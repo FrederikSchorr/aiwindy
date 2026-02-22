@@ -177,8 +177,10 @@ export default function Home() {
 
   const sendMessage = useCallback(async (userMessage: string) => {
     setIsStreaming(true);
+    const statusId = `status-${Date.now()}`;
     const assistantId = `assistant-${Date.now()}`;
-    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+    setMessages((prev) => [...prev, { id: statusId, role: "assistant", content: "" }]);
+    let contentStarted = false;
 
     try {
       abortRef.current = new AbortController();
@@ -219,26 +221,28 @@ export default function Home() {
                 setActiveLocation(data.location as GeocodeResult);
               }
               if (data.status) {
-                const statusId = `status-${Date.now()}`;
-                setMessages((prev) => {
-                  const idx = prev.findIndex((m) => m.id === assistantId);
-                  if (idx === -1) return prev;
-                  const before = prev.slice(0, idx);
-                  const after = prev.slice(idx);
-                  return [...before, { id: statusId, role: "assistant" as const, content: `*${data.status}*` }, ...after];
-                });
-              }
-              if (data.content) {
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: m.content + data.content } : m
+                    m.id === statusId ? { ...m, content: data.status } : m
                   )
                 );
+              }
+              if (data.content) {
+                if (!contentStarted) {
+                  contentStarted = true;
+                  setMessages((prev) => [...prev, { id: assistantId, role: "assistant" as const, content: data.content }]);
+                } else {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId ? { ...m, content: m.content + data.content } : m
+                    )
+                  );
+                }
               }
               if (data.error) {
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: "Fehler bei der Wetteranalyse. Bitte versuche es erneut." } : m
+                    m.id === statusId ? { ...m, content: "Fehler bei der Wetteranalyse. Bitte versuche es erneut." } : m
                   )
                 );
               }
@@ -250,7 +254,7 @@ export default function Home() {
       if (e.name !== "AbortError") {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
+            m.id === statusId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
           )
         );
       }
@@ -297,6 +301,20 @@ export default function Home() {
           <div className="px-4 py-4 space-y-3">
             {messages.map((msg) => {
               const isUser = msg.role === "user";
+              const isStatus = msg.id.startsWith("status-");
+              if (isStatus) {
+                if (!msg.content && !isStreaming) return null;
+                return (
+                  <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
+                    <div className="max-w-[90%]">
+                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin text-primary/60 shrink-0" />
+                        <MarkdownContent content={msg.content || "..."} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
                   <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
@@ -307,8 +325,8 @@ export default function Home() {
                     }`}>
                       {isUser ? msg.content : (
                         <>
-                          <MarkdownContent content={msg.content || (isStreaming && msg.content === "" ? "..." : "")} />
-                          {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && (
+                          <MarkdownContent content={msg.content} />
+                          {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && !isStatus && (
                             <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
                               <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
                               <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />

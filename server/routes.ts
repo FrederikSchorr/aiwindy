@@ -418,17 +418,20 @@ export async function registerRoutes(
     res.setHeader("Connection", "keep-alive");
 
     try {
+      res.write(`data: ${JSON.stringify({ status: "Analysiere Nachricht..." })}\n\n`);
       const locationResult = await extractLocation(message);
 
       let location = currentLocation as { lat: number; lon: number; displayName: string; regionalModel: string; regionalModelLabel: string; regionalModelZoom: number; countryCode?: string; warningUrl?: string; warningLabel?: string } | null;
       let isNewLocation = false;
 
       if (locationResult) {
+        res.write(`data: ${JSON.stringify({ status: `Ort erkannt: **${locationResult}** — Suche Koordinaten...` })}\n\n`);
         const geocoded = await geocodeLocation(locationResult);
         if (geocoded) {
           location = geocoded;
           isNewLocation = true;
           res.write(`data: ${JSON.stringify({ location: geocoded })}\n\n`);
+          res.write(`data: ${JSON.stringify({ status: `Karten geladen — Modell: **${geocoded.regionalModelLabel}**` })}\n\n`);
         }
       }
 
@@ -439,12 +442,12 @@ export async function registerRoutes(
         return;
       }
 
-      if (isNewLocation) {
-        const locationShort = location.displayName.split(",")[0].trim();
-        res.write(`data: ${JSON.stringify({ status: `Wetterbilder geladen. Lokales Modell: **${location.regionalModelLabel}**. Analysiere Wetterlage für ${locationShort}...` })}\n\n`);
-      }
+      const locationShort = location.displayName.split(",")[0].trim();
+      res.write(`data: ${JSON.stringify({ status: `Lade Wetterdaten für ${locationShort}...` })}\n\n`);
 
       const weatherContext = await fetchWeatherContext(location.lat, location.lon, location.displayName);
+
+      res.write(`data: ${JSON.stringify({ status: isNewLocation ? `Erstelle Wetteranalyse für ${locationShort}...` : `Beantworte Frage zu ${locationShort}...` })}\n\n`);
       const regional = getRegionalModelFallback(location.lat, location.lon);
 
       const mapContext = `
