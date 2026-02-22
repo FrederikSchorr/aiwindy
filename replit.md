@@ -1,37 +1,48 @@
 # Segelwetter - Windy Weather Maps
 
 ## Overview
-A sailing weather advisor app with AI-powered meteorological analysis and live weather maps. Features a chat-style interface with a Gemini AI meteorologist on the left and three weather map panels on the right.
+A sailing weather advisor app with AI-powered meteorological analysis and live weather maps. Features a chat-style interface with an OpenAI-powered meteorologist on the left and four weather map panels on the right.
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
-- **Backend**: Express.js API with geocoding, KNMI chart proxy, weather data fetching (Open-Meteo), and Gemini AI streaming chat
-- **AI**: Google Gemini (via Replit AI Integrations) for meteorological analysis
+- **Backend**: Express.js API with AI location extraction, geocoding, KNMI chart proxy, weather data fetching (Open-Meteo), and OpenAI streaming chat
+- **AI**: OpenAI GPT-4.1 (via Replit AI Integrations) for meteorological analysis, GPT-4.1-mini for location extraction and regional model selection
 - **No database required** - stateless app
 
 ## Key Files
 - `client/src/pages/home.tsx` - Main split-panel UI: chat left, maps right
-- `server/routes.ts` - All API endpoints (geocode, KNMI proxy, weather chat)
+- `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, forecast)
 - `shared/schema.ts` - Zod schemas and TypeScript types
 
 ## How It Works
-1. User types a location name in the chat
-2. Backend geocodes via Nominatim, determines best regional weather model
-3. Frontend displays three weather maps:
-   - Temperature 850hPa (ECMWF) - European synoptic overview
+1. User sends any message in the chat (e.g. "Wie ist das Wetter in Punat?" or just "Rovinj")
+2. Backend uses GPT-4.1-mini to extract location from message (if any)
+3. If location found: geocodes via Nominatim, selects best regional model via AI, updates maps, streams full 4-chapter weather analysis
+4. If no location found but previous location active: answers follow-up question concisely using existing weather context
+5. Frontend displays four weather panels:
+   - Temperature 850hPa (ECMWF) - European synoptic overview (3:2 ratio)
    - KNMI fronts analysis chart (proxied from cdn.knmi.nl)
-   - Local wind with regional high-res model (ICON-D2, ALADIN, AROME-HD, UKV, or ICON-EU)
-4. Backend fetches weather data from Open-Meteo (including marine data) and streams a Gemini AI meteorological analysis focused on sailing conditions
+   - Local wind with AI-selected regional model (3:2 ratio)
+   - Windy native forecast embed
+6. Country-specific weather warning links for 19+ European countries
 
 ## API
-- `POST /api/geocode` - Body: `{ location }` - Returns: `{ lat, lon, displayName, regionalModel, regionalModelLabel, regionalModelZoom }`
+- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ status }`, `{ content }`, `{ done: true }`
+- `POST /api/geocode` - Body: `{ location }` - Returns: `{ lat, lon, displayName, regionalModel, regionalModelLabel, regionalModelZoom, countryCode, warningUrl, warningLabel }`
 - `GET /api/knmi-chart` - Proxies the latest KNMI weather analysis chart (image/gif)
-- `POST /api/weather-chat` - Body: `{ lat, lon, displayName, message, history }` - Streams SSE weather analysis from Gemini
+- `POST /api/forecast` - Body: `{ lat, lon }` - Returns hourly forecast data
 
-## Regional Model Selection
-Based on coordinates:
-- Germany/Central Europe: ICON-D2 (2.2km)
-- Czech/Eastern Europe/Adriatic: ALADIN
-- France: AROME-HD (1.25km)
+## Regional Model Selection (AI-based)
+GPT-4.1-mini selects the best Windy.com wind model:
+- Lakes/inland waters: Meteoblue (mblue)
+- Adriatic coast: ALADIN (czeAladin)
+- France: AROME-HD (aromeHd, 1.25km)
+- Germany/Austria/Switzerland: ICON-D2 (iconD2, 2.2km)
 - UK/Ireland: UKV
-- Default Europe: ICON-EU (7km)
+- Default Europe: ICON-EU (iconEu, 7km)
+
+## Weather Analysis Structure (4 chapters, German)
+1. Großwetterlage - Synoptic situation with 850hPa map references
+2. Fronten - Front analysis with KNMI chart references
+3. Lokale Windsysteme - Regional wind phenomena (Bora, Mistral, Meltemi, etc.)
+4. Wetterwarnungen - Active warnings with country-specific links

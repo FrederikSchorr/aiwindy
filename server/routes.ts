@@ -208,6 +208,81 @@ function getWarningInfo(countryCode: string): { url: string; label: string } | u
   return WARNING_SERVICES[countryCode];
 }
 
+async function extractLocation(message: string): Promise<string | null> {
+  try {
+    const result = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Extrahiere den geographischen Ortsnamen aus der Benutzernachricht. 
+Wenn ein konkreter Ort, Hafen, See, Insel, Küste oder Region genannt wird, gib NUR den Ortsnamen zurück (z.B. "Punat, Kroatien" oder "Gardasee" oder "Elba").
+Wenn KEIN Ort genannt wird (z.B. reine Fragen wie "Wird der Wind stärker?" oder "Wann legt sich die Bora?"), antworte mit genau: NONE
+Antworte mit NICHTS anderem als dem Ortsnamen oder NONE.`,
+        },
+        { role: "user", content: message },
+      ],
+      max_completion_tokens: 64,
+      temperature: 0,
+    });
+    const text = result.choices[0]?.message?.content?.trim() || "";
+    if (!text || text === "NONE" || text.length > 100) return null;
+    return text;
+  } catch (e: any) {
+    console.error("Location extraction failed:", e?.message || e);
+    return null;
+  }
+}
+
+async function geocodeLocation(locationName: string): Promise<{
+  lat: number; lon: number; displayName: string;
+  regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
+  countryCode?: string; warningUrl?: string; warningLabel?: string;
+} | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`,
+      { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
+    );
+    if (!response.ok) return null;
+
+    const results = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
+    if (!results.length) return null;
+
+    const result = results[0];
+    const lat = parseFloat(result.lat);
+    const lon = parseFloat(result.lon);
+    const regional = await getRegionalModelAI(lat, lon, result.display_name);
+
+    let countryCode: string | undefined;
+    try {
+      const reverseRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&addressdetails=1`,
+        { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
+      );
+      if (reverseRes.ok) {
+        const reverseData = await reverseRes.json() as { address?: { country_code?: string } };
+        countryCode = reverseData.address?.country_code?.toUpperCase();
+      }
+    } catch {}
+
+    const warningInfo = countryCode ? getWarningInfo(countryCode) : undefined;
+
+    return {
+      lat, lon,
+      displayName: result.display_name,
+      regionalModel: regional.model,
+      regionalModelLabel: regional.label,
+      regionalModelZoom: regional.zoom,
+      countryCode,
+      warningUrl: warningInfo?.url,
+      warningLabel: warningInfo?.label,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -331,26 +406,56 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/weather-chat", async (req, res) => {
-    const { lat, lon, displayName, message, history, isFollowUp } = req.body;
+  app.post("/api/chat", async (req, res) => {
+    const { message, history, currentLocation } = req.body;
 
-    if (!lat || !lon || !displayName) {
-      return res.status(400).json({ error: "Location data required" });
+    if (!message) {
+      return res.status(400).json({ error: "Message required" });
     }
 
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
     try {
-      const weatherContext = await fetchWeatherContext(lat, lon, displayName);
-      const regional = getRegionalModelFallback(lat, lon);
+      const locationResult = await extractLocation(message);
+
+      let location = currentLocation as { lat: number; lon: number; displayName: string; regionalModel: string; regionalModelLabel: string; regionalModelZoom: number; countryCode?: string; warningUrl?: string; warningLabel?: string } | null;
+      let isNewLocation = false;
+
+      if (locationResult) {
+        const geocoded = await geocodeLocation(locationResult);
+        if (geocoded) {
+          location = geocoded;
+          isNewLocation = true;
+          res.write(`data: ${JSON.stringify({ location: geocoded })}\n\n`);
+        }
+      }
+
+      if (!location) {
+        res.write(`data: ${JSON.stringify({ content: "Bitte nenne einen Ort, damit ich die Wetterlage analysieren kann. Zum Beispiel: \"Wie ist das Wetter in Punat?\" oder einfach \"Rovinj\"." })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+        return;
+      }
+
+      if (isNewLocation) {
+        const locationShort = location.displayName.split(",")[0].trim();
+        res.write(`data: ${JSON.stringify({ status: `Wetterbilder geladen. Lokales Modell: **${location.regionalModelLabel}**. Analysiere Wetterlage für ${locationShort}...` })}\n\n`);
+      }
+
+      const weatherContext = await fetchWeatherContext(location.lat, location.lon, location.displayName);
+      const regional = getRegionalModelFallback(location.lat, location.lon);
 
       const mapContext = `
 ANGEZEIGTE KARTEN (die der Benutzer rechts neben dem Chat sieht):
 1. Temperatur 850hPa (ca. 1500m Höhe) - ECMWF Modell, Zoom auf Nordatlantik/Europa (zentriert 55°N, 10°W) — zeigt Luftmassen, Kaltluft-Zungen (blau/violett) und Warmluft-Vorstöße (gelb/orange/rot)
 2. KNMI Fronten-Analysekarte — zeigt Druckgebilde (H/L mit hPa-Werten), Fronten (Warmfronten rot halb-kreise, Kaltfronten blau Dreiecke, Okklusionen violett), Isobaren
-3. Lokales Windmodell: ${regional.label} — hochauflösendes Regionalmodell, zeigt Windfelder (Stärke farbcodiert, Richtung mit Pfeilen) für den Bereich um ${displayName}
+3. Lokales Windmodell: ${location.regionalModelLabel || regional.label} — hochauflösendes Regionalmodell, zeigt Windfelder (Stärke farbcodiert, Richtung mit Pfeilen) für den Bereich um ${location.displayName}
 4. Windy Vorhersage — Zeitleiste mit Wind, Böen, Temperatur für die nächsten Tage
 
-ORT: ${displayName} (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)
-Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. "## 3. Fokus ${displayName.split(",")[0].trim()} — Speziell für Segler").
+ORT: ${location.displayName} (${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E)
+Verwende "${location.displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3.
 `;
 
       const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
@@ -358,23 +463,21 @@ Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. 
         content: m.content,
       }));
 
+      const isFollowUp = !isNewLocation;
+
       const systemPrompt = isFollowUp
-        ? `${METEOROLOGIST_SYSTEM_PROMPT}\n\nWICHTIG: Dies ist eine Rückfrage des Benutzers. Antworte NUR auf die gestellte Frage. Wiederhole NICHT den kompletten Wetterbericht. Antworte kurz, präzise und im Chat-Stil.`
+        ? `${METEOROLOGIST_SYSTEM_PROMPT}\n\nWICHTIG: Dies ist eine Rückfrage des Benutzers im laufenden Gespräch. Antworte NUR auf die gestellte Frage. Wiederhole NICHT den kompletten Wetterbericht. Antworte kurz, präzise und im Chat-Stil.`
         : METEOROLOGIST_SYSTEM_PROMPT;
 
       const userContent = isFollowUp
-        ? `${message}\n\n--- AKTUELLE WETTERDATEN (als Referenz) ---\n${weatherContext}\n\nORT: ${displayName} (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`
-        : `${message}\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`;
+        ? `${message}\n\n--- AKTUELLE WETTERDATEN (als Referenz) ---\n${weatherContext}\n\nORT: ${location.displayName} (${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E)`
+        : `Analysiere die aktuelle Wetterlage für ${location.displayName}. Der Benutzer schrieb: "${message}"\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`;
 
       const messages: OpenAI.ChatCompletionMessageParam[] = [
         { role: "system", content: systemPrompt },
         ...chatHistory,
         { role: "user", content: userContent },
       ];
-
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
 
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1",
@@ -394,12 +497,12 @@ Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
     } catch (error) {
-      console.error("Weather chat error:", error);
+      console.error("Chat error:", error);
       if (res.headersSent) {
         res.write(`data: ${JSON.stringify({ error: "Fehler bei der Wetteranalyse" })}\n\n`);
         res.end();
       } else {
-        res.status(500).json({ error: "Failed to generate weather analysis" });
+        res.status(500).json({ error: "Failed to process chat message" });
       }
     }
   });

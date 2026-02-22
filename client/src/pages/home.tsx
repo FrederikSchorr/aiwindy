@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, AlertTriangle, ExternalLink } from "lucide-react";
@@ -168,7 +166,7 @@ export default function Home() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hallo! Nenne mir einen Ort und ich zeige dir die aktuelle Wetterlage mit Analyse speziell für Segler. Probiere z.B. \"Punat, Kroatien\", \"Elba\" oder \"Rovinj\".",
+      content: "Hallo! Frag mich nach dem Wetter an einem beliebigen Ort und ich zeige dir die aktuelle Wetterlage mit Analyse speziell für Segler. Probiere z.B. \"Wie ist das Wetter in Punat?\", \"Elba\" oder \"Segeln bei Rovinj\".",
     },
   ]);
   const [input, setInput] = useState("");
@@ -177,68 +175,24 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const geocodeMutation = useMutation({
-    mutationFn: async (location: string): Promise<GeocodeResult> => {
-      const res = await apiRequest("POST", "/api/geocode", { location });
-      return res.json();
-    },
-    onSuccess: (data, locationInput) => {
-      setActiveLocation(data);
-      const locationShort = data.displayName.split(",")[0].trim();
-      const statusId = `status-${Date.now()}`;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: statusId,
-          role: "assistant",
-          content: `Wetterbilder von Windy.com und KNMI geladen. Für **${locationShort}** das lokale Modell **${data.regionalModelLabel}** verwendet.`,
-        },
-      ]);
-      streamWeatherAnalysis(data, locationInput);
-    },
-    onError: () => {
-      setMessages((prev) => [
-        ...prev,
-        { id: `err-${Date.now()}`, role: "assistant", content: "Diesen Ort konnte ich leider nicht finden. Bitte versuche einen anderen Namen." },
-      ]);
-    },
-  });
-
-  const streamWeatherAnalysis = useCallback(async (location: GeocodeResult, userQuery: string, isFollowUp?: boolean) => {
+  const sendMessage = useCallback(async (userMessage: string) => {
     setIsStreaming(true);
-    const locationShort = location.displayName.split(",")[0].trim();
     const assistantId = `assistant-${Date.now()}`;
-
-    if (!isFollowUp) {
-      const statusId = `status-analyze-${Date.now()}`;
-      setMessages((prev) => [
-        ...prev,
-        { id: statusId, role: "assistant", content: `*Analysiere die Großwetterlage und Auswirkung auf ${locationShort}...*` },
-      ]);
-    }
-
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
     try {
       abortRef.current = new AbortController();
       const chatHistory = messages
-        .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-") && !m.id.startsWith("status-analyze-"))
+        .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-"))
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const message = isFollowUp
-        ? userQuery
-        : `Analysiere die aktuelle Wetterlage für ${location.displayName}. Der Benutzer hat nach "${userQuery}" gefragt.`;
-
-      const res = await fetch("/api/weather-chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lat: location.lat,
-          lon: location.lon,
-          displayName: location.displayName,
-          message,
+          message: userMessage,
           history: chatHistory,
-          isFollowUp: !!isFollowUp,
+          currentLocation: activeLocation,
         }),
         signal: abortRef.current.signal,
       });
@@ -261,6 +215,19 @@ export default function Home() {
           if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6));
+              if (data.location) {
+                setActiveLocation(data.location as GeocodeResult);
+              }
+              if (data.status) {
+                const statusId = `status-${Date.now()}`;
+                setMessages((prev) => {
+                  const idx = prev.findIndex((m) => m.id === assistantId);
+                  if (idx === -1) return prev;
+                  const before = prev.slice(0, idx);
+                  const after = prev.slice(idx);
+                  return [...before, { id: statusId, role: "assistant" as const, content: `*${data.status}*` }, ...after];
+                });
+              }
               if (data.content) {
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -290,7 +257,7 @@ export default function Home() {
     } finally {
       setIsStreaming(false);
     }
-  }, [messages]);
+  }, [messages, activeLocation]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -298,28 +265,17 @@ export default function Home() {
     }
   }, [messages]);
 
-  const isFollowUpQuestion = (text: string): boolean => {
-    if (!activeLocation) return false;
-    const questionPatterns = /^(wie|was|wann|wo|warum|wieso|weshalb|kann|ist|wird|gibt|soll|welch|könnt|darf|muss|stimmt|ab wann|bis wann|und |aber |noch|bitte|erkläre|erklär|detail|mehr|genauer|nochmal|morgen|übermorgen|heute|abend|nacht|mittag|nachmittag|früh|wind|welle|seegang|bora|mistral|meltemi|gewitter|regen|sturm|böen|segeln|ankern|auslaufen|hafen|\?)/i;
-    return questionPatterns.test(text) || text.includes("?");
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || geocodeMutation.isPending || isStreaming) return;
+    if (!trimmed || isStreaming) return;
 
     setMessages((prev) => [
       ...prev,
       { id: `user-${Date.now()}`, role: "user", content: trimmed },
     ]);
     setInput("");
-
-    if (isFollowUpQuestion(trimmed)) {
-      streamWeatherAnalysis(activeLocation!, trimmed, true);
-    } else {
-      geocodeMutation.mutate(trimmed);
-    }
+    sendMessage(trimmed);
   };
 
   return (
@@ -366,14 +322,6 @@ export default function Home() {
                 </div>
               );
             })}
-            {(geocodeMutation.isPending) && (
-              <div className="flex justify-start">
-                <div className="bg-card text-card-foreground border border-border rounded-2xl rounded-bl-md px-4 py-2.5 flex items-center gap-2 text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  <span className="text-muted-foreground">Ort suchen & Wetter laden...</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -384,16 +332,16 @@ export default function Home() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={activeLocation ? "Frage stellen oder neuen Ort eingeben..." : "Ort eingeben (z.B. Punat, Kroatien)..."}
+                placeholder={activeLocation ? "Frage stellen oder neuen Ort eingeben..." : "Ort eingeben, z.B. \"Wie ist das Wetter in Punat?\""}
                 className="pl-9"
-                disabled={geocodeMutation.isPending || isStreaming}
+                disabled={isStreaming}
                 data-testid="input-location"
               />
             </div>
             <Button
               type="submit"
               size="icon"
-              disabled={!input.trim() || geocodeMutation.isPending || isStreaming}
+              disabled={!input.trim() || isStreaming}
               data-testid="button-send"
             >
               <Send className="w-4 h-4" />
