@@ -556,7 +556,7 @@ export default function Home() {
   );
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-background">
+    <div className="flex flex-col md:flex-row h-dvh bg-background">
       <div className="hidden md:flex md:flex-col md:w-1/2 border-r border-border bg-background">
         {chatPanel}
       </div>
@@ -564,7 +564,7 @@ export default function Home() {
         {mapsPanel}
       </div>
 
-      <div className="flex flex-col h-screen md:hidden">
+      <div className="flex flex-col h-dvh md:hidden">
         <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
           <div className="px-4 py-2 flex items-center gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
@@ -649,8 +649,8 @@ export default function Home() {
                   }
                   return (
                     <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
-                      <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
-                        <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      <div className={`max-w-[85%] ${isUser ? "order-2" : "order-1"}`}>
+                        <div className={`rounded-2xl px-3.5 py-2 text-[15px] leading-normal ${
                           isUser
                             ? "bg-primary text-primary-foreground rounded-br-md"
                             : "bg-card text-card-foreground border border-border rounded-bl-md"
@@ -674,7 +674,7 @@ export default function Home() {
                 })}
               </div>
             </div>
-            <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
+            <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0 pb-[env(safe-area-inset-bottom)]">
               <form onSubmit={handleSubmit} className="px-3 py-2 flex items-center gap-2">
                 <div className="relative flex-1">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -682,7 +682,7 @@ export default function Home() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={activeLocation ? "Frage oder neuer Ort..." : "Ort eingeben, z.B. \"Punat\""}
-                    className="pl-9 text-sm"
+                    className="pl-9 text-[15px]"
                     disabled={isStreaming}
                     data-testid="input-location-mobile"
                   />
