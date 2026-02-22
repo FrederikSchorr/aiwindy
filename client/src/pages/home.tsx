@@ -155,21 +155,61 @@ function MarkdownContent({ content }: { content: string }) {
   const escape = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  let html = escape(withPlaceholders)
-    .replace(/### (.+)/g, '<h3 class="text-sm font-semibold mt-3 mb-1">$1</h3>')
-    .replace(/## (.+)/g, '<h2 class="text-sm font-bold mt-4 mb-1.5">$1</h2>')
-    .replace(/# (.+)/g, '<h1 class="text-base font-bold mt-4 mb-2">$1</h1>')
+  const escaped = escape(withPlaceholders);
+  const lines = escaped.split("\n");
+  const parts: string[] = [];
+  let inList = false;
+  let inSubList = false;
+
+  for (const line of lines) {
+    const trimmed = line.trimStart();
+    const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("• ");
+    const indent = line.length - line.trimStart().length;
+    const isSubBullet = isBullet && indent >= 2;
+
+    if (isBullet) {
+      const text = trimmed.slice(2);
+      if (isSubBullet) {
+        if (!inSubList) {
+          inSubList = true;
+          parts.push('<ul class="ml-4 mt-0.5 mb-0.5 space-y-0">');
+        }
+        parts.push(`<li class="text-[13px] leading-snug text-muted-foreground pl-1" style="list-style:none">– ${text}</li>`);
+      } else {
+        if (inSubList) { inSubList = false; parts.push("</ul>"); }
+        if (!inList) { inList = true; parts.push('<ul class="mt-1 mb-1.5 space-y-0.5">'); }
+        parts.push(`<li class="text-[13px] leading-snug pl-1" style="list-style:disc;margin-left:1rem">${text}</li>`);
+      }
+    } else {
+      if (inSubList) { inSubList = false; parts.push("</ul>"); }
+      if (inList) { inList = false; parts.push("</ul>"); }
+
+      let processed = trimmed
+        .replace(/^### (.+)/, '<h3 class="text-[13px] font-semibold mt-2.5 mb-0.5">$1</h3>')
+        .replace(/^## (.+)/, '<h2 class="text-[13px] font-bold mt-3 mb-0.5">$1</h2>')
+        .replace(/^# (.+)/, '<h1 class="text-sm font-bold mt-3 mb-1">$1</h1>');
+
+      if (processed === trimmed && trimmed === "") {
+        parts.push('<div class="h-1.5"></div>');
+      } else if (processed === trimmed) {
+        parts.push(`<p class="text-[13px] leading-snug">${processed}</p>`);
+      } else {
+        parts.push(processed);
+      }
+    }
+  }
+  if (inSubList) parts.push("</ul>");
+  if (inList) parts.push("</ul>");
+
+  let html = parts.join("")
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\n- /g, '\n<li class="ml-4 list-disc text-sm">')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
 
   links.forEach((link, i) => {
     html = html.replace(`%%LINK${i}%%`, link);
   });
 
-  return <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="text-[13px] leading-snug" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 export default function Home() {
