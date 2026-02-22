@@ -164,6 +164,15 @@ SCHWERPUNKT dieses Kapitels: Regionale und lokale Windphänomene! Das ist der wi
 STIL-REGELN:
 - Deutsch, sachlich-professionell, KEINE informellen Anreden oder Floskeln
 - Bullet-Point-Stil bevorzugen, Fließtext minimieren
+- EMOJIS nutzen um den Text aufzulockern und visuell zu strukturieren:
+  - Kapitelüberschriften: ## 1. ☁️ Großwetterlage, ## 2. 🌀 Fronten, ## 3. 💨 Lokale Windsysteme, ## 4. ⚠️ Wetterwarnungen
+  - Hochdruckgebiete: ☀️ oder 🔵, Tiefdruckgebiete: 🌀 oder 🔴
+  - Wind: 💨, Böen: 🌬️, Sturm: 🌊⚡, Gewitter: ⛈️
+  - Temperatur: 🌡️, Kaltluft: 🥶, Warmluft: 🌤️
+  - Sonne: ☀️, Wolken: ☁️, Regen: 🌧️, Schnee: ❄️
+  - Seegang: 🌊, Segeln gut: ⛵, Warnung: ⚠️, Gefahr: 🚨
+  - Richtungspfeile: ↗️ ➡️ ↘️ ⬇️ etc. für Windrichtungen
+  - Sparsam aber gezielt einsetzen, nicht übertreiben
 - AKTIVER KARTENBEZUG: Verweise gezielt auf die rechts angezeigten Karten! Formulierungen wie:
   - "→ In der 850hPa-Karte gut erkennbar: violette Kaltluft-Zunge aus NE..."
   - "→ Auf der KNMI-Frontenkarte: Kaltfront erstreckt sich von..."
