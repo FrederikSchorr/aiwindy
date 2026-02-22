@@ -397,7 +397,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="relative min-h-[250px] border-b border-border">
+              <div className="relative border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Map className="w-3 h-3 text-blue-500" />
                   KNMI Fronten-Analyse
@@ -406,7 +406,7 @@ export default function Home() {
                   <img
                     src="/api/knmi-chart"
                     alt="KNMI Weather Analysis Chart"
-                    className="max-w-full max-h-full object-contain"
+                    className="w-full h-full object-contain"
                     data-testid="img-knmi-chart"
                   />
                 </div>
