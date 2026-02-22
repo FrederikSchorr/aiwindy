@@ -14,7 +14,7 @@ function getRegionalModelFallback(lat: number, lon: number): { model: string; la
     return { model: "iconD2", label: "ICON-D2 (2.2km)", zoom: 8 };
   }
   if (lat >= 43 && lat <= 52 && lon >= 10 && lon <= 25) {
-    return { model: "czeAladin", label: "ALADIN (Czech)", zoom: 7 };
+    return { model: "czeAladin", label: "ALADIN", zoom: 7 };
   }
   if (lat >= 41 && lat <= 51.5 && lon >= -5.5 && lon <= 10) {
     return { model: "aromeHd", label: "AROME-HD (1.25km)", zoom: 8 };
@@ -29,7 +29,7 @@ const MODEL_SELECTION_PROMPT = `Du bist ein Meteorologie-Experte. Wähle das BES
 
 VERFÜGBARE MODELLE (Windy product parameter):
 - "iconD2" = ICON-D2 (2.2km) - Deutschland, Österreich, Schweiz, Tschechien, Benelux
-- "czeAladin" = ALADIN Czech - Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Adria
+- "czeAladin" = ALADIN - Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Adria
 - "aromeHd" = AROME-HD (1.25km) - Frankreich, Korsika  
 - "arome" = AROME (2.5km) - Frankreich erweitert
 - "ukv" = UKV Met Office - Großbritannien, Irland
@@ -49,7 +49,7 @@ ENTSCHEIDUNGSKRITERIEN (in dieser Priorität):
 Antworte NUR mit einem JSON-Objekt, KEINE weiteren Erklärungen:
 {"model": "...", "label": "...", "zoom": 8}
 
-Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "ICON-D2 (2.2km)" oder "Meteoblue (lokal)"`;
+Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "ICON-D2 (2.2km)", "ALADIN" oder "Meteoblue (lokal)". Schreibe NIEMALS "Czech" oder "Aladin Czech" — nur "ALADIN".`;
 
 async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
   try {
