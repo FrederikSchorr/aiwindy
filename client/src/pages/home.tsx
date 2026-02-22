@@ -647,28 +647,27 @@ export default function Home() {
                       </div>
                     );
                   }
-                  return (
-                    <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
-                      <div className={`max-w-[85%] ${isUser ? "order-2" : "order-1"}`}>
-                        <div className={`rounded-2xl px-3.5 py-2 text-[15px] leading-normal ${
-                          isUser
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-card text-card-foreground border border-border rounded-bl-md"
-                        }`}>
-                          {isUser ? msg.content : (
-                            <>
-                              <MarkdownContent content={msg.content} />
-                              {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && !isStatus && (
-                                <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                                </span>
-                              )}
-                            </>
-                          )}
+                  if (isUser) {
+                    return (
+                      <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`}>
+                        <div className="max-w-[75%]">
+                          <div className="rounded-2xl rounded-br-md px-3.5 py-2 text-[15px] leading-normal bg-primary text-primary-foreground">
+                            {msg.content}
+                          </div>
                         </div>
                       </div>
+                    );
+                  }
+                  return (
+                    <div key={msg.id} className="px-1 text-[15px] leading-normal" data-testid={`message-${msg.id}`}>
+                      <MarkdownContent content={msg.content} />
+                      {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && (
+                        <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                        </span>
+                      )}
                     </div>
                   );
                 })}
