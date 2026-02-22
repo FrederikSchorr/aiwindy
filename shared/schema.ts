@@ -30,6 +30,9 @@ export interface GeocodeResult {
   regionalModel: string;
   regionalModelLabel: string;
   regionalModelZoom: number;
+  countryCode?: string;
+  warningUrl?: string;
+  warningLabel?: string;
 }
 
 export interface ChatMessage {

@@ -161,6 +161,31 @@ REGELN:
 - Erwähne relevante regionale Windsysteme
 - Formatiere übersichtlich mit Absätzen und Überschriften (Markdown)`;
 
+const WARNING_SERVICES: Record<string, { url: string; label: string }> = {
+  HR: { url: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja", label: "DHMZ Kroatien" },
+  DE: { url: "https://www.dwd.de/DE/wetter/warnungen_gemeinden/warnWetter_node.html", label: "DWD Deutschland" },
+  AT: { url: "https://warnungen.zamg.at/wsapp/de/alle", label: "GeoSphere Austria" },
+  IT: { url: "https://www.meteoam.it/it/avvisi-meteo", label: "MeteoAM Italien" },
+  FR: { url: "https://vigilance.meteofrance.fr/fr", label: "Météo-France" },
+  NL: { url: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen", label: "KNMI Niederlande" },
+  GB: { url: "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings", label: "Met Office UK" },
+  GR: { url: "http://www.emy.gr/emy/en/warning/warning", label: "EMY Griechenland" },
+  SI: { url: "https://meteo.arso.gov.si/met/sl/warning/", label: "ARSO Slowenien" },
+  ES: { url: "https://www.aemet.es/es/eltiempo/prediccion/avisos", label: "AEMET Spanien" },
+  PT: { url: "https://www.ipma.pt/en/otempo/prev.am.geral/", label: "IPMA Portugal" },
+  DK: { url: "https://www.dmi.dk/vejr/varsler/", label: "DMI Dänemark" },
+  SE: { url: "https://www.smhi.se/vader/varningar-och-meddelanden", label: "SMHI Schweden" },
+  NO: { url: "https://www.yr.no/en/content/1-72837/meteorological", label: "Yr.no Norwegen" },
+  ME: { url: "https://www.meteo.co.me/misc.php?text=117&seession=", label: "ZHMS Montenegro" },
+  TR: { url: "https://www.mgm.gov.tr/en/forecast-warnings.aspx", label: "MGM Türkei" },
+  PL: { url: "https://meteo.imgw.pl/dyn/", label: "IMGW Polen" },
+  CH: { url: "https://www.meteoswiss.admin.ch/home/weather/warnings.html", label: "MeteoSchweiz" },
+};
+
+function getWarningInfo(countryCode: string): { url: string; label: string } | undefined {
+  return WARNING_SERVICES[countryCode];
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -194,6 +219,20 @@ export async function registerRoutes(
       const lon = parseFloat(result.lon);
       const regional = await getRegionalModelAI(lat, lon, result.display_name);
 
+      let countryCode: string | undefined;
+      try {
+        const reverseRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&addressdetails=1`,
+          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
+        );
+        if (reverseRes.ok) {
+          const reverseData = await reverseRes.json() as { address?: { country_code?: string } };
+          countryCode = reverseData.address?.country_code?.toUpperCase();
+        }
+      } catch {}
+
+      const warningInfo = countryCode ? getWarningInfo(countryCode) : undefined;
+
       return res.json({
         lat,
         lon,
@@ -201,6 +240,9 @@ export async function registerRoutes(
         regionalModel: regional.model,
         regionalModelLabel: regional.label,
         regionalModelZoom: regional.zoom,
+        countryCode,
+        warningUrl: warningInfo?.url,
+        warningLabel: warningInfo?.label,
       });
     } catch {
       return res.status(500).json({ error: "Failed to geocode location." });

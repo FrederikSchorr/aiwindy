@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation } from "lucide-react";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, AlertTriangle, ExternalLink } from "lucide-react";
 import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -429,6 +429,33 @@ export default function Home() {
                   forecast={true}
                 />
               </div>
+
+              {activeLocation.warningUrl && (
+                <div className="relative flex-1 min-h-[250px]">
+                  <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                    <AlertTriangle className="w-3 h-3 text-amber-500" />
+                    Wetterwarnungen - {activeLocation.warningLabel}
+                  </div>
+                  <a
+                    href={activeLocation.warningUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background/95 transition-colors"
+                    data-testid="link-warning-external"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Öffnen
+                  </a>
+                  <iframe
+                    title="Weather Warnings"
+                    src={activeLocation.warningUrl}
+                    className="w-full h-full border-0"
+                    frameBorder="0"
+                    sandbox="allow-scripts allow-same-origin"
+                    data-testid="iframe-warnings"
+                  />
+                </div>
+              )}
             </div>
           </div>
         ) : (
