@@ -11,7 +11,7 @@ const ai = new GoogleGenAI({
   },
 });
 
-function getRegionalModel(lat: number, lon: number): { model: string; label: string; zoom: number } {
+function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
   if (lat >= 47 && lat <= 55.5 && lon >= 5 && lon <= 16) {
     return { model: "iconD2", label: "ICON-D2 (2.2km)", zoom: 8 };
   }
@@ -25,6 +25,70 @@ function getRegionalModel(lat: number, lon: number): { model: string; label: str
     return { model: "ukv", label: "UKV (Met Office)", zoom: 7 };
   }
   return { model: "iconEu", label: "ICON-EU (7km)", zoom: 6 };
+}
+
+const MODEL_SELECTION_PROMPT = `Du bist ein Meteorologie-Experte. Wähle das BESTE hochauflösende Windmodell für den gegebenen Ort auf Windy.com.
+
+VERFÜGBARE MODELLE (Windy product parameter):
+- "iconD2" = ICON-D2 (2.2km) - Deutschland, Österreich, Schweiz, Tschechien, Benelux
+- "czeAladin" = ALADIN Czech - Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Adria
+- "aromeHd" = AROME-HD (1.25km) - Frankreich, Korsika  
+- "arome" = AROME (2.5km) - Frankreich erweitert
+- "ukv" = UKV Met Office - Großbritannien, Irland
+- "mblue" = Meteoblue - global verfügbar, gut für Binnengewässer und Seen
+- "iconEu" = ICON-EU (7km) - ganz Europa (Fallback)
+- "gfs" = GFS - global (niedrige Auflösung)
+
+ENTSCHEIDUNGSKRITERIEN (in dieser Priorität):
+1. SEEN und BINNENGEWÄSSER (Neusiedler See, Bodensee, Gardasee, Balaton, Plattensee, Ammersee, Chiemsee, Genfer See, Zürichsee, etc.): IMMER "mblue" verwenden! Meteoblue modelliert lokale See-Thermik und Seewind am besten.
+2. Adriatische Küste (Kroatien, Slowenien, Montenegro, Albanien): "czeAladin" wegen Bora, lokale Windphänomene
+3. Frankreich, Korsika: "aromeHd" (höchste Auflösung 1.25km)
+4. Deutschland, Österreich (NICHT an Seen), Schweiz: "iconD2" (2.2km)
+5. UK, Irland: "ukv"
+6. Sonstiges Europa: "iconEu"
+7. Der Zoom-Level sollte die lokale Situation gut zeigen (8-9 für Seen und hochauflösende Modelle, 7 für regionale, 6 für europäische)
+
+Antworte NUR mit einem JSON-Objekt, KEINE weiteren Erklärungen:
+{"model": "...", "label": "...", "zoom": 8}
+
+Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "ICON-D2 (2.2km)" oder "Meteoblue (lokal)"`;
+
+async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
+  try {
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{
+        role: "user",
+        parts: [{ text: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` }],
+      }],
+      config: {
+        systemInstruction: MODEL_SELECTION_PROMPT,
+        maxOutputTokens: 8192,
+        temperature: 0,
+      },
+    });
+
+    let text = "";
+    try { text = result.text?.trim() || ""; } catch {}
+    if (!text) {
+      try { text = (result as any).candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ""; } catch {}
+    }
+    const jsonMatch = text.match(/\{[^}]+\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const validModels = ["iconD2", "czeAladin", "aromeHd", "arome", "ukv", "mblue", "iconEu", "gfs"];
+      if (parsed.model && validModels.includes(parsed.model) && parsed.label) {
+        return {
+          model: parsed.model,
+          label: parsed.label,
+          zoom: Math.min(Math.max(parsed.zoom || 7, 4), 10),
+        };
+      }
+    }
+  } catch (e: any) {
+    console.error("AI model selection failed:", e?.message || e);
+  }
+  return getRegionalModelFallback(lat, lon);
 }
 
 async function fetchWeatherContext(lat: number, lon: number, displayName: string): Promise<string> {
@@ -127,7 +191,7 @@ export async function registerRoutes(
       const result = results[0];
       const lat = parseFloat(result.lat);
       const lon = parseFloat(result.lon);
-      const regional = getRegionalModel(lat, lon);
+      const regional = await getRegionalModelAI(lat, lon, result.display_name);
 
       return res.json({
         lat,
@@ -182,7 +246,7 @@ export async function registerRoutes(
 
     try {
       const weatherContext = await fetchWeatherContext(lat, lon, displayName);
-      const regional = getRegionalModel(lat, lon);
+      const regional = getRegionalModelFallback(lat, lon);
 
       const mapContext = `
 ANGEZEIGTE KARTEN:
