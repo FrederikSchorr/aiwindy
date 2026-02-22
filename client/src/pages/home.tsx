@@ -332,7 +332,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
-              <p className="text-xs text-muted-foreground">KI-Meteorologe mit Windy-Karten</p>
+              <p className="text-xs text-muted-foreground">AI-Meteorologe mit Windy-Karten</p>
             </div>
           </div>
         </header>
