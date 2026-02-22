@@ -440,6 +440,14 @@ export async function registerRoutes(
           isNewLocation = true;
           sendSSE({ location: geocoded });
           sendSSE({ status: `Karten geladen — Modell: **${geocoded.regionalModelLabel}**` });
+        } else {
+          sendSSE({ status: `Ort "${locationResult}" konnte nicht gefunden werden` });
+          if (!location) {
+            sendSSE({ content: `Den Ort "${locationResult}" konnte ich leider nicht finden. Bitte versuche einen anderen Namen oder schreibe den Ort ausführlicher, z.B. "Split in Kroatien" oder "Elba, Italien".` });
+            sendSSE({ done: true });
+            res.end();
+            return;
+          }
         }
       }
 
