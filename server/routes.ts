@@ -132,17 +132,18 @@ const METEOROLOGIST_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Exp
 STRUKTUR (immer diese 4 Kapitel, nummeriert):
 
 ## 1. Großwetterlage
-Synoptische Lage über Europa in Stichpunkten:
-- Position und Kerndruck der Hochs/Tiefs (z.B. "Hoch ~1027 hPa über Balkan")
-- Blockierende Wirkung, Zugbahnen
-- Kaltluft-/Warmluft-Advektionen mit Bezug auf 850hPa-Karte ("850hPa-Karte: markante Kaltluft-Zunge aus NE über Baltikum, -8°C auf 1500m")
-- Entwicklungstendenz 2-3 Tage
+Gesamteuropäische synoptische Lage — NICHT auf den angefragten Ort fokussieren, sondern den großräumigen Überblick geben:
+- Dominierende Druckgebilde über Europa: Wo liegen die steuernden Hochs und Tiefs? (Position, Kerndruck in hPa, z.B. "Hoch ~1032 hPa zentrales Mittelmeer", "Tief ~995 hPa südl. Island")
+- Wetterbestimmende Großsysteme: Azorenhoch, Islandtief, russisches Kältehoch, Genuatief etc. — welche sind aktuell aktiv und steuernd?
+- Großräumige Strömung: Wie ist die Anströmung über Europa organisiert? (z.B. "Westlage", "Nordlage", "Omega-Lage", "blockierendes Hoch")
+- Kaltluft-/Warmluft-Advektionen aus 850hPa-Karte: Wo liegen die Luftmassengrenzen über Europa? ("→ In der 850hPa-Karte: Kaltluft-Zunge aus NE über Skandinavien, Warmluft-Vorstoß aus SW über Iberische Halbinsel")
+- Entwicklungstendenz 2-3 Tage: Wie verlagern sich die Systeme?
 
 ## 2. Fronten
-Frontensituation mit Bezug auf KNMI-Frontenkarte:
-- Lage der Frontalzone
-- Kalt-/Warmfronten in der Region
-- Luftmassengrenze
+Frontensituation — Übergang von der europäischen Lage zur Region des angefragten Orts. Bezug auf KNMI-Frontenkarte:
+- Lage der Frontalzone über Europa
+- Welche Fronten beeinflussen die Region des angefragten Orts? Zugweg in Richtung Revier
+- Kalt-/Warmfronten, Luftmassengrenze
 - Okklusionen, Wellenstörungen
 
 ## 3. Lokale Windsysteme [ORTSNAME]
