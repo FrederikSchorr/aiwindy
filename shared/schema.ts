@@ -27,11 +27,13 @@ export interface GeocodeResult {
   lat: number;
   lon: number;
   displayName: string;
+  regionalModel: string;
+  regionalModelLabel: string;
+  regionalModelZoom: number;
 }
 
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
-  location?: GeocodeResult;
 }

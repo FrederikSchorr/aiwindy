@@ -1,61 +1,41 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2 } from "lucide-react";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
-function WindyEmbed({ lat, lon, label, overlay, zoom }: { lat: number; lon: number; label: string; overlay: string; zoom: number }) {
-  const src = `https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=${zoom}&overlay=${overlay}&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&message=true`;
+function WindyEmbed({ lat, lon, overlay, product, level, zoom }: {
+  lat: number; lon: number; overlay: string; product: string; level: string; zoom: number;
+}) {
+  const src = `https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&message=true&pressure=true`;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-        {overlay === "temp" ? <Thermometer className="w-4 h-4" /> : <Wind className="w-4 h-4" />}
-        <span>{label}</span>
-      </div>
-      <div className="rounded-md border border-border overflow-hidden">
-        <iframe
-          title={label}
-          src={src}
-          className="w-full h-full min-h-[300px]"
-          frameBorder="0"
-          data-testid={`iframe-windy-${overlay}`}
-        />
-      </div>
-    </div>
+    <iframe
+      title={`${overlay}-${product}`}
+      src={src}
+      className="w-full h-full border-0"
+      frameBorder="0"
+    />
   );
 }
 
-function MessageBubble({ message, onLocationSelect }: { message: ChatMessage; onLocationSelect: (loc: GeocodeResult, name: string) => void }) {
-  const isUser = message.role === "user";
+function MarkdownContent({ content }: { content: string }) {
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`} data-testid={`message-${message.id}`}>
-      <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
-        <div
-          className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-            isUser
-              ? "bg-primary text-primary-foreground rounded-br-md"
-              : "bg-card text-card-foreground border border-border rounded-bl-md"
-          }`}
-        >
-          {message.content}
-        </div>
-        {message.location && (
-          <button
-            onClick={() => onLocationSelect(message.location!, message.content)}
-            className="mt-1.5 flex items-center gap-1.5 text-xs text-primary cursor-pointer hover:underline"
-            data-testid={`button-show-map-${message.id}`}
-          >
-            <MapPin className="w-3 h-3" />
-            Show on map
-          </button>
-        )}
-      </div>
-    </div>
-  );
+  const html = escape(content)
+    .replace(/### (.+)/g, '<h3 class="text-sm font-semibold mt-3 mb-1">$1</h3>')
+    .replace(/## (.+)/g, '<h2 class="text-sm font-bold mt-4 mb-1.5">$1</h2>')
+    .replace(/# (.+)/g, '<h1 class="text-base font-bold mt-4 mb-2">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n- /g, '\n<li class="ml-4 list-disc text-sm">')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+
+  return <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 export default function Home() {
@@ -63,52 +43,115 @@ export default function Home() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hello! Tell me a location and I'll show you the current weather maps. Try something like \"Vienna\", \"Rome\", or \"Munich\".",
+      content: "Hallo! Nenne mir einen Ort und ich zeige dir die aktuelle Wetterlage mit Analyse speziell für Segler. Probiere z.B. \"Punat, Kroatien\", \"Elba\" oder \"Rovinj\".",
     },
   ]);
   const [input, setInput] = useState("");
-  const [activeLocation, setActiveLocation] = useState<{ location: GeocodeResult; label: string } | null>(null);
+  const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const geocodeMutation = useMutation({
     mutationFn: async (location: string): Promise<GeocodeResult> => {
       const res = await apiRequest("POST", "/api/geocode", { location });
       return res.json();
     },
-    onSuccess: (data) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: `Found: ${data.displayName}`,
-          location: data,
-        },
-      ]);
-      setActiveLocation({ location: data, label: data.displayName });
+    onSuccess: (data, locationInput) => {
+      setActiveLocation(data);
+      streamWeatherAnalysis(data, locationInput);
     },
     onError: () => {
       setMessages((prev) => [
         ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: "Sorry, I couldn't find that location. Please try a different city or place name.",
-        },
+        { id: `err-${Date.now()}`, role: "assistant", content: "Diesen Ort konnte ich leider nicht finden. Bitte versuche einen anderen Namen." },
       ]);
     },
   });
+
+  const streamWeatherAnalysis = useCallback(async (location: GeocodeResult, userQuery: string) => {
+    setIsStreaming(true);
+    const assistantId = `assistant-${Date.now()}`;
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+    try {
+      abortRef.current = new AbortController();
+      const chatHistory = messages
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await fetch("/api/weather-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: location.lat,
+          lon: location.lon,
+          displayName: location.displayName,
+          message: `Analysiere die aktuelle Wetterlage für ${location.displayName}. Der Benutzer hat nach "${userQuery}" gefragt.`,
+          history: chatHistory,
+        }),
+        signal: abortRef.current.signal,
+      });
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) throw new Error("No reader");
+
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.content) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: m.content + data.content } : m
+                  )
+                );
+              }
+              if (data.error) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: "Fehler bei der Wetteranalyse. Bitte versuche es erneut." } : m
+                  )
+                );
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
+          )
+        );
+      }
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, geocodeMutation.isPending]);
+  }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || geocodeMutation.isPending) return;
+    if (!trimmed || geocodeMutation.isPending || isStreaming) return;
 
     setMessages((prev) => [
       ...prev,
@@ -118,35 +161,44 @@ export default function Home() {
     geocodeMutation.mutate(trimmed);
   };
 
-  const handleLocationSelect = (loc: GeocodeResult, label: string) => {
-    setActiveLocation({ location: loc, label: loc.displayName });
-  };
-
   return (
     <div className="flex h-screen bg-background">
-      <div className="flex flex-col w-[360px] min-w-[320px] border-r border-border bg-background">
+      <div className="flex flex-col w-[400px] min-w-[340px] border-r border-border bg-background">
         <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
           <div className="px-4 py-3 flex items-center gap-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10">
               <Cloud className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-base font-semibold" data-testid="text-app-title">Windy Weather</h1>
-              <p className="text-xs text-muted-foreground">Enter a location to see live weather</p>
+              <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
+              <p className="text-xs text-muted-foreground">KI-Meteorologe mit Windy-Karten</p>
             </div>
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto" ref={scrollRef}>
-          <div className="px-4 py-4">
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} onLocationSelect={handleLocationSelect} />
-            ))}
-            {geocodeMutation.isPending && (
-              <div className="flex justify-start mb-3">
+          <div className="px-4 py-4 space-y-3">
+            {messages.map((msg) => {
+              const isUser = msg.role === "user";
+              return (
+                <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
+                  <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
+                    <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      isUser
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-card text-card-foreground border border-border rounded-bl-md"
+                    }`}>
+                      {isUser ? msg.content : <MarkdownContent content={msg.content || (isStreaming && msg.content === "" ? "..." : "")} />}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {(geocodeMutation.isPending) && (
+              <div className="flex justify-start">
                 <div className="bg-card text-card-foreground border border-border rounded-2xl rounded-bl-md px-4 py-2.5 flex items-center gap-2 text-sm">
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  <span className="text-muted-foreground">Looking up...</span>
+                  <span className="text-muted-foreground">Ort suchen & Wetter laden...</span>
                 </div>
               </div>
             )}
@@ -160,16 +212,16 @@ export default function Home() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Enter a city or location..."
+                placeholder="Ort eingeben (z.B. Punat, Kroatien)..."
                 className="pl-9"
-                disabled={geocodeMutation.isPending}
+                disabled={geocodeMutation.isPending || isStreaming}
                 data-testid="input-location"
               />
             </div>
             <Button
               type="submit"
               size="icon"
-              disabled={!input.trim() || geocodeMutation.isPending}
+              disabled={!input.trim() || geocodeMutation.isPending || isStreaming}
               data-testid="button-send"
             >
               <Send className="w-4 h-4" />
@@ -181,27 +233,61 @@ export default function Home() {
       <div className="flex-1 flex flex-col bg-muted/30">
         {activeLocation ? (
           <div className="flex flex-col h-full">
-            <div className="px-5 py-3 border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+            <div className="px-5 py-2.5 border-b border-border bg-card/50 backdrop-blur-sm shrink-0 flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium" data-testid="text-active-location">{activeLocation.label}</span>
+                <span className="text-sm font-medium" data-testid="text-active-location">{activeLocation.displayName}</span>
               </div>
+              <span className="text-xs text-muted-foreground">
+                {activeLocation.lat.toFixed(2)}°N, {activeLocation.lon.toFixed(2)}°E
+              </span>
             </div>
-            <div className="flex-1 grid grid-rows-2 gap-4 p-4 overflow-y-auto">
-              <WindyEmbed
-                lat={activeLocation.location.lat}
-                lon={activeLocation.location.lon}
-                label="Temperature"
-                overlay="temp"
-                zoom={6}
-              />
-              <WindyEmbed
-                lat={activeLocation.location.lat}
-                lon={activeLocation.location.lon}
-                label="Wind"
-                overlay="wind"
-                zoom={6}
-              />
+
+            <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-0">
+              <div className="relative border-r border-b border-border">
+                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                  <Thermometer className="w-3 h-3 text-red-500" />
+                  Temperatur 850hPa - ECMWF
+                </div>
+                <WindyEmbed
+                  lat={50}
+                  lon={15}
+                  overlay="temp"
+                  product="ecmwf"
+                  level="850h"
+                  zoom={4}
+                />
+              </div>
+
+              <div className="relative border-b border-border">
+                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                  <Map className="w-3 h-3 text-blue-500" />
+                  KNMI Fronten-Analyse
+                </div>
+                <div className="w-full h-full flex items-center justify-center bg-white">
+                  <img
+                    src="/api/knmi-chart"
+                    alt="KNMI Weather Analysis Chart"
+                    className="max-w-full max-h-full object-contain"
+                    data-testid="img-knmi-chart"
+                  />
+                </div>
+              </div>
+
+              <div className="relative col-span-2 border-border">
+                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                  <Wind className="w-3 h-3 text-cyan-500" />
+                  Lokaler Wind - {activeLocation.regionalModelLabel}
+                </div>
+                <WindyEmbed
+                  lat={activeLocation.lat}
+                  lon={activeLocation.lon}
+                  overlay="wind"
+                  product={activeLocation.regionalModel}
+                  level="surface"
+                  zoom={activeLocation.regionalModelZoom}
+                />
+              </div>
             </div>
           </div>
         ) : (
@@ -211,8 +297,8 @@ export default function Home() {
                 <Cloud className="w-8 h-8 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground">No location selected</p>
-                <p className="text-xs text-muted-foreground mt-1">Type a city in the chat to see weather maps</p>
+                <p className="text-sm font-medium text-foreground">Kein Ort ausgewählt</p>
+                <p className="text-xs text-muted-foreground mt-1">Gib im Chat einen Ort ein, um Wetterkarten zu sehen</p>
               </div>
             </div>
           </div>
