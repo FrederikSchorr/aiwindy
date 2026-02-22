@@ -175,95 +175,87 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const sendMessage = useCallback(async (userMessage: string) => {
+  const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
     const statusId = `status-${Date.now()}`;
     const assistantId = `assistant-${Date.now()}`;
     setMessages((prev) => [...prev, { id: statusId, role: "assistant", content: "" }]);
     let contentStarted = false;
     const statusSteps: string[] = [];
+    let processed = 0;
 
-    try {
-      abortRef.current = new AbortController();
-      const chatHistory = messages
-        .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-"))
-        .map((m) => ({ role: m.role, content: m.content }));
+    const chatHistory = messages
+      .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-"))
+      .map((m) => ({ role: m.role, content: m.content }));
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage,
-          history: chatHistory,
-          currentLocation: activeLocation,
-        }),
-        signal: abortRef.current.signal,
-      });
+    const xhr = new XMLHttpRequest();
+    abortRef.current = { abort: () => xhr.abort() } as AbortController;
+    xhr.open("POST", "/api/chat");
+    xhr.setRequestHeader("Content-Type", "application/json");
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) throw new Error("No reader");
-
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.location) {
-                setActiveLocation(data.location as GeocodeResult);
-              }
-              if (data.status) {
-                statusSteps.push(data.status);
-                const combined = statusSteps.join("\n");
+    const processChunk = () => {
+      const text = xhr.responseText.slice(processed);
+      processed = xhr.responseText.length;
+      const lines = text.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.location) {
+              setActiveLocation(data.location as GeocodeResult);
+            }
+            if (data.status) {
+              statusSteps.push(data.status);
+              const combined = statusSteps.join("\n");
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === statusId ? { ...m, content: combined } : m
+                )
+              );
+            }
+            if (data.content) {
+              if (!contentStarted) {
+                contentStarted = true;
+                setMessages((prev) => [...prev, { id: assistantId, role: "assistant" as const, content: data.content }]);
+              } else {
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === statusId ? { ...m, content: combined } : m
+                    m.id === assistantId ? { ...m, content: m.content + data.content } : m
                   )
                 );
               }
-              if (data.content) {
-                if (!contentStarted) {
-                  contentStarted = true;
-                  setMessages((prev) => [...prev, { id: assistantId, role: "assistant" as const, content: data.content }]);
-                } else {
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId ? { ...m, content: m.content + data.content } : m
-                    )
-                  );
-                }
-              }
-              if (data.error) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === statusId ? { ...m, content: "Fehler bei der Wetteranalyse. Bitte versuche es erneut." } : m
-                  )
-                );
-              }
-            } catch {}
-          }
+            }
+            if (data.error) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === statusId ? { ...m, content: "Fehler bei der Wetteranalyse. Bitte versuche es erneut." } : m
+                )
+              );
+            }
+          } catch {}
         }
       }
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === statusId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
-          )
-        );
-      }
-    } finally {
+    };
+
+    xhr.onprogress = processChunk;
+    xhr.onloadend = () => {
+      processChunk();
       setIsStreaming(false);
-    }
+    };
+    xhr.onerror = () => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === statusId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
+        )
+      );
+      setIsStreaming(false);
+    };
+
+    xhr.send(JSON.stringify({
+      message: userMessage,
+      history: chatHistory,
+      currentLocation: activeLocation,
+    }));
   }, [messages, activeLocation]);
 
   useEffect(() => {

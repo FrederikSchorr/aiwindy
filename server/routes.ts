@@ -419,10 +419,10 @@ export async function registerRoutes(
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
+    if (req.socket) req.socket.setNoDelay(true);
 
     const sendSSE = (data: Record<string, unknown>) => {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
-      if (typeof (res as any).flush === "function") (res as any).flush();
     };
 
     try {
