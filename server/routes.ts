@@ -2,14 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { geocodeRequestSchema } from "@shared/schema";
 import type { ForecastHour } from "@shared/schema";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
@@ -56,24 +53,17 @@ Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "ICON-D2 (2.2km)
 
 async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
   try {
-    const result = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{
-        role: "user",
-        parts: [{ text: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` }],
-      }],
-      config: {
-        systemInstruction: MODEL_SELECTION_PROMPT,
-        maxOutputTokens: 8192,
-        temperature: 0,
-      },
+    const result = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: MODEL_SELECTION_PROMPT },
+        { role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` },
+      ],
+      max_completion_tokens: 256,
+      temperature: 0,
     });
 
-    let text = "";
-    try { text = result.text?.trim() || ""; } catch {}
-    if (!text) {
-      try { text = (result as any).candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ""; } catch {}
-    }
+    const text = result.choices[0]?.message?.content?.trim() || "";
     const jsonMatch = text.match(/\{[^}]+\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -348,17 +338,16 @@ Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. 
 `;
 
       const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
-        role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.content }],
+        role: m.role as "user" | "assistant",
+        content: m.content,
       }));
 
-      const contents = [
+      const messages: OpenAI.ChatCompletionMessageParam[] = [
+        { role: "system", content: METEOROLOGIST_SYSTEM_PROMPT },
         ...chatHistory,
         {
           role: "user",
-          parts: [{
-            text: `${message}\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`
-          }],
+          content: `${message}\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`,
         },
       ];
 
@@ -366,18 +355,16 @@ Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. 
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      const stream = await ai.models.generateContentStream({
-        model: "gemini-2.5-pro",
-        contents,
-        config: {
-          systemInstruction: METEOROLOGIST_SYSTEM_PROMPT,
-          maxOutputTokens: 8192,
-          temperature: 0.3,
-        },
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages,
+        max_completion_tokens: 8192,
+        temperature: 0.3,
+        stream: true,
       });
 
       for await (const chunk of stream) {
-        const text = chunk.text || "";
+        const text = chunk.choices[0]?.delta?.content || "";
         if (text) {
           res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
         }
