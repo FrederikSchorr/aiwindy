@@ -478,7 +478,7 @@ export default function Home() {
 
             <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
               <a
-                href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen"
+                href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
