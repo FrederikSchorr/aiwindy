@@ -358,9 +358,17 @@ export default function Home() {
               return (
                 <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
                   <div className="max-w-[90%]">
-                    <div className="px-3 py-2 space-y-1">
+                    <div className="px-3 py-2 space-y-0.5">
                       {steps.map((step, i) => {
-                        const isLast = i === steps.length - 1;
+                        const isSub = step.startsWith("  - ");
+                        if (isSub) {
+                          return (
+                            <div key={i} className="ml-5 text-xs text-muted-foreground">
+                              <MarkdownContent content={step.slice(4)} />
+                            </div>
+                          );
+                        }
+                        const isLast = i === steps.length - 1 && !steps[i + 1]?.startsWith("  - ");
                         const isActive = isLast && isStreaming;
                         return (
                           <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
@@ -587,9 +595,17 @@ export default function Home() {
                     return (
                       <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
                         <div className="max-w-[90%]">
-                          <div className="px-3 py-2 space-y-1">
+                          <div className="px-3 py-2 space-y-0.5">
                             {steps.map((step, i) => {
-                              const isLast = i === steps.length - 1;
+                              const isSub = step.startsWith("  - ");
+                              if (isSub) {
+                                return (
+                                  <div key={i} className="ml-5 text-xs text-muted-foreground">
+                                    <MarkdownContent content={step.slice(4)} />
+                                  </div>
+                                );
+                              }
+                              const isLast = i === steps.length - 1 && !steps[i + 1]?.startsWith("  - ");
                               const isActive = isLast && isStreaming;
                               return (
                                 <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>

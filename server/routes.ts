@@ -449,7 +449,11 @@ export async function registerRoutes(
           location = geocoded;
           isNewLocation = true;
           sendSSE({ location: geocoded });
-          sendSSE({ status: `Karten geladen — Modell: **${geocoded.regionalModelLabel}**` });
+          const windyBase = `https://www.windy.com`;
+          const windyTemp = `${windyBase}/-temp-850h?ecmwf,55.000,-10.000,3`;
+          const windyWind = `${windyBase}/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
+          const knmiUrl = `https://cdn.knmi.nl/knmi/map/page/weer/actueel-weer/analyse.gif`;
+          sendSSE({ status: `Karten geladen — Modell: **${geocoded.regionalModelLabel}**\n  - [🌡️ 850hPa Synoptik → Windy](${windyTemp})\n  - [🌀 KNMI Fronten-Analyse](${knmiUrl})\n  - [💨 ${geocoded.regionalModelLabel} Wind → Windy](${windyWind})` });
         } else {
           sendSSE({ status: `Ort "${locationResult}" konnte nicht gefunden werden` });
           if (!location) {
