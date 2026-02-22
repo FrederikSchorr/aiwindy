@@ -184,6 +184,16 @@ export default function Home() {
     },
     onSuccess: (data, locationInput) => {
       setActiveLocation(data);
+      const locationShort = data.displayName.split(",")[0].trim();
+      const statusId = `status-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: statusId,
+          role: "assistant",
+          content: `Wetterbilder von Windy.com und KNMI geladen. Für **${locationShort}** das lokale Modell **${data.regionalModelLabel}** verwendet.`,
+        },
+      ]);
       streamWeatherAnalysis(data, locationInput);
     },
     onError: () => {
@@ -196,8 +206,10 @@ export default function Home() {
 
   const streamWeatherAnalysis = useCallback(async (location: GeocodeResult, userQuery: string) => {
     setIsStreaming(true);
+    const locationShort = location.displayName.split(",")[0].trim();
     const assistantId = `assistant-${Date.now()}`;
-    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+    const prefix = `*Analysiere die Großwetterlage und Auswirkung auf ${locationShort}...*\n\n`;
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: prefix }]);
 
     try {
       abortRef.current = new AbortController();
