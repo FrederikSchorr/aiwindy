@@ -416,38 +416,45 @@ export async function registerRoutes(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const sendSSE = (data: Record<string, unknown>) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (typeof (res as any).flush === "function") (res as any).flush();
+    };
 
     try {
-      res.write(`data: ${JSON.stringify({ status: "Analysiere Nachricht..." })}\n\n`);
+      sendSSE({ status: "Analysiere Nachricht..." });
       const locationResult = await extractLocation(message);
 
       let location = currentLocation as { lat: number; lon: number; displayName: string; regionalModel: string; regionalModelLabel: string; regionalModelZoom: number; countryCode?: string; warningUrl?: string; warningLabel?: string } | null;
       let isNewLocation = false;
 
       if (locationResult) {
-        res.write(`data: ${JSON.stringify({ status: `Ort erkannt: **${locationResult}** — Suche Koordinaten...` })}\n\n`);
+        sendSSE({ status: `Ort erkannt: **${locationResult}** — Suche Koordinaten...` });
         const geocoded = await geocodeLocation(locationResult);
         if (geocoded) {
           location = geocoded;
           isNewLocation = true;
-          res.write(`data: ${JSON.stringify({ location: geocoded })}\n\n`);
-          res.write(`data: ${JSON.stringify({ status: `Karten geladen — Modell: **${geocoded.regionalModelLabel}**` })}\n\n`);
+          sendSSE({ location: geocoded });
+          sendSSE({ status: `Karten geladen — Modell: **${geocoded.regionalModelLabel}**` });
         }
       }
 
       if (!location) {
-        res.write(`data: ${JSON.stringify({ content: "Bitte nenne einen Ort, damit ich die Wetterlage analysieren kann. Zum Beispiel: \"Wie ist das Wetter in Punat?\" oder einfach \"Rovinj\"." })}\n\n`);
-        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        sendSSE({ content: "Bitte nenne einen Ort, damit ich die Wetterlage analysieren kann. Zum Beispiel: \"Wie ist das Wetter in Punat?\" oder einfach \"Rovinj\"." });
+        sendSSE({ done: true });
         res.end();
         return;
       }
 
       const locationShort = location.displayName.split(",")[0].trim();
-      res.write(`data: ${JSON.stringify({ status: `Lade Wetterdaten für ${locationShort}...` })}\n\n`);
+      sendSSE({ status: `Lade Wetterdaten für ${locationShort}...` });
 
       const weatherContext = await fetchWeatherContext(location.lat, location.lon, location.displayName);
 
-      res.write(`data: ${JSON.stringify({ status: isNewLocation ? `Erstelle Wetteranalyse für ${locationShort}...` : `Beantworte Frage zu ${locationShort}...` })}\n\n`);
+      sendSSE({ status: isNewLocation ? `Erstelle Wetteranalyse für ${locationShort}...` : `Beantworte Frage zu ${locationShort}...` });
       const regional = getRegionalModelFallback(location.lat, location.lon);
 
       const mapContext = `
@@ -493,16 +500,16 @@ Verwende "${location.displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel
       for await (const chunk of stream) {
         const text = chunk.choices[0]?.delta?.content || "";
         if (text) {
-          res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+          sendSSE({ content: text });
         }
       }
 
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      sendSSE({ done: true });
       res.end();
     } catch (error) {
       console.error("Chat error:", error);
       if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: "Fehler bei der Wetteranalyse" })}\n\n`);
+        sendSSE({ error: "Fehler bei der Wetteranalyse" });
         res.end();
       } else {
         res.status(500).json({ error: "Failed to process chat message" });
