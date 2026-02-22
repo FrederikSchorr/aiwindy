@@ -399,7 +399,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative flex-1 min-h-[250px]">
+              <div className="relative min-h-[375px]" style={{ aspectRatio: "3/2" }}>
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Wind className="w-3 h-3 text-cyan-500" />
                   Lokaler Wind - {activeLocation.regionalModelLabel}
