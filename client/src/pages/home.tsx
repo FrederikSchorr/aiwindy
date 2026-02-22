@@ -163,7 +163,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-background">
-      <div className="flex flex-col w-[400px] min-w-[340px] border-r border-border bg-background">
+      <div className="flex flex-col w-1/2 border-r border-border bg-background">
         <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
           <div className="px-4 py-3 flex items-center gap-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10">
