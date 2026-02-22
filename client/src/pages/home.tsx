@@ -250,12 +250,12 @@ export default function Home() {
                   Temperatur 850hPa - ECMWF
                 </div>
                 <WindyEmbed
-                  lat={50}
-                  lon={15}
+                  lat={55}
+                  lon={-10}
                   overlay="temp"
                   product="ecmwf"
                   level="850h"
-                  zoom={4}
+                  zoom={3}
                 />
               </div>
 
