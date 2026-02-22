@@ -325,7 +325,18 @@ export default function Home() {
                         ? "bg-primary text-primary-foreground rounded-br-md"
                         : "bg-card text-card-foreground border border-border rounded-bl-md"
                     }`}>
-                      {isUser ? msg.content : <MarkdownContent content={msg.content || (isStreaming && msg.content === "" ? "..." : "")} />}
+                      {isUser ? msg.content : (
+                        <>
+                          <MarkdownContent content={msg.content || (isStreaming && msg.content === "" ? "..." : "")} />
+                          {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && (
+                            <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                            </span>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
