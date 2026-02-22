@@ -431,30 +431,17 @@ export default function Home() {
               </div>
 
               {activeLocation.warningUrl && (
-                <div className="relative flex-1 min-h-[250px]">
-                  <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
-                    <AlertTriangle className="w-3 h-3 text-amber-500" />
-                    Wetterwarnungen - {activeLocation.warningLabel}
-                  </div>
-                  <a
-                    href={activeLocation.warningUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background/95 transition-colors"
-                    data-testid="link-warning-external"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    Öffnen
-                  </a>
-                  <iframe
-                    title="Weather Warnings"
-                    src={activeLocation.warningUrl}
-                    className="w-full h-full border-0"
-                    frameBorder="0"
-                    sandbox="allow-scripts allow-same-origin"
-                    data-testid="iframe-warnings"
-                  />
-                </div>
+                <a
+                  href={activeLocation.warningUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card hover:bg-accent transition-colors text-sm"
+                  data-testid="link-warning-external"
+                >
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>Wetterwarnungen — {activeLocation.warningLabel}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground ml-auto shrink-0" />
+                </a>
               )}
             </div>
           </div>
