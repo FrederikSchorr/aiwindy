@@ -193,7 +193,7 @@ const WARNING_SERVICES: Record<string, { url: string; label: string }> = {
   FR: { url: "https://vigilance.meteofrance.fr/fr", label: "Météo-France" },
   NL: { url: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen", label: "KNMI Niederlande" },
   GB: { url: "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings", label: "Met Office UK" },
-  GR: { url: "http://www.emy.gr/emy/en/warning/warning", label: "EMY Griechenland" },
+  GR: { url: "https://emy.gr/en/warnings", label: "EMY Griechenland" },
   SI: { url: "https://meteo.arso.gov.si/met/sl/warning/", label: "ARSO Slowenien" },
   ES: { url: "https://www.aemet.es/es/eltiempo/prediccion/avisos", label: "AEMET Spanien" },
   PT: { url: "https://www.ipma.pt/en/otempo/prev.am.geral/", label: "IPMA Portugal" },
