@@ -369,7 +369,7 @@ export default function Home() {
             </div>
 
             <div className="flex-1 flex flex-col overflow-y-auto">
-              <div className="relative flex-1 min-h-[250px] border-b border-border">
+              <div className="relative min-h-[375px] border-b border-border" style={{ aspectRatio: "3/2" }}>
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Thermometer className="w-3 h-3 text-red-500" />
                   Temperatur 850hPa - ECMWF
