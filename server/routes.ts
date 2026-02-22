@@ -162,10 +162,20 @@ SCHWERPUNKT dieses Kapitels: Regionale und lokale Windphänomene! Das ist der wi
 STIL-REGELN:
 - Deutsch, sachlich-professionell, KEINE informellen Anreden oder Floskeln
 - Bullet-Point-Stil bevorzugen, Fließtext minimieren
-- Bezug auf die angezeigten Karten ("850hPa-Karte:", "KNMI-Frontenkarte:", "Lokales Windmodell:")
+- AKTIVER KARTENBEZUG: Verweise gezielt auf die rechts angezeigten Karten! Formulierungen wie:
+  - "→ In der 850hPa-Karte gut erkennbar: violette Kaltluft-Zunge aus NE..."
+  - "→ Auf der KNMI-Frontenkarte: Kaltfront erstreckt sich von..."
+  - "→ Im lokalen Windmodell (ICON-D2) sichtbar: Düseneffekt zwischen..."
+  - "→ In der Windy-Vorhersage zeigt sich ab morgen..."
+  Diese Verweise helfen dem Benutzer, die Analyse mit den Karten abzugleichen.
 - Konkrete Zahlen aus den Daten, KEINE halluzinierten Werte
 - Windangaben: kt / Bft (z.B. "12 kt / 4 Bft")
-- Druckangaben: hPa`;
+- Druckangaben: hPa
+
+ABSCHLUSS:
+- Am Ende der Analyse IMMER eine kurze Aufforderung an den Benutzer, z.B.:
+  "---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern nachfragen."
+  oder: "---\n**Fragen?** Zu bestimmten Revieren, Zeitfenstern oder Segelbedingungen gerne nachfragen."`;
 
 const WARNING_SERVICES: Record<string, { url: string; label: string }> = {
   HR: { url: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja", label: "DHMZ Kroatien" },
