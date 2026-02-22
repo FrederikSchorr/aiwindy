@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, Check } from "lucide-react";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, Check, MessageSquare, BarChart3 } from "lucide-react";
 import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -213,6 +213,7 @@ function MarkdownContent({ content }: { content: string }) {
 }
 
 export default function Home() {
+  const [mobileTab, setMobileTab] = useState<"chat" | "maps">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -224,6 +225,7 @@ export default function Home() {
   const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const sendMessage = useCallback((userMessage: string) => {
@@ -313,6 +315,9 @@ export default function Home() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    if (mobileScrollRef.current) {
+      mobileScrollRef.current.scrollTop = mobileScrollRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -328,191 +333,329 @@ export default function Home() {
     sendMessage(trimmed);
   };
 
-  return (
-    <div className="flex h-screen bg-background">
-      <div className="flex flex-col w-1/2 border-r border-border bg-background">
-        <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
-          <div className="px-4 py-3 flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10">
-              <Cloud className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
-              <p className="text-xs text-muted-foreground">AI-Meteorologe mit Windy-Karten</p>
-            </div>
+  const chatPanel = (
+    <>
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10">
+            <Cloud className="w-5 h-5 text-primary" />
           </div>
-        </header>
+          <div>
+            <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
+            <p className="text-xs text-muted-foreground">AI-Meteorologe mit Windy-Karten</p>
+          </div>
+        </div>
+      </header>
 
-        <div className="flex-1 overflow-y-auto" ref={scrollRef}>
-          <div className="px-4 py-4 space-y-3">
-            {messages.map((msg) => {
-              const isUser = msg.role === "user";
-              const isStatus = msg.id.startsWith("status-");
-              if (isStatus) {
-                if (!msg.content && !isStreaming) return null;
-                const steps = (msg.content || "...").split("\n").filter(Boolean);
-                return (
-                  <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
-                    <div className="max-w-[90%]">
-                      <div className="px-3 py-2 space-y-1">
-                        {steps.map((step, i) => {
-                          const isLast = i === steps.length - 1;
-                          const isActive = isLast && isStreaming;
-                          return (
-                            <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
-                              {isActive ? (
-                                <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
-                              ) : (
-                                <Check className="w-3 h-3 text-green-500 shrink-0" />
-                              )}
-                              <MarkdownContent content={step} />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
+      <div className="flex-1 overflow-y-auto" ref={scrollRef}>
+        <div className="px-4 py-4 space-y-3">
+          {messages.map((msg) => {
+            const isUser = msg.role === "user";
+            const isStatus = msg.id.startsWith("status-");
+            if (isStatus) {
+              if (!msg.content && !isStreaming) return null;
+              const steps = (msg.content || "...").split("\n").filter(Boolean);
               return (
-                <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
-                  <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
-                    <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      isUser
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-card text-card-foreground border border-border rounded-bl-md"
-                    }`}>
-                      {isUser ? msg.content : (
-                        <>
-                          <MarkdownContent content={msg.content} />
-                          {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && !isStatus && (
-                            <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                            </span>
-                          )}
-                        </>
-                      )}
+                <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
+                  <div className="max-w-[90%]">
+                    <div className="px-3 py-2 space-y-1">
+                      {steps.map((step, i) => {
+                        const isLast = i === steps.length - 1;
+                        const isActive = isLast && isStreaming;
+                        return (
+                          <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                            {isActive ? (
+                              <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
+                            ) : (
+                              <Check className="w-3 h-3 text-green-500 shrink-0" />
+                            )}
+                            <MarkdownContent content={step} />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               );
-            })}
-          </div>
-        </div>
-
-        <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
-          <form onSubmit={handleSubmit} className="px-4 py-3 flex items-center gap-2">
-            <div className="relative flex-1">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={activeLocation ? "Frage stellen oder neuen Ort eingeben..." : "Ort eingeben, z.B. \"Wie ist das Wetter in Punat?\""}
-                className="pl-9"
-                disabled={isStreaming}
-                data-testid="input-location"
-              />
-            </div>
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!input.trim() || isStreaming}
-              data-testid="button-send"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </form>
+            }
+            return (
+              <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
+                <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
+                  <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    isUser
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-card text-card-foreground border border-border rounded-bl-md"
+                  }`}>
+                    {isUser ? msg.content : (
+                      <>
+                        <MarkdownContent content={msg.content} />
+                        {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && !isStatus && (
+                          <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-muted/30">
-        {activeLocation ? (
-          <div className="flex flex-col h-full">
-            <div className="px-5 py-2.5 border-b border-border bg-card/50 backdrop-blur-sm shrink-0 flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium" data-testid="text-active-location">{activeLocation.displayName}</span>
+      <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
+        <form onSubmit={handleSubmit} className="px-4 py-3 flex items-center gap-2">
+          <div className="relative flex-1">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={activeLocation ? "Frage stellen oder neuen Ort eingeben..." : "Ort eingeben, z.B. \"Punat\""}
+              className="pl-9"
+              disabled={isStreaming}
+              data-testid="input-location"
+            />
+          </div>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!input.trim() || isStreaming}
+            data-testid="button-send"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </form>
+      </div>
+    </>
+  );
+
+  const mapsPanel = (
+    <>
+      {activeLocation ? (
+        <div className="flex flex-col h-full">
+          <div className="px-5 py-2.5 border-b border-border bg-card/50 backdrop-blur-sm shrink-0 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium" data-testid="text-active-location">{activeLocation.displayName}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {activeLocation.lat.toFixed(2)}°N, {activeLocation.lon.toFixed(2)}°E
+            </span>
+          </div>
+
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border" style={{ aspectRatio: "3/2" }}>
+              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                <Thermometer className="w-3 h-3 text-red-500" />
+                Temperatur 850hPa - ECMWF
               </div>
-              <span className="text-xs text-muted-foreground">
-                {activeLocation.lat.toFixed(2)}°N, {activeLocation.lon.toFixed(2)}°E
-              </span>
+              <WindyEmbed
+                lat={55}
+                lon={-10}
+                overlay="temp"
+                product="ecmwf"
+                level="850h"
+                zoom={3}
+              />
             </div>
 
-            <div className="flex-1 flex flex-col overflow-y-auto">
-              <div className="relative min-h-[375px] border-b border-border" style={{ aspectRatio: "3/2" }}>
-                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
-                  <Thermometer className="w-3 h-3 text-red-500" />
-                  Temperatur 850hPa - ECMWF
-                </div>
-                <WindyEmbed
-                  lat={55}
-                  lon={-10}
-                  overlay="temp"
-                  product="ecmwf"
-                  level="850h"
-                  zoom={3}
-                />
+            <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
+              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                <Map className="w-3 h-3 text-blue-500" />
+                KNMI Fronten-Analyse
               </div>
+              <img
+                src="/api/knmi-chart"
+                alt="KNMI Weather Analysis Chart"
+                className="w-full h-full object-contain bg-white"
+                data-testid="img-knmi-chart"
+              />
+            </div>
 
-              <div className="relative min-h-[375px] border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
-                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
-                  <Map className="w-3 h-3 text-blue-500" />
-                  KNMI Fronten-Analyse
-                </div>
-                <img
-                  src="/api/knmi-chart"
-                  alt="KNMI Weather Analysis Chart"
-                  className="w-full h-full object-contain bg-white"
-                  data-testid="img-knmi-chart"
-                />
+            <div className="relative min-h-[250px] md:min-h-[375px]" style={{ aspectRatio: "3/2" }}>
+              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                <Wind className="w-3 h-3 text-cyan-500" />
+                Lokaler Wind - {activeLocation.regionalModelLabel}
               </div>
+              <WindyEmbed
+                lat={activeLocation.lat}
+                lon={activeLocation.lon}
+                overlay="wind"
+                product={activeLocation.regionalModel}
+                level="surface"
+                zoom={activeLocation.regionalModelZoom}
+              />
+            </div>
 
-              <div className="relative min-h-[375px]" style={{ aspectRatio: "3/2" }}>
-                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
-                  <Wind className="w-3 h-3 text-cyan-500" />
-                  Lokaler Wind - {activeLocation.regionalModelLabel}
-                </div>
-                <WindyEmbed
-                  lat={activeLocation.lat}
-                  lon={activeLocation.lon}
-                  overlay="wind"
-                  product={activeLocation.regionalModel}
-                  level="surface"
-                  zoom={activeLocation.regionalModelZoom}
-                />
+            <div className="relative flex-1 min-h-[250px]">
+              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                <Navigation className="w-3 h-3 text-emerald-500" />
+                Vorhersage - {activeLocation.regionalModelLabel}
               </div>
+              <WindyEmbed
+                lat={activeLocation.lat}
+                lon={activeLocation.lon}
+                overlay="wind"
+                product={activeLocation.regionalModel}
+                level="surface"
+                zoom={activeLocation.regionalModelZoom}
+                forecast={true}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mx-auto">
+              <Cloud className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Kein Ort ausgewählt</p>
+              <p className="text-xs text-muted-foreground mt-1">Gib im Chat einen Ort ein, um Wetterkarten zu sehen</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
-              <div className="relative flex-1 min-h-[250px]">
-                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
-                  <Navigation className="w-3 h-3 text-emerald-500" />
-                  Vorhersage - {activeLocation.regionalModelLabel}
-                </div>
-                <WindyEmbed
-                  lat={activeLocation.lat}
-                  lon={activeLocation.lon}
-                  overlay="wind"
-                  product={activeLocation.regionalModel}
-                  level="surface"
-                  zoom={activeLocation.regionalModelZoom}
-                  forecast={true}
-                />
+  return (
+    <div className="flex flex-col md:flex-row h-screen bg-background">
+      <div className="hidden md:flex md:flex-col md:w-1/2 border-r border-border bg-background">
+        {chatPanel}
+      </div>
+      <div className="hidden md:flex md:flex-1 md:flex-col bg-muted/30">
+        {mapsPanel}
+      </div>
+
+      <div className="flex flex-col h-screen md:hidden">
+        <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+          <div className="px-4 py-2 flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
+              <Cloud className="w-4 h-4 text-primary" />
+            </div>
+            <h1 className="text-sm font-semibold flex-1">Segelwetter</h1>
+            {activeLocation && (
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">{activeLocation.displayName}</span>
+            )}
+          </div>
+          <div className="flex">
+            <button
+              onClick={() => setMobileTab("chat")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 transition-colors ${
+                mobileTab === "chat"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="tab-chat"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Chat
+            </button>
+            <button
+              onClick={() => setMobileTab("maps")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 transition-colors ${
+                mobileTab === "maps"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="tab-maps"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Karten
+              {activeLocation && (
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {mobileTab === "chat" ? (
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto" ref={mobileScrollRef}>
+              <div className="px-4 py-4 space-y-3">
+                {messages.map((msg) => {
+                  const isUser = msg.role === "user";
+                  const isStatus = msg.id.startsWith("status-");
+                  if (isStatus) {
+                    if (!msg.content && !isStreaming) return null;
+                    const steps = (msg.content || "...").split("\n").filter(Boolean);
+                    return (
+                      <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
+                        <div className="max-w-[90%]">
+                          <div className="px-3 py-2 space-y-1">
+                            {steps.map((step, i) => {
+                              const isLast = i === steps.length - 1;
+                              const isActive = isLast && isStreaming;
+                              return (
+                                <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                                  {isActive ? (
+                                    <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
+                                  ) : (
+                                    <Check className="w-3 h-3 text-green-500 shrink-0" />
+                                  )}
+                                  <MarkdownContent content={step} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
+                      <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
+                        <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                          isUser
+                            ? "bg-primary text-primary-foreground rounded-br-md"
+                            : "bg-card text-card-foreground border border-border rounded-bl-md"
+                        }`}>
+                          {isUser ? msg.content : (
+                            <>
+                              <MarkdownContent content={msg.content} />
+                              {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && !isStatus && (
+                                <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-
+            </div>
+            <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
+              <form onSubmit={handleSubmit} className="px-3 py-2 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={activeLocation ? "Frage oder neuer Ort..." : "Ort eingeben, z.B. \"Punat\""}
+                    className="pl-9 text-sm"
+                    disabled={isStreaming}
+                    data-testid="input-location-mobile"
+                  />
+                </div>
+                <Button type="submit" size="icon" disabled={!input.trim() || isStreaming} data-testid="button-send-mobile">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-3">
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mx-auto">
-                <Cloud className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">Kein Ort ausgewählt</p>
-                <p className="text-xs text-muted-foreground mt-1">Gib im Chat einen Ort ein, um Wetterkarten zu sehen</p>
-              </div>
-            </div>
+          <div className="flex-1 flex flex-col overflow-y-auto bg-muted/30 min-h-0">
+            {mapsPanel}
           </div>
         )}
       </div>
