@@ -37,3 +37,18 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+export interface ForecastHour {
+  time: string;
+  temp: number;
+  rain: number;
+  windSpeed: number;
+  windGusts: number;
+  windDir: number;
+  weatherCode: number;
+}
+
+export interface ForecastData {
+  hours: ForecastHour[];
+  timezone: string;
+}

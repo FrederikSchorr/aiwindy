@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { geocodeRequestSchema } from "@shared/schema";
+import type { ForecastHour } from "@shared/schema";
 import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({
@@ -234,6 +235,35 @@ export async function registerRoutes(
       return res.send(buffer);
     } catch {
       return res.status(500).json({ error: "Failed to fetch KNMI chart" });
+    }
+  });
+
+  app.post("/api/forecast", async (req, res) => {
+    const { lat, lon } = req.body;
+    if (!lat || !lon) {
+      return res.status(400).json({ error: "lat and lon required" });
+    }
+
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto&forecast_days=5`;
+      const meteoRes = await fetch(url);
+      if (!meteoRes.ok) {
+        return res.status(502).json({ error: "Forecast service unavailable" });
+      }
+      const data = await meteoRes.json();
+      const hours: ForecastHour[] = (data.hourly?.time || []).map((t: string, i: number) => ({
+        time: t,
+        temp: data.hourly.temperature_2m?.[i] ?? 0,
+        rain: data.hourly.precipitation?.[i] ?? 0,
+        windSpeed: Math.round(data.hourly.wind_speed_10m?.[i] ?? 0),
+        windGusts: Math.round(data.hourly.wind_gusts_10m?.[i] ?? 0),
+        windDir: data.hourly.wind_direction_10m?.[i] ?? 0,
+        weatherCode: data.hourly.weather_code?.[i] ?? 0,
+      }));
+
+      return res.json({ hours, timezone: data.timezone || "UTC" });
+    } catch {
+      return res.status(500).json({ error: "Failed to fetch forecast" });
     }
   });
 

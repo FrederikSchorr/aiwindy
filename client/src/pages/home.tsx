@@ -3,8 +3,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map } from "lucide-react";
-import type { ChatMessage, GeocodeResult } from "@shared/schema";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation } from "lucide-react";
+import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom }: {
   lat: number; lon: number; overlay: string; product: string; level: string; zoom: number;
@@ -18,6 +18,130 @@ function WindyEmbed({ lat, lon, overlay, product, level, zoom }: {
       className="w-full h-full border-0"
       frameBorder="0"
     />
+  );
+}
+
+function weatherIcon(code: number): string {
+  if (code === 0) return "☀️";
+  if (code <= 3) return "⛅";
+  if (code <= 48) return "🌫️";
+  if (code <= 55) return "🌦️";
+  if (code <= 57) return "🌧️";
+  if (code <= 65) return "🌧️";
+  if (code <= 67) return "🌨️";
+  if (code <= 75) return "❄️";
+  if (code <= 77) return "🌨️";
+  if (code <= 82) return "🌧️";
+  if (code <= 86) return "❄️";
+  if (code <= 99) return "⛈️";
+  return "❓";
+}
+
+function windDirArrow(deg: number): string {
+  const arrows = ["↓", "↙", "←", "↖", "↑", "↗", "→", "↘"];
+  return arrows[Math.round(deg / 45) % 8];
+}
+
+function windColor(kt: number): string {
+  if (kt < 5) return "text-gray-400";
+  if (kt < 10) return "text-green-500";
+  if (kt < 15) return "text-yellow-500";
+  if (kt < 20) return "text-orange-500";
+  if (kt < 25) return "text-red-500";
+  return "text-red-700 font-bold";
+}
+
+function gustColor(kt: number): string {
+  if (kt < 10) return "text-gray-400";
+  if (kt < 15) return "text-yellow-500";
+  if (kt < 20) return "text-orange-500";
+  if (kt < 25) return "text-red-500";
+  return "text-red-700 font-bold";
+}
+
+function ForecastStrip({ lat, lon }: { lat: number; lon: number }) {
+  const [forecast, setForecast] = useState<ForecastData | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/forecast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat, lon }),
+        });
+        if (res.ok && !cancelled) {
+          setForecast(await res.json());
+        }
+      } catch {}
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [lat, lon]);
+
+  if (!forecast) {
+    return (
+      <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
+        <Loader2 className="w-3 h-3 animate-spin" /> Vorhersage laden...
+      </div>
+    );
+  }
+
+  const dayGroups: { label: string; hours: (ForecastHour & { h: number })[] }[] = [];
+  const dayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  let currentDay = "";
+
+  for (const hour of forecast.hours) {
+    const d = new Date(hour.time);
+    const dayKey = d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric" });
+    if (dayKey !== currentDay) {
+      currentDay = dayKey;
+      dayGroups.push({ label: `${dayNames[d.getDay()]} ${d.getDate()}.`, hours: [] });
+    }
+    dayGroups[dayGroups.length - 1].hours.push({ ...hour, h: d.getHours() });
+  }
+
+  return (
+    <div className="border-t border-border bg-card" data-testid="forecast-strip">
+      <div className="overflow-x-auto" ref={scrollRef}>
+        <div className="inline-flex min-w-full">
+          <div className="sticky left-0 z-10 bg-card border-r border-border shrink-0 text-[10px]">
+            <div className="h-5 px-1.5 flex items-center font-medium text-muted-foreground border-b border-border/50">Stunden</div>
+            <div className="h-5 px-1.5 flex items-center border-b border-border/50"></div>
+            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Temp °C</div>
+            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Regen mm</div>
+            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Wind kt</div>
+            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Böen kt</div>
+            <div className="h-5 px-1.5 flex items-center text-muted-foreground">Richtung</div>
+          </div>
+
+          {dayGroups.map((day) => (
+            <div key={day.label} className="border-r border-border/30">
+              <div className="text-[10px] font-medium text-center px-1 h-5 flex items-center justify-center bg-muted/50 border-b border-border/50 whitespace-nowrap" style={{ gridColumn: `span ${day.hours.length}` }}>
+                {day.label}
+              </div>
+              <div className="flex">
+                {day.hours.filter((_, i) => i % 3 === 0).map((h) => (
+                  <div key={h.time} className="flex flex-col items-center" style={{ minWidth: "28px" }}>
+                    <div className="h-5 text-[10px] text-muted-foreground flex items-center border-b border-border/50">{h.h}</div>
+                    <div className="h-5 text-[11px] flex items-center border-b border-border/50">{weatherIcon(h.weatherCode)}</div>
+                    <div className="h-5 text-[10px] flex items-center border-b border-border/50">{Math.round(h.temp)}°</div>
+                    <div className="h-5 text-[10px] flex items-center border-b border-border/50">
+                      {h.rain > 0 ? <span className="text-blue-500">{h.rain.toFixed(1)}</span> : <span className="text-gray-300">-</span>}
+                    </div>
+                    <div className={`h-5 text-[10px] flex items-center border-b border-border/50 ${windColor(h.windSpeed)}`}>{h.windSpeed}</div>
+                    <div className={`h-5 text-[10px] flex items-center border-b border-border/50 ${gustColor(h.windGusts)}`}>{h.windGusts}</div>
+                    <div className="h-5 text-[10px] flex items-center text-muted-foreground">{windDirArrow(h.windDir)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -288,6 +412,8 @@ export default function Home() {
                   zoom={activeLocation.regionalModelZoom}
                 />
               </div>
+
+              <ForecastStrip lat={activeLocation.lat} lon={activeLocation.lon} />
             </div>
           </div>
         ) : (
