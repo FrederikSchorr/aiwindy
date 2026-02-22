@@ -16,3 +16,22 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const geocodeRequestSchema = z.object({
+  location: z.string().min(1, "Location is required"),
+});
+
+export type GeocodeRequest = z.infer<typeof geocodeRequestSchema>;
+
+export interface GeocodeResult {
+  lat: number;
+  lon: number;
+  displayName: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  location?: GeocodeResult;
+}
