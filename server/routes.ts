@@ -452,7 +452,7 @@ export async function registerRoutes(
           const windyBase = `https://www.windy.com`;
           const windyTemp = `${windyBase}/-temp-850h?ecmwf,55.000,-10.000,3`;
           const windyWind = `${windyBase}/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
-          const knmiUrl = `https://cdn.knmi.nl/knmi/map/page/weer/actueel-weer/analyse.gif`;
+          const knmiUrl = `https://www.knmi.nl/nederland-nu/weer/waarschuwingen`;
           sendSSE({ status: `Karten geladen\n  - [🌡️ Großwetterlage, Temperatur, 1.500m → Windy](${windyTemp})\n  - [🌀 Fronten-Analyse → KNMI](${knmiUrl})\n  - [💨 Lokales Windmodell ${geocoded.regionalModelLabel} → Windy](${windyWind})` });
         } else {
           sendSSE({ status: `Ort "${locationResult}" konnte nicht gefunden werden` });
