@@ -411,6 +411,21 @@ export default function Home() {
                   product={activeLocation.regionalModel}
                   level="surface"
                   zoom={activeLocation.regionalModelZoom}
+                />
+              </div>
+
+              <div className="relative flex-1 min-h-[250px]">
+                <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+                  <Navigation className="w-3 h-3 text-emerald-500" />
+                  Vorhersage - {activeLocation.regionalModelLabel}
+                </div>
+                <WindyEmbed
+                  lat={activeLocation.lat}
+                  lon={activeLocation.lon}
+                  overlay="wind"
+                  product={activeLocation.regionalModel}
+                  level="surface"
+                  zoom={activeLocation.regionalModelZoom}
                   forecast={true}
                 />
               </div>
