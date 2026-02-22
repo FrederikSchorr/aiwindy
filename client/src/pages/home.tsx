@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, AlertTriangle, ExternalLink, Check } from "lucide-react";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, Check } from "lucide-react";
 import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -145,10 +145,17 @@ function ForecastStrip({ lat, lon }: { lat: number; lon: number }) {
 }
 
 function MarkdownContent({ content }: { content: string }) {
+  const links: string[] = [];
+  const withPlaceholders = content.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, text, url) => {
+    const idx = links.length;
+    links.push(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`);
+    return `%%LINK${idx}%%`;
+  });
+
   const escape = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const html = escape(content)
+  let html = escape(withPlaceholders)
     .replace(/### (.+)/g, '<h3 class="text-sm font-semibold mt-3 mb-1">$1</h3>')
     .replace(/## (.+)/g, '<h2 class="text-sm font-bold mt-4 mb-1.5">$1</h2>')
     .replace(/# (.+)/g, '<h1 class="text-base font-bold mt-4 mb-2">$1</h1>')
@@ -157,6 +164,10 @@ function MarkdownContent({ content }: { content: string }) {
     .replace(/\n- /g, '\n<li class="ml-4 list-disc text-sm">')
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
+
+  links.forEach((link, i) => {
+    html = html.replace(`%%LINK${i}%%`, link);
+  });
 
   return <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
 }
@@ -449,19 +460,6 @@ export default function Home() {
                 />
               </div>
 
-              {activeLocation.warningUrl && (
-                <a
-                  href={activeLocation.warningUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card hover:bg-accent transition-colors text-sm"
-                  data-testid="link-warning-external"
-                >
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Wetterwarnungen — {activeLocation.warningLabel}</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground ml-auto shrink-0" />
-                </a>
-              )}
             </div>
           </div>
         ) : (

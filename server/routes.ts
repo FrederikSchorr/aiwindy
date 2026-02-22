@@ -159,6 +159,7 @@ SCHWERPUNKT dieses Kapitels: Regionale und lokale Windphänomene! Das ist der wi
 - Aktive Warnungen auflisten (Sturmwarnung, Bora-Warnung, Gewitterwarnung etc.)
 - Falls keine Warnungen: nur ein kurzer Satz "Keine aktiven Warnungen."
 - Bei Warnungen: konkrete Werte (erwartete Böen in kt, Wellenhöhe) und Zeitfenster
+- Falls ein Link zum regionalen Warndienst im Kontext angegeben ist, diesen als Markdown-Link einbinden, z.B.: "→ Aktuelle Warnungen: [DHMZ Kroatien](https://meteo.hr/...)"
 
 STIL-REGELN:
 - Deutsch, sachlich-professionell, KEINE informellen Anreden oder Floskeln
@@ -475,6 +476,7 @@ ANGEZEIGTE KARTEN (die der Benutzer rechts neben dem Chat sieht):
 
 ORT: ${location.displayName} (${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E)
 Verwende "${location.displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3.
+${location.warningUrl ? `REGIONALER WARNDIENST: [${location.warningLabel}](${location.warningUrl}) — diesen Link in Kapitel 4 als Markdown-Link einbinden!` : "Kein regionaler Warndienst-Link verfügbar."}
 `;
 
       const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
