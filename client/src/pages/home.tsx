@@ -243,8 +243,8 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-0">
-              <div className="relative border-r border-b border-border">
+            <div className="flex-1 flex flex-col overflow-y-auto">
+              <div className="relative flex-1 min-h-[250px] border-b border-border">
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Thermometer className="w-3 h-3 text-red-500" />
                   Temperatur 850hPa - ECMWF
@@ -259,7 +259,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="relative border-b border-border">
+              <div className="relative min-h-[250px] border-b border-border">
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Map className="w-3 h-3 text-blue-500" />
                   KNMI Fronten-Analyse
@@ -274,7 +274,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative col-span-2 border-border">
+              <div className="relative flex-1 min-h-[250px]">
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Wind className="w-3 h-3 text-cyan-500" />
                   Lokaler Wind - {activeLocation.regionalModelLabel}
