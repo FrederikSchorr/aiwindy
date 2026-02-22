@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation } from "lucide-react";
 import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
-function WindyEmbed({ lat, lon, overlay, product, level, zoom }: {
-  lat: number; lon: number; overlay: string; product: string; level: string; zoom: number;
+function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
+  lat: number; lon: number; overlay: string; product: string; level: string; zoom: number; forecast?: boolean;
 }) {
-  const src = `https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&message=true&pressure=true`;
+  const type = forecast ? "forecast" : "map";
+  const src = `https://embed.windy.com/embed2.html?type=${type}&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&message=true&pressure=true&calendar=now`;
 
   return (
     <iframe
@@ -410,10 +411,9 @@ export default function Home() {
                   product={activeLocation.regionalModel}
                   level="surface"
                   zoom={activeLocation.regionalModelZoom}
+                  forecast={true}
                 />
               </div>
-
-              <ForecastStrip lat={activeLocation.lat} lon={activeLocation.lon} />
             </div>
           </div>
         ) : (
