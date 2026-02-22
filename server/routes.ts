@@ -451,7 +451,7 @@ export async function registerRoutes(
           sendSSE({ location: geocoded });
           const windyBase = `https://www.windy.com`;
           const windyTemp = `${windyBase}/-temp-850h?ecmwf,55.000,-10.000,3`;
-          const windyWind = `${windyBase}/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
+          const windyWind = `${windyBase}/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
           const knmiUrl = `https://www.knmi.nl/nederland-nu/weer/waarschuwingen`;
           sendSSE({ status: `Karten geladen\n  - [🌡️ Großwetterlage, Temperatur, 1.500m → Windy](${windyTemp})\n  - [🌀 Fronten-Analyse → KNMI](${knmiUrl})\n  - [💨 Lokales Windmodell ${geocoded.regionalModelLabel} → Windy](${windyWind})` });
         } else {
