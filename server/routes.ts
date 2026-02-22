@@ -172,10 +172,16 @@ STIL-REGELN:
 - Windangaben: kt / Bft (z.B. "12 kt / 4 Bft")
 - Druckangaben: hPa
 
-ABSCHLUSS:
+ABSCHLUSS (nur bei vollständiger Erstanalyse):
 - Am Ende der Analyse IMMER eine kurze Aufforderung an den Benutzer, z.B.:
   "---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern nachfragen."
-  oder: "---\n**Fragen?** Zu bestimmten Revieren, Zeitfenstern oder Segelbedingungen gerne nachfragen."`;
+
+RÜCKFRAGEN / FOLLOW-UP:
+- Wenn der Benutzer eine Rückfrage stellt: NUR auf die konkrete Frage antworten!
+- NICHT den kompletten Wetterbericht wiederholen
+- Kurz, präzise, wie ein normales Chat-Gespräch
+- Kartenbezug nur wo relevant für die Frage
+- Zahlen und Daten aus dem Kontext verwenden`;
 
 const WARNING_SERVICES: Record<string, { url: string; label: string }> = {
   HR: { url: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja", label: "DHMZ Kroatien" },
@@ -326,7 +332,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/weather-chat", async (req, res) => {
-    const { lat, lon, displayName, message, history } = req.body;
+    const { lat, lon, displayName, message, history, isFollowUp } = req.body;
 
     if (!lat || !lon || !displayName) {
       return res.status(400).json({ error: "Location data required" });
@@ -352,13 +358,18 @@ Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. 
         content: m.content,
       }));
 
+      const systemPrompt = isFollowUp
+        ? `${METEOROLOGIST_SYSTEM_PROMPT}\n\nWICHTIG: Dies ist eine Rückfrage des Benutzers. Antworte NUR auf die gestellte Frage. Wiederhole NICHT den kompletten Wetterbericht. Antworte kurz, präzise und im Chat-Stil.`
+        : METEOROLOGIST_SYSTEM_PROMPT;
+
+      const userContent = isFollowUp
+        ? `${message}\n\n--- AKTUELLE WETTERDATEN (als Referenz) ---\n${weatherContext}\n\nORT: ${displayName} (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`
+        : `${message}\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`;
+
       const messages: OpenAI.ChatCompletionMessageParam[] = [
-        { role: "system", content: METEOROLOGIST_SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         ...chatHistory,
-        {
-          role: "user",
-          content: `${message}\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`,
-        },
+        { role: "user", content: userContent },
       ];
 
       res.setHeader("Content-Type", "text/event-stream");
@@ -368,7 +379,7 @@ Verwende "${displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3 (z.B. 
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages,
-        max_completion_tokens: 8192,
+        max_completion_tokens: isFollowUp ? 2048 : 8192,
         temperature: 0.3,
         stream: true,
       });

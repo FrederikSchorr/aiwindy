@@ -208,13 +208,21 @@ export default function Home() {
     setIsStreaming(true);
     const locationShort = location.displayName.split(",")[0].trim();
     const assistantId = `assistant-${Date.now()}`;
-    const prefix = isFollowUp ? "" : `*Analysiere die Großwetterlage und Auswirkung auf ${locationShort}...*\n\n`;
-    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: prefix }]);
+
+    if (!isFollowUp) {
+      const statusId = `status-analyze-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        { id: statusId, role: "assistant", content: `*Analysiere die Großwetterlage und Auswirkung auf ${locationShort}...*` },
+      ]);
+    }
+
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
     try {
       abortRef.current = new AbortController();
       const chatHistory = messages
-        .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-"))
+        .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-") && !m.id.startsWith("status-analyze-"))
         .map((m) => ({ role: m.role, content: m.content }));
 
       const message = isFollowUp
@@ -230,6 +238,7 @@ export default function Home() {
           displayName: location.displayName,
           message,
           history: chatHistory,
+          isFollowUp: !!isFollowUp,
         }),
         signal: abortRef.current.signal,
       });
