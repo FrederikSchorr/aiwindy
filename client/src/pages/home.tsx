@@ -456,10 +456,16 @@ export default function Home() {
 
           <div className="flex-1 flex flex-col overflow-y-auto">
             <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border" style={{ aspectRatio: "3/2" }}>
-              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+              <a
+                href={`https://www.windy.com/-temp-850h?ecmwf,55.000,-10.000,3`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
+                data-testid="link-temp-map"
+              >
                 <Thermometer className="w-3 h-3 text-red-500" />
-                Temperatur 850hPa - ECMWF
-              </div>
+                Temperatur 850hPa - ECMWF ↗
+              </a>
               <WindyEmbed
                 lat={55}
                 lon={-10}
@@ -471,10 +477,16 @@ export default function Home() {
             </div>
 
             <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
-              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+              <a
+                href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
+                data-testid="link-knmi-chart"
+              >
                 <Map className="w-3 h-3 text-blue-500" />
-                KNMI Fronten-Analyse
-              </div>
+                KNMI Fronten-Analyse ↗
+              </a>
               <img
                 src="/api/knmi-chart"
                 alt="KNMI Weather Analysis Chart"
@@ -484,10 +496,16 @@ export default function Home() {
             </div>
 
             <div className="relative min-h-[250px] md:min-h-[375px]" style={{ aspectRatio: "3/2" }}>
-              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+              <a
+                href={`https://www.windy.com/-wind-${activeLocation.regionalModel}?${activeLocation.regionalModel},${activeLocation.lat.toFixed(3)},${activeLocation.lon.toFixed(3)},${Math.min(activeLocation.regionalModelZoom + 2, 14)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
+                data-testid="link-wind-map"
+              >
                 <Wind className="w-3 h-3 text-cyan-500" />
-                Lokaler Wind - {activeLocation.regionalModelLabel}
-              </div>
+                Lokaler Wind - {activeLocation.regionalModelLabel} ↗
+              </a>
               <WindyEmbed
                 lat={activeLocation.lat}
                 lon={activeLocation.lon}
@@ -499,10 +517,16 @@ export default function Home() {
             </div>
 
             <div className="relative flex-1 min-h-[250px]">
-              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
+              <a
+                href={`https://www.windy.com/-wind-${activeLocation.regionalModel}?${activeLocation.regionalModel},${activeLocation.lat.toFixed(3)},${activeLocation.lon.toFixed(3)},${Math.min(activeLocation.regionalModelZoom + 2, 14)},forecast`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
+                data-testid="link-forecast-map"
+              >
                 <Navigation className="w-3 h-3 text-emerald-500" />
-                Vorhersage - {activeLocation.regionalModelLabel}
-              </div>
+                Vorhersage - {activeLocation.regionalModelLabel} ↗
+              </a>
               <WindyEmbed
                 lat={activeLocation.lat}
                 lon={activeLocation.lon}
