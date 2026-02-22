@@ -204,18 +204,22 @@ export default function Home() {
     },
   });
 
-  const streamWeatherAnalysis = useCallback(async (location: GeocodeResult, userQuery: string) => {
+  const streamWeatherAnalysis = useCallback(async (location: GeocodeResult, userQuery: string, isFollowUp?: boolean) => {
     setIsStreaming(true);
     const locationShort = location.displayName.split(",")[0].trim();
     const assistantId = `assistant-${Date.now()}`;
-    const prefix = `*Analysiere die Großwetterlage und Auswirkung auf ${locationShort}...*\n\n`;
+    const prefix = isFollowUp ? "" : `*Analysiere die Großwetterlage und Auswirkung auf ${locationShort}...*\n\n`;
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: prefix }]);
 
     try {
       abortRef.current = new AbortController();
       const chatHistory = messages
-        .filter((m) => m.id !== "welcome")
+        .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-"))
         .map((m) => ({ role: m.role, content: m.content }));
+
+      const message = isFollowUp
+        ? userQuery
+        : `Analysiere die aktuelle Wetterlage für ${location.displayName}. Der Benutzer hat nach "${userQuery}" gefragt.`;
 
       const res = await fetch("/api/weather-chat", {
         method: "POST",
@@ -224,7 +228,7 @@ export default function Home() {
           lat: location.lat,
           lon: location.lon,
           displayName: location.displayName,
-          message: `Analysiere die aktuelle Wetterlage für ${location.displayName}. Der Benutzer hat nach "${userQuery}" gefragt.`,
+          message,
           history: chatHistory,
         }),
         signal: abortRef.current.signal,
@@ -285,6 +289,12 @@ export default function Home() {
     }
   }, [messages]);
 
+  const isFollowUpQuestion = (text: string): boolean => {
+    if (!activeLocation) return false;
+    const questionPatterns = /^(wie|was|wann|wo|warum|wieso|weshalb|kann|ist|wird|gibt|soll|welch|könnt|darf|muss|stimmt|ab wann|bis wann|und |aber |noch|bitte|erkläre|erklär|detail|mehr|genauer|nochmal|morgen|übermorgen|heute|abend|nacht|mittag|nachmittag|früh|wind|welle|seegang|bora|mistral|meltemi|gewitter|regen|sturm|böen|segeln|ankern|auslaufen|hafen|\?)/i;
+    return questionPatterns.test(text) || text.includes("?");
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
@@ -295,7 +305,12 @@ export default function Home() {
       { id: `user-${Date.now()}`, role: "user", content: trimmed },
     ]);
     setInput("");
-    geocodeMutation.mutate(trimmed);
+
+    if (isFollowUpQuestion(trimmed)) {
+      streamWeatherAnalysis(activeLocation!, trimmed, true);
+    } else {
+      geocodeMutation.mutate(trimmed);
+    }
   };
 
   return (
@@ -360,7 +375,7 @@ export default function Home() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ort eingeben (z.B. Punat, Kroatien)..."
+                placeholder={activeLocation ? "Frage stellen oder neuen Ort eingeben..." : "Ort eingeben (z.B. Punat, Kroatien)..."}
                 className="pl-9"
                 disabled={geocodeMutation.isPending || isStreaming}
                 data-testid="input-location"
