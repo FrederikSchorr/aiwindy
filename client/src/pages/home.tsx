@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, AlertTriangle, ExternalLink } from "lucide-react";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, AlertTriangle, ExternalLink, Check } from "lucide-react";
 import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -181,6 +181,7 @@ export default function Home() {
     const assistantId = `assistant-${Date.now()}`;
     setMessages((prev) => [...prev, { id: statusId, role: "assistant", content: "" }]);
     let contentStarted = false;
+    const statusSteps: string[] = [];
 
     try {
       abortRef.current = new AbortController();
@@ -221,9 +222,11 @@ export default function Home() {
                 setActiveLocation(data.location as GeocodeResult);
               }
               if (data.status) {
+                statusSteps.push(data.status);
+                const combined = statusSteps.join("\n");
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === statusId ? { ...m, content: data.status } : m
+                    m.id === statusId ? { ...m, content: combined } : m
                   )
                 );
               }
@@ -304,12 +307,25 @@ export default function Home() {
               const isStatus = msg.id.startsWith("status-");
               if (isStatus) {
                 if (!msg.content && !isStreaming) return null;
+                const steps = (msg.content || "...").split("\n").filter(Boolean);
                 return (
                   <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
                     <div className="max-w-[90%]">
-                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
-                        <Loader2 className="w-3 h-3 animate-spin text-primary/60 shrink-0" />
-                        <MarkdownContent content={msg.content || "..."} />
+                      <div className="px-3 py-2 space-y-1">
+                        {steps.map((step, i) => {
+                          const isLast = i === steps.length - 1;
+                          const isActive = isLast && isStreaming;
+                          return (
+                            <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                              {isActive ? (
+                                <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
+                              ) : (
+                                <Check className="w-3 h-3 text-green-500 shrink-0" />
+                              )}
+                              <MarkdownContent content={step} />
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -397,19 +413,17 @@ export default function Home() {
                 />
               </div>
 
-              <div className="relative border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
+              <div className="relative min-h-[375px] border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
                 <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border">
                   <Map className="w-3 h-3 text-blue-500" />
                   KNMI Fronten-Analyse
                 </div>
-                <div className="w-full h-full flex items-center justify-center bg-white">
-                  <img
-                    src="/api/knmi-chart"
-                    alt="KNMI Weather Analysis Chart"
-                    className="w-full h-full object-contain"
-                    data-testid="img-knmi-chart"
-                  />
-                </div>
+                <img
+                  src="/api/knmi-chart"
+                  alt="KNMI Weather Analysis Chart"
+                  className="w-full h-full object-contain bg-white"
+                  data-testid="img-knmi-chart"
+                />
               </div>
 
               <div className="relative min-h-[375px]" style={{ aspectRatio: "3/2" }}>
