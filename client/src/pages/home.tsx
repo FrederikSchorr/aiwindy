@@ -517,7 +517,6 @@ export default function Home() {
           <input
             type="file"
             accept="image/*,video/*"
-            capture="environment"
             ref={fileInputRef}
             onChange={onFileChange}
             className="hidden"
@@ -796,7 +795,6 @@ export default function Home() {
                 <input
                   type="file"
                   accept="image/*,video/*"
-                  capture="environment"
                   ref={mobileFileInputRef}
                   onChange={onFileChange}
                   className="hidden"
