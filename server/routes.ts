@@ -7,12 +7,15 @@ import multer from "multer";
 import exifParser from "exif-parser";
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+const gemini = new GoogleGenerativeAI(process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "");
+const geminiBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || "";
 
 function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
   if (lat >= 47 && lat <= 55.5 && lon >= 5 && lon <= 16) {
@@ -476,40 +479,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const fileBuffer = fs.readFileSync(filePath);
       const isVideo = req.file.mimetype.startsWith("video/");
 
-      let imageBuffer = fileBuffer;
-      let imageMime = req.file.mimetype;
-
-      if (isVideo) {
-        sendSSE({ status: "📹 Video empfangen — extrahiere Einzelbild..." });
-        try {
-          const framePath = filePath + "_frame.jpg";
-          execSync(`ffmpeg -i "${filePath}" -ss 00:00:01 -vframes 1 -q:v 2 "${framePath}" -y`, {
-            timeout: 15000,
-            stdio: "pipe",
-          });
-          if (fs.existsSync(framePath)) {
-            imageBuffer = fs.readFileSync(framePath);
-            imageMime = "image/jpeg";
-            try { fs.unlinkSync(framePath); } catch {}
-            sendSSE({ status: "📷 Einzelbild aus Video extrahiert" });
-          } else {
-            sendSSE({ content: "Konnte kein Bild aus dem Video extrahieren. Bitte versuche ein kürzeres Video oder ein Foto." });
-            sendSSE({ done: true });
-            res.end();
-            try { fs.unlinkSync(filePath); } catch {}
-            return;
-          }
-        } catch (e) {
-          console.error("ffmpeg frame extraction failed:", e);
-          sendSSE({ content: "Konnte kein Bild aus dem Video extrahieren. Bitte versuche ein Foto stattdessen." });
-          sendSSE({ done: true });
-          res.end();
-          try { fs.unlinkSync(filePath); } catch {}
-          return;
-        }
-      } else {
-        sendSSE({ status: "📷 Foto empfangen — analysiere Metadaten..." });
-      }
+      sendSSE({ status: isVideo ? "📹 Video empfangen — analysiere..." : "📷 Foto empfangen — analysiere Metadaten..." });
 
       let exifLocation: { lat: number; lon: number } | null = null;
       let exifTime: string | null = null;
@@ -554,14 +524,9 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         metadataInfo += `\nAufnahmezeitpunkt: ${exifTime}`;
       }
 
-      if (!exifLocation && !exifTime) {
+      if (!exifLocation && !exifTime && !isVideo) {
         sendSSE({ status: "ℹ️ Keine GPS/Zeit-Metadaten im Bild gefunden" });
       }
-
-      sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
-
-      const base64Image = imageBuffer.toString("base64");
-      const mimeType = imageMime;
 
       const currentLocation = req.body?.currentLocation ? JSON.parse(req.body.currentLocation) : null;
       let locationContext = "";
@@ -572,41 +537,88 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         locationContext += `\nBild-Metadaten: ${metadataInfo}`;
       }
 
-      const imageMessages: OpenAI.ChatCompletionMessageParam[] = [
-        {
-          role: "system",
-          content: PHOTO_ANALYSIS_PROMPT + (locationContext ? `\n\nKONTEXT:${locationContext}` : ""),
-        },
-        {
-          role: "user",
-          content: [
+      const systemPrompt = PHOTO_ANALYSIS_PROMPT + (locationContext ? `\n\nKONTEXT:${locationContext}` : "");
+
+      if (isVideo) {
+        sendSSE({ status: "🔍 Analysiere Video mit Gemini KI..." });
+
+        const base64Video = fileBuffer.toString("base64");
+        const geminiOpenai = new OpenAI({
+          apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+          baseURL: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        });
+
+        const videoStream = await geminiOpenai.chat.completions.create({
+          model: "gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt.replace("Foto/Bild", "Video").replace("dieses Bild", "dieses Video") + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)" },
             {
-              type: "image_url",
-              image_url: {
-                url: `data:${mimeType};base64,${base64Image}`,
-                detail: "high",
-              },
-            },
-            {
-              type: "text",
-              text: "Analysiere dieses Bild meteorologisch.",
+              role: "user",
+              content: [
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${req.file.mimetype};base64,${base64Video}`,
+                  },
+                },
+                {
+                  type: "text",
+                  text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen.",
+                },
+              ] as any,
             },
           ],
-        },
-      ];
+          max_completion_tokens: 8192,
+          stream: true,
+        });
 
-      const stream = await openai.chat.completions.create({
-        model: "gpt-4.1",
-        messages: imageMessages,
-        max_completion_tokens: 4096,
-        temperature: 0.3,
-        stream: true,
-      });
+        for await (const chunk of videoStream) {
+          const text = chunk.choices[0]?.delta?.content || "";
+          if (text) {
+            sendSSE({ content: text });
+          }
+        }
+      } else {
+        sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
 
-      for await (const chunk of stream) {
-        const text = chunk.choices[0]?.delta?.content || "";
-        if (text) {
-          sendSSE({ content: text });
+        const base64Image = fileBuffer.toString("base64");
+
+        const imageMessages: OpenAI.ChatCompletionMessageParam[] = [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${req.file.mimetype};base64,${base64Image}`,
+                  detail: "high",
+                },
+              },
+              {
+                type: "text",
+                text: "Analysiere dieses Bild meteorologisch.",
+              },
+            ],
+          },
+        ];
+
+        const stream = await openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: imageMessages,
+          max_completion_tokens: 4096,
+          temperature: 0.3,
+          stream: true,
+        });
+
+        for await (const chunk of stream) {
+          const text = chunk.choices[0]?.delta?.content || "";
+          if (text) {
+            sendSSE({ content: text });
+          }
         }
       }
 
