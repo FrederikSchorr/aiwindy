@@ -543,37 +543,26 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         sendSSE({ status: "🔍 Analysiere Video mit Gemini KI..." });
 
         const base64Video = fileBuffer.toString("base64");
-        const geminiOpenai = new OpenAI({
-          apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-          baseURL: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        const videoPrompt = systemPrompt.replace("Foto/Bild", "Video").replace("dieses Bild", "dieses Video") + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
+
+        const geminiModel = gemini.getGenerativeModel(
+          { model: "gemini-2.5-flash" },
+          { baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL }
+        );
+
+        const result = await geminiModel.generateContentStream({
+          contents: [{
+            role: "user",
+            parts: [
+              { inlineData: { mimeType: req.file!.mimetype, data: base64Video } },
+              { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
+            ],
+          }],
+          systemInstruction: { role: "user", parts: [{ text: videoPrompt }] },
         });
 
-        const videoStream = await geminiOpenai.chat.completions.create({
-          model: "gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt.replace("Foto/Bild", "Video").replace("dieses Bild", "dieses Video") + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)" },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${req.file.mimetype};base64,${base64Video}`,
-                  },
-                },
-                {
-                  type: "text",
-                  text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen.",
-                },
-              ] as any,
-            },
-          ],
-          max_completion_tokens: 8192,
-          stream: true,
-        });
-
-        for await (const chunk of videoStream) {
-          const text = chunk.choices[0]?.delta?.content || "";
+        for await (const chunk of result.stream) {
+          const text = chunk.text();
           if (text) {
             sendSSE({ content: text });
           }
@@ -594,7 +583,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:${req.file.mimetype};base64,${base64Image}`,
+                  url: `data:${req.file!.mimetype};base64,${base64Image}`,
                   detail: "high",
                 },
               },
@@ -615,7 +604,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         });
 
         for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content || "";
+          const text = chunk.choices?.[0]?.delta?.content;
           if (text) {
             sendSSE({ content: text });
           }
