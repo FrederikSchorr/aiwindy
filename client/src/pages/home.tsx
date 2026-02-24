@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, Check, MessageSquare, BarChart3 } from "lucide-react";
+import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, Check, MessageSquare, BarChart3, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -227,6 +227,8 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileFileInputRef = useRef<HTMLInputElement>(null);
 
   const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
@@ -310,6 +312,102 @@ export default function Home() {
       currentLocation: activeLocation,
     }));
   }, [messages, activeLocation]);
+
+  const handleFileUpload = useCallback((file: File) => {
+    if (isStreaming) return;
+    setIsStreaming(true);
+    const statusId = `status-${Date.now()}`;
+    const assistantId = `assistant-${Date.now()}`;
+    const isVideo = file.type.startsWith("video/");
+
+    setMessages((prev) => [
+      ...prev,
+      { id: `user-${Date.now()}`, role: "user", content: isVideo ? "📹 Video hochgeladen" : "📷 Foto hochgeladen" },
+      { id: statusId, role: "assistant", content: "" },
+    ]);
+
+    let contentStarted = false;
+    const statusSteps: string[] = [];
+    let processed = 0;
+
+    const formData = new FormData();
+    formData.append("photo", file);
+    if (activeLocation) {
+      formData.append("currentLocation", JSON.stringify(activeLocation));
+    }
+
+    const xhr = new XMLHttpRequest();
+    abortRef.current = { abort: () => xhr.abort() } as AbortController;
+    xhr.open("POST", "/api/upload");
+
+    const processChunk = () => {
+      const text = xhr.responseText.slice(processed);
+      processed = xhr.responseText.length;
+      const lines = text.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.location) {
+              setActiveLocation(data.location as GeocodeResult);
+            }
+            if (data.status) {
+              statusSteps.push(data.status);
+              const combined = statusSteps.join("\n");
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === statusId ? { ...m, content: combined } : m
+                )
+              );
+            }
+            if (data.content) {
+              if (!contentStarted) {
+                contentStarted = true;
+                setMessages((prev) => [...prev, { id: assistantId, role: "assistant" as const, content: data.content }]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: m.content + data.content } : m
+                  )
+                );
+              }
+            }
+            if (data.error) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === statusId ? { ...m, content: "Fehler bei der Bildanalyse. Bitte versuche es erneut." } : m
+                )
+              );
+            }
+          } catch {}
+        }
+      }
+    };
+
+    xhr.onprogress = processChunk;
+    xhr.onloadend = () => {
+      processChunk();
+      setIsStreaming(false);
+    };
+    xhr.onerror = () => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === statusId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
+        )
+      );
+      setIsStreaming(false);
+    };
+
+    xhr.send(formData);
+  }, [activeLocation, isStreaming]);
+
+  const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+    e.target.value = "";
+  }, [handleFileUpload]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -416,6 +514,26 @@ export default function Home() {
 
       <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
         <form onSubmit={handleSubmit} className="px-4 py-3 flex items-center gap-2">
+          <input
+            type="file"
+            accept="image/*,video/*"
+            capture="environment"
+            ref={fileInputRef}
+            onChange={onFileChange}
+            className="hidden"
+            data-testid="input-file-desktop"
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isStreaming}
+            data-testid="button-upload"
+            title="Foto/Video hochladen"
+          >
+            <Camera className="w-4 h-4" />
+          </Button>
           <div className="relative flex-1">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -675,6 +793,26 @@ export default function Home() {
             </div>
             <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0 pb-[env(safe-area-inset-bottom)]">
               <form onSubmit={handleSubmit} className="px-3 py-2 flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  capture="environment"
+                  ref={mobileFileInputRef}
+                  onChange={onFileChange}
+                  className="hidden"
+                  data-testid="input-file-mobile"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => mobileFileInputRef.current?.click()}
+                  disabled={isStreaming}
+                  data-testid="button-upload-mobile"
+                  className="shrink-0"
+                >
+                  <Camera className="w-4 h-4" />
+                </Button>
                 <div className="relative flex-1">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input

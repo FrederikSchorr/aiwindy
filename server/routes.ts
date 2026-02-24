@@ -3,6 +3,10 @@ import { createServer, type Server } from "http";
 import { geocodeRequestSchema } from "@shared/schema";
 import type { ForecastHour } from "@shared/schema";
 import OpenAI from "openai";
+import multer from "multer";
+import exifParser from "exif-parser";
+import fs from "fs";
+import path from "path";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -414,6 +418,186 @@ export async function registerRoutes(
       return res.json({ hours, timezone: data.timezone || "UTC" });
     } catch {
       return res.status(500).json({ error: "Failed to fetch forecast" });
+    }
+  });
+
+  const upload = multer({
+    dest: "/tmp/uploads",
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "video/mp4", "video/quicktime", "video/webm"];
+      cb(null, allowed.includes(file.mimetype));
+    },
+  });
+
+  const PHOTO_ANALYSIS_PROMPT = `Du bist ein Meteorologe und Wolkenexperte. Analysiere dieses Foto/Bild auf meteorologisch relevante Inhalte.
+
+AUFGABE:
+1. Prüfe ob das Bild meteorologisch relevant ist (Himmel, Wolken, Wasser, Wetterstimmung)
+2. Falls JA — analysiere detailliert:
+
+## ☁️ Wolkenanalyse
+- **Wolkentyp(en):** Exakte Klassifikation (z.B. Cumulus congestus, Cumulonimbus, Cirrus uncinus, Altocumulus lenticularis, Stratocumulus, etc.)
+- **Wolkenhöhe:** Geschätzte Höhe in Metern und Kategorie (tief/mittel/hoch)
+- **Bedeckungsgrad:** In Okta (0-8) oder Prozent
+
+## 🌤️ Wetterlage
+- **Aktuelle Situation:** Was zeigt das Bild über die aktuelle Wetterlage?
+- **Typische Drucklage:** Welche synoptische Situation erzeugt diese Wolkenformationen?
+
+## ⛵ Vorboten & Prognose
+- **Wetterentwicklung:** Wofür sind diese Wolken Vorboten? Was kommt wahrscheinlich als nächstes?
+- **Zeitrahmen:** In welchem Zeitraum ist mit Veränderung zu rechnen?
+- **Relevanz für Segler:** Warnsignale, Windentwicklung, Gewitter-Risiko
+
+3. Falls NEIN (kein meteorologisch relevantes Bild): Sag kurz, dass das Bild keinen Himmel/Wolken/Wetter zeigt und bitte um ein Foto vom Himmel oder Horizont.
+
+STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Points bevorzugen.`;
+
+  app.post("/api/upload", upload.single("photo"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "Keine Datei hochgeladen" });
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    if (req.socket) req.socket.setNoDelay(true);
+
+    const sendSSE = (data: Record<string, unknown>) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const filePath = req.file.path;
+      const fileBuffer = fs.readFileSync(filePath);
+      const isVideo = req.file.mimetype.startsWith("video/");
+
+      if (isVideo) {
+        sendSSE({ status: "📹 Video empfangen" });
+        sendSSE({ content: "Videos können leider noch nicht direkt analysiert werden. Bitte mach ein **Foto** vom Himmel oder Horizont — damit kann ich Wolkentypen und Wetterlagen sofort erkennen." });
+        sendSSE({ done: true });
+        res.end();
+        try { fs.unlinkSync(filePath); } catch {}
+        return;
+      }
+
+      sendSSE({ status: "📷 Foto empfangen — analysiere Metadaten..." });
+
+      let exifLocation: { lat: number; lon: number } | null = null;
+      let exifTime: string | null = null;
+
+      if (!isVideo && (req.file.mimetype === "image/jpeg" || req.file.mimetype === "image/png")) {
+        try {
+          const parser = exifParser.create(fileBuffer);
+          const exifData = parser.parse();
+          const tags = exifData.tags;
+
+          if (tags.GPSLatitude && tags.GPSLongitude) {
+            exifLocation = {
+              lat: tags.GPSLatitude as number,
+              lon: tags.GPSLongitude as number,
+            };
+          }
+
+          if (tags.DateTimeOriginal) {
+            const ts = tags.DateTimeOriginal as number;
+            exifTime = new Date(ts * 1000).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+          }
+        } catch (e) {
+          console.log("EXIF parsing failed (non-critical):", e);
+        }
+      }
+
+      let metadataInfo = "";
+      if (exifLocation) {
+        sendSSE({ status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E` });
+        metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
+
+        const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
+        if (geocoded) {
+          sendSSE({ location: geocoded });
+          sendSSE({ status: `📍 Ort: **${geocoded.displayName.split(",")[0]}** — Karten aktualisiert` });
+          metadataInfo += `\nOrt: ${geocoded.displayName}`;
+        }
+      }
+
+      if (exifTime) {
+        sendSSE({ status: `🕐 Aufnahmezeitpunkt: ${exifTime}` });
+        metadataInfo += `\nAufnahmezeitpunkt: ${exifTime}`;
+      }
+
+      if (!exifLocation && !exifTime) {
+        sendSSE({ status: "ℹ️ Keine GPS/Zeit-Metadaten im Bild gefunden" });
+      }
+
+      sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
+
+      const base64Image = fileBuffer.toString("base64");
+      const mimeType = req.file.mimetype;
+
+      const currentLocation = req.body?.currentLocation ? JSON.parse(req.body.currentLocation) : null;
+      let locationContext = "";
+      if (currentLocation) {
+        locationContext = `\nAktueller aktiver Ort im System: ${currentLocation.displayName} (${currentLocation.lat}°N, ${currentLocation.lon}°E)`;
+      }
+      if (metadataInfo) {
+        locationContext += `\nBild-Metadaten: ${metadataInfo}`;
+      }
+
+      const imageMessages: OpenAI.ChatCompletionMessageParam[] = [
+        {
+          role: "system",
+          content: PHOTO_ANALYSIS_PROMPT + (locationContext ? `\n\nKONTEXT:${locationContext}` : ""),
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64Image}`,
+                detail: "high",
+              },
+            },
+            {
+              type: "text",
+              text: "Analysiere dieses Bild meteorologisch.",
+            },
+          ],
+        },
+      ];
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: imageMessages,
+        max_completion_tokens: 4096,
+        temperature: 0.3,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || "";
+        if (text) {
+          sendSSE({ content: text });
+        }
+      }
+
+      sendSSE({ done: true });
+      res.end();
+
+      try { fs.unlinkSync(filePath); } catch {}
+    } catch (error) {
+      console.error("Upload analysis error:", error);
+      if (res.headersSent) {
+        sendSSE({ error: "Fehler bei der Bildanalyse" });
+        res.end();
+      } else {
+        res.status(500).json({ error: "Failed to analyze image" });
+      }
+      try { if (req.file) fs.unlinkSync(req.file.path); } catch {}
     }
   });
 

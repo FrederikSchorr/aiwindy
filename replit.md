@@ -26,8 +26,17 @@ A sailing weather advisor app with AI-powered meteorological analysis and live w
    - Windy native forecast embed
 6. Country-specific weather warning links for 19+ European countries
 
+## Photo/Video Upload
+- Camera button in chat input (both desktop and mobile)
+- Accepts images (JPEG, PNG, WebP, HEIC) and videos (MP4, QuickTime, WebM), max 20MB
+- Server-side EXIF extraction (exif-parser) for GPS location and timestamp
+- If GPS found: auto-geocodes and updates maps
+- OpenAI GPT-4.1 Vision analyzes meteorological relevance: cloud types, weather patterns, precursors
+- SSE streaming response compatible with existing chat flow
+
 ## API
 - `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ status }`, `{ content }`, `{ done: true }`
+- `POST /api/upload` - Multipart form: `photo` (file) + optional `currentLocation` (JSON string) - Streams SSE same format as /api/chat
 - `POST /api/geocode` - Body: `{ location }` - Returns: `{ lat, lon, displayName, regionalModel, regionalModelLabel, regionalModelZoom, countryCode, warningUrl, warningLabel }`
 - `GET /api/knmi-chart` - Proxies the latest KNMI weather analysis chart (image/gif)
 - `POST /api/forecast` - Body: `{ lat, lon }` - Returns hourly forecast data
