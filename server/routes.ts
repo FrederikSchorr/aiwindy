@@ -7,6 +7,7 @@ import multer from "multer";
 import exifParser from "exif-parser";
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -475,16 +476,40 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const fileBuffer = fs.readFileSync(filePath);
       const isVideo = req.file.mimetype.startsWith("video/");
 
-      if (isVideo) {
-        sendSSE({ status: "📹 Video empfangen" });
-        sendSSE({ content: "Videos können leider noch nicht direkt analysiert werden. Bitte mach ein **Foto** vom Himmel oder Horizont — damit kann ich Wolkentypen und Wetterlagen sofort erkennen." });
-        sendSSE({ done: true });
-        res.end();
-        try { fs.unlinkSync(filePath); } catch {}
-        return;
-      }
+      let imageBuffer = fileBuffer;
+      let imageMime = req.file.mimetype;
 
-      sendSSE({ status: "📷 Foto empfangen — analysiere Metadaten..." });
+      if (isVideo) {
+        sendSSE({ status: "📹 Video empfangen — extrahiere Einzelbild..." });
+        try {
+          const framePath = filePath + "_frame.jpg";
+          execSync(`ffmpeg -i "${filePath}" -ss 00:00:01 -vframes 1 -q:v 2 "${framePath}" -y`, {
+            timeout: 15000,
+            stdio: "pipe",
+          });
+          if (fs.existsSync(framePath)) {
+            imageBuffer = fs.readFileSync(framePath);
+            imageMime = "image/jpeg";
+            try { fs.unlinkSync(framePath); } catch {}
+            sendSSE({ status: "📷 Einzelbild aus Video extrahiert" });
+          } else {
+            sendSSE({ content: "Konnte kein Bild aus dem Video extrahieren. Bitte versuche ein kürzeres Video oder ein Foto." });
+            sendSSE({ done: true });
+            res.end();
+            try { fs.unlinkSync(filePath); } catch {}
+            return;
+          }
+        } catch (e) {
+          console.error("ffmpeg frame extraction failed:", e);
+          sendSSE({ content: "Konnte kein Bild aus dem Video extrahieren. Bitte versuche ein Foto stattdessen." });
+          sendSSE({ done: true });
+          res.end();
+          try { fs.unlinkSync(filePath); } catch {}
+          return;
+        }
+      } else {
+        sendSSE({ status: "📷 Foto empfangen — analysiere Metadaten..." });
+      }
 
       let exifLocation: { lat: number; lon: number } | null = null;
       let exifTime: string | null = null;
@@ -535,8 +560,8 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
 
       sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
 
-      const base64Image = fileBuffer.toString("base64");
-      const mimeType = req.file.mimetype;
+      const base64Image = imageBuffer.toString("base64");
+      const mimeType = imageMime;
 
       const currentLocation = req.body?.currentLocation ? JSON.parse(req.body.currentLocation) : null;
       let locationContext = "";
