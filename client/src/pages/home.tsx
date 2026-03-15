@@ -257,7 +257,7 @@ export default function Home() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hallo! Ich bin dein Segelwetter-Assistent. Du kannst mich alles rund um Wetter, Wind und Segeln fragen.\n\nFür eine **Segelwetteranalyse** nenne einfach einen Ort — z.B. \"Punat\", \"Gardasee\" oder \"Segeln bei Rovinj\".",
+      content: "Ahoi! Sage mir wo Du segelst, oder lade ein Wolken-Foto hoch.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -503,7 +503,7 @@ export default function Home() {
           </div>
           <div className="flex-1">
             <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
-            <p className="text-sm text-muted-foreground">AI-Meteorologe</p>
+            <p className="text-sm text-muted-foreground">Wetterdaten und Fotos mit AI erklärt</p>
           </div>
           {activeLocation && (
             <span className="text-sm text-muted-foreground flex items-center gap-1.5 truncate max-w-[220px]" data-testid="text-active-location">
