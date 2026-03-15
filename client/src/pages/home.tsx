@@ -4,25 +4,25 @@ import { Input } from "@/components/ui/input";
 import { Send, Cloud, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
-const COUNTRY_INFO: Record<string, { flag: string; name: string }> = {
-  HR: { flag: "🇭🇷", name: "Kroatien" },
-  DE: { flag: "🇩🇪", name: "Deutschland" },
-  AT: { flag: "🇦🇹", name: "Österreich" },
-  IT: { flag: "🇮🇹", name: "Italien" },
-  FR: { flag: "🇫🇷", name: "Frankreich" },
-  GR: { flag: "🇬🇷", name: "Griechenland" },
-  SI: { flag: "🇸🇮", name: "Slowenien" },
-  ME: { flag: "🇲🇪", name: "Montenegro" },
-  GB: { flag: "🇬🇧", name: "Großbritannien" },
-  NL: { flag: "🇳🇱", name: "Niederlande" },
-  ES: { flag: "🇪🇸", name: "Spanien" },
-  PT: { flag: "🇵🇹", name: "Portugal" },
-  TR: { flag: "🇹🇷", name: "Türkei" },
-  DK: { flag: "🇩🇰", name: "Dänemark" },
-  SE: { flag: "🇸🇪", name: "Schweden" },
-  NO: { flag: "🇳🇴", name: "Norwegen" },
-  PL: { flag: "🇵🇱", name: "Polen" },
-  CH: { flag: "🇨🇭", name: "Schweiz" },
+const COUNTRY_INFO: Record<string, { name: string }> = {
+  HR: { name: "Kroatien" },
+  DE: { name: "Deutschland" },
+  AT: { name: "Österreich" },
+  IT: { name: "Italien" },
+  FR: { name: "Frankreich" },
+  GR: { name: "Griechenland" },
+  SI: { name: "Slowenien" },
+  ME: { name: "Montenegro" },
+  GB: { name: "Großbritannien" },
+  NL: { name: "Niederlande" },
+  ES: { name: "Spanien" },
+  PT: { name: "Portugal" },
+  TR: { name: "Türkei" },
+  DK: { name: "Dänemark" },
+  SE: { name: "Schweden" },
+  NO: { name: "Norwegen" },
+  PL: { name: "Polen" },
+  CH: { name: "Schweiz" },
 };
 
 interface SectionMapConfig {
@@ -497,10 +497,19 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">AI-Meteorologe</p>
           </div>
           {activeLocation && (
-            <span className="text-sm text-muted-foreground truncate max-w-[220px]" data-testid="text-active-location">
+            <span className="text-sm text-muted-foreground flex items-center gap-1.5 truncate max-w-[220px]" data-testid="text-active-location">
               📍 {activeLocation.displayName.split(",")[0]}
               {activeLocation.countryCode && COUNTRY_INFO[activeLocation.countryCode] && (
-                <> {COUNTRY_INFO[activeLocation.countryCode].flag} {COUNTRY_INFO[activeLocation.countryCode].name}</>
+                <>
+                  <img
+                    src={`https://flagcdn.com/w20/${activeLocation.countryCode.toLowerCase()}.png`}
+                    width={20}
+                    height={14}
+                    alt={activeLocation.countryCode}
+                    className="inline-block rounded-[2px] shrink-0"
+                  />
+                  {COUNTRY_INFO[activeLocation.countryCode].name}
+                </>
               )}
             </span>
           )}
