@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Sailboat, Camera } from "lucide-react";
+import { Send, Sailboat, Camera, MapPin } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
 const COUNTRY_INFO: Record<string, { name: string }> = {
@@ -268,6 +268,8 @@ export default function Home() {
   const uploadHintShownRef = useRef(false);
   const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null }>>({});
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
+  const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
+  const lastAnalysisLocationRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -294,6 +296,7 @@ export default function Home() {
       if (data.location) {
         setActiveLocation(data.location);
         setMessageLocations(prev => ({ ...prev, [assistantId]: data.location! }));
+        lastAnalysisLocationRef.current = data.location!.displayName.split(",")[0].trim();
       }
       if (data.analysisStart?.sections) {
         const sections = data.analysisStart.sections;
@@ -387,6 +390,8 @@ export default function Home() {
     let processed = 0;
     let lineBuffer = "";
 
+    let photoExifMeta: { locationName: string | null; countryCode: string | null } = { locationName: null, countryCode: null };
+
     if (!isVideo) {
       const objectUrl = URL.createObjectURL(file);
       setUploadPreviews(prev => ({ ...prev, [userId]: { url: objectUrl } }));
@@ -422,6 +427,7 @@ export default function Home() {
               setActiveLocation(data.location as GeocodeResult);
             }
             if (data.exifMeta) {
+              photoExifMeta = { locationName: data.exifMeta.locationName ?? null, countryCode: data.exifMeta.countryCode ?? null };
               setUploadPreviews(prev => ({
                 ...prev,
                 [userId]: { ...prev[userId], time: data.exifMeta.time, locationName: data.exifMeta.locationName, countryCode: data.exifMeta.countryCode }
@@ -457,6 +463,16 @@ export default function Home() {
         }
         return prev;
       });
+      if (!isVideo && photoExifMeta.locationName) {
+        const lastAnalysis = lastAnalysisLocationRef.current;
+        const isDifferentOrNone = !lastAnalysis || lastAnalysis !== photoExifMeta.locationName;
+        if (isDifferentOrNone) {
+          setPhotoLocationHints(prev => ({
+            ...prev,
+            [assistantId]: { locationName: photoExifMeta.locationName!, countryCode: photoExifMeta.countryCode }
+          }));
+        }
+      }
       setIsStreaming(false);
     };
     xhr.onerror = () => {
@@ -624,6 +640,7 @@ export default function Home() {
               );
             }
 
+            const photoHint = photoLocationHints[msg.id];
             return (
               <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                 {msg.content ? <MarkdownContent content={msg.content} /> : null}
@@ -633,6 +650,31 @@ export default function Home() {
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
                   </span>
+                )}
+                {photoHint && !isStreaming && (
+                  <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-photo-location-hint">
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    <span>
+                      Möchtest Du für{" "}
+                      <strong className="not-italic text-foreground/80">
+                        {photoHint.locationName}
+                        {photoHint.countryCode && (
+                          <>
+                            {" "}
+                            <img
+                              src={`https://flagcdn.com/w20/${photoHint.countryCode.toLowerCase()}.png`}
+                              width={16}
+                              height={11}
+                              alt={photoHint.countryCode}
+                              className="inline-block rounded-[2px] align-baseline"
+                            />
+                            {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
+                          </>
+                        )}
+                      </strong>
+                      {" "}eine Wetteranalyse durchführen?
+                    </span>
+                  </div>
                 )}
               </div>
             );
