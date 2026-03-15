@@ -77,7 +77,7 @@ function SectionCard({ section }: { section: SectionEvent }) {
           </a>
         </div>
       )}
-      {mapType === "windy" && mapConfig.lat != null && (
+      {mapType === "windy" && mapConfig.lat != null && mapConfig.lon != null && (
         <WindyEmbed
           lat={mapConfig.lat}
           lon={mapConfig.lon}
@@ -273,9 +273,10 @@ export default function Home() {
         setActiveLocation(data.location);
       }
       if (data.section) {
+        const sectionEvt = data.section;
         setMessageSections(prev => ({
           ...prev,
-          [assistantId]: [...(prev[assistantId] || []), data.section],
+          [assistantId]: [...(prev[assistantId] || []), sectionEvt],
         }));
       }
       if (data.content) {
