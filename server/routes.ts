@@ -439,18 +439,18 @@ Schreibe genau diese Bullets in dieser Reihenfolge:
 3. Letzter Bullet: "Seezustand: [Douglas-Skala-Wert]" — aus dem regionalen Wetterbericht, nächste 12h
 
 ## 4. Wolken & Regen
-- Basierend auf dem regionalen Wetterbericht und den Wetterdaten
-- Beschreibe Bewölkung, Niederschlag, Gewitterrisiko für die nächsten 12h in 1-2 Bullets
+- Basierend auf dem regionalen Wetterbericht und (falls möglich) der Windy-Wolkenkarte
+- Genau 1-2 Bullets: Beschreibung Bewölkung, Regen, Gewitterrisiko in den nächsten 12h
 
 ## 5. Prognose
-- Kurzer Ausblick auf die nächsten 2-3 Tage in 1-2 Bullets
-- Tendenz: besser/schlechter/stabil?
+- Basierend auf dem regionalen Wetterbericht
+- Genau 1-2 Bullets: Ausblick auf die nächsten 2-3 Tage, Tendenz: besser/schlechter/stabil?
 
 ## 6. Wetterwarnung
-- Basierend auf den REGIONALE WARNUNGEN
-- Aktive Warnungen oder "Keine aktuellen Wetterwarnungen"
-- Bei Warnungen: konkrete Werte und Zeitfenster
-- Quelle als Link: [(Quelle: WARNDIENSTNAME)](WARNINGURL) — URL aus QUELLENURLS
+- Basierend auf dem REGIONALEN WETTERBERICHT und den REGIONALEN WARNUNGEN
+- Falls Warnungen aktiv: konkrete Werte und Zeitfenster als Bullet-Liste
+- Falls keine Warnungen: genau diesen Satz: "Keine aktuellen Wetterwarnungen. [(Quelle: WARNDIENSTNAME)](WARNINGURL)"
+- URL aus QUELLENURLS verwenden
 
 STIL-REGELN:
 - Deutsch, sachlich-professionell, KEINE Begrüßung, KEINE Floskeln
