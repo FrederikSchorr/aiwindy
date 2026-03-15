@@ -652,7 +652,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           { baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL }
         );
 
-        const result = await geminiModel.generateContentStream({
+        const result = await geminiModel.generateContent({
           contents: [{
             role: "user",
             parts: [
@@ -662,16 +662,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           }],
           systemInstruction: { role: "user", parts: [{ text: videoPrompt }] },
         });
-
-        let vidBuffer = "";
-        let vidTimer: ReturnType<typeof setTimeout> | null = null;
-        const flushVid = () => { if (vidBuffer) { sendSSE({ content: vidBuffer }); vidBuffer = ""; } vidTimer = null; };
-        for await (const chunk of result.stream) {
-          const text = chunk.text();
-          if (text) { vidBuffer += text; if (!vidTimer) vidTimer = setTimeout(flushVid, 30); }
-        }
-        if (vidTimer) clearTimeout(vidTimer);
-        flushVid();
+        const vidText = result.response.text();
+        if (vidText) sendSSE({ content: vidText });
       } else {
         sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
 
@@ -700,23 +692,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           },
         ];
 
-        const stream = await openai.chat.completions.create({
+        const imgResponse = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: imageMessages,
           max_completion_tokens: 4096,
           temperature: 0.3,
-          stream: true,
+          stream: false,
         });
-
-        let imgBuffer = "";
-        let imgTimer: ReturnType<typeof setTimeout> | null = null;
-        const flushImg = () => { if (imgBuffer) { sendSSE({ content: imgBuffer }); imgBuffer = ""; } imgTimer = null; };
-        for await (const chunk of stream) {
-          const text = chunk.choices?.[0]?.delta?.content;
-          if (text) { imgBuffer += text; if (!imgTimer) imgTimer = setTimeout(flushImg, 30); }
-        }
-        if (imgTimer) clearTimeout(imgTimer);
-        flushImg();
+        const imgText = imgResponse.choices[0]?.message?.content || "";
+        if (imgText) sendSSE({ content: imgText });
       }
 
       sendSSE({ done: true });
@@ -775,23 +759,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           { role: "user", content: userContent },
         ];
 
-        const stream = await openai.chat.completions.create({
+        const chatResponse = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: msgs,
           max_completion_tokens: 2048,
           temperature: 0.3,
-          stream: true,
+          stream: false,
         });
-
-        let chatBuf = "";
-        let chatTimer: ReturnType<typeof setTimeout> | null = null;
-        const flushChat = () => { if (chatBuf) { sendSSE({ content: chatBuf }); chatBuf = ""; } chatTimer = null; };
-        for await (const chunk of stream) {
-          const text = chunk.choices?.[0]?.delta?.content;
-          if (text) { chatBuf += text; if (!chatTimer) chatTimer = setTimeout(flushChat, 30); }
-        }
-        if (chatTimer) clearTimeout(chatTimer);
-        flushChat();
+        const chatText = chatResponse.choices[0]?.message?.content || "";
+        if (chatText) sendSSE({ content: chatText });
 
         sendSSE({ done: true });
         res.end();
