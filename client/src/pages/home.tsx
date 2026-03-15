@@ -723,7 +723,7 @@ export default function Home() {
                 )}
                 {photoHint && !isStreaming && (
                   <div className="mt-3 text-[14px]" data-testid="text-photo-location-hint">
-                    <div className="flex items-center gap-2 text-muted-foreground italic">
+                    <div className="flex items-center gap-2 flex-wrap text-muted-foreground italic">
                       <MapPin className="w-4 h-4 shrink-0" />
                       <span>
                         Möchtest Du für{" "}
@@ -745,8 +745,6 @@ export default function Home() {
                         </strong>
                         {" "}eine Wetteranalyse durchführen?
                       </span>
-                    </div>
-                    <div className="flex gap-2 mt-2 ml-6">
                       <Button
                         size="sm"
                         data-testid="button-confirm-location-yes"
@@ -772,6 +770,7 @@ export default function Home() {
                         size="sm"
                         variant="ghost"
                         data-testid="button-confirm-location-no"
+                        className="not-italic"
                         onClick={() => {
                           setPhotoLocationHints(prev => {
                             const next = { ...prev };
