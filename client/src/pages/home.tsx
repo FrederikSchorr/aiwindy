@@ -196,7 +196,7 @@ function AnalysisContent({ content, sections, isStreaming, isLast }: {
   const sectionRegex = /^##\s*(\d)[.):\s]/m;
   const parts = content.split(sectionRegex);
 
-  const textBlocks: { num: number; text: string }[] = [];
+  const textBlocks: { num: number; heading: string; body: string }[] = [];
   const preamble = parts[0] || "";
 
   for (let i = 1; i < parts.length; i += 2) {
@@ -204,8 +204,8 @@ function AnalysisContent({ content, sections, isStreaming, isLast }: {
     const rawText = parts[i + 1] || "";
     const firstNewline = rawText.indexOf("\n");
     const titleLine = firstNewline >= 0 ? rawText.slice(0, firstNewline) : rawText;
-    const restText = firstNewline >= 0 ? rawText.slice(firstNewline) : "";
-    textBlocks.push({ num, text: `## ${num}.${titleLine}${restText}` });
+    const body = firstNewline >= 0 ? rawText.slice(firstNewline) : "";
+    textBlocks.push({ num, heading: `## ${num}.${titleLine}`, body });
   }
 
   const sectionMap = new Map<string, SectionEvent>();
@@ -220,8 +220,9 @@ function AnalysisContent({ content, sections, isStreaming, isLast }: {
         const sectionEvt = sectionId ? sectionMap.get(sectionId) : undefined;
         return (
           <div key={block.num} data-testid={`analysis-section-${block.num}`}>
+            <MarkdownContent content={block.heading} />
             {sectionEvt && <SectionCard section={sectionEvt} />}
-            <MarkdownContent content={block.text} />
+            {block.body.trim() && <MarkdownContent content={block.body} />}
           </div>
         );
       })}
