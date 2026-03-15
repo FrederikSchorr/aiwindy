@@ -609,9 +609,9 @@ Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 
 ## 3. Wind & Welle
 Schreibe genau diese Bullets in dieser Reihenfolge:
-1. Erster Bullet exakt in diesem Format (Markdown-Link!): "Regionales Windmodell: ALADIN, Regionaler Wetterbericht: [DHMZ Kroatien](https://meteo.hr/...)" — ersetze Modell und Dienst aus KONTEXT und QUELLENURLS. Der Dienstname muss ein klickbarer Markdown-Link sein: [Dienstname](URL)
+1. Erster Bullet: EXAKT den Text aus "ABSCHNITT-3-BULLET-1" im KONTEXT kopieren — keine Änderungen, keine Ergänzungen
 2. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen. Windsysteme: Bora, Maestral, Meltemi, Mistral, Jugo/Scirocco, Tramontana, thermische Winde etc.
-3. Letzter Bullet: "Seezustand: [Zustand auf Deutsch]" — exakt aus dem regionalen Wetterbericht übernehmen und korrekt ins Deutsche übersetzen. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Beispiele: "slight and moderate" → "leicht bis mäßig", "The sea 3-4" → "leicht bis mäßig (Douglas 3-4)"
+3. Letzter Bullet: "Seezustand: [Zustand auf Deutsch]" — exakt aus dem regionalen Wetterbericht übernehmen und korrekt ins Deutsche übersetzen. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Beispiele: "slight and moderate" → "leicht bis mäßig", "The sea 3-4" → "leicht bis mäßig (Douglas 3-4)". Falls regionaler Wetterbericht nicht verfügbar: "Seezustand: nicht verfügbar"
 
 ## 4. Wolken & Regen
 - Basierend auf dem regionalen Wetterbericht und (falls möglich) der Windy-Wolkenkarte
@@ -1032,9 +1032,13 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         countryCode ? fetchRegionalWarnings(countryCode) : Promise.resolve(noResult),
       ]);
 
-      const regionalUnavailableNote = !regionalReport.available
-        ? `\n⚠️ PFLICHT-ANWEISUNG: Der regionale Wetterbericht (${service?.label || "unbekannt"}) ist NICHT ABRUFBAR. Schreibe in Abschnitt 3 (Wind & Welle) als ERSTEN Bullet-Point: "⚠️ Regionaler Wetterbericht (${service?.label || "unbekannt"}) momentan nicht verfügbar – keine ortsspezifischen Windwerte vorhanden." Verwende KEINE geschätzten Windwerte ohne regionale Quelldaten. Nenne im letzten Bullet als Seezustand: "nicht verfügbar".`
-        : "";
+      const bullet1Available = service
+        ? `Regionales Windmodell: ${geocoded.regionalModelLabel}, Regionaler Wetterbericht: [${service.label}](${service.forecastUrl})`
+        : `Regionales Windmodell: ${geocoded.regionalModelLabel}`;
+      const bullet1Unavailable = service
+        ? `⚠️ Regionales Windmodell: ${geocoded.regionalModelLabel} — Regionaler Wetterbericht [${service.label}](${service.forecastUrl}) momentan nicht verfügbar`
+        : `⚠️ Regionales Windmodell: ${geocoded.regionalModelLabel} — kein regionaler Wetterbericht verfügbar`;
+      const abschnitt3Bullet1 = regionalReport.available ? bullet1Available : bullet1Unavailable;
 
       const warningsUnavailableNote = !warningsText.available
         ? `\n⚠️ PFLICHT-ANWEISUNG: Die Warnseite (${service?.warningLabel || "unbekannt"}) ist NICHT ABRUFBAR. Beginne Abschnitt 6 mit: "⚠️ [${service?.warningLabel || "Warnseite"}](${service?.warningUrl || "#"}) nicht erreichbar – bitte direkt auf der Seite prüfen."`
@@ -1045,7 +1049,8 @@ ORT: ${geocoded.displayName} (${geocoded.lat.toFixed(4)}°N, ${geocoded.lon.toFi
 Ortskurzname: ${locationShort}
 Regionales Windmodell: ${geocoded.regionalModelLabel}
 Regionaler Wetterdienst: ${service?.label || "nicht verfügbar"}
-${regionalUnavailableNote}${warningsUnavailableNote}
+ABSCHNITT-3-BULLET-1: ${abschnitt3Bullet1}
+${warningsUnavailableNote}
 
 --- QUELLENURLS (für Markdown-Links verwenden) ---
 meteonews.at Allgemeine Lage: https://meteonews.at/de/Allgemeine_Lage/K33/Europa
