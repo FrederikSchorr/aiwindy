@@ -105,7 +105,7 @@ function stripHtml(html: string): string {
 }
 
 async function fetchMeteonews(): Promise<string> {
-  // Only fetches the European overview from meteonews.at — no regional subsections
+  // Fetches only the European overview bulletin from meteonews.at
   try {
     const res = await fetch("https://meteonews.at/de/Allgemeine_Lage/K33/Europa", {
       headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
@@ -114,29 +114,20 @@ async function fetchMeteonews(): Promise<string> {
     if (!res.ok) return "";
     const html = await res.text();
 
-    // Try to extract just the main article/overview text before any regional sections
-    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
-    const rawText = articleMatch
-      ? stripHtml(articleMatch[1])
-      : stripHtml(html);
+    // Target the bulletin-wrap div inside ModuleBulletinsGeneralSituation
+    const bulletinMatch = html.match(/class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i)
+      || html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
 
-    // Find the start of "Allgemeine Lage" or similar heading
-    const startMarkers = ["Allgemeine Lage", "Wetterlage", "Wettersituation"];
-    let startIdx = 0;
-    for (const marker of startMarkers) {
-      const idx = rawText.indexOf(marker);
-      if (idx >= 0) { startIdx = idx; break; }
+    if (bulletinMatch) {
+      return stripHtml(bulletinMatch[1]).slice(0, 1500).trim();
     }
 
-    // Stop before any regional subsection headings
-    const regionalMarkers = ["Alpenraum", "Nordsee", "Ostsee", "Mittelmeer", "Atlantik\n", "Nordeuropa", "Südeuropa", "Osteuropa", "Westeuropa"];
-    let endIdx = Math.min(startIdx + 1500, rawText.length);
-    for (const marker of regionalMarkers) {
-      const idx = rawText.indexOf(marker, startIdx + 100);
-      if (idx >= 0 && idx < endIdx) endIdx = idx;
-    }
+    // Fallback: find "Europawetter" section in plain text
+    const plainText = stripHtml(html);
+    const startIdx = plainText.indexOf("Europawetter");
+    if (startIdx >= 0) return plainText.slice(startIdx, startIdx + 1500).trim();
 
-    return rawText.slice(startIdx, endIdx).trim();
+    return plainText.slice(0, 1500);
   } catch (e) {
     console.error("Meteonews fetch failed:", e);
     return "";
