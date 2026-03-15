@@ -668,10 +668,15 @@ export default function Home() {
             }
 
             const photoHint = photoLocationHints[msg.id];
+            const isCurrentlyStreaming = isStreaming && isLast && msg.role === "assistant";
             return (
               <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
-                {msg.content ? <MarkdownContent content={msg.content} /> : null}
-                {isStreaming && isLast && msg.role === "assistant" && (
+                {msg.content
+                  ? isCurrentlyStreaming
+                    ? <div className="text-[15px] leading-relaxed whitespace-pre-wrap text-foreground">{msg.content}</div>
+                    : <MarkdownContent content={msg.content} />
+                  : null}
+                {isCurrentlyStreaming && (
                   <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
