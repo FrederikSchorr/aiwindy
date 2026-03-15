@@ -815,8 +815,8 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const sectionConfigs = [
         {
           id: "druck-luftmassen", title: "1. Druck & Luftmassen",
-          mapType: "windy", mapConfig: { lat: 51, lon: 0, overlay: "temp", product: "ecmwf", level: "850h", zoom: 4 },
-          sourceLabel: "Windy Temperatur 1.500m ECMWF", sourceUrl: "https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,51.000,0.000,4",
+          mapType: "windy", mapConfig: { lat: 55, lon: -10, overlay: "temp", product: "ecmwf", level: "850h", zoom: 4 },
+          sourceLabel: "Windy Temperatur 1.500m ECMWF", sourceUrl: "https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,55.000,-10.000,4",
         },
         {
           id: "fronten", title: "2. Fronten",
