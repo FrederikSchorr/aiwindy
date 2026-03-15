@@ -444,8 +444,7 @@ Schreibe genau diese Bullets in dieser Reihenfolge:
 - Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)" — URL aus QUELLENURLS
 
 ## 5. Prognose
-- Basierend auf dem regionalen Wetterbericht
-- Genau 1-2 Bullets: Ausblick auf die nächsten 2-3 Tage, Tendenz: besser/schlechter/stabil?
+- KEIN Fließtext, KEINE Bullets — nur die Überschrift, die Karte spricht für sich
 
 ## 6. Wetterwarnung
 - Beginne mit dem Dienstnamen als Label, Beispiel: "[DHMZ Kroatien](WARNINGURL): Gelegentliche Böen..."
