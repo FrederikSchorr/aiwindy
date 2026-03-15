@@ -819,6 +819,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const windUrl = `https://www.windy.com/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
       const cloudsUrl = `https://www.windy.com/-Wolken-clouds?${geocoded.regionalModel},clouds,${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
       const meteogramUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}/meteogram`;
+      const basisdatenUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}`;
 
       const sectionConfigs = [
         {
@@ -840,12 +841,12 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         {
           id: "wolken", title: "4. Wolken & Regen",
           mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "clouds", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 3, 4) },
-          sourceLabel: `Wolken ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: cloudsUrl,
+          sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: meteogramUrl,
         },
         {
           id: "prognose", title: "5. Prognose",
           mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom, forecast: true },
-          sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: meteogramUrl,
+          sourceLabel: `Basisdaten ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: basisdatenUrl,
         },
         {
           id: "warnung", title: "6. Wetterwarnung",
