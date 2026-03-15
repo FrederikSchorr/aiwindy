@@ -166,10 +166,10 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "Météo-France Vigilance",
   },
   GR: {
-    forecastUrl: "https://emy.gr/en/forecast/greece",
-    label: "EMY Griechenland",
-    warningUrl: "https://emy.gr/en/warnings",
-    warningLabel: "EMY Warnungen",
+    forecastUrl: "http://oldportal.emy.gr/emy/en/navigation/naftilia",
+    label: "EMY (HNMS) Griechenland",
+    warningUrl: "http://oldportal.emy.gr/emy/en/warning/gale_html",
+    warningLabel: "EMY Sturmwarnungen",
   },
   SI: {
     forecastUrl: "https://meteo.arso.gov.si/met/sl/weather/forecast/",
