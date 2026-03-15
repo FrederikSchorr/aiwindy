@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const execFileAsync = promisify(execFile);
 
@@ -102,7 +102,13 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const gemini = new GoogleGenerativeAI(process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "");
+const gemini = new GoogleGenAI({
+  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "",
+  httpOptions: {
+    apiVersion: "",
+    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+  },
+});
 
 function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
   if (lat >= 47 && lat <= 55.5 && lon >= 5 && lon <= 16) {
@@ -844,11 +850,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
 
         let vidText = "";
         try {
-          const geminiModel = gemini.getGenerativeModel(
-            { model: "gemini-2.5-flash" },
-            { baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL }
-          );
-          const result = await geminiModel.generateContent({
+          const result = await gemini.models.generateContent({
+            model: "gemini-2.5-flash",
             contents: [{
               role: "user",
               parts: [
@@ -856,9 +859,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
                 { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
               ],
             }],
-            systemInstruction: { role: "user", parts: [{ text: videoPrompt }] },
+            config: { systemInstruction: videoPrompt },
           });
-          vidText = result.response.text();
+          vidText = result.text || "";
         } catch (geminiErr) {
           console.warn("Gemini video analysis failed, falling back to GPT-4.1 Vision with thumbnail:", geminiErr instanceof Error ? geminiErr.message : geminiErr);
         }
