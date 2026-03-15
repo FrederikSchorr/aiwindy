@@ -57,7 +57,7 @@ function SourceLink({ label, url }: { label: string; url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-block text-xs text-muted-foreground hover:text-primary transition-colors mt-1 mb-0.5"
+      className="inline-block text-sm text-muted-foreground hover:text-primary transition-colors mt-1 mb-0.5"
       data-testid="source-link"
     >
       Quelle: {label} ↗
@@ -142,25 +142,25 @@ function MarkdownContent({ content }: { content: string }) {
           inSubList = true;
           parts.push('<ul class="ml-4 mt-0.5 mb-0.5 space-y-0">');
         }
-        parts.push(`<li class="text-[13px] leading-snug text-muted-foreground pl-1" style="list-style:none">– ${text}</li>`);
+        parts.push(`<li class="text-[15px] leading-snug text-muted-foreground pl-1" style="list-style:none">– ${text}</li>`);
       } else {
         if (inSubList) { inSubList = false; parts.push("</ul>"); }
         if (!inList) { inList = true; parts.push('<ul class="mt-0 mb-1.5 space-y-0.5">'); }
-        parts.push(`<li class="text-[13px] leading-snug pl-1" style="list-style:disc;margin-left:1rem">${text}</li>`);
+        parts.push(`<li class="text-[15px] leading-snug pl-1" style="list-style:disc;margin-left:1rem">${text}</li>`);
       }
     } else {
       if (inSubList) { inSubList = false; parts.push("</ul>"); }
       if (inList) { inList = false; parts.push("</ul>"); }
 
       let processed = trimmed
-        .replace(/^### (.+)/, '<h3 class="text-[13px] font-semibold mt-2.5 mb-0.5">$1</h3>')
-        .replace(/^## (.+)/, '<h2 class="text-sm font-bold mt-3 mb-1">$1</h2>')
-        .replace(/^# (.+)/, '<h1 class="text-base font-bold mt-3 mb-1">$1</h1>');
+        .replace(/^### (.+)/, '<h3 class="text-sm font-semibold mt-2.5 mb-0.5">$1</h3>')
+        .replace(/^## (.+)/, '<h2 class="text-base font-bold mt-3 mb-1">$1</h2>')
+        .replace(/^# (.+)/, '<h1 class="text-lg font-bold mt-3 mb-1">$1</h1>');
 
       if (processed === trimmed && trimmed === "") {
         parts.push('<div class="h-1.5"></div>');
       } else if (processed === trimmed) {
-        parts.push(`<p class="text-[13px] leading-snug">${processed}</p>`);
+        parts.push(`<p class="text-[15px] leading-snug">${processed}</p>`);
       } else {
         parts.push(processed);
       }
@@ -177,7 +177,7 @@ function MarkdownContent({ content }: { content: string }) {
     html = html.replace(`%%LINK${i}%%`, link);
   });
 
-  return <div className="text-[13px] leading-snug" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="text-[15px] leading-snug" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 function AnalysisContent({ content, sections, isStreaming, isLast }: {
@@ -473,10 +473,10 @@ export default function Home() {
           </div>
           <div className="flex-1">
             <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
-            <p className="text-xs text-muted-foreground">AI-Meteorologe</p>
+            <p className="text-sm text-muted-foreground">AI-Meteorologe</p>
           </div>
           {activeLocation && (
-            <span className="text-xs text-muted-foreground truncate max-w-[180px]" data-testid="text-active-location">
+            <span className="text-sm text-muted-foreground truncate max-w-[180px]" data-testid="text-active-location">
               📍 {activeLocation.displayName.split(",")[0]}
             </span>
           )}
