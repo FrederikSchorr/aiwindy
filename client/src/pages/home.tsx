@@ -1,8 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MapPin, Cloud, Wind, Thermometer, Loader2, Map, Navigation, Check, MessageSquare, BarChart3, Camera } from "lucide-react";
-import type { ChatMessage, GeocodeResult, ForecastData, ForecastHour } from "@shared/schema";
+import { Send, Cloud, Camera } from "lucide-react";
+import type { ChatMessage, GeocodeResult } from "@shared/schema";
+
+interface AnalysisConfig {
+  locationName: string;
+  lat: number;
+  lon: number;
+  regionalModel: string;
+  regionalModelLabel: string;
+  regionalModelZoom: number;
+  knmiTime: string;
+  regionalServiceLabel: string | null;
+  regionalServiceUrl: string | null;
+  warningServiceLabel: string | null;
+  warningServiceUrl: string | null;
+}
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
   lat: number; lon: number; overlay: string; product: string; level: string; zoom: number; forecast?: boolean;
@@ -14,134 +28,135 @@ function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
     <iframe
       title={`${overlay}-${product}`}
       src={src}
-      className="w-full h-full border-0"
+      className="w-full border-0 rounded-lg"
+      style={{ height: "300px" }}
       frameBorder="0"
     />
   );
 }
 
-function weatherIcon(code: number): string {
-  if (code === 0) return "☀️";
-  if (code <= 3) return "⛅";
-  if (code <= 48) return "🌫️";
-  if (code <= 55) return "🌦️";
-  if (code <= 57) return "🌧️";
-  if (code <= 65) return "🌧️";
-  if (code <= 67) return "🌨️";
-  if (code <= 75) return "❄️";
-  if (code <= 77) return "🌨️";
-  if (code <= 82) return "🌧️";
-  if (code <= 86) return "❄️";
-  if (code <= 99) return "⛈️";
-  return "❓";
-}
-
-function windDirArrow(deg: number): string {
-  const arrows = ["↓", "↙", "←", "↖", "↑", "↗", "→", "↘"];
-  return arrows[Math.round(deg / 45) % 8];
-}
-
-function windColor(kt: number): string {
-  if (kt < 5) return "text-gray-400";
-  if (kt < 10) return "text-green-500";
-  if (kt < 15) return "text-yellow-500";
-  if (kt < 20) return "text-orange-500";
-  if (kt < 25) return "text-red-500";
-  return "text-red-700 font-bold";
-}
-
-function gustColor(kt: number): string {
-  if (kt < 10) return "text-gray-400";
-  if (kt < 15) return "text-yellow-500";
-  if (kt < 20) return "text-orange-500";
-  if (kt < 25) return "text-red-500";
-  return "text-red-700 font-bold";
-}
-
-function ForecastStrip({ lat, lon }: { lat: number; lon: number }) {
-  const [forecast, setForecast] = useState<ForecastData | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/forecast", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat, lon }),
-        });
-        if (res.ok && !cancelled) {
-          setForecast(await res.json());
-        }
-      } catch {}
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [lat, lon]);
-
-  if (!forecast) {
-    return (
-      <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
-        <Loader2 className="w-3 h-3 animate-spin" /> Vorhersage laden...
-      </div>
-    );
-  }
-
-  const dayGroups: { label: string; hours: (ForecastHour & { h: number })[] }[] = [];
-  const dayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-  let currentDay = "";
-
-  for (const hour of forecast.hours) {
-    const d = new Date(hour.time);
-    const dayKey = d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric" });
-    if (dayKey !== currentDay) {
-      currentDay = dayKey;
-      dayGroups.push({ label: `${dayNames[d.getDay()]} ${d.getDate()}.`, hours: [] });
-    }
-    dayGroups[dayGroups.length - 1].hours.push({ ...hour, h: d.getHours() });
-  }
-
+function SourceLink({ label, url }: { label: string; url: string }) {
   return (
-    <div className="border-t border-border bg-card" data-testid="forecast-strip">
-      <div className="overflow-x-auto" ref={scrollRef}>
-        <div className="inline-flex min-w-full">
-          <div className="sticky left-0 z-10 bg-card border-r border-border shrink-0 text-[10px]">
-            <div className="h-5 px-1.5 flex items-center font-medium text-muted-foreground border-b border-border/50">Stunden</div>
-            <div className="h-5 px-1.5 flex items-center border-b border-border/50"></div>
-            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Temp °C</div>
-            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Regen mm</div>
-            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Wind kt</div>
-            <div className="h-5 px-1.5 flex items-center text-muted-foreground border-b border-border/50">Böen kt</div>
-            <div className="h-5 px-1.5 flex items-center text-muted-foreground">Richtung</div>
-          </div>
-
-          {dayGroups.map((day) => (
-            <div key={day.label} className="border-r border-border/30">
-              <div className="text-[10px] font-medium text-center px-1 h-5 flex items-center justify-center bg-muted/50 border-b border-border/50 whitespace-nowrap" style={{ gridColumn: `span ${day.hours.length}` }}>
-                {day.label}
-              </div>
-              <div className="flex">
-                {day.hours.filter((_, i) => i % 3 === 0).map((h) => (
-                  <div key={h.time} className="flex flex-col items-center" style={{ minWidth: "28px" }}>
-                    <div className="h-5 text-[10px] text-muted-foreground flex items-center border-b border-border/50">{h.h}</div>
-                    <div className="h-5 text-[11px] flex items-center border-b border-border/50">{weatherIcon(h.weatherCode)}</div>
-                    <div className="h-5 text-[10px] flex items-center border-b border-border/50">{Math.round(h.temp)}°</div>
-                    <div className="h-5 text-[10px] flex items-center border-b border-border/50">
-                      {h.rain > 0 ? <span className="text-blue-500">{h.rain.toFixed(1)}</span> : <span className="text-gray-300">-</span>}
-                    </div>
-                    <div className={`h-5 text-[10px] flex items-center border-b border-border/50 ${windColor(h.windSpeed)}`}>{h.windSpeed}</div>
-                    <div className={`h-5 text-[10px] flex items-center border-b border-border/50 ${gustColor(h.windGusts)}`}>{h.windGusts}</div>
-                    <div className="h-5 text-[10px] flex items-center text-muted-foreground">{windDirArrow(h.windDir)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-block text-xs text-muted-foreground hover:text-primary transition-colors mt-1 mb-2"
+      data-testid="source-link"
+    >
+      Quelle: {label} ↗
+    </a>
   );
+}
+
+function SectionMaps({ sectionNum, config }: { sectionNum: number; config: AnalysisConfig }) {
+  switch (sectionNum) {
+    case 1:
+      return (
+        <div className="my-3" data-testid="section-map-luftmassen">
+          <WindyEmbed lat={51} lon={0} overlay="temp" product="ecmwf" level="850h" zoom={4} />
+          <SourceLink
+            label="Temperatur 1.500m ECMWF windy.com"
+            url="https://www.windy.com/-temp-850h?ecmwf,51.000,0.000,4"
+          />
+        </div>
+      );
+    case 2:
+      return (
+        <div className="my-3" data-testid="section-map-fronten">
+          <img
+            src="/api/knmi-chart"
+            alt="KNMI Fronten-Analyse"
+            className="w-full rounded-lg bg-white"
+            data-testid="img-knmi-chart"
+          />
+          <SourceLink
+            label={`KNMI ${config.knmiTime}`}
+            url="https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten"
+          />
+        </div>
+      );
+    case 3: {
+      const windUrl = `https://www.windy.com/-wind-${config.regionalModel}?${config.regionalModel},${config.lat.toFixed(3)},${config.lon.toFixed(3)},${Math.min(config.regionalModelZoom + 2, 14)}`;
+      return (
+        <div className="my-3" data-testid="section-map-wind">
+          {config.regionalServiceLabel && config.regionalServiceUrl && (
+            <div className="text-xs text-muted-foreground mb-2">
+              Regionaler Wetterdienst:{" "}
+              <a href={config.regionalServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                {config.regionalServiceLabel} ↗
+              </a>
+            </div>
+          )}
+          <WindyEmbed
+            lat={config.lat}
+            lon={config.lon}
+            overlay="wind"
+            product={config.regionalModel}
+            level="surface"
+            zoom={config.regionalModelZoom}
+          />
+          <SourceLink
+            label={`Wind ${config.locationName} ${config.regionalModelLabel} windy.com`}
+            url={windUrl}
+          />
+        </div>
+      );
+    }
+    case 4: {
+      const cloudsUrl = `https://www.windy.com/-Wolken-clouds?${config.regionalModel},clouds,${config.lat.toFixed(3)},${config.lon.toFixed(3)},${config.regionalModelZoom}`;
+      return (
+        <div className="my-3" data-testid="section-map-wolken">
+          <WindyEmbed
+            lat={config.lat}
+            lon={config.lon}
+            overlay="clouds"
+            product={config.regionalModel}
+            level="surface"
+            zoom={config.regionalModelZoom}
+          />
+          <SourceLink
+            label={`Wolken & Regen ${config.locationName} ${config.regionalModelLabel} windy.com`}
+            url={cloudsUrl}
+          />
+        </div>
+      );
+    }
+    case 5: {
+      const meteogramUrl = `https://www.windy.com/${config.lat.toFixed(3)}/${config.lon.toFixed(3)}/${config.regionalModel}/meteogram?${config.regionalModel},${config.lat.toFixed(3)},${config.lon.toFixed(3)},${config.regionalModelZoom}`;
+      return (
+        <div className="my-3" data-testid="section-map-prognose">
+          <WindyEmbed
+            lat={config.lat}
+            lon={config.lon}
+            overlay="wind"
+            product={config.regionalModel}
+            level="surface"
+            zoom={config.regionalModelZoom}
+            forecast={true}
+          />
+          <SourceLink
+            label={`Meteogram ${config.locationName} ${config.regionalModelLabel} windy.com`}
+            url={meteogramUrl}
+          />
+        </div>
+      );
+    }
+    case 6:
+      if (config.warningServiceLabel && config.warningServiceUrl) {
+        return (
+          <div className="my-2 text-xs text-muted-foreground" data-testid="section-warning-source">
+            Warnquelle:{" "}
+            <a href={config.warningServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              {config.warningServiceLabel} ↗
+            </a>
+          </div>
+        );
+      }
+      return null;
+    default:
+      return null;
+  }
 }
 
 function MarkdownContent({ content }: { content: string }) {
@@ -186,8 +201,8 @@ function MarkdownContent({ content }: { content: string }) {
 
       let processed = trimmed
         .replace(/^### (.+)/, '<h3 class="text-[13px] font-semibold mt-2.5 mb-0.5">$1</h3>')
-        .replace(/^## (.+)/, '<h2 class="text-[13px] font-bold mt-3 mb-0.5">$1</h2>')
-        .replace(/^# (.+)/, '<h1 class="text-sm font-bold mt-3 mb-1">$1</h1>');
+        .replace(/^## (.+)/, '<h2 class="text-sm font-bold mt-3 mb-1">$1</h2>')
+        .replace(/^# (.+)/, '<h1 class="text-base font-bold mt-3 mb-1">$1</h1>');
 
       if (processed === trimmed && trimmed === "") {
         parts.push('<div class="h-1.5"></div>');
@@ -212,81 +227,127 @@ function MarkdownContent({ content }: { content: string }) {
   return <div className="text-[13px] leading-snug" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+function AnalysisContent({ content, config, isStreaming, isLast }: {
+  content: string;
+  config: AnalysisConfig;
+  isStreaming: boolean;
+  isLast: boolean;
+}) {
+  const sectionRegex = /^##\s*(\d)[.):\s]/m;
+  const parts = content.split(sectionRegex);
+
+  const sections: { num: number; text: string }[] = [];
+  let preamble = parts[0] || "";
+
+  for (let i = 1; i < parts.length; i += 2) {
+    const num = parseInt(parts[i], 10);
+    const rawText = parts[i + 1] || "";
+    const firstNewline = rawText.indexOf("\n");
+    const titleLine = firstNewline >= 0 ? rawText.slice(0, firstNewline) : rawText;
+    const restText = firstNewline >= 0 ? rawText.slice(firstNewline) : "";
+    sections.push({ num, text: `## ${num}.${titleLine}${restText}` });
+  }
+
+  return (
+    <div>
+      {preamble.trim() && <MarkdownContent content={preamble} />}
+      {sections.map((section, idx) => (
+        <div key={section.num}>
+          <SectionMaps sectionNum={section.num} config={config} />
+          <MarkdownContent content={section.text} />
+        </div>
+      ))}
+      {isStreaming && isLast && (
+        <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
-  const [mobileTab, setMobileTab] = useState<"chat" | "maps">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hallo! Frag mich nach dem Wetter an einem beliebigen Ort und ich zeige dir die aktuelle Wetterlage mit Analyse speziell für Segler. Probiere z.B. \"Wie ist das Wetter in Punat?\", \"Elba\" oder \"Segeln bei Rovinj\".",
+      content: "Hallo! Ich bin dein Segelwetter-Assistent. Du kannst mich alles rund um Wetter, Wind und Segeln fragen.\n\nFür eine **Segelwetteranalyse** nenne einfach einen Ort — z.B. \"Punat\", \"Gardasee\" oder \"Segeln bei Rovinj\".",
     },
   ]);
   const [input, setInput] = useState("");
   const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
+  const [analysisConfigs, setAnalysisConfigs] = useState<Record<string, AnalysisConfig>>({});
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const mobileScrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mobileFileInputRef = useRef<HTMLInputElement>(null);
 
   const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
-    const statusId = `status-${Date.now()}`;
     const assistantId = `assistant-${Date.now()}`;
-    setMessages((prev) => [...prev, { id: statusId, role: "assistant", content: "" }]);
-    let contentStarted = false;
-    const statusSteps: string[] = [];
+    let currentAnalysisConfig: AnalysisConfig | null = null;
     let processed = 0;
+    let lineBuffer = "";
 
-    const chatHistory = messages
-      .filter((m) => m.id !== "welcome" && !m.id.startsWith("status-"))
-      .map((m) => ({ role: m.role, content: m.content }));
+    setMessages((prev) => [...prev, {
+      id: assistantId,
+      role: "assistant" as const,
+      content: "",
+    }]);
 
     const xhr = new XMLHttpRequest();
     abortRef.current = { abort: () => xhr.abort() } as AbortController;
     xhr.open("POST", "/api/chat");
     xhr.setRequestHeader("Content-Type", "application/json");
 
+    const handleEvent = (data: any) => {
+      if (data.location) {
+        setActiveLocation(data.location as GeocodeResult);
+      }
+      if (data.analysisStart) {
+        currentAnalysisConfig = {
+          locationName: data.locationName,
+          lat: data.lat,
+          lon: data.lon,
+          regionalModel: data.regionalModel,
+          regionalModelLabel: data.regionalModelLabel,
+          regionalModelZoom: data.regionalModelZoom,
+          knmiTime: data.knmiTime,
+          regionalServiceLabel: data.regionalServiceLabel,
+          regionalServiceUrl: data.regionalServiceUrl,
+          warningServiceLabel: data.warningServiceLabel,
+          warningServiceUrl: data.warningServiceUrl,
+        };
+        setAnalysisConfigs(prev => ({ ...prev, [assistantId]: currentAnalysisConfig! }));
+      }
+      if (data.content) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: m.content + data.content } : m
+          )
+        );
+      }
+      if (data.error) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Verarbeitung. Bitte versuche es erneut." } : m
+          )
+        );
+      }
+    };
+
     const processChunk = () => {
       const text = xhr.responseText.slice(processed);
       processed = xhr.responseText.length;
-      const lines = text.split("\n");
+      const combined = lineBuffer + text;
+      const lines = combined.split("\n");
+      lineBuffer = lines.pop() || "";
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
-            const data = JSON.parse(line.slice(6));
-            if (data.location) {
-              setActiveLocation(data.location as GeocodeResult);
-            }
-            if (data.status) {
-              statusSteps.push(data.status);
-              const combined = statusSteps.join("\n");
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === statusId ? { ...m, content: combined } : m
-                )
-              );
-            }
-            if (data.content) {
-              if (!contentStarted) {
-                contentStarted = true;
-                setMessages((prev) => [...prev, { id: assistantId, role: "assistant" as const, content: data.content }]);
-              } else {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: m.content + data.content } : m
-                  )
-                );
-              }
-            }
-            if (data.error) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === statusId ? { ...m, content: "Fehler bei der Wetteranalyse. Bitte versuche es erneut." } : m
-                )
-              );
-            }
+            handleEvent(JSON.parse(line.slice(6)));
           } catch {}
         }
       }
@@ -294,17 +355,29 @@ export default function Home() {
 
     xhr.onprogress = processChunk;
     xhr.onloadend = () => {
+      lineBuffer += "\n";
       processChunk();
+      setMessages((prev) => {
+        const msg = prev.find(m => m.id === assistantId);
+        if (msg && !msg.content) {
+          return prev.filter(m => m.id !== assistantId);
+        }
+        return prev;
+      });
       setIsStreaming(false);
     };
     xhr.onerror = () => {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === statusId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
+          m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
         )
       );
       setIsStreaming(false);
     };
+
+    const chatHistory = messages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({ role: m.role, content: m.content }));
 
     xhr.send(JSON.stringify({
       message: userMessage,
@@ -316,19 +389,16 @@ export default function Home() {
   const handleFileUpload = useCallback((file: File) => {
     if (isStreaming) return;
     setIsStreaming(true);
-    const statusId = `status-${Date.now()}`;
     const assistantId = `assistant-${Date.now()}`;
     const isVideo = file.type.startsWith("video/");
+    let processed = 0;
+    let lineBuffer = "";
 
     setMessages((prev) => [
       ...prev,
       { id: `user-${Date.now()}`, role: "user", content: isVideo ? "📹 Video hochgeladen" : "📷 Foto hochgeladen" },
-      { id: statusId, role: "assistant", content: "" },
+      { id: assistantId, role: "assistant" as const, content: "" },
     ]);
-
-    let contentStarted = false;
-    const statusSteps: string[] = [];
-    let processed = 0;
 
     const formData = new FormData();
     formData.append("photo", file);
@@ -343,7 +413,9 @@ export default function Home() {
     const processChunk = () => {
       const text = xhr.responseText.slice(processed);
       processed = xhr.responseText.length;
-      const lines = text.split("\n");
+      const combined = lineBuffer + text;
+      const lines = combined.split("\n");
+      lineBuffer = lines.pop() || "";
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
@@ -351,31 +423,17 @@ export default function Home() {
             if (data.location) {
               setActiveLocation(data.location as GeocodeResult);
             }
-            if (data.status) {
-              statusSteps.push(data.status);
-              const combined = statusSteps.join("\n");
+            if (data.content) {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === statusId ? { ...m, content: combined } : m
+                  m.id === assistantId ? { ...m, content: m.content + data.content } : m
                 )
               );
-            }
-            if (data.content) {
-              if (!contentStarted) {
-                contentStarted = true;
-                setMessages((prev) => [...prev, { id: assistantId, role: "assistant" as const, content: data.content }]);
-              } else {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: m.content + data.content } : m
-                  )
-                );
-              }
             }
             if (data.error) {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === statusId ? { ...m, content: "Fehler bei der Bildanalyse. Bitte versuche es erneut." } : m
+                  m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Bildanalyse. Bitte versuche es erneut." } : m
                 )
               );
             }
@@ -386,13 +444,21 @@ export default function Home() {
 
     xhr.onprogress = processChunk;
     xhr.onloadend = () => {
+      lineBuffer += "\n";
       processChunk();
+      setMessages((prev) => {
+        const msg = prev.find(m => m.id === assistantId);
+        if (msg && !msg.content) {
+          return prev.filter(m => m.id !== assistantId);
+        }
+        return prev;
+      });
       setIsStreaming(false);
     };
     xhr.onerror = () => {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === statusId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
+          m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
         )
       );
       setIsStreaming(false);
@@ -413,9 +479,6 @@ export default function Home() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-    if (mobileScrollRef.current) {
-      mobileScrollRef.current.scrollTop = mobileScrollRef.current.scrollHeight;
-    }
   }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -431,408 +494,111 @@ export default function Home() {
     sendMessage(trimmed);
   };
 
-  const chatPanel = (
-    <>
+  return (
+    <div className="flex flex-col h-dvh bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
-        <div className="px-4 py-3 flex items-center gap-3">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10">
             <Cloud className="w-5 h-5 text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
-            <p className="text-xs text-muted-foreground">AI-Meteorologe mit Windy-Karten</p>
+            <p className="text-xs text-muted-foreground">AI-Meteorologe</p>
           </div>
+          {activeLocation && (
+            <span className="text-xs text-muted-foreground truncate max-w-[180px]" data-testid="text-active-location">
+              📍 {activeLocation.displayName.split(",")[0]}
+            </span>
+          )}
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto" ref={scrollRef}>
-        <div className="px-4 py-4 space-y-3">
+        <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
           {messages.map((msg) => {
             const isUser = msg.role === "user";
-            const isStatus = msg.id.startsWith("status-");
-            if (isStatus) {
-              if (!msg.content && !isStreaming) return null;
-              const steps = (msg.content || "...").split("\n").filter(Boolean);
+            const msgAnalysisConfig = analysisConfigs[msg.id];
+            const isLast = msg.id === messages[messages.length - 1]?.id;
+
+            if (isUser) {
               return (
-                <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
-                  <div className="max-w-[90%]">
-                    <div className="px-3 py-2 space-y-0.5">
-                      {steps.map((step, i) => {
-                        const isSub = step.startsWith("  - ");
-                        if (isSub) {
-                          return (
-                            <div key={i} className="ml-5 text-xs text-muted-foreground">
-                              <MarkdownContent content={step.slice(4)} />
-                            </div>
-                          );
-                        }
-                        const isLast = i === steps.length - 1 && !steps[i + 1]?.startsWith("  - ");
-                        const isActive = isLast && isStreaming;
-                        return (
-                          <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
-                            {isActive ? (
-                              <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
-                            ) : (
-                              <Check className="w-3 h-3 text-green-500 shrink-0" />
-                            )}
-                            <MarkdownContent content={step} />
-                          </div>
-                        );
-                      })}
+                <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`}>
+                  <div className="max-w-[75%]">
+                    <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-normal bg-primary text-primary-foreground">
+                      {msg.content}
                     </div>
                   </div>
                 </div>
               );
             }
-            return (
-              <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
-                <div className={`max-w-[90%] ${isUser ? "order-2" : "order-1"}`}>
-                  <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                    isUser
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-card text-card-foreground border border-border rounded-bl-md"
-                  }`}>
-                    {isUser ? msg.content : (
-                      <>
-                        <MarkdownContent content={msg.content} />
-                        {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && !isStatus && (
-                          <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
+
+            if (msgAnalysisConfig) {
+              return (
+                <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`}>
+                  <AnalysisContent
+                    content={msg.content}
+                    config={msgAnalysisConfig}
+                    isStreaming={isStreaming}
+                    isLast={isLast}
+                  />
                 </div>
+              );
+            }
+
+            return (
+              <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`}>
+                {msg.content ? <MarkdownContent content={msg.content} /> : null}
+                {isStreaming && isLast && msg.role === "assistant" && (
+                  <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
-        <form onSubmit={handleSubmit} className="px-4 py-3 flex items-center gap-2">
-          <input
-            type="file"
-            accept="image/*,video/*"
-            ref={fileInputRef}
-            onChange={onFileChange}
-            className="hidden"
-            data-testid="input-file-desktop"
-          />
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isStreaming}
-            data-testid="button-upload"
-            title="Foto/Video hochladen"
-          >
-            <Camera className="w-4 h-4" />
-          </Button>
-          <div className="relative flex-1">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={activeLocation ? "Frage stellen oder neuen Ort eingeben..." : "Ort eingeben, z.B. \"Punat\""}
-              className="pl-9"
-              disabled={isStreaming}
-              data-testid="input-location"
+      <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0 pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-2xl mx-auto">
+          <form onSubmit={handleSubmit} className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="file"
+              accept="image/*,video/*"
+              ref={fileInputRef}
+              onChange={onFileChange}
+              className="hidden"
+              data-testid="input-file"
             />
-          </div>
-          <Button
-            type="submit"
-            size="icon"
-            disabled={!input.trim() || isStreaming}
-            data-testid="button-send"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
-      </div>
-    </>
-  );
-
-  const mapsPanel = (
-    <>
-      {activeLocation ? (
-        <div className="flex flex-col h-full">
-          <div className="px-5 py-2.5 border-b border-border bg-card/50 backdrop-blur-sm shrink-0 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium" data-testid="text-active-location">{activeLocation.displayName}</span>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {activeLocation.lat.toFixed(2)}°N, {activeLocation.lon.toFixed(2)}°E
-            </span>
-          </div>
-
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border" style={{ aspectRatio: "3/2" }}>
-              <a
-                href={`https://www.windy.com/-temp-850h?ecmwf,55.000,-10.000,3`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
-                data-testid="link-temp-map"
-              >
-                <Thermometer className="w-3 h-3 text-red-500" />
-                Temperatur 850hPa - ECMWF ↗
-              </a>
-              <WindyEmbed
-                lat={55}
-                lon={-10}
-                overlay="temp"
-                product="ecmwf"
-                level="850h"
-                zoom={3}
-              />
-            </div>
-
-            <div className="relative min-h-[250px] md:min-h-[375px] border-b border-border overflow-hidden" style={{ aspectRatio: "3/2" }}>
-              <a
-                href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
-                data-testid="link-knmi-chart"
-              >
-                <Map className="w-3 h-3 text-blue-500" />
-                KNMI Fronten-Analyse ↗
-              </a>
-              <img
-                src="/api/knmi-chart"
-                alt="KNMI Weather Analysis Chart"
-                className="w-full h-full object-contain bg-white"
-                data-testid="img-knmi-chart"
-              />
-            </div>
-
-            <div className="relative min-h-[250px] md:min-h-[375px]" style={{ aspectRatio: "3/2" }}>
-              <a
-                href={`https://www.windy.com/-wind-${activeLocation.regionalModel}?${activeLocation.regionalModel},${activeLocation.lat.toFixed(3)},${activeLocation.lon.toFixed(3)},${Math.min(activeLocation.regionalModelZoom + 2, 14)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
-                data-testid="link-wind-map"
-              >
-                <Wind className="w-3 h-3 text-cyan-500" />
-                Lokaler Wind - {activeLocation.regionalModelLabel} ↗
-              </a>
-              <WindyEmbed
-                lat={activeLocation.lat}
-                lon={activeLocation.lon}
-                overlay="wind"
-                product={activeLocation.regionalModel}
-                level="surface"
-                zoom={activeLocation.regionalModelZoom}
-              />
-            </div>
-
-            <div className="relative flex-1 min-h-[250px]">
-              <a
-                href={`https://www.windy.com/-wind-${activeLocation.regionalModel}?${activeLocation.regionalModel},${activeLocation.lat.toFixed(3)},${activeLocation.lon.toFixed(3)},${Math.min(activeLocation.regionalModelZoom + 2, 14)},forecast`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5 text-xs font-medium border border-border hover:bg-background transition-colors cursor-pointer"
-                data-testid="link-forecast-map"
-              >
-                <Navigation className="w-3 h-3 text-emerald-500" />
-                Vorhersage - {activeLocation.regionalModelLabel} ↗
-              </a>
-              <WindyEmbed
-                lat={activeLocation.lat}
-                lon={activeLocation.lon}
-                overlay="wind"
-                product={activeLocation.regionalModel}
-                level="surface"
-                zoom={activeLocation.regionalModelZoom}
-                forecast={true}
-              />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-3">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mx-auto">
-              <Cloud className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Kein Ort ausgewählt</p>
-              <p className="text-xs text-muted-foreground mt-1">Gib im Chat einen Ort ein, um Wetterkarten zu sehen</p>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
-  return (
-    <div className="flex flex-col md:flex-row h-dvh bg-background">
-      <div className="hidden md:flex md:flex-col md:w-1/2 border-r border-border bg-background">
-        {chatPanel}
-      </div>
-      <div className="hidden md:flex md:flex-1 md:flex-col bg-muted/30">
-        {mapsPanel}
-      </div>
-
-      <div className="flex flex-col h-dvh md:hidden">
-        <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
-          <div className="px-4 py-2 flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
-              <Cloud className="w-4 h-4 text-primary" />
-            </div>
-            <h1 className="text-sm font-semibold flex-1">Segelwetter</h1>
-            {activeLocation && (
-              <span className="text-xs text-muted-foreground truncate max-w-[120px]">{activeLocation.displayName}</span>
-            )}
-          </div>
-          <div className="flex">
-            <button
-              onClick={() => setMobileTab("chat")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 transition-colors ${
-                mobileTab === "chat"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="tab-chat"
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming}
+              data-testid="button-upload"
+              title="Foto/Video hochladen"
+              className="shrink-0"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Chat
-            </button>
-            <button
-              onClick={() => setMobileTab("maps")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 transition-colors ${
-                mobileTab === "maps"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="tab-maps"
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              Karten
-              {activeLocation && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              )}
-            </button>
-          </div>
+              <Camera className="w-4 h-4" />
+            </Button>
+            <div className="relative flex-1">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ort, Frage oder Nachricht..."
+                className="text-[15px]"
+                disabled={isStreaming}
+                data-testid="input-message"
+              />
+            </div>
+            <Button type="submit" size="icon" disabled={!input.trim() || isStreaming} data-testid="button-send">
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
         </div>
-
-        {mobileTab === "chat" ? (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto" ref={mobileScrollRef}>
-              <div className="px-4 py-4 space-y-3">
-                {messages.map((msg) => {
-                  const isUser = msg.role === "user";
-                  const isStatus = msg.id.startsWith("status-");
-                  if (isStatus) {
-                    if (!msg.content && !isStreaming) return null;
-                    const steps = (msg.content || "...").split("\n").filter(Boolean);
-                    return (
-                      <div key={msg.id} className="flex justify-start" data-testid={`message-${msg.id}`}>
-                        <div className="max-w-[90%]">
-                          <div className="px-3 py-2 space-y-0.5">
-                            {steps.map((step, i) => {
-                              const isSub = step.startsWith("  - ");
-                              if (isSub) {
-                                return (
-                                  <div key={i} className="ml-5 text-xs text-muted-foreground">
-                                    <MarkdownContent content={step.slice(4)} />
-                                  </div>
-                                );
-                              }
-                              const isLast = i === steps.length - 1 && !steps[i + 1]?.startsWith("  - ");
-                              const isActive = isLast && isStreaming;
-                              return (
-                                <div key={i} className={`flex items-center gap-2 text-xs ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
-                                  {isActive ? (
-                                    <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
-                                  ) : (
-                                    <Check className="w-3 h-3 text-green-500 shrink-0" />
-                                  )}
-                                  <MarkdownContent content={step} />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  if (isUser) {
-                    return (
-                      <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`}>
-                        <div className="max-w-[75%]">
-                          <div className="rounded-2xl rounded-br-md px-3.5 py-2 text-[15px] leading-normal bg-primary text-primary-foreground">
-                            {msg.content}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={msg.id} className="px-1 text-[15px] leading-normal" data-testid={`message-${msg.id}`}>
-                      <MarkdownContent content={msg.content} />
-                      {isStreaming && msg.id === messages[messages.length - 1]?.id && msg.role === "assistant" && (
-                        <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0 pb-[env(safe-area-inset-bottom)]">
-              <form onSubmit={handleSubmit} className="px-3 py-2 flex items-center gap-2">
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  ref={mobileFileInputRef}
-                  onChange={onFileChange}
-                  className="hidden"
-                  data-testid="input-file-mobile"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => mobileFileInputRef.current?.click()}
-                  disabled={isStreaming}
-                  data-testid="button-upload-mobile"
-                  className="shrink-0"
-                >
-                  <Camera className="w-4 h-4" />
-                </Button>
-                <div className="relative flex-1">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={activeLocation ? "Frage oder neuer Ort..." : "Ort eingeben, z.B. \"Punat\""}
-                    className="pl-9 text-[15px]"
-                    disabled={isStreaming}
-                    data-testid="input-location-mobile"
-                  />
-                </div>
-                <Button type="submit" size="icon" disabled={!input.trim() || isStreaming} data-testid="button-send-mobile">
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col overflow-y-auto bg-muted/30 min-h-0">
-            {mapsPanel}
-          </div>
-        )}
       </div>
     </div>
   );

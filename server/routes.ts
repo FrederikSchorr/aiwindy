@@ -15,7 +15,6 @@ const openai = new OpenAI({
 });
 
 const gemini = new GoogleGenerativeAI(process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "");
-const geminiBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || "";
 
 function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
   if (lat >= 47 && lat <= 55.5 && lon >= 5 && lon <= 16) {
@@ -135,109 +134,216 @@ async function fetchWeatherContext(lat: number, lon: number, displayName: string
   return parts.join("\n\n");
 }
 
-const METEOROLOGIST_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Sachlich, präzise, Bullet-Point-Stil. Keine Begrüßung, keine Floskeln, kein "Moin Crew", direkt zur Sache.
-
-STRUKTUR (immer diese 4 Kapitel, nummeriert):
-
-## 1. Großwetterlage
-Gesamteuropäische synoptische Lage — NICHT auf den angefragten Ort fokussieren, sondern den großräumigen Überblick geben:
-- Dominierende Druckgebilde über Europa: Wo liegen die steuernden Hochs und Tiefs? (Position, Kerndruck in hPa, z.B. "Hoch ~1032 hPa zentrales Mittelmeer", "Tief ~995 hPa südl. Island")
-- Wetterbestimmende Großsysteme: Azorenhoch, Islandtief, russisches Kältehoch, Genuatief etc. — welche sind aktuell aktiv und steuernd?
-- Großräumige Strömung: Wie ist die Anströmung über Europa organisiert? (z.B. "Westlage", "Nordlage", "Omega-Lage", "blockierendes Hoch")
-- Kaltluft-/Warmluft-Advektionen aus 850hPa-Karte: Wo liegen die Luftmassengrenzen über Europa? ("→ In der 850hPa-Karte: Kaltluft-Zunge aus NE über Skandinavien, Warmluft-Vorstoß aus SW über Iberische Halbinsel")
-- Entwicklungstendenz 2-3 Tage: Wie verlagern sich die Systeme?
-
-## 2. Fronten
-Frontensituation — Übergang von der europäischen Lage zur Region des angefragten Orts. Bezug auf KNMI-Frontenkarte:
-- Lage der Frontalzone über Europa
-- Welche Fronten beeinflussen die Region des angefragten Orts? Zugweg in Richtung Revier
-- Kalt-/Warmfronten, Luftmassengrenze
-- Okklusionen, Wellenstörungen
-
-## 3. Lokale Windsysteme [ORTSNAME]
-SCHWERPUNKT dieses Kapitels: Regionale und lokale Windphänomene! Das ist der wichtigste Teil.
-- **Relevante Windsysteme:** Bora, Jugo/Scirocco, Maestral, Mistral, Meltemi, Tramontana, Föhn, thermische See-/Landwind-Zirkulation, Düseneffekte, Kapeffekte — was davon ist aktuell relevant und warum?
-- **Mechanismus kurz erklären:** Warum entsteht der Wind hier? (z.B. "Druckgradient NE-SW über Dinariden → Bora-Lage", "Thermische Konvektion ab Mittag → Maestral")
-- **Aktueller Wind:** Richtung, Stärke (kt / Bft), Böen — nur als kurze Zeile
-- **Seegang:** Wellenhöhe, Periode — nur als kurze Zeile, falls Daten vorhanden
-- **Bezug auf lokale Windkarte** ("Im ALADIN-Modell erkennbar: ...")
-- Aktuelles Wetter (Temperatur, Bewölkung) maximal 1-2 Zeilen, nicht mehr
-
-## 4. Wetterwarnungen
-- Aktive Warnungen auflisten (Sturmwarnung, Bora-Warnung, Gewitterwarnung etc.)
-- Falls keine Warnungen: nur ein kurzer Satz "Keine aktiven Warnungen."
-- Bei Warnungen: konkrete Werte (erwartete Böen in kt, Wellenhöhe) und Zeitfenster
-- Falls ein Link zum regionalen Warndienst im Kontext angegeben ist, diesen als Markdown-Link einbinden, z.B.: "→ Aktuelle Warnungen: [DHMZ Kroatien](https://meteo.hr/...)"
-
-STIL-REGELN:
-- Deutsch, sachlich-professionell, KEINE informellen Anreden oder Floskeln
-- Bullet-Point-Stil bevorzugen, Fließtext minimieren
-- EMOJIS nutzen um den Text aufzulockern und visuell zu strukturieren:
-  - Kapitelüberschriften: ## 1. ☁️ Großwetterlage, ## 2. 🌀 Fronten, ## 3. 💨 Lokale Windsysteme, ## 4. ⚠️ Wetterwarnungen
-  - Hochdruckgebiete: ☀️ oder 🔵, Tiefdruckgebiete: 🌀 oder 🔴
-  - Wind: 💨, Böen: 🌬️, Sturm: 🌊⚡, Gewitter: ⛈️
-  - Temperatur: 🌡️, Kaltluft: 🥶, Warmluft: 🌤️
-  - Sonne: ☀️, Wolken: ☁️, Regen: 🌧️, Schnee: ❄️
-  - Seegang: 🌊, Segeln gut: ⛵, Warnung: ⚠️, Gefahr: 🚨
-  - Richtungspfeile: ↗️ ➡️ ↘️ ⬇️ etc. für Windrichtungen
-  - Sparsam aber gezielt einsetzen, nicht übertreiben
-- AKTIVER KARTENBEZUG: Verweise gezielt auf die rechts angezeigten Karten! Formulierungen wie:
-  - "→ In der 850hPa-Karte gut erkennbar: violette Kaltluft-Zunge aus NE..."
-  - "→ Auf der KNMI-Frontenkarte: Kaltfront erstreckt sich von..."
-  - "→ Im lokalen Windmodell (ICON-D2) sichtbar: Düseneffekt zwischen..."
-  - "→ In der Windy-Vorhersage zeigt sich ab morgen..."
-  Diese Verweise helfen dem Benutzer, die Analyse mit den Karten abzugleichen.
-- Konkrete Zahlen aus den Daten, KEINE halluzinierten Werte
-- Windangaben: kt / Bft (z.B. "12 kt / 4 Bft")
-- Druckangaben: hPa
-
-ABSCHLUSS (nur bei vollständiger Erstanalyse):
-- Am Ende der Analyse IMMER eine kurze Aufforderung an den Benutzer, z.B.:
-  "---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern nachfragen."
-
-RÜCKFRAGEN / FOLLOW-UP:
-- Wenn der Benutzer eine Rückfrage stellt: NUR auf die konkrete Frage antworten!
-- NICHT den kompletten Wetterbericht wiederholen
-- Kurz, präzise, wie ein normales Chat-Gespräch
-- Kartenbezug nur wo relevant für die Frage
-- Zahlen und Daten aus dem Kontext verwenden`;
-
-const WARNING_SERVICES: Record<string, { url: string; label: string }> = {
-  HR: { url: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja", label: "DHMZ Kroatien" },
-  DE: { url: "https://www.dwd.de/DE/wetter/warnungen_gemeinden/warnWetter_node.html", label: "DWD Deutschland" },
-  AT: { url: "https://warnungen.zamg.at/wsapp/de/alle", label: "GeoSphere Austria" },
-  IT: { url: "https://www.meteoam.it/it/avvisi-meteo", label: "MeteoAM Italien" },
-  FR: { url: "https://vigilance.meteofrance.fr/fr", label: "Météo-France" },
-  NL: { url: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen", label: "KNMI Niederlande" },
-  GB: { url: "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings", label: "Met Office UK" },
-  GR: { url: "https://emy.gr/en/warnings", label: "EMY Griechenland" },
-  SI: { url: "https://meteo.arso.gov.si/met/sl/warning/", label: "ARSO Slowenien" },
-  ES: { url: "https://www.aemet.es/es/eltiempo/prediccion/avisos", label: "AEMET Spanien" },
-  PT: { url: "https://www.ipma.pt/en/otempo/prev.am.geral/", label: "IPMA Portugal" },
-  DK: { url: "https://www.dmi.dk/vejr/varsler/", label: "DMI Dänemark" },
-  SE: { url: "https://www.smhi.se/vader/varningar-och-meddelanden", label: "SMHI Schweden" },
-  NO: { url: "https://www.yr.no/en/content/1-72837/meteorological", label: "Yr.no Norwegen" },
-  ME: { url: "https://www.meteo.co.me/misc.php?text=117&seession=", label: "ZHMS Montenegro" },
-  TR: { url: "https://www.mgm.gov.tr/en/forecast-warnings.aspx", label: "MGM Türkei" },
-  PL: { url: "https://meteo.imgw.pl/dyn/", label: "IMGW Polen" },
-  CH: { url: "https://www.meteoswiss.admin.ch/home/weather/warnings.html", label: "MeteoSchweiz" },
-};
-
-function getWarningInfo(countryCode: string): { url: string; label: string } | undefined {
-  return WARNING_SERVICES[countryCode];
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#\d+;/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-async function extractLocation(message: string): Promise<string | null> {
+async function fetchMeteonews(): Promise<string> {
+  try {
+    const res = await fetch("https://meteonews.at/de/Allgemeine_Lage/K33/Europa", {
+      headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
+    const bodyMatch = html.match(/<div[^>]*class="[^"]*forecast[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
+      || html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
+      || html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    if (bodyMatch) {
+      return stripHtml(bodyMatch[1]).slice(0, 2000);
+    }
+    const plainText = stripHtml(html);
+    const startIdx = plainText.indexOf("Allgemeine Lage");
+    if (startIdx >= 0) {
+      return plainText.slice(startIdx, startIdx + 2000);
+    }
+    return plainText.slice(0, 2000);
+  } catch (e) {
+    console.error("Meteonews fetch failed:", e);
+    return "";
+  }
+}
+
+const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: string; warningUrl: string; warningLabel: string }> = {
+  HR: {
+    forecastUrl: "https://meteo.hr/prognoze.php?section=prognoze_model&param=3d",
+    label: "DHMZ Kroatien",
+    warningUrl: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja",
+    warningLabel: "DHMZ Warnungen",
+  },
+  DE: {
+    forecastUrl: "https://www.dwd.de/DWD/wetter/wv_allg/deutschland/text/vhdl13_dwoh.html",
+    label: "DWD Deutschland",
+    warningUrl: "https://www.dwd.de/DE/wetter/warnungen_gemeinden/warnWetter_node.html",
+    warningLabel: "DWD Warnungen",
+  },
+  AT: {
+    forecastUrl: "https://www.zamg.ac.at/cms/de/wetter/wetterlage",
+    label: "GeoSphere Austria",
+    warningUrl: "https://warnungen.zamg.at/wsapp/de/alle",
+    warningLabel: "GeoSphere Warnungen",
+  },
+  IT: {
+    forecastUrl: "https://www.meteoam.it/it/previsione-italia",
+    label: "MeteoAM Italien",
+    warningUrl: "https://www.meteoam.it/it/avvisi-meteo",
+    warningLabel: "MeteoAM Warnungen",
+  },
+  FR: {
+    forecastUrl: "https://meteofrance.com/previsions-meteo-france",
+    label: "Météo-France",
+    warningUrl: "https://vigilance.meteofrance.fr/fr",
+    warningLabel: "Météo-France Vigilance",
+  },
+  GR: {
+    forecastUrl: "https://emy.gr/en/forecast/greece",
+    label: "EMY Griechenland",
+    warningUrl: "https://emy.gr/en/warnings",
+    warningLabel: "EMY Warnungen",
+  },
+  SI: {
+    forecastUrl: "https://meteo.arso.gov.si/met/sl/weather/forecast/",
+    label: "ARSO Slowenien",
+    warningUrl: "https://meteo.arso.gov.si/met/sl/warning/",
+    warningLabel: "ARSO Warnungen",
+  },
+  ME: {
+    forecastUrl: "https://www.meteo.co.me/misc.php?text=117",
+    label: "ZHMS Montenegro",
+    warningUrl: "https://www.meteo.co.me/misc.php?text=117&seession=",
+    warningLabel: "ZHMS Warnungen",
+  },
+  GB: {
+    forecastUrl: "https://www.metoffice.gov.uk/weather/forecast/uk",
+    label: "Met Office UK",
+    warningUrl: "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings",
+    warningLabel: "Met Office Warnungen",
+  },
+  NL: {
+    forecastUrl: "https://www.knmi.nl/nederland-nu/weer/verwachtingen",
+    label: "KNMI Niederlande",
+    warningUrl: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen",
+    warningLabel: "KNMI Warnungen",
+  },
+  ES: {
+    forecastUrl: "https://www.aemet.es/es/eltiempo/prediccion/espana",
+    label: "AEMET Spanien",
+    warningUrl: "https://www.aemet.es/es/eltiempo/prediccion/avisos",
+    warningLabel: "AEMET Warnungen",
+  },
+  PT: {
+    forecastUrl: "https://www.ipma.pt/en/otempo/prev.am.geral/",
+    label: "IPMA Portugal",
+    warningUrl: "https://www.ipma.pt/en/otempo/prev.am.geral/",
+    warningLabel: "IPMA Warnungen",
+  },
+  TR: {
+    forecastUrl: "https://www.mgm.gov.tr/en/forecast-cities.aspx",
+    label: "MGM Türkei",
+    warningUrl: "https://www.mgm.gov.tr/en/forecast-warnings.aspx",
+    warningLabel: "MGM Warnungen",
+  },
+  DK: {
+    forecastUrl: "https://www.dmi.dk/vejr/",
+    label: "DMI Dänemark",
+    warningUrl: "https://www.dmi.dk/vejr/varsler/",
+    warningLabel: "DMI Warnungen",
+  },
+  SE: {
+    forecastUrl: "https://www.smhi.se/vader",
+    label: "SMHI Schweden",
+    warningUrl: "https://www.smhi.se/vader/varningar-och-meddelanden",
+    warningLabel: "SMHI Warnungen",
+  },
+  NO: {
+    forecastUrl: "https://www.yr.no/en",
+    label: "Yr.no Norwegen",
+    warningUrl: "https://www.yr.no/en/content/1-72837/meteorological",
+    warningLabel: "Yr.no Warnungen",
+  },
+  PL: {
+    forecastUrl: "https://meteo.imgw.pl/",
+    label: "IMGW Polen",
+    warningUrl: "https://meteo.imgw.pl/dyn/",
+    warningLabel: "IMGW Warnungen",
+  },
+  CH: {
+    forecastUrl: "https://www.meteoswiss.admin.ch/home/weather/forecasts.html",
+    label: "MeteoSchweiz",
+    warningUrl: "https://www.meteoswiss.admin.ch/home/weather/warnings.html",
+    warningLabel: "MeteoSchweiz Warnungen",
+  },
+};
+
+function getRegionalService(countryCode: string): typeof REGIONAL_FORECAST_SERVICES["HR"] | undefined {
+  return REGIONAL_FORECAST_SERVICES[countryCode];
+}
+
+async function fetchRegionalWeatherReport(countryCode: string): Promise<string> {
+  const service = REGIONAL_FORECAST_SERVICES[countryCode];
+  if (!service) return "";
+
+  try {
+    const res = await fetch(service.forecastUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "de,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
+    const text = stripHtml(html);
+    return text.slice(0, 3000);
+  } catch (e) {
+    console.error(`Regional forecast fetch failed for ${countryCode}:`, e);
+    return "";
+  }
+}
+
+async function classifyMessage(message: string, hasActiveLocation: boolean): Promise<{ type: "ANALYSE" | "CHAT" | "FOLLOWUP"; location?: string }> {
   try {
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
-          content: `Extrahiere den geographischen Ortsnamen aus der Benutzernachricht. 
-Wenn ein konkreter Ort, Hafen, See, Insel, Küste oder Region genannt wird, gib NUR den Ortsnamen zurück (z.B. "Punat, Kroatien" oder "Gardasee" oder "Elba").
-Wenn KEIN Ort genannt wird (z.B. reine Fragen wie "Wird der Wind stärker?" oder "Wann legt sich die Bora?"), antworte mit genau: NONE
-Antworte mit NICHTS anderem als dem Ortsnamen oder NONE.`,
+          content: `Klassifiziere die Benutzernachricht in eine von drei Kategorien:
+
+ANALYSE <Ortsname> — wenn der Benutzer nach Wetterlage/Segelbedingungen an einem konkreten Ort fragt, oder einfach nur einen Ortsnamen/See/Insel/Hafen/Küste eingibt. Beispiele:
+- "Punat" → ANALYSE Punat
+- "Wie ist das Wetter in Split?" → ANALYSE Split
+- "Segeln am Gardasee" → ANALYSE Gardasee
+- "Rovinj, Kroatien" → ANALYSE Rovinj, Kroatien
+- "Wetterlage Elba" → ANALYSE Elba
+
+CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht für einen Ort erfordert. Beispiele:
+- "Was sind Cumulonimbus-Wolken?" → CHAT
+- "Wie entsteht die Bora?" → CHAT
+- "Was ist der Zufluss zum Neusiedler See?" → CHAT
+- "Erkläre die Douglas-Skala" → CHAT
+- "Wann ist die beste Segelzeit in Kroatien?" → CHAT
+
+FOLLOWUP — wenn der Benutzer eine Rückfrage stellt die sich auf eine vorherige Analyse bezieht (nur wenn bereits ein Ort aktiv ist). Beispiele:
+- "Wird der Wind stärker?" → FOLLOWUP
+- "Wie sieht es morgen aus?" → FOLLOWUP
+- "Was bedeutet das für meine Route?" → FOLLOWUP
+
+${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN Ort aktiv."}
+
+Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`,
         },
         { role: "user", content: message },
       ],
@@ -245,18 +351,24 @@ Antworte mit NICHTS anderem als dem Ortsnamen oder NONE.`,
       temperature: 0,
     });
     const text = result.choices[0]?.message?.content?.trim() || "";
-    if (!text || text === "NONE" || text.length > 100) return null;
-    return text;
+    if (text.startsWith("ANALYSE")) {
+      const location = text.replace("ANALYSE", "").trim();
+      return { type: "ANALYSE", location: location || undefined };
+    }
+    if (text === "FOLLOWUP" && hasActiveLocation) {
+      return { type: "FOLLOWUP" };
+    }
+    return { type: "CHAT" };
   } catch (e: any) {
-    console.error("Location extraction failed:", e?.message || e);
-    return null;
+    console.error("Message classification failed:", e?.message || e);
+    return { type: "CHAT" };
   }
 }
 
 async function geocodeLocation(locationName: string): Promise<{
   lat: number; lon: number; displayName: string;
   regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
-  countryCode?: string; warningUrl?: string; warningLabel?: string;
+  countryCode?: string;
 } | null> {
   try {
     const response = await fetch(
@@ -285,8 +397,6 @@ async function geocodeLocation(locationName: string): Promise<{
       }
     } catch {}
 
-    const warningInfo = countryCode ? getWarningInfo(countryCode) : undefined;
-
     return {
       lat, lon,
       displayName: result.display_name,
@@ -294,13 +404,86 @@ async function geocodeLocation(locationName: string): Promise<{
       regionalModelLabel: regional.label,
       regionalModelZoom: regional.zoom,
       countryCode,
-      warningUrl: warningInfo?.url,
-      warningLabel: warningInfo?.label,
     };
   } catch {
     return null;
   }
 }
+
+function getKnmiChartTime(): string {
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+  return utcHour >= 12 ? "12" : "00";
+}
+
+const GENERAL_CHAT_PROMPT = `Du bist ein erfahrener Meteorologe und Segelexperte. Du beantwortest allgemeine Fragen zu Wetter, Meteorologie, Wolken, Wind, Segeln und verwandten Themen.
+
+STIL:
+- Deutsch, sachlich-professionell
+- Bullet-Points wo sinnvoll
+- Emojis sparsam zur Strukturierung
+- Konkret und hilfreich, keine Floskeln
+- Bei Segelfragen: praktische Tipps aus Segler-Perspektive
+- Kurz und prägnant antworten, nicht übermäßig lang`;
+
+const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Erstelle eine strukturierte Segelwetteranalyse in genau 6 Abschnitten.
+
+WICHTIG: Schreibe die Abschnitte EXAKT mit diesen Überschriften (## N. Titel) — die Überschriften steuern die Kartendarstellung!
+
+## 1. Luftmassen
+- Fasse die europäische Wetterdynamik in 1-2 prägnanten Sätzen/Bullets zusammen
+- Basierend auf dem METEONEWS-TEXT (falls vorhanden) und den Wetterdaten
+- Gib die Quelle meteonews.at in Klammern an wenn verfügbar
+- Beschreibe dominierende Druckgebilde, Luftmassengrenzen, 850hPa-Situation
+
+## 2. Fronten
+- Basierend auf dem meteonews-Text, den Wetterdaten und dem Zielort
+- Fasse die regional relevanten Fronten in 1-2 Bullets zusammen
+- Welche Fronten beeinflussen die Region? Zugweg?
+
+## 3. Wind & Welle
+- Basierend auf dem REGIONALEN WETTERBERICHT (falls vorhanden) und den Wetterdaten
+- Beschreibe relevante Windsysteme und Windstärken für die nächsten 12h in 1-2 Bullets
+- Bora, Maestral, Meltemi, Mistral, thermische Winde — was ist relevant?
+- Windangaben: kt / Bft
+- Seezustand auf Douglas-Skala für die nächsten 12h (falls Seedaten vorhanden)
+- Gib die Quelle des regionalen Wetterberichts an
+
+## 4. Wolken & Regen
+- Basierend auf dem regionalen Wetterbericht und den Wetterdaten
+- Beschreibe Bewölkung, Niederschlag, Gewitterrisiko für die nächsten 12h in 1-2 Bullets
+
+## 5. Prognose
+- Kurzer Ausblick auf die nächsten 2-3 Tage in 1-2 Bullets
+- Tendenz: besser/schlechter/stabil?
+
+## 6. Wetterwarnung
+- Basierend auf dem regionalen Wetterbericht
+- Aktive Warnungen oder "Keine aktuellen Wetterwarnungen"
+- Bei Warnungen: konkrete Werte und Zeitfenster
+- Gib die Quelle des regionalen Warndienstes an
+
+STIL-REGELN:
+- Deutsch, sachlich-professionell, KEINE Begrüßung, KEINE Floskeln
+- Bullet-Point-Stil, Fließtext minimieren
+- Jeder Abschnitt: maximal 1-3 Bullets, KURZ und PRÄGNANT
+- Emojis sparsam: 💨 Wind, 🌊 Welle, ☀️ Sonne, ☁️ Wolken, 🌧️ Regen, ⚠️ Warnung, ⛈️ Gewitter
+- Konkrete Zahlen aus den Daten, KEINE halluzinierten Werte
+- Windangaben: kt / Bft
+- Druckangaben: hPa
+
+ABSCHLUSS:
+"---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern."`;
+
+const FOLLOWUP_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Der Benutzer stellt eine Rückfrage zu einer vorherigen Wetteranalyse.
+
+REGELN:
+- NUR auf die konkrete Frage antworten
+- NICHT den kompletten Wetterbericht wiederholen
+- Kurz, präzise, wie ein normales Chat-Gespräch
+- Zahlen und Daten aus dem Kontext verwenden
+- Deutsch, sachlich
+- Emojis sparsam`;
 
 export async function registerRoutes(
   httpServer: Server,
@@ -315,50 +498,17 @@ export async function registerRoutes(
     const { location } = parsed.data;
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`,
-        { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-      );
-
-      if (!response.ok) {
-        return res.status(502).json({ error: "Geocoding service unavailable." });
-      }
-
-      const results = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
-
-      if (!results.length) {
+      const geocoded = await geocodeLocation(location);
+      if (!geocoded) {
         return res.status(404).json({ error: "Location not found." });
       }
 
-      const result = results[0];
-      const lat = parseFloat(result.lat);
-      const lon = parseFloat(result.lon);
-      const regional = await getRegionalModelAI(lat, lon, result.display_name);
-
-      let countryCode: string | undefined;
-      try {
-        const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&addressdetails=1`,
-          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-        );
-        if (reverseRes.ok) {
-          const reverseData = await reverseRes.json() as { address?: { country_code?: string } };
-          countryCode = reverseData.address?.country_code?.toUpperCase();
-        }
-      } catch {}
-
-      const warningInfo = countryCode ? getWarningInfo(countryCode) : undefined;
+      const service = geocoded.countryCode ? getRegionalService(geocoded.countryCode) : undefined;
 
       return res.json({
-        lat,
-        lon,
-        displayName: result.display_name,
-        regionalModel: regional.model,
-        regionalModelLabel: regional.label,
-        regionalModelZoom: regional.zoom,
-        countryCode,
-        warningUrl: warningInfo?.url,
-        warningLabel: warningInfo?.label,
+        ...geocoded,
+        warningUrl: service?.warningUrl,
+        warningLabel: service?.warningLabel,
       });
     } catch {
       return res.status(500).json({ error: "Failed to geocode location." });
@@ -646,60 +796,131 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
     };
 
     try {
-      sendSSE({ status: "Analysiere Nachricht..." });
-      const locationResult = await extractLocation(message);
+      const hasActiveLocation = !!currentLocation;
+      const classification = await classifyMessage(message, hasActiveLocation);
 
-      let location = currentLocation as { lat: number; lon: number; displayName: string; regionalModel: string; regionalModelLabel: string; regionalModelZoom: number; countryCode?: string; warningUrl?: string; warningLabel?: string } | null;
-      let isNewLocation = false;
+      if (classification.type === "CHAT") {
+        const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
 
-      if (locationResult) {
-        sendSSE({ status: `Ort erkannt: **${locationResult}** — Suche Koordinaten...` });
-        const geocoded = await geocodeLocation(locationResult);
-        if (geocoded) {
-          location = geocoded;
-          isNewLocation = true;
-          sendSSE({ location: geocoded });
-          const windyBase = `https://www.windy.com`;
-          const windyTemp = `${windyBase}/-temp-850h?ecmwf,55.000,-10.000,3`;
-          const windyWind = `${windyBase}/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
-          const knmiUrl = `https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten`;
-          sendSSE({ status: `Karten geladen\n  - [🌡️ Großwetterlage, Temperatur, 1.500m → Windy](${windyTemp})\n  - [🌀 Fronten-Analyse → KNMI](${knmiUrl})\n  - [💨 Lokales Windmodell ${geocoded.regionalModelLabel} → Windy](${windyWind})` });
-        } else {
-          sendSSE({ status: `Ort "${locationResult}" konnte nicht gefunden werden` });
-          if (!location) {
-            sendSSE({ content: `Den Ort "${locationResult}" konnte ich leider nicht finden. Bitte versuche einen anderen Namen oder schreibe den Ort ausführlicher, z.B. "Split in Kroatien" oder "Elba, Italien".` });
-            sendSSE({ done: true });
-            res.end();
-            return;
+        const msgs: OpenAI.ChatCompletionMessageParam[] = [
+          { role: "system", content: GENERAL_CHAT_PROMPT },
+          ...chatHistory,
+          { role: "user", content: message },
+        ];
+
+        const stream = await openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: msgs,
+          max_completion_tokens: 2048,
+          temperature: 0.3,
+          stream: true,
+        });
+
+        for await (const chunk of stream) {
+          const text = chunk.choices?.[0]?.delta?.content;
+          if (text) {
+            sendSSE({ content: text });
           }
         }
-      }
 
-      if (!location) {
-        sendSSE({ content: "Bitte nenne einen Ort, damit ich die Wetterlage analysieren kann. Zum Beispiel: \"Wie ist das Wetter in Punat?\" oder einfach \"Rovinj\"." });
         sendSSE({ done: true });
         res.end();
         return;
       }
 
-      const locationShort = location.displayName.split(",")[0].trim();
-      sendSSE({ status: `Lade Wetterdaten für ${locationShort}...` });
+      if (classification.type === "FOLLOWUP" && currentLocation) {
+        const weatherContext = await fetchWeatherContext(currentLocation.lat, currentLocation.lon, currentLocation.displayName);
+        const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
 
-      const weatherContext = await fetchWeatherContext(location.lat, location.lon, location.displayName);
+        const msgs: OpenAI.ChatCompletionMessageParam[] = [
+          { role: "system", content: FOLLOWUP_SYSTEM_PROMPT },
+          ...chatHistory,
+          { role: "user", content: `${message}\n\n--- WETTERDATEN für ${currentLocation.displayName} ---\n${weatherContext}` },
+        ];
 
-      sendSSE({ status: isNewLocation ? `Erstelle Wetteranalyse für ${locationShort}...` : `Beantworte Frage zu ${locationShort}...` });
-      const regional = getRegionalModelFallback(location.lat, location.lon);
+        const stream = await openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: msgs,
+          max_completion_tokens: 2048,
+          temperature: 0.3,
+          stream: true,
+        });
 
-      const mapContext = `
-ANGEZEIGTE KARTEN (die der Benutzer rechts neben dem Chat sieht):
-1. Temperatur 850hPa (ca. 1500m Höhe) - ECMWF Modell, Zoom auf Nordatlantik/Europa (zentriert 55°N, 10°W) — zeigt Luftmassen, Kaltluft-Zungen (blau/violett) und Warmluft-Vorstöße (gelb/orange/rot)
-2. KNMI Fronten-Analysekarte — zeigt Druckgebilde (H/L mit hPa-Werten), Fronten (Warmfronten rot halb-kreise, Kaltfronten blau Dreiecke, Okklusionen violett), Isobaren
-3. Lokales Windmodell: ${location.regionalModelLabel || regional.label} — hochauflösendes Regionalmodell, zeigt Windfelder (Stärke farbcodiert, Richtung mit Pfeilen) für den Bereich um ${location.displayName}
-4. Windy Vorhersage — Zeitleiste mit Wind, Böen, Temperatur für die nächsten Tage
+        for await (const chunk of stream) {
+          const text = chunk.choices?.[0]?.delta?.content;
+          if (text) {
+            sendSSE({ content: text });
+          }
+        }
 
-ORT: ${location.displayName} (${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E)
-Verwende "${location.displayName.split(",")[0].trim()}" als Ortsnamen in Kapitel 3.
-${location.warningUrl ? `REGIONALER WARNDIENST: [${location.warningLabel}](${location.warningUrl}) — diesen Link in Kapitel 4 als Markdown-Link einbinden!` : "Kein regionaler Warndienst-Link verfügbar."}
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
+
+      if (!classification.location) {
+        sendSSE({ content: "Welchen Ort meinst du? Nenne mir einen konkreten Ort, Hafen oder See — z.B. \"Punat\", \"Gardasee\" oder \"Split\"." });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
+
+      const geocoded = await geocodeLocation(classification.location);
+      if (!geocoded) {
+        sendSSE({ content: `Den Ort \"${classification.location}\" konnte ich leider nicht finden. Bitte versuche einen anderen Namen oder schreibe den Ort ausführlicher, z.B. \"Split in Kroatien\" oder \"Elba, Italien\".` });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
+
+      sendSSE({ location: geocoded });
+
+      const countryCode = geocoded.countryCode || "";
+      const service = getRegionalService(countryCode);
+      const locationShort = geocoded.displayName.split(",")[0].trim();
+      const knmiTime = getKnmiChartTime();
+
+      sendSSE({
+        analysisStart: true,
+        locationName: locationShort,
+        lat: geocoded.lat,
+        lon: geocoded.lon,
+        regionalModel: geocoded.regionalModel,
+        regionalModelLabel: geocoded.regionalModelLabel,
+        regionalModelZoom: geocoded.regionalModelZoom,
+        knmiTime: knmiTime + " UTC",
+        regionalServiceLabel: service?.label || null,
+        regionalServiceUrl: service?.forecastUrl || null,
+        warningServiceLabel: service?.warningLabel || null,
+        warningServiceUrl: service?.warningUrl || null,
+      });
+
+      const [weatherContext, meteonewsText, regionalReport] = await Promise.all([
+        fetchWeatherContext(geocoded.lat, geocoded.lon, geocoded.displayName),
+        fetchMeteonews(),
+        countryCode ? fetchRegionalWeatherReport(countryCode) : Promise.resolve(""),
+      ]);
+
+      const dataContext = `
+ORT: ${geocoded.displayName} (${geocoded.lat.toFixed(4)}°N, ${geocoded.lon.toFixed(4)}°E)
+Ortskurzname: ${locationShort}
+Regionales Windmodell: ${geocoded.regionalModelLabel}
+Regionaler Wetterdienst: ${service?.label || "nicht verfügbar"}
+
+--- METEONEWS ALLGEMEINE LAGE EUROPA (Quelle: meteonews.at) ---
+${meteonewsText || "(nicht verfügbar)"}
+
+--- REGIONALER WETTERBERICHT (Quelle: ${service?.label || "nicht verfügbar"}) ---
+${regionalReport || "(nicht verfügbar - verwende nur Open-Meteo Daten)"}
+
+--- OPEN-METEO WETTERDATEN ---
+${weatherContext}
 `;
 
       const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
@@ -707,32 +928,22 @@ ${location.warningUrl ? `REGIONALER WARNDIENST: [${location.warningLabel}](${loc
         content: m.content,
       }));
 
-      const isFollowUp = !isNewLocation;
-
-      const systemPrompt = isFollowUp
-        ? `${METEOROLOGIST_SYSTEM_PROMPT}\n\nWICHTIG: Dies ist eine Rückfrage des Benutzers im laufenden Gespräch. Antworte NUR auf die gestellte Frage. Wiederhole NICHT den kompletten Wetterbericht. Antworte kurz, präzise und im Chat-Stil.`
-        : METEOROLOGIST_SYSTEM_PROMPT;
-
-      const userContent = isFollowUp
-        ? `${message}\n\n--- AKTUELLE WETTERDATEN (als Referenz) ---\n${weatherContext}\n\nORT: ${location.displayName} (${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E)`
-        : `Analysiere die aktuelle Wetterlage für ${location.displayName}. Der Benutzer schrieb: "${message}"\n\n--- AKTUELLE WETTERDATEN ---\n${weatherContext}\n\n${mapContext}`;
-
-      const messages: OpenAI.ChatCompletionMessageParam[] = [
-        { role: "system", content: systemPrompt },
+      const msgs: OpenAI.ChatCompletionMessageParam[] = [
+        { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
         ...chatHistory,
-        { role: "user", content: userContent },
+        { role: "user", content: `Erstelle Segelwetteranalyse für ${locationShort}.\n\n${dataContext}` },
       ];
 
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1",
-        messages,
-        max_completion_tokens: isFollowUp ? 2048 : 8192,
+        messages: msgs,
+        max_completion_tokens: 4096,
         temperature: 0.3,
         stream: true,
       });
 
       for await (const chunk of stream) {
-        const text = chunk.choices[0]?.delta?.content || "";
+        const text = chunk.choices?.[0]?.delta?.content;
         if (text) {
           sendSSE({ content: text });
         }

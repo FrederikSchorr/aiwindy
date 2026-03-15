@@ -1,45 +1,73 @@
-# Segelwetter - Windy Weather Maps
+# Segelwetter - AI Weather Advisor
 
 ## Overview
-A sailing weather advisor app with AI-powered meteorological analysis and live weather maps. Features a chat-style interface with an OpenAI-powered meteorologist on the left and four weather map panels on the right.
+A sailing weather advisor app with AI-powered meteorological analysis. Features a single-column chat interface with inline weather maps. Smart message classification distinguishes between general meteorology questions, location-specific sailing weather analyses, and follow-up questions.
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
-- **Backend**: Express.js API with AI location extraction, geocoding, KNMI chart proxy, weather data fetching (Open-Meteo), and OpenAI streaming chat
-- **AI**: OpenAI GPT-4.1 (via Replit AI Integrations) for meteorological analysis, GPT-4.1-mini for location extraction and regional model selection
+- **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, weather data fetching (Open-Meteo), regional weather scraping, and OpenAI streaming chat
+- **AI**: OpenAI GPT-4.1 for meteorological analysis/chat/photos, GPT-4.1-mini for message classification and regional model selection, Gemini 2.5 Flash for video analysis
 - **No database required** - stateless app
 
 ## Key Files
-- `client/src/pages/home.tsx` - Main split-panel UI: chat left, maps right
-- `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, forecast)
+- `client/src/pages/home.tsx` - Single-column chat UI with inline maps
+- `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, forecast, upload)
 - `shared/schema.ts` - Zod schemas and TypeScript types
 
 ## How It Works
-1. User sends any message in the chat (e.g. "Wie ist das Wetter in Punat?" or just "Rovinj")
-2. Backend uses GPT-4.1-mini to extract location from message (if any)
-3. If location found: geocodes via Nominatim, selects best regional model via AI, updates maps, streams full 4-chapter weather analysis
-4. If no location found but previous location active: answers follow-up question concisely using existing weather context
-5. Frontend displays four weather panels:
-   - Temperature 850hPa (ECMWF) - European synoptic overview (3:2 ratio)
-   - KNMI fronts analysis chart (proxied from cdn.knmi.nl)
-   - Local wind with AI-selected regional model (3:2 ratio)
-   - Windy native forecast embed
-6. Country-specific weather warning links for 19+ European countries
+1. User sends a message in the chat
+2. Backend classifies message via GPT-4.1-mini into:
+   - **CHAT**: General meteorology question → direct GPT-4.1 answer, no maps
+   - **ANALYSE**: Location detected → 6-section Segelwetteranalyse with inline maps
+   - **FOLLOWUP**: Follow-up to existing analysis → concise answer using weather context
+3. For ANALYSE mode:
+   - Geocodes via Nominatim, selects regional model via AI
+   - Scrapes meteonews.at for European weather overview
+   - Scrapes regional weather service (DHMZ, DWD, GeoSphere, etc.) for local forecast
+   - Fetches Open-Meteo data (current + hourly + marine)
+   - Streams 6-section analysis with inline maps
+
+## Chat Layout
+- Single column: full width on mobile, max-w-2xl centered on desktop
+- User messages: right-aligned bubbles with primary color
+- AI responses: left-aligned, no bubble/border (more space for content)
+- No status messages during processing, only bounce cursor during streaming
+
+## 6-Section Segelwetteranalyse (inline maps)
+1. **Luftmassen** - Windy 850hPa ECMWF map (Greenwich center), meteonews.at source
+2. **Fronten** - KNMI fronts analysis chart (proxied image), KNMI source with UTC time
+3. **Wind & Welle** - Windy regional wind model map, regional weather service link
+4. **Wolken & Regen** - Windy clouds overlay map
+5. **Prognose** - Windy meteogram (forecast type embed)
+6. **Wetterwarnung** - Regional warning service link
 
 ## Photo/Video Upload
-- Camera button in chat input (both desktop and mobile)
+- Camera button in chat input
 - Accepts images (JPEG, PNG, WebP, HEIC) and videos (MP4, QuickTime, WebM), max 20MB
 - Server-side EXIF extraction (exif-parser) for GPS location and timestamp
 - If GPS found: auto-geocodes and updates maps
-- OpenAI GPT-4.1 Vision analyzes meteorological relevance: cloud types, weather patterns, precursors
-- SSE streaming response compatible with existing chat flow
+- OpenAI GPT-4.1 Vision analyzes meteorological relevance
+- Gemini 2.5 Flash for video analysis (native @google/generative-ai SDK)
+- SSE streaming response
 
 ## API
-- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ status }`, `{ content }`, `{ done: true }`
-- `POST /api/upload` - Multipart form: `photo` (file) + optional `currentLocation` (JSON string) - Streams SSE same format as /api/chat
-- `POST /api/geocode` - Body: `{ location }` - Returns: `{ lat, lon, displayName, regionalModel, regionalModelLabel, regionalModelZoom, countryCode, warningUrl, warningLabel }`
+- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ analysisStart }`, `{ content }`, `{ done: true }`
+- `POST /api/upload` - Multipart form: `photo` (file) + optional `currentLocation` (JSON string) - Streams SSE
+- `POST /api/geocode` - Body: `{ location }` - Returns geocoded result with regional model
 - `GET /api/knmi-chart` - Proxies the latest KNMI weather analysis chart (image/gif)
 - `POST /api/forecast` - Body: `{ lat, lon }` - Returns hourly forecast data
+
+## Message Classification (AI-based)
+GPT-4.1-mini classifies each user message:
+- **ANALYSE <location>**: Location-specific weather query → full 6-section analysis
+- **CHAT**: General meteorology/sailing question → direct conversational answer
+- **FOLLOWUP**: Follow-up to previous analysis (only when location active) → concise answer
+
+## Regional Weather Scraping
+- `fetchMeteonews()`: Scrapes meteonews.at/de/Allgemeine_Lage/K33/Europa for European overview
+- `fetchRegionalWeatherReport(countryCode)`: Scrapes national weather service for local forecast
+- Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
+- HTML stripped via regex, fallback to Open-Meteo data if scraping fails
 
 ## Regional Model Selection (AI-based)
 GPT-4.1-mini selects the best Windy.com wind model:
@@ -50,8 +78,6 @@ GPT-4.1-mini selects the best Windy.com wind model:
 - UK/Ireland: UKV
 - Default Europe: ICON-EU (iconEu, 7km)
 
-## Weather Analysis Structure (4 chapters, German)
-1. Großwetterlage - Synoptic situation with 850hPa map references
-2. Fronten - Front analysis with KNMI chart references
-3. Lokale Windsysteme - Regional wind phenomena (Bora, Mistral, Meltemi, etc.)
-4. Wetterwarnungen - Active warnings with country-specific links
+## Custom Domain
+- Domain: aiwindy.schorr.wien
+- Redirect from *.replit.app/*.replit.dev to custom domain in production
