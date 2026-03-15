@@ -57,7 +57,7 @@ function SourceLink({ label, url }: { label: string; url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-block text-xs text-muted-foreground hover:text-primary transition-colors mt-1 mb-2"
+      className="inline-block text-xs text-muted-foreground hover:text-primary transition-colors mt-1 mb-0.5"
       data-testid="source-link"
     >
       Quelle: {label} ↗
@@ -152,7 +152,7 @@ function MarkdownContent({ content }: { content: string }) {
         parts.push(`<li class="text-[13px] leading-snug text-muted-foreground pl-1" style="list-style:none">– ${text}</li>`);
       } else {
         if (inSubList) { inSubList = false; parts.push("</ul>"); }
-        if (!inList) { inList = true; parts.push('<ul class="mt-1 mb-1.5 space-y-0.5">'); }
+        if (!inList) { inList = true; parts.push('<ul class="mt-0 mb-1.5 space-y-0.5">'); }
         parts.push(`<li class="text-[13px] leading-snug pl-1" style="list-style:disc;margin-left:1rem">${text}</li>`);
       }
     } else {
