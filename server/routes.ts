@@ -249,66 +249,91 @@ function getRegionalService(countryCode: string): typeof REGIONAL_FORECAST_SERVI
   return REGIONAL_FORECAST_SERVICES[countryCode];
 }
 
-async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<string> {
-  const service = REGIONAL_FORECAST_SERVICES[countryCode];
-  if (!service) return "";
+type FetchResult = { text: string; available: boolean };
 
-  try {
-    if (countryCode === "DK") {
-      const dmiRes = await fetch("https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land", {
-        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
-        signal: AbortSignal.timeout(10000),
-      });
-      if (dmiRes.ok) {
-        const data = await dmiRes.json() as { date?: string; valid?: string; weatherForecast?: string; slipperyWarning?: string | null };
-        const parts: string[] = [];
-        if (data.date) parts.push(data.date);
-        if (data.valid) parts.push(data.valid);
-        if (data.weatherForecast) parts.push(data.weatherForecast);
-        if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
-        return parts.join(" ").slice(0, 3000);
-      }
-      return "";
-    }
+const REGIONAL_MIN_TEXT_LENGTH = 150;
 
-    const res = await fetch(service.forecastUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "de,en;q=0.9",
-      },
+async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"]): Promise<FetchResult> {
+  if (countryCode === "DK") {
+    const dmiRes = await fetch("https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land", {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return "";
-    const html = await res.text();
-    const text = stripHtml(html);
-    return text.slice(0, 3000);
+    if (!dmiRes.ok) return { text: "", available: false };
+    const data = await dmiRes.json() as { date?: string; valid?: string; weatherForecast?: string; slipperyWarning?: string | null };
+    const parts: string[] = [];
+    if (data.date) parts.push(data.date);
+    if (data.valid) parts.push(data.valid);
+    if (data.weatherForecast) parts.push(data.weatherForecast);
+    if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
+    const text = parts.join(" ").slice(0, 3000);
+    return { text, available: text.length >= REGIONAL_MIN_TEXT_LENGTH };
+  }
+
+  const res = await fetch(service.forecastUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml",
+      "Accept-Language": "de,en;q=0.9",
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) return { text: "", available: false };
+  const html = await res.text();
+  const text = stripHtml(html).slice(0, 3000);
+  return { text, available: text.length >= REGIONAL_MIN_TEXT_LENGTH };
+}
+
+async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<FetchResult> {
+  const service = REGIONAL_FORECAST_SERVICES[countryCode];
+  if (!service) return { text: "", available: false };
+
+  try {
+    const first = await tryFetchForecast(countryCode, service);
+    if (first.available) return first;
+    console.warn(`Regional forecast first attempt failed for ${countryCode}, retrying in 1s...`);
+    await new Promise(r => setTimeout(r, 1000));
+    const second = await tryFetchForecast(countryCode, service);
+    if (second.available) return second;
+    console.error(`Regional forecast unavailable for ${countryCode} (${lat.toFixed(2)},${lon.toFixed(2)}) after 2 attempts`);
+    return { text: "", available: false };
   } catch (e) {
-    console.error(`Regional forecast fetch failed for ${countryCode} (${lat.toFixed(2)},${lon.toFixed(2)}):`, e);
-    return "";
+    console.error(`Regional forecast fetch error for ${countryCode}:`, e);
+    return { text: "", available: false };
   }
 }
 
-async function fetchRegionalWarnings(countryCode: string): Promise<string> {
+async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]): Promise<FetchResult> {
+  const res = await fetch(service.warningUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml",
+      "Accept-Language": "de,en;q=0.9",
+    },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) return { text: "", available: false };
+  const html = await res.text();
+  const text = stripHtml(html).slice(0, 2000);
+  return { text, available: text.length >= REGIONAL_MIN_TEXT_LENGTH };
+}
+
+async function fetchRegionalWarnings(countryCode: string): Promise<FetchResult> {
   const service = REGIONAL_FORECAST_SERVICES[countryCode];
-  if (!service) return "";
+  if (!service) return { text: "", available: false };
 
   try {
-    const res = await fetch(service.warningUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "de,en;q=0.9",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return "";
-    const html = await res.text();
-    const text = stripHtml(html);
-    return text.slice(0, 2000);
+    const first = await tryFetchWarnings(service);
+    if (first.available) return first;
+    console.warn(`Regional warnings first attempt failed for ${countryCode}, retrying in 1s...`);
+    await new Promise(r => setTimeout(r, 1000));
+    const second = await tryFetchWarnings(service);
+    if (second.available) return second;
+    console.error(`Regional warnings unavailable for ${countryCode} after 2 attempts`);
+    return { text: "", available: false };
   } catch (e) {
-    console.error(`Regional warnings fetch failed for ${countryCode}:`, e);
-    return "";
+    console.error(`Regional warnings fetch error for ${countryCode}:`, e);
+    return { text: "", available: false };
   }
 }
 
@@ -859,17 +884,27 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         },
       ];
 
+      const noResult: FetchResult = { text: "", available: false };
       const [meteonewsText, regionalReport, warningsText] = await Promise.all([
         fetchMeteonews(),
-        countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(""),
-        countryCode ? fetchRegionalWarnings(countryCode) : Promise.resolve(""),
+        countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
+        countryCode ? fetchRegionalWarnings(countryCode) : Promise.resolve(noResult),
       ]);
+
+      const regionalUnavailableNote = !regionalReport.available
+        ? `\n⚠️ PFLICHT-ANWEISUNG: Der regionale Wetterbericht (${service?.label || "unbekannt"}) ist NICHT ABRUFBAR. Schreibe in Abschnitt 3 (Wind & Welle) als ERSTEN Bullet-Point: "⚠️ Regionaler Wetterbericht (${service?.label || "unbekannt"}) momentan nicht verfügbar – keine ortsspezifischen Windwerte vorhanden." Verwende KEINE geschätzten Windwerte ohne regionale Quelldaten. Nenne im letzten Bullet als Seezustand: "nicht verfügbar".`
+        : "";
+
+      const warningsUnavailableNote = !warningsText.available
+        ? `\n⚠️ PFLICHT-ANWEISUNG: Die Warnseite (${service?.warningLabel || "unbekannt"}) ist NICHT ABRUFBAR. Beginne Abschnitt 6 mit: "⚠️ [${service?.warningLabel || "Warnseite"}](${service?.warningUrl || "#"}) nicht erreichbar – bitte direkt auf der Seite prüfen."`
+        : "";
 
       const dataContext = `
 ORT: ${geocoded.displayName} (${geocoded.lat.toFixed(4)}°N, ${geocoded.lon.toFixed(4)}°E)
 Ortskurzname: ${locationShort}
 Regionales Windmodell: ${geocoded.regionalModelLabel}
 Regionaler Wetterdienst: ${service?.label || "nicht verfügbar"}
+${regionalUnavailableNote}${warningsUnavailableNote}
 
 --- QUELLENURLS (für Markdown-Links verwenden) ---
 meteonews.at Allgemeine Lage: https://meteonews.at/de/Allgemeine_Lage/K33/Europa
@@ -880,10 +915,10 @@ Regionaler Warndienst (${service?.warningLabel || "nicht verfügbar"}): ${servic
 ${meteonewsText || "(nicht verfügbar)"}
 
 --- REGIONALER WETTERBERICHT (Quelle: ${service?.label || "nicht verfügbar"}) ---
-${regionalReport || "(nicht verfügbar)"}
+${regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR — Quelle nicht abrufbar)"}
 
 --- REGIONALE WARNUNGEN (Quelle: ${service?.warningLabel || "nicht verfügbar"}) ---
-${warningsText || "(keine Warnungsdaten verfügbar)"}
+${warningsText.available ? warningsText.text : "(NICHT VERFÜGBAR — Warnseite nicht abrufbar)"}
 `;
 
       const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
