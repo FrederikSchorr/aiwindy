@@ -830,22 +830,49 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         const base64Video = fileBuffer.toString("base64");
         const videoPrompt = systemPrompt.replace("Foto/Bild", "Video").replace("dieses Bild", "dieses Video") + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
 
-        const geminiModel = gemini.getGenerativeModel(
-          { model: "gemini-2.5-flash" },
-          { baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL }
-        );
+        let vidText = "";
+        try {
+          const geminiModel = gemini.getGenerativeModel(
+            { model: "gemini-2.5-flash" },
+            { baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL }
+          );
+          const result = await geminiModel.generateContent({
+            contents: [{
+              role: "user",
+              parts: [
+                { inlineData: { mimeType: req.file!.mimetype, data: base64Video } },
+                { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
+              ],
+            }],
+            systemInstruction: { role: "user", parts: [{ text: videoPrompt }] },
+          });
+          vidText = result.response.text();
+        } catch (geminiErr) {
+          console.warn("Gemini video analysis failed, falling back to GPT-4.1 Vision with thumbnail:", geminiErr instanceof Error ? geminiErr.message : geminiErr);
+        }
 
-        const result = await geminiModel.generateContent({
-          contents: [{
-            role: "user",
-            parts: [
-              { inlineData: { mimeType: req.file!.mimetype, data: base64Video } },
-              { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
-            ],
-          }],
-          systemInstruction: { role: "user", parts: [{ text: videoPrompt }] },
-        });
-        const vidText = result.response.text();
+        if (!vidText && videoThumbnailBase64) {
+          sendSSE({ status: "🔍 Analysiere Video-Standbild mit GPT-4.1 Vision..." });
+          const fallbackMessages: OpenAI.ChatCompletionMessageParam[] = [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${videoThumbnailBase64}`, detail: "high" } },
+                { type: "text", text: "Analysiere dieses Video-Standbild meteorologisch." },
+              ],
+            },
+          ];
+          const fallbackRes = await openai.chat.completions.create({
+            model: "gpt-4.1",
+            messages: fallbackMessages,
+            max_completion_tokens: 4096,
+            temperature: 0.3,
+            stream: false,
+          });
+          vidText = fallbackRes.choices[0]?.message?.content || "";
+        }
+
         if (vidText) sendSSE({ content: vidText });
       } else {
         sendSSE({ status: "🔍 Analysiere Bild mit KI..." });

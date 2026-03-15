@@ -422,6 +422,7 @@ export default function Home() {
     const isVideo = file.type.startsWith("video/");
     let processed = 0;
     let lineBuffer = "";
+    let uploadHadError = false;
 
     hasUploadedRef.current = true;
 
@@ -491,6 +492,7 @@ export default function Home() {
             }
             if (data.error) {
               hasError = true;
+              uploadHadError = true;
             }
           } catch {}
         }
@@ -498,7 +500,7 @@ export default function Home() {
       if (hasError) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Bildanalyse. Bitte versuche es erneut." } : m
+            m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Analyse. Bitte versuche es erneut." } : m
           )
         );
       }
@@ -509,7 +511,8 @@ export default function Home() {
       lineBuffer += "\n";
       processChunk();
       setMessages((prev) => {
-        if (!uploadStreamContent) return prev.filter(m => m.id !== assistantId);
+        if (!uploadStreamContent && !uploadHadError) return prev.filter(m => m.id !== assistantId);
+        if (!uploadStreamContent) return prev;
         return prev.map((m) => m.id === assistantId ? { ...m, content: uploadStreamContent } : m);
       });
       if (photoExifMeta.locationName) {
