@@ -243,7 +243,7 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "DWD Warnungen",
   },
   AT: {
-    forecastUrl: "https://www.zamg.ac.at/cms/de/wetter/wetterbericht",
+    forecastUrl: "https://www.geosphere.at/de/karten/wetterprognose",
     label: "GeoSphere Austria",
     warningUrl: "https://warnungen.zamg.at/wsapp/de/alle",
     warningLabel: "GeoSphere Warnungen",
