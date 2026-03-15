@@ -499,7 +499,7 @@ export default function Home() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-2 flex items-center gap-2">
           <Sailboat className="w-5 h-5 text-primary shrink-0" />
-          <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
+          <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter AI</h1>
           <div className="flex-1" />
           {activeLocation && (
             <span className="text-sm text-muted-foreground flex items-center gap-1.5 truncate max-w-[220px]" data-testid="text-active-location">
