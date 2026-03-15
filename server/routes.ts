@@ -714,7 +714,7 @@ export async function registerRoutes(
 AUFGABE:
 Prüfe ob das Bild meteorologisch relevant ist (Himmel, Wolken, Wasser, Wetterstimmung).
 
-Falls JA — analysiere in genau dieser Struktur:
+Falls JA — verwende IMMER alle folgenden Abschnitte, in dieser Reihenfolge, keinen weglassen:
 
 ## 📷 Aufnahme
 (1–2 Sätze: Was ist zu sehen? Kurze sachliche Beschreibung des Motivs — Ort, Perspektive, Tageszeit, auffällige Elemente.)
@@ -725,7 +725,7 @@ Falls JA — analysiere in genau dieser Struktur:
 - Beispiel: **Cirrus fibratus** — ~7.000–10.000 m (hoch): Feine, faserige Schleierwolke aus Eiskristallen, oft hakenförmig oder gekämmt. Trübt kaum die Sonne und kündigt häufig eine nahende Warmfront an.
 
 ## 🌊 Wellen
-(Wenn Wasser sichtbar: Wellentyp, geschätzte Höhe, Periode, Beschaffenheit der Oberfläche. Falls kein Wasser sichtbar: nur „—" schreiben.)
+(PFLICHT — immer vorhanden. Wenn Wasser sichtbar: Wellentyp, geschätzte Höhe, Periode, Beschaffenheit der Oberfläche. Wenn kein Wasser sichtbar: schreibe nur „—".)
 
 ## 🌫️ Bedeckungsgrad
 (Okta-Angabe + kurze Beschreibung)
