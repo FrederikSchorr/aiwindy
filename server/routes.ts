@@ -290,7 +290,7 @@ function getRegionalService(countryCode: string): typeof REGIONAL_FORECAST_SERVI
   return REGIONAL_FORECAST_SERVICES[countryCode];
 }
 
-async function fetchRegionalWeatherReport(countryCode: string): Promise<string> {
+async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<string> {
   const service = REGIONAL_FORECAST_SERVICES[countryCode];
   if (!service) return "";
 
@@ -308,12 +308,35 @@ async function fetchRegionalWeatherReport(countryCode: string): Promise<string> 
     const text = stripHtml(html);
     return text.slice(0, 3000);
   } catch (e) {
-    console.error(`Regional forecast fetch failed for ${countryCode}:`, e);
+    console.error(`Regional forecast fetch failed for ${countryCode} (${lat.toFixed(2)},${lon.toFixed(2)}):`, e);
     return "";
   }
 }
 
-async function classifyMessage(message: string, hasActiveLocation: boolean): Promise<{ type: "ANALYSE" | "CHAT" | "FOLLOWUP"; location?: string }> {
+async function fetchRegionalWarnings(countryCode: string): Promise<string> {
+  const service = REGIONAL_FORECAST_SERVICES[countryCode];
+  if (!service) return "";
+
+  try {
+    const res = await fetch(service.warningUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "de,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
+    const text = stripHtml(html);
+    return text.slice(0, 2000);
+  } catch (e) {
+    console.error(`Regional warnings fetch failed for ${countryCode}:`, e);
+    return "";
+  }
+}
+
+async function classifyMessage(message: string, hasActiveLocation: boolean): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR"; location?: string }> {
   try {
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
@@ -329,17 +352,17 @@ ANALYSE <Ortsname> — wenn der Benutzer nach Wetterlage/Segelbedingungen an ein
 - "Rovinj, Kroatien" → ANALYSE Rovinj, Kroatien
 - "Wetterlage Elba" → ANALYSE Elba
 
-CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht für einen Ort erfordert. Beispiele:
+CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht erfordert, ODER eine Rückfrage zu einer laufenden Analyse stellt. Beispiele:
 - "Was sind Cumulonimbus-Wolken?" → CHAT
 - "Wie entsteht die Bora?" → CHAT
-- "Was ist der Zufluss zum Neusiedler See?" → CHAT
 - "Erkläre die Douglas-Skala" → CHAT
-- "Wann ist die beste Segelzeit in Kroatien?" → CHAT
+- "Wird der Wind stärker?" → CHAT (Rückfrage)
+- "Wie sieht es morgen aus?" → CHAT (Rückfrage)
 
-FOLLOWUP — wenn der Benutzer eine Rückfrage stellt die sich auf eine vorherige Analyse bezieht (nur wenn bereits ein Ort aktiv ist). Beispiele:
-- "Wird der Wind stärker?" → FOLLOWUP
-- "Wie sieht es morgen aus?" → FOLLOWUP
-- "Was bedeutet das für meine Route?" → FOLLOWUP
+UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist, oder die Nachricht mehrdeutig ist. Beispiele:
+- "Wetter" → UNCLEAR
+- "Wie ist es dort?" → UNCLEAR (ohne aktiven Ort)
+- "Segeln" → UNCLEAR
 
 ${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN Ort aktiv."}
 
@@ -355,8 +378,8 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
       const location = text.replace("ANALYSE", "").trim();
       return { type: "ANALYSE", location: location || undefined };
     }
-    if (text === "FOLLOWUP" && hasActiveLocation) {
-      return { type: "FOLLOWUP" };
+    if (text === "UNCLEAR") {
+      return { type: "UNCLEAR" };
     }
     return { type: "CHAT" };
   } catch (e: any) {
@@ -475,15 +498,6 @@ STIL-REGELN:
 ABSCHLUSS:
 "---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern."`;
 
-const FOLLOWUP_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Der Benutzer stellt eine Rückfrage zu einer vorherigen Wetteranalyse.
-
-REGELN:
-- NUR auf die konkrete Frage antworten
-- NICHT den kompletten Wetterbericht wiederholen
-- Kurz, präzise, wie ein normales Chat-Gespräch
-- Zahlen und Daten aus dem Kontext verwenden
-- Deutsch, sachlich
-- Emojis sparsam`;
 
 export async function registerRoutes(
   httpServer: Server,
@@ -805,10 +819,18 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
           content: m.content,
         }));
 
+        let userContent = message;
+        let systemPrompt = GENERAL_CHAT_PROMPT;
+        if (currentLocation) {
+          const weatherContext = await fetchWeatherContext(currentLocation.lat, currentLocation.lon, currentLocation.displayName);
+          userContent = `${message}\n\n--- WETTERDATEN für ${currentLocation.displayName} (${currentLocation.lat.toFixed(2)}°N, ${currentLocation.lon.toFixed(2)}°E) ---\n${weatherContext}`;
+          systemPrompt = GENERAL_CHAT_PROMPT + `\n\nWICHTIG: Es ist ein Ort aktiv (${currentLocation.displayName}). Wenn die Frage sich auf diesen Ort bezieht, beantworte sie mit den vorhandenen Wetterdaten. Antworte kurz und präzise.`;
+        }
+
         const msgs: OpenAI.ChatCompletionMessageParam[] = [
-          { role: "system", content: GENERAL_CHAT_PROMPT },
+          { role: "system", content: systemPrompt },
           ...chatHistory,
-          { role: "user", content: message },
+          { role: "user", content: userContent },
         ];
 
         const stream = await openai.chat.completions.create({
@@ -831,34 +853,8 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         return;
       }
 
-      if (classification.type === "FOLLOWUP" && currentLocation) {
-        const weatherContext = await fetchWeatherContext(currentLocation.lat, currentLocation.lon, currentLocation.displayName);
-        const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        }));
-
-        const msgs: OpenAI.ChatCompletionMessageParam[] = [
-          { role: "system", content: FOLLOWUP_SYSTEM_PROMPT },
-          ...chatHistory,
-          { role: "user", content: `${message}\n\n--- WETTERDATEN für ${currentLocation.displayName} ---\n${weatherContext}` },
-        ];
-
-        const stream = await openai.chat.completions.create({
-          model: "gpt-4.1",
-          messages: msgs,
-          max_completion_tokens: 2048,
-          temperature: 0.3,
-          stream: true,
-        });
-
-        for await (const chunk of stream) {
-          const text = chunk.choices?.[0]?.delta?.content;
-          if (text) {
-            sendSSE({ content: text });
-          }
-        }
-
+      if (classification.type === "UNCLEAR") {
+        sendSSE({ content: "Welchen Ort meinst du? Nenne mir einen konkreten Ort, Hafen oder See — z.B. \"Punat\", \"Gardasee\" oder \"Split\"." });
         sendSSE({ done: true });
         res.end();
         return;
@@ -886,25 +882,49 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const locationShort = geocoded.displayName.split(",")[0].trim();
       const knmiTime = getKnmiChartTime();
 
-      sendSSE({
-        analysisStart: true,
-        locationName: locationShort,
-        lat: geocoded.lat,
-        lon: geocoded.lon,
-        regionalModel: geocoded.regionalModel,
-        regionalModelLabel: geocoded.regionalModelLabel,
-        regionalModelZoom: geocoded.regionalModelZoom,
-        knmiTime: knmiTime + " UTC",
-        regionalServiceLabel: service?.label || null,
-        regionalServiceUrl: service?.forecastUrl || null,
-        warningServiceLabel: service?.warningLabel || null,
-        warningServiceUrl: service?.warningUrl || null,
-      });
+      const windUrl = `https://www.windy.com/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
+      const cloudsUrl = `https://www.windy.com/-Wolken-clouds?${geocoded.regionalModel},clouds,${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
+      const meteogramUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}`;
 
-      const [weatherContext, meteonewsText, regionalReport] = await Promise.all([
+      const sectionConfigs = [
+        {
+          id: "luftmassen", title: "1. Luftmassen",
+          mapType: "windy", mapConfig: { lat: 51, lon: 0, overlay: "temp", product: "ecmwf", level: "850h", zoom: 4 },
+          sourceLabel: "Temperatur 1.500m ECMWF windy.com", sourceUrl: "https://www.windy.com/-temp-850h?ecmwf,51.000,0.000,4",
+        },
+        {
+          id: "fronten", title: "2. Fronten",
+          mapType: "knmi", mapConfig: {},
+          sourceLabel: `KNMI ${knmiTime} UTC`, sourceUrl: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten",
+        },
+        {
+          id: "wind", title: "3. Wind & Welle",
+          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom },
+          sourceLabel: `Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
+          regionalServiceLabel: service?.label || null, regionalServiceUrl: service?.forecastUrl || null,
+        },
+        {
+          id: "wolken", title: "4. Wolken & Regen",
+          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "clouds", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom },
+          sourceLabel: `Wolken ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: cloudsUrl,
+        },
+        {
+          id: "prognose", title: "5. Prognose",
+          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom, forecast: true },
+          sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: meteogramUrl,
+        },
+        {
+          id: "warnung", title: "6. Wetterwarnung",
+          mapType: "none", mapConfig: {},
+          sourceLabel: service?.warningLabel || null, sourceUrl: service?.warningUrl || null,
+        },
+      ];
+
+      const [weatherContext, meteonewsText, regionalReport, warningsText] = await Promise.all([
         fetchWeatherContext(geocoded.lat, geocoded.lon, geocoded.displayName),
         fetchMeteonews(),
-        countryCode ? fetchRegionalWeatherReport(countryCode) : Promise.resolve(""),
+        countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(""),
+        countryCode ? fetchRegionalWarnings(countryCode) : Promise.resolve(""),
       ]);
 
       const dataContext = `
@@ -918,6 +938,9 @@ ${meteonewsText || "(nicht verfügbar)"}
 
 --- REGIONALER WETTERBERICHT (Quelle: ${service?.label || "nicht verfügbar"}) ---
 ${regionalReport || "(nicht verfügbar - verwende nur Open-Meteo Daten)"}
+
+--- REGIONALE WARNUNGEN (Quelle: ${service?.warningLabel || "nicht verfügbar"}) ---
+${warningsText || "(keine Warnungsdaten verfügbar)"}
 
 --- OPEN-METEO WETTERDATEN ---
 ${weatherContext}
@@ -942,9 +965,24 @@ ${weatherContext}
         stream: true,
       });
 
+      let accumulated = "";
+      const emittedSections = new Set<number>();
+
       for await (const chunk of stream) {
         const text = chunk.choices?.[0]?.delta?.content;
         if (text) {
+          accumulated += text;
+
+          for (let n = 1; n <= 6; n++) {
+            if (!emittedSections.has(n)) {
+              const pattern = new RegExp(`##\\s*${n}[.):\\s]`);
+              if (pattern.test(accumulated)) {
+                emittedSections.add(n);
+                sendSSE({ section: sectionConfigs[n - 1] });
+              }
+            }
+          }
+
           sendSSE({ content: text });
         }
       }

@@ -1,7 +1,7 @@
 # Segelwetter - AI Weather Advisor
 
 ## Overview
-A sailing weather advisor app with AI-powered meteorological analysis. Features a single-column chat interface with inline weather maps. Smart message classification distinguishes between general meteorology questions, location-specific sailing weather analyses, and follow-up questions.
+A sailing weather advisor app with AI-powered meteorological analysis. Features a single-column chat interface with inline weather maps. Smart message classification distinguishes between general meteorology questions, location-specific sailing weather analyses, and ambiguous queries.
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
@@ -10,22 +10,24 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - **No database required** - stateless app
 
 ## Key Files
-- `client/src/pages/home.tsx` - Single-column chat UI with inline maps
+- `client/src/pages/home.tsx` - Single-column chat UI with SectionCard event-driven inline maps
 - `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, forecast, upload)
 - `shared/schema.ts` - Zod schemas and TypeScript types
 
 ## How It Works
 1. User sends a message in the chat
 2. Backend classifies message via GPT-4.1-mini into:
-   - **CHAT**: General meteorology question → direct GPT-4.1 answer, no maps
-   - **ANALYSE**: Location detected → 6-section Segelwetteranalyse with inline maps
-   - **FOLLOWUP**: Follow-up to existing analysis → concise answer using weather context
+   - **CHAT**: General meteorology question or follow-up → direct GPT-4.1 answer (with weather context if location active)
+   - **ANALYSE**: Location detected → 6-section Segelwetteranalyse with per-section SSE events + inline maps
+   - **UNCLEAR**: Ambiguous message → asks user to specify a location
 3. For ANALYSE mode:
    - Geocodes via Nominatim, selects regional model via AI
    - Scrapes meteonews.at for European weather overview
    - Scrapes regional weather service (DHMZ, DWD, GeoSphere, etc.) for local forecast
+   - Scrapes regional warnings from national weather service
    - Fetches Open-Meteo data (current + hourly + marine)
-   - Streams 6-section analysis with inline maps
+   - Emits per-section SSE events `{ section: { id, title, mapType, mapConfig, sourceLabel, sourceUrl } }` when each section starts in the AI stream
+   - Streams 6-section analysis text with inline maps driven by section events
 
 ## Chat Layout
 - Single column: full width on mobile, max-w-2xl centered on desktop
@@ -33,13 +35,13 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - AI responses: left-aligned, no bubble/border (more space for content)
 - No status messages during processing, only bounce cursor during streaming
 
-## 6-Section Segelwetteranalyse (inline maps)
+## 6-Section Segelwetteranalyse (per-section SSE events + inline maps)
 1. **Luftmassen** - Windy 850hPa ECMWF map (Greenwich center), meteonews.at source
 2. **Fronten** - KNMI fronts analysis chart (proxied image), KNMI source with UTC time
 3. **Wind & Welle** - Windy regional wind model map, regional weather service link
 4. **Wolken & Regen** - Windy clouds overlay map
 5. **Prognose** - Windy meteogram (forecast type embed)
-6. **Wetterwarnung** - Regional warning service link
+6. **Wetterwarnung** - Scraped warning text from regional service, warning service link
 
 ## Photo/Video Upload
 - Camera button in chat input
@@ -51,7 +53,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - SSE streaming response
 
 ## API
-- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ analysisStart }`, `{ content }`, `{ done: true }`
+- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ section }` (per-section), `{ content }`, `{ done: true }`
 - `POST /api/upload` - Multipart form: `photo` (file) + optional `currentLocation` (JSON string) - Streams SSE
 - `POST /api/geocode` - Body: `{ location }` - Returns geocoded result with regional model
 - `GET /api/knmi-chart` - Proxies the latest KNMI weather analysis chart (image/gif)
@@ -60,12 +62,13 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 ## Message Classification (AI-based)
 GPT-4.1-mini classifies each user message:
 - **ANALYSE <location>**: Location-specific weather query → full 6-section analysis
-- **CHAT**: General meteorology/sailing question → direct conversational answer
-- **FOLLOWUP**: Follow-up to previous analysis (only when location active) → concise answer
+- **CHAT**: General meteorology/sailing question or follow-up → direct conversational answer (with weather context if location active)
+- **UNCLEAR**: Ambiguous query → asks user to specify location
 
 ## Regional Weather Scraping
 - `fetchMeteonews()`: Scrapes meteonews.at/de/Allgemeine_Lage/K33/Europa for European overview
-- `fetchRegionalWeatherReport(countryCode)`: Scrapes national weather service for local forecast
+- `fetchRegionalWeatherReport(countryCode, lat, lon)`: Scrapes national weather service for local forecast
+- `fetchRegionalWarnings(countryCode)`: Scrapes national weather service warnings page
 - Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
 - HTML stripped via regex, fallback to Open-Meteo data if scraping fails
 

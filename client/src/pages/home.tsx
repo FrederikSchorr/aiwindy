@@ -4,18 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Send, Cloud, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
-interface AnalysisConfig {
-  locationName: string;
-  lat: number;
-  lon: number;
-  regionalModel: string;
-  regionalModelLabel: string;
-  regionalModelZoom: number;
-  knmiTime: string;
-  regionalServiceLabel: string | null;
-  regionalServiceUrl: string | null;
-  warningServiceLabel: string | null;
-  warningServiceUrl: string | null;
+interface SectionEvent {
+  id: string;
+  title: string;
+  mapType: string;
+  mapConfig: Record<string, any>;
+  sourceLabel: string | null;
+  sourceUrl: string | null;
+  regionalServiceLabel?: string | null;
+  regionalServiceUrl?: string | null;
 }
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -49,114 +46,43 @@ function SourceLink({ label, url }: { label: string; url: string }) {
   );
 }
 
-function SectionMaps({ sectionNum, config }: { sectionNum: number; config: AnalysisConfig }) {
-  switch (sectionNum) {
-    case 1:
-      return (
-        <div className="my-3" data-testid="section-map-luftmassen">
-          <WindyEmbed lat={51} lon={0} overlay="temp" product="ecmwf" level="850h" zoom={4} />
-          <SourceLink
-            label="Temperatur 1.500m ECMWF windy.com"
-            url="https://www.windy.com/-temp-850h?ecmwf,51.000,0.000,4"
-          />
+function SectionCard({ section }: { section: SectionEvent }) {
+  const { mapType, mapConfig, sourceLabel, sourceUrl, regionalServiceLabel, regionalServiceUrl } = section;
+
+  return (
+    <div className="my-3" data-testid={`section-card-${section.id}`}>
+      {regionalServiceLabel && regionalServiceUrl && (
+        <div className="text-xs text-muted-foreground mb-2">
+          Regionaler Wetterdienst:{" "}
+          <a href={regionalServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            {regionalServiceLabel} ↗
+          </a>
         </div>
-      );
-    case 2:
-      return (
-        <div className="my-3" data-testid="section-map-fronten">
-          <img
-            src="/api/knmi-chart"
-            alt="KNMI Fronten-Analyse"
-            className="w-full rounded-lg bg-white"
-            data-testid="img-knmi-chart"
-          />
-          <SourceLink
-            label={`KNMI ${config.knmiTime}`}
-            url="https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten"
-          />
-        </div>
-      );
-    case 3: {
-      const windUrl = `https://www.windy.com/-wind-${config.regionalModel}?${config.regionalModel},${config.lat.toFixed(3)},${config.lon.toFixed(3)},${Math.min(config.regionalModelZoom + 2, 14)}`;
-      return (
-        <div className="my-3" data-testid="section-map-wind">
-          {config.regionalServiceLabel && config.regionalServiceUrl && (
-            <div className="text-xs text-muted-foreground mb-2">
-              Regionaler Wetterdienst:{" "}
-              <a href={config.regionalServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                {config.regionalServiceLabel} ↗
-              </a>
-            </div>
-          )}
-          <WindyEmbed
-            lat={config.lat}
-            lon={config.lon}
-            overlay="wind"
-            product={config.regionalModel}
-            level="surface"
-            zoom={config.regionalModelZoom}
-          />
-          <SourceLink
-            label={`Wind ${config.locationName} ${config.regionalModelLabel} windy.com`}
-            url={windUrl}
-          />
-        </div>
-      );
-    }
-    case 4: {
-      const cloudsUrl = `https://www.windy.com/-Wolken-clouds?${config.regionalModel},clouds,${config.lat.toFixed(3)},${config.lon.toFixed(3)},${config.regionalModelZoom}`;
-      return (
-        <div className="my-3" data-testid="section-map-wolken">
-          <WindyEmbed
-            lat={config.lat}
-            lon={config.lon}
-            overlay="clouds"
-            product={config.regionalModel}
-            level="surface"
-            zoom={config.regionalModelZoom}
-          />
-          <SourceLink
-            label={`Wolken & Regen ${config.locationName} ${config.regionalModelLabel} windy.com`}
-            url={cloudsUrl}
-          />
-        </div>
-      );
-    }
-    case 5: {
-      const meteogramUrl = `https://www.windy.com/${config.lat.toFixed(3)}/${config.lon.toFixed(3)}/${config.regionalModel}/meteogram?${config.regionalModel},${config.lat.toFixed(3)},${config.lon.toFixed(3)},${config.regionalModelZoom}`;
-      return (
-        <div className="my-3" data-testid="section-map-prognose">
-          <WindyEmbed
-            lat={config.lat}
-            lon={config.lon}
-            overlay="wind"
-            product={config.regionalModel}
-            level="surface"
-            zoom={config.regionalModelZoom}
-            forecast={true}
-          />
-          <SourceLink
-            label={`Meteogram ${config.locationName} ${config.regionalModelLabel} windy.com`}
-            url={meteogramUrl}
-          />
-        </div>
-      );
-    }
-    case 6:
-      if (config.warningServiceLabel && config.warningServiceUrl) {
-        return (
-          <div className="my-2 text-xs text-muted-foreground" data-testid="section-warning-source">
-            Warnquelle:{" "}
-            <a href={config.warningServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              {config.warningServiceLabel} ↗
-            </a>
-          </div>
-        );
-      }
-      return null;
-    default:
-      return null;
-  }
+      )}
+      {mapType === "windy" && mapConfig.lat != null && (
+        <WindyEmbed
+          lat={mapConfig.lat}
+          lon={mapConfig.lon}
+          overlay={mapConfig.overlay || "wind"}
+          product={mapConfig.product || "ecmwf"}
+          level={mapConfig.level || "surface"}
+          zoom={mapConfig.zoom || 8}
+          forecast={mapConfig.forecast}
+        />
+      )}
+      {mapType === "knmi" && (
+        <img
+          src="/api/knmi-chart"
+          alt="KNMI Fronten-Analyse"
+          className="w-full rounded-lg bg-white"
+          data-testid="img-knmi-chart"
+        />
+      )}
+      {sourceLabel && sourceUrl && (
+        <SourceLink label={sourceLabel} url={sourceUrl} />
+      )}
+    </div>
+  );
 }
 
 function MarkdownContent({ content }: { content: string }) {
@@ -227,17 +153,17 @@ function MarkdownContent({ content }: { content: string }) {
   return <div className="text-[13px] leading-snug" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function AnalysisContent({ content, config, isStreaming, isLast }: {
+function AnalysisContent({ content, sections, isStreaming, isLast }: {
   content: string;
-  config: AnalysisConfig;
+  sections: SectionEvent[];
   isStreaming: boolean;
   isLast: boolean;
 }) {
   const sectionRegex = /^##\s*(\d)[.):\s]/m;
   const parts = content.split(sectionRegex);
 
-  const sections: { num: number; text: string }[] = [];
-  let preamble = parts[0] || "";
+  const textBlocks: { num: number; text: string }[] = [];
+  const preamble = parts[0] || "";
 
   for (let i = 1; i < parts.length; i += 2) {
     const num = parseInt(parts[i], 10);
@@ -245,18 +171,26 @@ function AnalysisContent({ content, config, isStreaming, isLast }: {
     const firstNewline = rawText.indexOf("\n");
     const titleLine = firstNewline >= 0 ? rawText.slice(0, firstNewline) : rawText;
     const restText = firstNewline >= 0 ? rawText.slice(firstNewline) : "";
-    sections.push({ num, text: `## ${num}.${titleLine}${restText}` });
+    textBlocks.push({ num, text: `## ${num}.${titleLine}${restText}` });
   }
+
+  const sectionMap = new Map<string, SectionEvent>();
+  const sectionOrder = ["luftmassen", "fronten", "wind", "wolken", "prognose", "warnung"];
+  sections.forEach(s => sectionMap.set(s.id, s));
 
   return (
     <div>
       {preamble.trim() && <MarkdownContent content={preamble} />}
-      {sections.map((section, idx) => (
-        <div key={section.num}>
-          <SectionMaps sectionNum={section.num} config={config} />
-          <MarkdownContent content={section.text} />
-        </div>
-      ))}
+      {textBlocks.map((block) => {
+        const sectionId = sectionOrder[block.num - 1];
+        const sectionEvt = sectionId ? sectionMap.get(sectionId) : undefined;
+        return (
+          <div key={block.num} data-testid={`analysis-section-${block.num}`}>
+            {sectionEvt && <SectionCard section={sectionEvt} />}
+            <MarkdownContent content={block.text} />
+          </div>
+        );
+      })}
       {isStreaming && isLast && (
         <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
           <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -278,7 +212,7 @@ export default function Home() {
   ]);
   const [input, setInput] = useState("");
   const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
-  const [analysisConfigs, setAnalysisConfigs] = useState<Record<string, AnalysisConfig>>({});
+  const [messageSections, setMessageSections] = useState<Record<string, SectionEvent[]>>({});
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -287,7 +221,6 @@ export default function Home() {
   const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
     const assistantId = `assistant-${Date.now()}`;
-    let currentAnalysisConfig: AnalysisConfig | null = null;
     let processed = 0;
     let lineBuffer = "";
 
@@ -306,21 +239,11 @@ export default function Home() {
       if (data.location) {
         setActiveLocation(data.location as GeocodeResult);
       }
-      if (data.analysisStart) {
-        currentAnalysisConfig = {
-          locationName: data.locationName,
-          lat: data.lat,
-          lon: data.lon,
-          regionalModel: data.regionalModel,
-          regionalModelLabel: data.regionalModelLabel,
-          regionalModelZoom: data.regionalModelZoom,
-          knmiTime: data.knmiTime,
-          regionalServiceLabel: data.regionalServiceLabel,
-          regionalServiceUrl: data.regionalServiceUrl,
-          warningServiceLabel: data.warningServiceLabel,
-          warningServiceUrl: data.warningServiceUrl,
-        };
-        setAnalysisConfigs(prev => ({ ...prev, [assistantId]: currentAnalysisConfig! }));
+      if (data.section) {
+        setMessageSections(prev => ({
+          ...prev,
+          [assistantId]: [...(prev[assistantId] || []), data.section as SectionEvent],
+        }));
       }
       if (data.content) {
         setMessages((prev) =>
@@ -517,8 +440,9 @@ export default function Home() {
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
           {messages.map((msg) => {
             const isUser = msg.role === "user";
-            const msgAnalysisConfig = analysisConfigs[msg.id];
+            const msgSections = messageSections[msg.id] || [];
             const isLast = msg.id === messages[messages.length - 1]?.id;
+            const hasAnalysis = msgSections.length > 0;
 
             if (isUser) {
               return (
@@ -532,12 +456,12 @@ export default function Home() {
               );
             }
 
-            if (msgAnalysisConfig) {
+            if (hasAnalysis) {
               return (
                 <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`}>
                   <AnalysisContent
                     content={msg.content}
-                    config={msgAnalysisConfig}
+                    sections={msgSections}
                     isStreaming={isStreaming}
                     isLast={isLast}
                   />
