@@ -725,7 +725,7 @@ Falls JA — analysiere in genau dieser Struktur:
 - Beispiel: **Cirrus fibratus** — ~7.000–10.000 m (hoch): Feine, faserige Schleierwolke aus Eiskristallen, oft hakenförmig oder gekämmt. Trübt kaum die Sonne und kündigt häufig eine nahende Warmfront an.
 
 ## 🌊 Wellen
-(Nur ausfüllen wenn Wasser sichtbar: Wellentyp, geschätzte Höhe, Periode, Beschaffenheit der Oberfläche. Falls kein Wasser sichtbar: diesen Abschnitt weglassen.)
+(Wenn Wasser sichtbar: Wellentyp, geschätzte Höhe, Periode, Beschaffenheit der Oberfläche. Falls kein Wasser sichtbar: nur „—" schreiben.)
 
 ## 🌫️ Bedeckungsgrad
 (Okta-Angabe + kurze Beschreibung)
