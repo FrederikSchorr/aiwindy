@@ -717,10 +717,11 @@ export async function registerRoutes(
 
   const PHOTO_ANALYSIS_PROMPT = `Du bist ein Meteorologe und Wolkenexperte. Analysiere ausschließlich das vorliegende Bild — ohne externe Wetterdaten oder Kontext.
 
-AUFGABE:
-Prüfe ob das Bild meteorologisch relevant ist (Himmel, Wolken, Wasser, Wetterstimmung).
+Enthält das Bild meteorologisch relevanten Inhalt (Himmel, Wolken, Wasser, Wetterstimmung)?
 
-Falls JA — verwende IMMER alle folgenden Abschnitte, in dieser Reihenfolge, keinen weglassen:
+WENN NEIN: Schreibe nur einen kurzen Satz, dass kein meteorologisch relevanter Inhalt zu sehen ist, und bitte um ein Foto vom Himmel oder Horizont.
+
+WENN JA: Beginne sofort mit dem ersten Abschnitt — KEIN einleitender Satz, KEINE Bewertung der Relevanz, KEINE Einleitung. Der erste Ausgabe-Token muss "## 📷" sein.
 
 ## 📷 Aufnahme
 (1–2 Sätze: Was ist zu sehen? Kurze sachliche Beschreibung des Motivs — Ort, Perspektive, Tageszeit, auffällige Elemente.)
@@ -739,9 +740,7 @@ Falls JA — verwende IMMER alle folgenden Abschnitte, in dieser Reihenfolge, ke
 ## 🌤️ Typische Wetterentwicklung
 (Was ist meteorologisch zu erwarten? Kurz und klar.)
 
-Falls NEIN: Sag kurz, dass kein meteorologisch relevanter Inhalt zu sehen ist, und bitte um ein Foto vom Himmel oder Horizont.
-
-STIL: Deutsch, sachlich, ohne Wiederholungen. Direkt mit ## 📷 Aufnahme beginnen — kein einleitender Satz wie „Das Bild/Video ist meteorologisch relevant.".`;
+STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
   app.post("/api/upload", upload.single("photo"), async (req, res) => {
     if (!req.file) {
@@ -841,8 +840,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Direkt mit ## 📷 Aufnahme beginn
 
         const base64Video = fileBuffer.toString("base64");
         const videoPrompt = systemPrompt
-          .replace("Foto/Bild", "Video")
-          .replace("dieses Bild", "dieses Video")
+          .replace(/\bBild\b/g, "Video")
           .replace(
             "## 🌫️ Bedeckungsgrad",
             "## 💨 Windgeschwindigkeit\n(Schätze die Windstärke anhand sichtbarer Hinweise: Baumbeweigung, Wasserkräuselung, Gischt, Flaggen, Wellenhöhe, Schaumstreifen. Gib Windstärke NUR in Knoten (kt) an, mit kurzer Begründung der Schätzung. KEINE Beaufort-Angabe.)\n\n## 🌫️ Bedeckungsgrad"
