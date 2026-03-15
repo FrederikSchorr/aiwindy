@@ -828,7 +828,13 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         sendSSE({ status: "🔍 Analysiere Video mit Gemini 2.5 Flash..." });
 
         const base64Video = fileBuffer.toString("base64");
-        const videoPrompt = systemPrompt.replace("Foto/Bild", "Video").replace("dieses Bild", "dieses Video") + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
+        const videoPrompt = systemPrompt
+          .replace("Foto/Bild", "Video")
+          .replace("dieses Bild", "dieses Video")
+          .replace(
+            "## 🌫️ Bedeckungsgrad",
+            "## 💨 Windgeschwindigkeit\n(Schätze die Windstärke anhand sichtbarer Hinweise: Baumbeweigung, Wasserkräuselung, Gischt, Flaggen, Wellenhöhe, Schaumstreifen. Gib Windstärke in Knoten (kt) und Beaufort-Skala an, mit kurzer Begründung der Schätzung.)\n\n## 🌫️ Bedeckungsgrad"
+          ) + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
 
         let vidText = "";
         try {
@@ -854,7 +860,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         if (!vidText && videoThumbnailBase64) {
           sendSSE({ status: "🔍 Analysiere Video-Standbild mit GPT-4.1 Vision..." });
           const fallbackMessages: OpenAI.ChatCompletionMessageParam[] = [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: videoPrompt },
             {
               role: "user",
               content: [
