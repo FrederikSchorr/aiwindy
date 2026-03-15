@@ -67,7 +67,7 @@ function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
       title={`${overlay}-${product}`}
       src={src}
       className="w-full border-0 rounded-lg"
-      style={{ height: forecast ? "180px" : "300px" }}
+      style={{ height: forecast ? "190px" : "300px" }}
       frameBorder="0"
     />
   );
