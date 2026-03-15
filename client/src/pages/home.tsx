@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Cloud, Camera } from "lucide-react";
+import { Send, Sailboat, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
 const COUNTRY_INFO: Record<string, { name: string }> = {
@@ -497,14 +497,10 @@ export default function Home() {
   return (
     <div className="flex flex-col h-dvh bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10">
-            <Cloud className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
-            <p className="text-sm text-muted-foreground">Wetter und Wolken mit AI erklärt</p>
-          </div>
+        <div className="max-w-2xl mx-auto px-4 py-2 flex items-center gap-2">
+          <Sailboat className="w-5 h-5 text-primary shrink-0" />
+          <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter</h1>
+          <div className="flex-1" />
           {activeLocation && (
             <span className="text-sm text-muted-foreground flex items-center gap-1.5 truncate max-w-[220px]" data-testid="text-active-location">
               📍 {activeLocation.displayName.split(",")[0]}
