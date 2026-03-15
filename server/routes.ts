@@ -83,8 +83,8 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
         };
       }
     }
-  } catch (e: any) {
-    console.error("AI model selection failed:", e?.message || e);
+  } catch (e) {
+    console.error("AI model selection failed:", e instanceof Error ? e.message : e);
   }
   return getRegionalModelFallback(lat, lon);
 }
@@ -382,8 +382,8 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
       return { type: "UNCLEAR" };
     }
     return { type: "CHAT" };
-  } catch (e: any) {
-    console.error("Message classification failed:", e?.message || e);
+  } catch (e) {
+    console.error("Message classification failed:", e instanceof Error ? e.message : e);
     return { type: "CHAT" };
   }
 }

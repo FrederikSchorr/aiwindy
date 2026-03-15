@@ -4,15 +4,33 @@ import { Input } from "@/components/ui/input";
 import { Send, Cloud, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
+interface SectionMapConfig {
+  lat?: number;
+  lon?: number;
+  overlay?: string;
+  product?: string;
+  level?: string;
+  zoom?: number;
+  forecast?: boolean;
+}
+
 interface SectionEvent {
   id: string;
   title: string;
   mapType: string;
-  mapConfig: Record<string, any>;
+  mapConfig: SectionMapConfig;
   sourceLabel: string | null;
   sourceUrl: string | null;
   regionalServiceLabel?: string | null;
   regionalServiceUrl?: string | null;
+}
+
+interface SSEPayload {
+  location?: GeocodeResult;
+  section?: SectionEvent;
+  content?: string;
+  error?: string;
+  done?: boolean;
 }
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
@@ -86,10 +104,25 @@ function SectionCard({ section }: { section: SectionEvent }) {
 }
 
 function MarkdownContent({ content }: { content: string }) {
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+  const sanitizeUrl = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return "";
+      return parsed.href;
+    } catch {
+      return "";
+    }
+  };
+
   const links: string[] = [];
   const withPlaceholders = content.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, text, url) => {
+    const safeUrl = sanitizeUrl(url);
+    if (!safeUrl) return escapeHtml(text);
     const idx = links.length;
-    links.push(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`);
+    links.push(`<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${escapeHtml(text)}</a>`);
     return `%%LINK${idx}%%`;
   });
 
@@ -235,14 +268,14 @@ export default function Home() {
     xhr.open("POST", "/api/chat");
     xhr.setRequestHeader("Content-Type", "application/json");
 
-    const handleEvent = (data: any) => {
+    const handleEvent = (data: SSEPayload) => {
       if (data.location) {
-        setActiveLocation(data.location as GeocodeResult);
+        setActiveLocation(data.location);
       }
       if (data.section) {
         setMessageSections(prev => ({
           ...prev,
-          [assistantId]: [...(prev[assistantId] || []), data.section as SectionEvent],
+          [assistantId]: [...(prev[assistantId] || []), data.section],
         }));
       }
       if (data.content) {
