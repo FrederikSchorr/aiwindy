@@ -387,10 +387,13 @@ async function geocodeLocation(locationName: string): Promise<{
   }
 }
 
-function getKnmiChartTime(): string {
+function getKnmiChartTime(): { hour: string; label: string } {
   const now = new Date();
   const utcHour = now.getUTCHours();
-  return utcHour >= 12 ? "12" : "00";
+  const hour = utcHour >= 12 ? "12" : "00";
+  const day = String(now.getUTCDate()).padStart(2, "0");
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return { hour, label: `${day}.${month}. ${hour}:00 UTC` };
 }
 
 const GENERAL_CHAT_PROMPT = `Du bist ein erfahrener Meteorologe und Segelexperte. Du beantwortest allgemeine Fragen zu Wetter, Meteorologie, Wolken, Wind, Segeln und verwandten Themen.
@@ -821,7 +824,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         {
           id: "fronten", title: "2. Fronten",
           mapType: "knmi", mapConfig: {},
-          sourceLabel: `KNMI ${knmiTime} UTC`, sourceUrl: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten",
+          sourceLabel: `KNMI ${knmiTime.label}`, sourceUrl: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten",
         },
         {
           id: "wind", title: "3. Wind & Welle",
