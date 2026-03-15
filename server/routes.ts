@@ -6,7 +6,96 @@ import multer from "multer";
 import exifParser from "exif-parser";
 import fs from "fs";
 import path from "path";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const execFileAsync = promisify(execFile);
+
+async function extractVideoThumbnail(filePath: string): Promise<string | null> {
+  try {
+    const outputPath = `/tmp/vthumb-${Date.now()}.jpg`;
+    await execFileAsync("ffmpeg", [
+      "-i", filePath,
+      "-ss", "00:00:01",
+      "-vframes", "1",
+      "-q:v", "3",
+      "-y",
+      outputPath,
+    ]);
+    const buf = fs.readFileSync(outputPath);
+    fs.unlinkSync(outputPath);
+    return buf.toString("base64");
+  } catch {
+    try {
+      const outputPath = `/tmp/vthumb-${Date.now()}.jpg`;
+      await execFileAsync("ffmpeg", [
+        "-i", filePath,
+        "-vframes", "1",
+        "-q:v", "3",
+        "-y",
+        outputPath,
+      ]);
+      const buf = fs.readFileSync(outputPath);
+      fs.unlinkSync(outputPath);
+      return buf.toString("base64");
+    } catch {
+      return null;
+    }
+  }
+}
+
+function parseISO6709(raw: string): { lat: number; lon: number } | null {
+  const m = raw.match(/^([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lon = parseFloat(m[2]);
+  if (isNaN(lat) || isNaN(lon)) return null;
+  return { lat, lon };
+}
+
+async function extractVideoMetadata(filePath: string): Promise<{
+  gps: { lat: number; lon: number } | null;
+  time: string | null;
+}> {
+  try {
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v", "quiet",
+      "-print_format", "json",
+      "-show_format",
+      filePath,
+    ]);
+    const data = JSON.parse(stdout);
+    const tags: Record<string, string> = data?.format?.tags || {};
+
+    let gps: { lat: number; lon: number } | null = null;
+    const locationTag =
+      tags["com.apple.quicktime.location.ISO6709"] ||
+      tags["location"] ||
+      tags["location-eng"] ||
+      tags["GPS_location"];
+    if (locationTag) {
+      gps = parseISO6709(locationTag);
+    }
+
+    let time: string | null = null;
+    const creationTag = tags["creation_time"] || tags["com.apple.quicktime.creationdate"] || tags["date"];
+    if (creationTag) {
+      const d = new Date(creationTag);
+      if (!isNaN(d.getTime())) {
+        time = d.toLocaleString("de-DE", {
+          timeZone: "Europe/Berlin",
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit",
+        });
+      }
+    }
+
+    return { gps, time };
+  } catch {
+    return { gps: null, time: null };
+  }
+}
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -663,12 +752,21 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
       const fileBuffer = fs.readFileSync(filePath);
       const isVideo = req.file.mimetype.startsWith("video/");
 
-      sendSSE({ status: isVideo ? "📹 Video empfangen — analysiere..." : "📷 Foto empfangen — analysiere Metadaten..." });
+      sendSSE({ status: isVideo ? "📹 Video empfangen — analysiere Metadaten..." : "📷 Foto empfangen — analysiere Metadaten..." });
 
       let exifLocation: { lat: number; lon: number } | null = null;
       let exifTime: string | null = null;
+      let videoThumbnailBase64: string | null = null;
 
-      if (!isVideo && (req.file.mimetype === "image/jpeg" || req.file.mimetype === "image/png")) {
+      if (isVideo) {
+        const [thumbResult, metaResult] = await Promise.all([
+          extractVideoThumbnail(filePath),
+          extractVideoMetadata(filePath),
+        ]);
+        videoThumbnailBase64 = thumbResult;
+        if (metaResult.gps) exifLocation = metaResult.gps;
+        if (metaResult.time) exifTime = metaResult.time;
+      } else if (req.file.mimetype === "image/jpeg" || req.file.mimetype === "image/png") {
         try {
           const parser = exifParser.create(fileBuffer);
           const exifData = parser.parse();
@@ -714,7 +812,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         metadataInfo += `\nAufnahmezeitpunkt: ${exifTime}`;
       }
 
-      if (!isVideo) {
+      if (isVideo) {
+        sendSSE({ videoMeta: { thumbnailBase64: videoThumbnailBase64, time: exifTime, locationName: exifLocationName, countryCode: exifCountryCode } });
+      } else {
         sendSSE({ exifMeta: { time: exifTime, locationName: exifLocationName, countryCode: exifCountryCode } });
       }
 
@@ -725,7 +825,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
       const systemPrompt = PHOTO_ANALYSIS_PROMPT;
 
       if (isVideo) {
-        sendSSE({ status: "🔍 Analysiere Video mit Gemini KI..." });
+        sendSSE({ status: "🔍 Analysiere Video mit Gemini 2.5 Flash..." });
 
         const base64Video = fileBuffer.toString("base64");
         const videoPrompt = systemPrompt.replace("Foto/Bild", "Video").replace("dieses Bild", "dieses Video") + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";

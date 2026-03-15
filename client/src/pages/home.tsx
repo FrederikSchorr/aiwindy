@@ -267,7 +267,7 @@ export default function Home() {
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
   const hasUploadedRef = useRef(false);
-  const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null }>>({});
+  const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null; isVideo?: boolean }>>({});
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
@@ -429,11 +429,13 @@ export default function Home() {
     if (!isVideo) {
       const objectUrl = URL.createObjectURL(file);
       setUploadPreviews(prev => ({ ...prev, [userId]: { url: objectUrl } }));
+    } else {
+      setUploadPreviews(prev => ({ ...prev, [userId]: { url: "", isVideo: true } }));
     }
 
     setMessages((prev) => [
       ...prev,
-      { id: userId, role: "user", content: isVideo ? "📹 Video hochgeladen" : "" },
+      { id: userId, role: "user", content: "" },
       { id: assistantId, role: "assistant" as const, content: "" },
     ]);
 
@@ -471,6 +473,16 @@ export default function Home() {
                 [userId]: { ...prev[userId], time: data.exifMeta.time, locationName: data.exifMeta.locationName, countryCode: data.exifMeta.countryCode }
               }));
             }
+            if (data.videoMeta) {
+              const thumbUrl = data.videoMeta.thumbnailBase64
+                ? `data:image/jpeg;base64,${data.videoMeta.thumbnailBase64}`
+                : "";
+              photoExifMeta = { locationName: data.videoMeta.locationName ?? null, countryCode: data.videoMeta.countryCode ?? null };
+              setUploadPreviews(prev => ({
+                ...prev,
+                [userId]: { url: thumbUrl, isVideo: true, time: data.videoMeta.time, locationName: data.videoMeta.locationName, countryCode: data.videoMeta.countryCode }
+              }));
+            }
             if (data.content) {
               uploadStreamContent += data.content;
               const el = getUploadStreamEl();
@@ -499,7 +511,7 @@ export default function Home() {
         if (!uploadStreamContent) return prev.filter(m => m.id !== assistantId);
         return prev.map((m) => m.id === assistantId ? { ...m, content: uploadStreamContent } : m);
       });
-      if (!isVideo && photoExifMeta.locationName) {
+      if (photoExifMeta.locationName) {
         const lastAnalysis = lastAnalysisLocationRef.current;
         const isDifferentOrNone = !lastAnalysis || lastAnalysis !== photoExifMeta.locationName;
         if (isDifferentOrNone) {
@@ -592,11 +604,30 @@ export default function Home() {
                   <div className="max-w-[75%]">
                     {preview ? (
                       <div>
-                        <img
-                          src={preview.url}
-                          alt="Hochgeladenes Foto"
-                          className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
-                        />
+                        {preview.isVideo ? (
+                          <div className="relative">
+                            {preview.url ? (
+                              <img
+                                src={preview.url}
+                                alt="Standbild aus Video"
+                                className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
+                              />
+                            ) : (
+                              <div className="rounded-2xl rounded-br-md w-48 h-32 bg-muted flex items-center justify-center">
+                                <span className="text-muted-foreground text-sm">📹 Lade…</span>
+                              </div>
+                            )}
+                            <div className="absolute top-2 left-2 bg-black/60 rounded-md px-2 py-0.5 flex items-center gap-1">
+                              <span className="text-white text-xs font-medium">▶ Video</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={preview.url}
+                            alt="Hochgeladenes Foto"
+                            className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
+                          />
+                        )}
                         {(preview.locationName || preview.time) && (
                           <div className="flex flex-col items-end gap-0.5 mt-1">
                             {preview.locationName && (
@@ -624,11 +655,11 @@ export default function Home() {
                           </div>
                         )}
                       </div>
-                    ) : (
+                    ) : msg.content ? (
                       <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-normal bg-primary text-primary-foreground">
                         {msg.content}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );

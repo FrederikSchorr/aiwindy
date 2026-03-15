@@ -46,11 +46,13 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 ## Photo/Video Upload
 - Camera button in chat input
 - Accepts images (JPEG, PNG, WebP, HEIC) and videos (MP4, QuickTime, WebM), max 20MB
-- Server-side EXIF extraction (exif-parser) for GPS location and timestamp
+- Photos: server-side EXIF extraction (exif-parser) for GPS location and timestamp
+- Videos: server-side thumbnail extraction via ffmpeg (1s frame), metadata via ffprobe (GPS/date from MP4 atoms: ISO6709, creation_time)
 - If GPS found: auto-geocodes and updates maps
-- OpenAI GPT-4.1 Vision analyzes meteorological relevance
+- OpenAI GPT-4.1 Vision analyzes meteorological relevance of photos
 - Gemini 2.5 Flash for video analysis (native @google/generative-ai SDK)
-- SSE streaming response
+- SSE streaming response: `{ videoMeta: { thumbnailBase64, time, locationName, countryCode } }` for videos, `{ exifMeta }` for photos
+- Video: shows still frame thumbnail with "▶ Video" overlay, recording location + date below, "ja" location hint button (same as photo)
 
 ## API
 - `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ section }` (per-section), `{ content }`, `{ done: true }`
