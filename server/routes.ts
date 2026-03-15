@@ -352,16 +352,15 @@ ANALYSE <Ortsname> — wenn der Benutzer nach Wetterlage/Segelbedingungen an ein
 - "Rovinj, Kroatien" → ANALYSE Rovinj, Kroatien
 - "Wetterlage Elba" → ANALYSE Elba
 
-CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht erfordert, ODER eine Rückfrage zu einer laufenden Analyse stellt. Beispiele:
+CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht erfordert${hasActiveLocation ? ", ODER eine Rückfrage zu einer laufenden Analyse stellt" : ""}. Beispiele:
 - "Was sind Cumulonimbus-Wolken?" → CHAT
 - "Wie entsteht die Bora?" → CHAT
 - "Erkläre die Douglas-Skala" → CHAT
-- "Wird der Wind stärker?" → CHAT (Rückfrage)
-- "Wie sieht es morgen aus?" → CHAT (Rückfrage)
+${hasActiveLocation ? '- "Wird der Wind stärker?" → CHAT (Rückfrage bei aktivem Ort)\n- "Wie sieht es morgen aus?" → CHAT (Rückfrage bei aktivem Ort)' : '- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)\n- "Wie sieht es morgen aus?" → UNCLEAR (kein aktiver Ort)'}
 
-UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist, oder die Nachricht mehrdeutig ist. Beispiele:
+UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist, die Nachricht mehrdeutig ist${!hasActiveLocation ? ", oder eine ortsbezogene Frage ohne konkreten Ort gestellt wird" : ""}. Beispiele:
 - "Wetter" → UNCLEAR
-- "Wie ist es dort?" → UNCLEAR (ohne aktiven Ort)
+- "Wie ist es dort?" → UNCLEAR${!hasActiveLocation ? '\n- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)' : ""}
 - "Segeln" → UNCLEAR
 
 ${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN Ort aktiv."}
