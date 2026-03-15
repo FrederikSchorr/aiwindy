@@ -691,28 +691,67 @@ export default function Home() {
                   </span>
                 )}
                 {photoHint && !isStreaming && (
-                  <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-photo-location-hint">
-                    <MapPin className="w-4 h-4 shrink-0" />
-                    <span>
-                      Möchtest Du für{" "}
-                      <strong className="not-italic text-foreground/80">
-                        {photoHint.locationName}
-                        {photoHint.countryCode && (
-                          <>
-                            {" "}
-                            <img
-                              src={`https://flagcdn.com/w20/${photoHint.countryCode.toLowerCase()}.png`}
-                              width={16}
-                              height={11}
-                              alt={photoHint.countryCode}
-                              className="inline-block rounded-[2px] align-baseline"
-                            />
-                            {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
-                          </>
-                        )}
-                      </strong>
-                      {" "}eine Wetteranalyse durchführen?
-                    </span>
+                  <div className="mt-3 text-[14px]" data-testid="text-photo-location-hint">
+                    <div className="flex items-center gap-2 text-muted-foreground italic">
+                      <MapPin className="w-4 h-4 shrink-0" />
+                      <span>
+                        Möchtest Du für{" "}
+                        <strong className="not-italic text-foreground/80">
+                          {photoHint.locationName}
+                          {photoHint.countryCode && (
+                            <>
+                              {" "}
+                              <img
+                                src={`https://flagcdn.com/w20/${photoHint.countryCode.toLowerCase()}.png`}
+                                width={16}
+                                height={11}
+                                alt={photoHint.countryCode}
+                                className="inline-block rounded-[2px] align-baseline"
+                              />
+                              {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
+                            </>
+                          )}
+                        </strong>
+                        {" "}eine Wetteranalyse durchführen?
+                      </span>
+                    </div>
+                    <div className="flex gap-2 mt-2 ml-6">
+                      <Button
+                        size="sm"
+                        data-testid="button-confirm-location-yes"
+                        disabled={isStreaming}
+                        onClick={() => {
+                          if (isStreaming) return;
+                          const loc = photoHint.locationName + (photoHint.countryCode && COUNTRY_INFO[photoHint.countryCode] ? `, ${COUNTRY_INFO[photoHint.countryCode].name}` : "");
+                          setPhotoLocationHints(prev => {
+                            const next = { ...prev };
+                            delete next[msg.id];
+                            return next;
+                          });
+                          setMessages((prev) => [
+                            ...prev,
+                            { id: `user-${Date.now()}`, role: "user" as const, content: loc },
+                          ]);
+                          sendMessage(loc);
+                        }}
+                      >
+                        ja
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        data-testid="button-confirm-location-no"
+                        onClick={() => {
+                          setPhotoLocationHints(prev => {
+                            const next = { ...prev };
+                            delete next[msg.id];
+                            return next;
+                          });
+                        }}
+                      >
+                        nein
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
