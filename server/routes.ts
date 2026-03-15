@@ -105,6 +105,7 @@ function stripHtml(html: string): string {
 }
 
 async function fetchMeteonews(): Promise<string> {
+  // Only fetches the European overview from meteonews.at — no regional subsections
   try {
     const res = await fetch("https://meteonews.at/de/Allgemeine_Lage/K33/Europa", {
       headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
@@ -112,18 +113,30 @@ async function fetchMeteonews(): Promise<string> {
     });
     if (!res.ok) return "";
     const html = await res.text();
-    const bodyMatch = html.match(/<div[^>]*class="[^"]*forecast[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-      || html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
-      || html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-    if (bodyMatch) {
-      return stripHtml(bodyMatch[1]).slice(0, 2000);
+
+    // Try to extract just the main article/overview text before any regional sections
+    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+    const rawText = articleMatch
+      ? stripHtml(articleMatch[1])
+      : stripHtml(html);
+
+    // Find the start of "Allgemeine Lage" or similar heading
+    const startMarkers = ["Allgemeine Lage", "Wetterlage", "Wettersituation"];
+    let startIdx = 0;
+    for (const marker of startMarkers) {
+      const idx = rawText.indexOf(marker);
+      if (idx >= 0) { startIdx = idx; break; }
     }
-    const plainText = stripHtml(html);
-    const startIdx = plainText.indexOf("Allgemeine Lage");
-    if (startIdx >= 0) {
-      return plainText.slice(startIdx, startIdx + 2000);
+
+    // Stop before any regional subsection headings
+    const regionalMarkers = ["Alpenraum", "Nordsee", "Ostsee", "Mittelmeer", "Atlantik\n", "Nordeuropa", "Südeuropa", "Osteuropa", "Westeuropa"];
+    let endIdx = Math.min(startIdx + 1500, rawText.length);
+    for (const marker of regionalMarkers) {
+      const idx = rawText.indexOf(marker, startIdx + 100);
+      if (idx >= 0 && idx < endIdx) endIdx = idx;
     }
-    return plainText.slice(0, 2000);
+
+    return rawText.slice(startIdx, endIdx).trim();
   } catch (e) {
     console.error("Meteonews fetch failed:", e);
     return "";
