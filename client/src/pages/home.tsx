@@ -562,7 +562,7 @@ export default function Home() {
                           className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
                         />
                         {(preview.locationName || preview.time) && (
-                          <div className="flex items-center justify-end gap-1.5 mt-1 flex-wrap">
+                          <div className="flex flex-col items-end gap-0.5 mt-1">
                             {preview.locationName && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 📍 {preview.locationName}
