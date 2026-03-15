@@ -27,6 +27,7 @@ interface SectionEvent {
 
 interface SSEPayload {
   location?: GeocodeResult;
+  analysisStart?: { sections: SectionEvent[] };
   section?: SectionEvent;
   content?: string;
   error?: string;
@@ -208,7 +209,7 @@ function AnalysisContent({ content, sections, isStreaming, isLast }: {
   }
 
   const sectionMap = new Map<string, SectionEvent>();
-  const sectionOrder = ["luftmassen", "fronten", "wind", "wolken", "prognose", "warnung"];
+  const sectionOrder = ["druck-luftmassen", "fronten", "wind", "wolken", "prognose", "warnung"];
   sections.forEach(s => sectionMap.set(s.id, s));
 
   return (
@@ -272,12 +273,19 @@ export default function Home() {
       if (data.location) {
         setActiveLocation(data.location);
       }
+      if (data.analysisStart?.sections) {
+        const sections = data.analysisStart.sections;
+        setMessageSections(prev => ({ ...prev, [assistantId]: sections }));
+      }
       if (data.section) {
         const sectionEvt = data.section;
-        setMessageSections(prev => ({
-          ...prev,
-          [assistantId]: [...(prev[assistantId] || []), sectionEvt],
-        }));
+        setMessageSections(prev => {
+          const existing = prev[assistantId] || [];
+          if (!existing.find(s => s.id === sectionEvt.id)) {
+            return { ...prev, [assistantId]: [...existing, sectionEvt] };
+          }
+          return prev;
+        });
       }
       if (data.content) {
         setMessages((prev) =>
@@ -432,11 +440,22 @@ export default function Home() {
     e.target.value = "";
   }, [handleFileUpload]);
 
+  const lastSeenLengthRef = useRef(1);
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messages.length > lastSeenLengthRef.current) {
+      lastSeenLengthRef.current = messages.length;
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg) {
+        requestAnimationFrame(() => {
+          const el = document.querySelector(`[data-message-id="${lastMsg.id}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      }
     }
-  }, [messages]);
+  }, [messages.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,7 +499,7 @@ export default function Home() {
 
             if (isUser) {
               return (
-                <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`}>
+                <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                   <div className="max-w-[75%]">
                     <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-normal bg-primary text-primary-foreground">
                       {msg.content}
@@ -492,7 +511,7 @@ export default function Home() {
 
             if (hasAnalysis) {
               return (
-                <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`}>
+                <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                   <AnalysisContent
                     content={msg.content}
                     sections={msgSections}
@@ -504,7 +523,7 @@ export default function Home() {
             }
 
             return (
-              <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`}>
+              <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                 {msg.content ? <MarkdownContent content={msg.content} /> : null}
                 {isStreaming && isLast && msg.role === "assistant" && (
                   <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">

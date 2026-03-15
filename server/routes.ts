@@ -452,11 +452,11 @@ const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte.
 
 WICHTIG: Schreibe die Abschnitte EXAKT mit diesen Überschriften (## N. Titel) — die Überschriften steuern die Kartendarstellung!
 
-## 1. Luftmassen
+## 1. Druck & Luftmassen
 - Fasse die europäische Wetterdynamik in 1-2 prägnanten Sätzen/Bullets zusammen
 - Basierend auf dem METEONEWS-TEXT (falls vorhanden) und den Wetterdaten
 - Gib die Quelle meteonews.at in Klammern an wenn verfügbar
-- Beschreibe dominierende Druckgebilde, Luftmassengrenzen, 850hPa-Situation
+- Beschreibe dominierende Druckgebilde, Luftmassengrenzen, Hochs/Tiefs
 
 ## 2. Fronten
 - Basierend auf dem meteonews-Text, den Wetterdaten und dem Zielort
@@ -887,9 +887,9 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
 
       const sectionConfigs = [
         {
-          id: "luftmassen", title: "1. Luftmassen",
-          mapType: "windy", mapConfig: { lat: 51, lon: 0, overlay: "temp", product: "ecmwf", level: "850h", zoom: 4 },
-          sourceLabel: "Temperatur 1.500m ECMWF windy.com", sourceUrl: "https://www.windy.com/-temp-850h?ecmwf,51.000,0.000,4",
+          id: "druck-luftmassen", title: "1. Druck & Luftmassen",
+          mapType: "windy", mapConfig: { lat: 51, lon: 0, overlay: "pressure", product: "ecmwf", level: "surface", zoom: 4 },
+          sourceLabel: "Bodendruck ECMWF Europa windy.com", sourceUrl: "https://www.windy.com/-pressure?ecmwf,51.000,0.000,4",
         },
         {
           id: "fronten", title: "2. Fronten",
@@ -956,6 +956,8 @@ ${weatherContext}
         { role: "user", content: `Erstelle Segelwetteranalyse für ${locationShort}.\n\n${dataContext}` },
       ];
 
+      sendSSE({ analysisStart: { sections: sectionConfigs } });
+
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages: msgs,
@@ -964,24 +966,9 @@ ${weatherContext}
         stream: true,
       });
 
-      let accumulated = "";
-      const emittedSections = new Set<number>();
-
       for await (const chunk of stream) {
         const text = chunk.choices?.[0]?.delta?.content;
         if (text) {
-          accumulated += text;
-
-          for (let n = 1; n <= 6; n++) {
-            if (!emittedSections.has(n)) {
-              const pattern = new RegExp(`##\\s*${n}[.):\\s]`);
-              if (pattern.test(accumulated)) {
-                emittedSections.add(n);
-                sendSSE({ section: sectionConfigs[n - 1] });
-              }
-            }
-          }
-
           sendSSE({ content: text });
         }
       }
