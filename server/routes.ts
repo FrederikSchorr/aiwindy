@@ -434,8 +434,8 @@ Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 
 ## 3. Wind & Welle
 Schreibe genau diese Bullets in dieser Reihenfolge:
-1. Erster Bullet: "Regionales Windmodell: [Modellname aus KONTEXT], Regionaler Wetterbericht: [Dienstname](URL)" — URL aus QUELLENURLS, KEINE Klammern um Dienstname
-2. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. Windsysteme: Bora, Maestral, Meltemi, Mistral, Jugo/Scirocco, Tramontana, thermische Winde etc.
+1. Erster Bullet exakt in diesem Format (Markdown-Link!): "Regionales Windmodell: ALADIN, Regionaler Wetterbericht: [DHMZ Kroatien](https://meteo.hr/...)" — ersetze Modell und Dienst aus KONTEXT und QUELLENURLS. Der Dienstname muss ein klickbarer Markdown-Link sein: [Dienstname](URL)
+2. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen. Windsysteme: Bora, Maestral, Meltemi, Mistral, Jugo/Scirocco, Tramontana, thermische Winde etc.
 3. Letzter Bullet: "Seezustand: [Douglas-Skala-Wert]" — aus dem regionalen Wetterbericht, nächste 12h
 
 ## 4. Wolken & Regen
