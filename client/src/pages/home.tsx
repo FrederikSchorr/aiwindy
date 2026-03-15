@@ -422,6 +422,8 @@ export default function Home() {
       const combined = lineBuffer + text;
       const lines = combined.split("\n");
       lineBuffer = lines.pop() || "";
+      let batchedContent = "";
+      let hasError = false;
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
@@ -437,21 +439,27 @@ export default function Home() {
               }));
             }
             if (data.content) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, content: m.content + data.content } : m
-                )
-              );
+              batchedContent += data.content;
             }
             if (data.error) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Bildanalyse. Bitte versuche es erneut." } : m
-                )
-              );
+              hasError = true;
             }
           } catch {}
         }
+      }
+      if (batchedContent) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: m.content + batchedContent } : m
+          )
+        );
+      }
+      if (hasError) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Bildanalyse. Bitte versuche es erneut." } : m
+          )
+        );
       }
     };
 
