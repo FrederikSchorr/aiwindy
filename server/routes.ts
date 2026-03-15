@@ -885,7 +885,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
             temperature: 0.3,
             stream: false,
           });
-          vidText = fallbackRes.choices[0]?.message?.content || "";
+          const fallbackContent = fallbackRes.choices[0]?.message?.content || "";
+          if (fallbackContent) {
+            vidText = `> ⚠️ *Video-Analyse nicht verfügbar — Analyse basiert auf einem Standbild (1. Sekunde).*\n\n${fallbackContent}`;
+          }
         }
 
         if (vidText) sendSSE({ content: vidText });
