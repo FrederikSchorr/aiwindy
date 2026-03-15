@@ -1,0 +1,27 @@
+B. Segelwetteranalyse
+
+Falls der [Ort] nicht erkannt wurde, via Chat nochmals nachfragen
+Sobald [Zielort] erkannt wurde, beginnt die Segelwetteranalyse in folgenden fest definierten Abschnitten
+Luftmassen
+Karte darstellen: Windy Temperatur 1.500m ECMWF, sodass Greenwich in der Mitte
+darunter: Quelle: "Temperatur 1.500m ECMWF windy.com" klickbar
+[Zusammenfassung Europa Wetter Dynamik in einem prägnantem Bullet/Satz. Fasse diesen aus https://meteonews.at/de/Allgemeine_Lage/K33/Europa zusammen, gib diese Quelle auch in Klammern an.]
+Fronten
+Karte darstellen: KNMI Fronten
+Quelle: "KNMI [Uhrzeit]" klickbar
+Basierend auf diesem Bild, der obigen meteonews Beschreibung und dem Zielort, fasse die regional relevanten Fronten in 1-2 Bullets zusammen
+Wind & Welle
+Regionales Windmodell: [Auswahl des besten von Windy für diesen Zielort angegebenen Modells, ZB Aladin, Icon-D2, Arome, etc.], Regionaler Wetterbericht: [Auswahl des regionalen/nationalen Anbieters, zB DHMZ, EMY, DWD] klickbar zum Wetterbericht
+Karte darstellen: Windy, Regionaler Wind
+Quelle: "Wind [Zielort] [Windmodell] windy.com" klickbar
+Basierend auf dem regionalen Wetterbericht und (falls möglich) der Windy Windkarte Beschreibung der relevanten Windsysteme und Windstärken in nächsten 12h in 1-2 Bullets
+Aus regionalen Wetterbericht den "Seezustand" auf Douglas Skala in nächsten 12h
+Wolken & Regen
+Karte darstellen: https://www.windy.com/de/-Wolken-clouds?czeAladin,clouds,44.941,14.821,8,i:pressure,p:favs für den Zielort mit regionalem Windmodell
+Quelle: "Wolken & Regen [Zielort] [Windmodell] windy.com" klickbar
+Basierend auf dem regionalen Wetterbericht und (falls möglich) der Windy Wolkenkarte, Beschreibung Bewölkung, Regen, Gewitter in nächsten 12h, in 1-2 Bullets
+Prognose
+Darstellen: die Meteogram Prognose Darstellung von Windy für den Zielort mit regionalem Modell https://www.windy.com/44.578/13.489/czeAladin/meteogram?czeAladin,44.148,13.489,8,i:pressure,p:favs
+Quelle: "Meteogram [Zielort] [Windmodell] windy.com" klickbar
+Wetterwarnung
+Basierend auf dem regionalen Wetterbericht, wieder Quelle klickbar - ggf "keine Wetterwarnung (Quelle: ...)"

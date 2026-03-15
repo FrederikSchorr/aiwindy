@@ -433,11 +433,10 @@ Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 - Quelle als Link: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
 
 ## 3. Wind & Welle
-- Basierend auf dem REGIONALEN WETTERBERICHT und den Wetterdaten
-- Beschreibe relevante Windsysteme und Windstärken für die nächsten 12h in 1-2 Bullets
-- Bora, Maestral, Meltemi, Mistral, thermische Winde — was ist relevant?
-- Windangaben: kt / Bft, Seezustand auf Douglas-Skala (falls Seedaten vorhanden)
-- Quelle als Link verwenden: [(Quelle: DIENSTNAME)](FORECASTURL) — URL aus QUELLENURLS
+Schreibe genau diese Bullets in dieser Reihenfolge:
+1. Erster Bullet: "Regionales Windmodell: [Modellname aus KONTEXT], Regionaler Wetterbericht: [(Dienstname)](URL)" — URL aus QUELLENURLS
+2. 1-2 Bullets: Relevante Windsysteme und Windstärken für die nächsten 12h — basierend auf dem REGIONALEN WETTERBERICHT. Bora, Maestral, Meltemi, Mistral, thermische Winde — was ist relevant? Windangaben: kt / Bft
+3. Letzter Bullet: "Seezustand: [Douglas-Skala-Wert]" — aus dem regionalen Wetterbericht, nächste 12h
 
 ## 4. Wolken & Regen
 - Basierend auf dem regionalen Wetterbericht und den Wetterdaten
