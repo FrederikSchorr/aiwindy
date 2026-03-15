@@ -4,6 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Send, Cloud, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
+function countryFlag(code?: string): string {
+  if (!code || code.length !== 2) return "";
+  return [...code.toUpperCase()].map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join("");
+}
+
 interface SectionMapConfig {
   lat?: number;
   lon?: number;
@@ -476,8 +481,11 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">AI-Meteorologe</p>
           </div>
           {activeLocation && (
-            <span className="text-sm text-muted-foreground truncate max-w-[180px]" data-testid="text-active-location">
+            <span className="text-sm text-muted-foreground truncate max-w-[220px]" data-testid="text-active-location">
               📍 {activeLocation.displayName.split(",")[0]}
+              {activeLocation.countryCode && (
+                <> {countryFlag(activeLocation.countryCode)} {activeLocation.displayName.split(",").at(-1)?.trim()}</>
+              )}
             </span>
           )}
         </div>
