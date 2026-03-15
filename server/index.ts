@@ -22,6 +22,18 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+const CUSTOM_DOMAIN = "aiwindy.schorr.wien";
+const REPLIT_DOMAINS = (process.env.REPLIT_DOMAINS || "").split(",").map(d => d.trim()).filter(Boolean);
+
+app.use((req, res, next) => {
+  const host = (req.headers.host || "").split(":")[0];
+  const isReplitDomain = REPLIT_DOMAINS.some(d => host === d || host.endsWith(".replit.app") || host.endsWith(".replit.dev"));
+  if (process.env.NODE_ENV === "production" && isReplitDomain && host !== CUSTOM_DOMAIN) {
+    return res.redirect(301, `https://${CUSTOM_DOMAIN}${req.originalUrl}`);
+  }
+  next();
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
