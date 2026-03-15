@@ -257,7 +257,7 @@ export default function Home() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Ahoi! Sage mir wo Du segelst ⛵, oder lade ein Wolken-Foto ☀️ hoch.",
+      content: "Ahoi! Sage mir wo Du segelst ⛵, oder lade ein Wolken-Foto ☁️ hoch.",
     },
   ]);
   const [input, setInput] = useState("");
