@@ -293,6 +293,16 @@ export default function Home() {
     xhr.open("POST", "/api/chat");
     xhr.setRequestHeader("Content-Type", "application/json");
 
+    let pendingChatContent = "";
+    let chatRafId: number | null = null;
+    const flushChatContent = () => {
+      chatRafId = null;
+      if (!pendingChatContent) return;
+      const captured = pendingChatContent;
+      pendingChatContent = "";
+      setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + captured } : m));
+    };
+
     const handleEvent = (data: SSEPayload) => {
       if (data.location) {
         setActiveLocation(data.location);
@@ -314,13 +324,6 @@ export default function Home() {
           return prev;
         });
       }
-      if (data.content) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: m.content + data.content } : m
-          )
-        );
-      }
       if (data.error) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -336,25 +339,18 @@ export default function Home() {
       const combined = lineBuffer + text;
       const lines = combined.split("\n");
       lineBuffer = lines.pop() || "";
-      let batchedContent = "";
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.content) {
-              batchedContent += data.content;
+              pendingChatContent += data.content;
+              if (!chatRafId) chatRafId = requestAnimationFrame(flushChatContent);
             } else {
               handleEvent(data);
             }
           } catch {}
         }
-      }
-      if (batchedContent) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: m.content + batchedContent } : m
-          )
-        );
       }
     };
 
@@ -362,6 +358,8 @@ export default function Home() {
     xhr.onloadend = () => {
       lineBuffer += "\n";
       processChunk();
+      if (chatRafId) { cancelAnimationFrame(chatRafId); chatRafId = null; }
+      flushChatContent();
       setMessages((prev) => {
         const msg = prev.find(m => m.id === assistantId);
         if (msg && !msg.content) {
@@ -429,13 +427,22 @@ export default function Home() {
     abortRef.current = { abort: () => xhr.abort() } as AbortController;
     xhr.open("POST", "/api/upload");
 
+    let pendingUploadContent = "";
+    let uploadRafId: number | null = null;
+    const flushUploadContent = () => {
+      uploadRafId = null;
+      if (!pendingUploadContent) return;
+      const captured = pendingUploadContent;
+      pendingUploadContent = "";
+      setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + captured } : m));
+    };
+
     const processChunk = () => {
       const text = xhr.responseText.slice(processed);
       processed = xhr.responseText.length;
       const combined = lineBuffer + text;
       const lines = combined.split("\n");
       lineBuffer = lines.pop() || "";
-      let batchedContent = "";
       let hasError = false;
       for (const line of lines) {
         if (line.startsWith("data: ")) {
@@ -452,20 +459,14 @@ export default function Home() {
               }));
             }
             if (data.content) {
-              batchedContent += data.content;
+              pendingUploadContent += data.content;
+              if (!uploadRafId) uploadRafId = requestAnimationFrame(flushUploadContent);
             }
             if (data.error) {
               hasError = true;
             }
           } catch {}
         }
-      }
-      if (batchedContent) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: m.content + batchedContent } : m
-          )
-        );
       }
       if (hasError) {
         setMessages((prev) =>
@@ -480,6 +481,8 @@ export default function Home() {
     xhr.onloadend = () => {
       lineBuffer += "\n";
       processChunk();
+      if (uploadRafId) { cancelAnimationFrame(uploadRafId); uploadRafId = null; }
+      flushUploadContent();
       setMessages((prev) => {
         const msg = prev.find(m => m.id === assistantId);
         if (msg && !msg.content) {
