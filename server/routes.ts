@@ -841,7 +841,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         {
           id: "wolken", title: "4. Wolken & Regen",
           mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "clouds", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 3, 4) },
-          sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: meteogramUrl,
+          sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: cloudsUrl,
         },
         {
           id: "prognose", title: "5. Prognose",
