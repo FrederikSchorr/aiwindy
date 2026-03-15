@@ -266,6 +266,7 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
+  const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null }>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -379,13 +380,19 @@ export default function Home() {
     if (isStreaming) return;
     setIsStreaming(true);
     const assistantId = `assistant-${Date.now()}`;
+    const userId = `user-${Date.now()}`;
     const isVideo = file.type.startsWith("video/");
     let processed = 0;
     let lineBuffer = "";
 
+    if (!isVideo) {
+      const objectUrl = URL.createObjectURL(file);
+      setUploadPreviews(prev => ({ ...prev, [userId]: { url: objectUrl } }));
+    }
+
     setMessages((prev) => [
       ...prev,
-      { id: `user-${Date.now()}`, role: "user", content: isVideo ? "📹 Video hochgeladen" : "📷 Foto hochgeladen" },
+      { id: userId, role: "user", content: isVideo ? "📹 Video hochgeladen" : "" },
       { id: assistantId, role: "assistant" as const, content: "" },
     ]);
 
@@ -411,6 +418,12 @@ export default function Home() {
             const data = JSON.parse(line.slice(6));
             if (data.location) {
               setActiveLocation(data.location as GeocodeResult);
+            }
+            if (data.exifMeta) {
+              setUploadPreviews(prev => ({
+                ...prev,
+                [userId]: { ...prev[userId], time: data.exifMeta.time, locationName: data.exifMeta.locationName }
+              }));
             }
             if (data.content) {
               setMessages((prev) =>
@@ -531,12 +544,29 @@ export default function Home() {
             const showUploadHint = msg.id === uploadHintAfterMsgId;
 
             if (isUser) {
+              const preview = uploadPreviews[msg.id];
               return (
                 <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                   <div className="max-w-[75%]">
-                    <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-normal bg-primary text-primary-foreground">
-                      {msg.content}
-                    </div>
+                    {preview ? (
+                      <div>
+                        <img
+                          src={preview.url}
+                          alt="Hochgeladenes Foto"
+                          className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
+                        />
+                        {(preview.locationName || preview.time) && (
+                          <div className="text-xs text-muted-foreground mt-1 text-right space-x-2">
+                            {preview.locationName && <span>📍 {preview.locationName}</span>}
+                            {preview.time && <span>🕐 {preview.time}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-normal bg-primary text-primary-foreground">
+                        {msg.content}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

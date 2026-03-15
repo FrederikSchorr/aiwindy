@@ -607,6 +607,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       }
 
       let metadataInfo = "";
+      let exifLocationName: string | null = null;
       if (exifLocation) {
         sendSSE({ status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E` });
         metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
@@ -614,14 +615,17 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
         if (geocoded) {
           sendSSE({ location: geocoded });
-          sendSSE({ status: `📍 Ort: **${geocoded.displayName.split(",")[0]}** — Karten aktualisiert` });
+          exifLocationName = geocoded.displayName.split(",").slice(0, 2).join(",").trim();
           metadataInfo += `\nOrt: ${geocoded.displayName}`;
         }
       }
 
       if (exifTime) {
-        sendSSE({ status: `🕐 Aufnahmezeitpunkt: ${exifTime}` });
         metadataInfo += `\nAufnahmezeitpunkt: ${exifTime}`;
+      }
+
+      if (!isVideo) {
+        sendSSE({ exifMeta: { time: exifTime, locationName: exifLocationName } });
       }
 
       if (!exifLocation && !exifTime && !isVideo) {
