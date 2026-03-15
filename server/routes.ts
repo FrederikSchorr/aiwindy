@@ -148,19 +148,19 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "DWD Warnungen",
   },
   AT: {
-    forecastUrl: "https://www.zamg.ac.at/cms/de/wetter/wetterlage",
+    forecastUrl: "https://www.zamg.ac.at/",
     label: "GeoSphere Austria",
     warningUrl: "https://warnungen.zamg.at/wsapp/de/alle",
     warningLabel: "GeoSphere Warnungen",
   },
   IT: {
-    forecastUrl: "https://www.meteoam.it/it/previsione-italia",
+    forecastUrl: "https://www.meteoam.it/it/home",
     label: "MeteoAM Italien",
     warningUrl: "https://www.meteoam.it/it/avvisi-meteo",
     warningLabel: "MeteoAM Warnungen",
   },
   FR: {
-    forecastUrl: "https://meteofrance.com/previsions-meteo-france",
+    forecastUrl: "https://meteofrance.fr/",
     label: "Météo-France",
     warningUrl: "https://vigilance.meteofrance.fr/fr",
     warningLabel: "Météo-France Vigilance",
@@ -172,19 +172,19 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "EMY Sturmwarnungen",
   },
   SI: {
-    forecastUrl: "https://meteo.arso.gov.si/met/sl/weather/forecast/",
+    forecastUrl: "https://meteo.arso.gov.si/",
     label: "ARSO Slowenien",
     warningUrl: "https://meteo.arso.gov.si/met/sl/warning/",
     warningLabel: "ARSO Warnungen",
   },
   ME: {
-    forecastUrl: "https://www.meteo.co.me/misc.php?text=117",
+    forecastUrl: "https://www.meteo.co.me/",
     label: "ZHMS Montenegro",
-    warningUrl: "https://www.meteo.co.me/misc.php?text=117&seession=",
+    warningUrl: "https://www.meteo.co.me/",
     warningLabel: "ZHMS Warnungen",
   },
   GB: {
-    forecastUrl: "https://www.metoffice.gov.uk/weather/forecast/uk",
+    forecastUrl: "https://weather.metoffice.gov.uk/forecast/uk",
     label: "Met Office UK",
     warningUrl: "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings",
     warningLabel: "Met Office Warnungen",
@@ -208,15 +208,15 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "IPMA Warnungen",
   },
   TR: {
-    forecastUrl: "https://www.mgm.gov.tr/en/forecast-cities.aspx",
+    forecastUrl: "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx",
     label: "MGM Türkei",
-    warningUrl: "https://www.mgm.gov.tr/en/forecast-warnings.aspx",
+    warningUrl: "https://www.mgm.gov.tr/tahmin/deniztahmin.aspx",
     warningLabel: "MGM Warnungen",
   },
   DK: {
-    forecastUrl: "https://www.dmi.dk/vejr/",
+    forecastUrl: "https://www.dmi.dk/",
     label: "DMI Dänemark",
-    warningUrl: "https://www.dmi.dk/vejr/varsler/",
+    warningUrl: "https://www.dmi.dk/",
     warningLabel: "DMI Warnungen",
   },
   SE: {
@@ -238,9 +238,9 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "IMGW Warnungen",
   },
   CH: {
-    forecastUrl: "https://www.meteoswiss.admin.ch/home/weather/forecasts.html",
+    forecastUrl: "https://www.meteoswiss.admin.ch/weather.html",
     label: "MeteoSchweiz",
-    warningUrl: "https://www.meteoswiss.admin.ch/home/weather/warnings.html",
+    warningUrl: "https://www.meteoswiss.admin.ch/weather.html",
     warningLabel: "MeteoSchweiz Warnungen",
   },
 };
@@ -254,6 +254,23 @@ async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon:
   if (!service) return "";
 
   try {
+    if (countryCode === "DK") {
+      const dmiRes = await fetch("https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land", {
+        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (dmiRes.ok) {
+        const data = await dmiRes.json() as { date?: string; valid?: string; weatherForecast?: string; slipperyWarning?: string | null };
+        const parts: string[] = [];
+        if (data.date) parts.push(data.date);
+        if (data.valid) parts.push(data.valid);
+        if (data.weatherForecast) parts.push(data.weatherForecast);
+        if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
+        return parts.join(" ").slice(0, 3000);
+      }
+      return "";
+    }
+
     const res = await fetch(service.forecastUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
