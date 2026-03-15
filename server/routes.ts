@@ -663,12 +663,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           systemInstruction: { role: "user", parts: [{ text: videoPrompt }] },
         });
 
+        let vidBuffer = "";
+        let vidTimer: ReturnType<typeof setTimeout> | null = null;
+        const flushVid = () => { if (vidBuffer) { sendSSE({ content: vidBuffer }); vidBuffer = ""; } vidTimer = null; };
         for await (const chunk of result.stream) {
           const text = chunk.text();
-          if (text) {
-            sendSSE({ content: text });
-          }
+          if (text) { vidBuffer += text; if (!vidTimer) vidTimer = setTimeout(flushVid, 30); }
         }
+        if (vidTimer) clearTimeout(vidTimer);
+        flushVid();
       } else {
         sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
 
@@ -705,12 +708,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           stream: true,
         });
 
+        let imgBuffer = "";
+        let imgTimer: ReturnType<typeof setTimeout> | null = null;
+        const flushImg = () => { if (imgBuffer) { sendSSE({ content: imgBuffer }); imgBuffer = ""; } imgTimer = null; };
         for await (const chunk of stream) {
           const text = chunk.choices?.[0]?.delta?.content;
-          if (text) {
-            sendSSE({ content: text });
-          }
+          if (text) { imgBuffer += text; if (!imgTimer) imgTimer = setTimeout(flushImg, 30); }
         }
+        if (imgTimer) clearTimeout(imgTimer);
+        flushImg();
       }
 
       sendSSE({ done: true });
