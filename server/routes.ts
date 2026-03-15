@@ -388,6 +388,17 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
   }
 }
 
+const WATER_CLASSES = new Set(["water", "waterway"]);
+const WATER_NATURAL_TYPES = new Set(["water", "lake", "wetland", "bay", "strait", "sea"]);
+const WATER_PLACE_TYPES = new Set(["sea", "ocean"]);
+
+function isWaterFeature(cls: string, type: string): boolean {
+  if (WATER_CLASSES.has(cls)) return true;
+  if (cls === "natural" && WATER_NATURAL_TYPES.has(type)) return true;
+  if (cls === "place" && WATER_PLACE_TYPES.has(type)) return true;
+  return false;
+}
+
 async function geocodeLocation(locationName: string): Promise<{
   lat: number; lon: number; displayName: string;
   regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
@@ -395,32 +406,62 @@ async function geocodeLocation(locationName: string): Promise<{
 } | null> {
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1`,
       { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
     );
     if (!response.ok) return null;
 
-    const results = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
+    const results = await response.json() as Array<{
+      lat: string; lon: string; display_name: string;
+      class: string; type: string;
+      namedetails?: Record<string, string>;
+    }>;
     if (!results.length) return null;
 
     const result = results[0];
     const lat = parseFloat(result.lat);
     const lon = parseFloat(result.lon);
+    const resultClass = result.class || "";
+    const resultType = result.type || "";
+    const isWater = isWaterFeature(resultClass, resultType);
+
     const regional = await getRegionalModelAI(lat, lon, result.display_name);
 
     let countryCode: string | undefined;
     let cityName: string | undefined;
-    try {
-      const reverseRes = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
-        { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-      );
-      if (reverseRes.ok) {
-        const reverseData = await reverseRes.json() as { address?: { country_code?: string; city?: string; town?: string; village?: string; suburb?: string; municipality?: string; county?: string } };
-        countryCode = reverseData.address?.country_code?.toUpperCase();
-        cityName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village || reverseData.address?.municipality || reverseData.address?.suburb || reverseData.address?.county;
-      }
-    } catch {}
+
+    if (isWater) {
+      const nd = result.namedetails || {};
+      const waterName = nd["name:de"] || nd["name"] || result.display_name.split(",")[0].trim();
+      cityName = waterName;
+      try {
+        const reverseRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=4&addressdetails=1`,
+          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
+        );
+        if (reverseRes.ok) {
+          const rev = await reverseRes.json() as { address?: { country_code?: string } };
+          countryCode = rev.address?.country_code?.toUpperCase();
+        }
+      } catch {}
+    } else {
+      try {
+        const reverseRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
+        );
+        if (reverseRes.ok) {
+          const reverseData = await reverseRes.json() as {
+            class?: string; address?: {
+              country_code?: string; city?: string; town?: string;
+              village?: string; suburb?: string; municipality?: string; county?: string;
+            }
+          };
+          countryCode = reverseData.address?.country_code?.toUpperCase();
+          cityName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village || reverseData.address?.municipality || reverseData.address?.suburb || reverseData.address?.county;
+        }
+      } catch {}
+    }
 
     return {
       lat, lon,
@@ -842,7 +883,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
 
       const countryCode = geocoded.countryCode || "";
       const service = getRegionalService(countryCode);
-      const locationShort = geocoded.displayName.split(",")[0].trim();
+      const locationShort = geocoded.cityName || geocoded.displayName.split(",")[0].trim();
       const knmiTime = getKnmiChartTime();
 
       const windUrl = `https://www.windy.com/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
