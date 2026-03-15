@@ -177,7 +177,7 @@ async function fetchMeteonews(): Promise<string> {
 
 const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: string; warningUrl: string; warningLabel: string }> = {
   HR: {
-    forecastUrl: "https://meteo.hr/prognoze.php?section=prognoze_model&param=3d",
+    forecastUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
     label: "DHMZ Kroatien",
     warningUrl: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja",
     warningLabel: "DHMZ Warnungen",
