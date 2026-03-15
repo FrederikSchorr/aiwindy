@@ -716,10 +716,16 @@ Prüfe ob das Bild meteorologisch relevant ist (Himmel, Wolken, Wasser, Wetterst
 
 Falls JA — analysiere in genau dieser Struktur:
 
+## 📷 Aufnahme
+(1–2 Sätze: Was ist zu sehen? Kurze sachliche Beschreibung des Motivs — Ort, Perspektive, Tageszeit, auffällige Elemente.)
+
 ## ☁️ Wolkentyp
 (ein Bullet pro identifizierter Wolkenart: Name fett, Höhe, dann 1–2 Sätze Beschreibung was diese Wolke charakterisiert und wie man sie erkennt)
 - Beispiel: **Cumulus mediocris** — ~1.500–2.500 m (tief-mittel): Kompakte, blumenkohlförmige Quellwolke mit flacher Basis und klar abgegrenztem Rand. Entsteht durch thermische Konvektion und gilt als Schönwetterwolke solange die Vertikalentwicklung begrenzt bleibt.
 - Beispiel: **Cirrus fibratus** — ~7.000–10.000 m (hoch): Feine, faserige Schleierwolke aus Eiskristallen, oft hakenförmig oder gekämmt. Trübt kaum die Sonne und kündigt häufig eine nahende Warmfront an.
+
+## 🌊 Wellen
+(Nur ausfüllen wenn Wasser sichtbar: Wellentyp, geschätzte Höhe, Periode, Beschaffenheit der Oberfläche. Falls kein Wasser sichtbar: diesen Abschnitt weglassen.)
 
 ## 🌫️ Bedeckungsgrad
 (Okta-Angabe + kurze Beschreibung)
