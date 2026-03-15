@@ -741,7 +741,7 @@ Falls JA — verwende IMMER alle folgenden Abschnitte, in dieser Reihenfolge, ke
 
 Falls NEIN: Sag kurz, dass kein meteorologisch relevanter Inhalt zu sehen ist, und bitte um ein Foto vom Himmel oder Horizont.
 
-STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
+STIL: Deutsch, sachlich, ohne Wiederholungen. Direkt mit ## 📷 Aufnahme beginnen — kein einleitender Satz wie „Das Bild/Video ist meteorologisch relevant.".`;
 
   app.post("/api/upload", upload.single("photo"), async (req, res) => {
     if (!req.file) {
@@ -845,7 +845,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           .replace("dieses Bild", "dieses Video")
           .replace(
             "## 🌫️ Bedeckungsgrad",
-            "## 💨 Windgeschwindigkeit\n(Schätze die Windstärke anhand sichtbarer Hinweise: Baumbeweigung, Wasserkräuselung, Gischt, Flaggen, Wellenhöhe, Schaumstreifen. Gib Windstärke in Knoten (kt) und Beaufort-Skala an, mit kurzer Begründung der Schätzung.)\n\n## 🌫️ Bedeckungsgrad"
+            "## 💨 Windgeschwindigkeit\n(Schätze die Windstärke anhand sichtbarer Hinweise: Baumbeweigung, Wasserkräuselung, Gischt, Flaggen, Wellenhöhe, Schaumstreifen. Gib Windstärke NUR in Knoten (kt) an, mit kurzer Begründung der Schätzung. KEINE Beaufort-Angabe.)\n\n## 🌫️ Bedeckungsgrad"
           ) + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
 
         let vidText = "";
