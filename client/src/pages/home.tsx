@@ -264,6 +264,8 @@ export default function Home() {
   const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
   const [messageSections, setMessageSections] = useState<Record<string, SectionEvent[]>>({});
   const [isStreaming, setIsStreaming] = useState(false);
+  const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
+  const uploadHintShownRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -273,6 +275,7 @@ export default function Home() {
     const assistantId = `assistant-${Date.now()}`;
     let processed = 0;
     let lineBuffer = "";
+    let isAnalyse = false;
 
     setMessages((prev) => [...prev, {
       id: assistantId,
@@ -292,6 +295,7 @@ export default function Home() {
       if (data.analysisStart?.sections) {
         const sections = data.analysisStart.sections;
         setMessageSections(prev => ({ ...prev, [assistantId]: sections }));
+        isAnalyse = true;
       }
       if (data.section) {
         const sectionEvt = data.section;
@@ -345,6 +349,10 @@ export default function Home() {
         }
         return prev;
       });
+      if (isAnalyse && !uploadHintShownRef.current) {
+        uploadHintShownRef.current = true;
+        setUploadHintAfterMsgId(assistantId);
+      }
       setIsStreaming(false);
     };
     xhr.onerror = () => {
@@ -524,6 +532,7 @@ export default function Home() {
             const msgSections = messageSections[msg.id] || [];
             const isLast = msg.id === messages[messages.length - 1]?.id;
             const hasAnalysis = msgSections.length > 0;
+            const showUploadHint = msg.id === uploadHintAfterMsgId;
 
             if (isUser) {
               return (
@@ -539,13 +548,21 @@ export default function Home() {
 
             if (hasAnalysis) {
               return (
-                <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
-                  <AnalysisContent
-                    content={msg.content}
-                    sections={msgSections}
-                    isStreaming={isStreaming}
-                    isLast={isLast}
-                  />
+                <div key={msg.id} data-testid={`message-${msg.id}`} data-message-id={msg.id}>
+                  <div className="w-full">
+                    <AnalysisContent
+                      content={msg.content}
+                      sections={msgSections}
+                      isStreaming={isStreaming}
+                      isLast={isLast}
+                    />
+                  </div>
+                  {showUploadHint && !isStreaming && (
+                    <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-upload-hint">
+                      <Camera className="w-4 h-4 shrink-0" />
+                      Lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse.
+                    </div>
+                  )}
                 </div>
               );
             }
