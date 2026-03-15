@@ -534,29 +534,27 @@ export async function registerRoutes(
     },
   });
 
-  const PHOTO_ANALYSIS_PROMPT = `Du bist ein Meteorologe und Wolkenexperte. Analysiere dieses Foto/Bild auf meteorologisch relevante Inhalte.
+  const PHOTO_ANALYSIS_PROMPT = `Du bist ein Meteorologe und Wolkenexperte. Analysiere ausschließlich das vorliegende Bild — ohne externe Wetterdaten oder Kontext.
 
 AUFGABE:
-1. Prüfe ob das Bild meteorologisch relevant ist (Himmel, Wolken, Wasser, Wetterstimmung)
-2. Falls JA — analysiere detailliert:
+Prüfe ob das Bild meteorologisch relevant ist (Himmel, Wolken, Wasser, Wetterstimmung).
 
-## ☁️ Wolkenanalyse
-- **Wolkentyp(en):** Exakte Klassifikation (z.B. Cumulus congestus, Cumulonimbus, Cirrus uncinus, Altocumulus lenticularis, Stratocumulus, etc.)
-- **Wolkenhöhe:** Geschätzte Höhe in Metern und Kategorie (tief/mittel/hoch)
-- **Bedeckungsgrad:** In Okta (0-8) oder Prozent
+Falls JA — analysiere in genau dieser Struktur:
 
-## 🌤️ Wetterlage
-- **Aktuelle Situation:** Was zeigt das Bild über die aktuelle Wetterlage?
-- **Typische Drucklage:** Welche synoptische Situation erzeugt diese Wolkenformationen?
+## ☁️ Wolkentyp
+(ein Bullet pro identifizierter Wolkenart, inkl. geschätzter Höhe)
+- Beispiel: **Cumulus mediocris** — ~1.500–2.500 m (tief-mittel)
+- Beispiel: **Cirrus fibratus** — ~7.000–10.000 m (hoch)
 
-## ⛵ Vorboten & Prognose
-- **Wetterentwicklung:** Wofür sind diese Wolken Vorboten? Was kommt wahrscheinlich als nächstes?
-- **Zeitrahmen:** In welchem Zeitraum ist mit Veränderung zu rechnen?
-- **Relevanz für Segler:** Warnsignale, Windentwicklung, Gewitter-Risiko
+## 🌫️ Bedeckungsgrad
+(Okta-Angabe + kurze Beschreibung)
 
-3. Falls NEIN (kein meteorologisch relevantes Bild): Sag kurz, dass das Bild keinen Himmel/Wolken/Wetter zeigt und bitte um ein Foto vom Himmel oder Horizont.
+## 🌤️ Typische Wetterentwicklung
+(Was ist meteorologisch zu erwarten? Kurz und klar.)
 
-STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Points bevorzugen.`;
+Falls NEIN: Sag kurz, dass kein meteorologisch relevanter Inhalt zu sehen ist, und bitte um ein Foto vom Himmel oder Horizont.
+
+STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
 
   app.post("/api/upload", upload.single("photo"), async (req, res) => {
     if (!req.file) {
@@ -608,6 +606,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
 
       let metadataInfo = "";
       let exifLocationName: string | null = null;
+      let exifCountryCode: string | null = null;
       if (exifLocation) {
         sendSSE({ status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E` });
         metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
@@ -615,7 +614,8 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
         if (geocoded) {
           sendSSE({ location: geocoded });
-          exifLocationName = geocoded.displayName.split(",").slice(0, 2).join(",").trim();
+          exifLocationName = geocoded.displayName.split(",")[0].trim();
+          exifCountryCode = geocoded.countryCode || null;
           metadataInfo += `\nOrt: ${geocoded.displayName}`;
         }
       }
@@ -625,23 +625,14 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       }
 
       if (!isVideo) {
-        sendSSE({ exifMeta: { time: exifTime, locationName: exifLocationName } });
+        sendSSE({ exifMeta: { time: exifTime, locationName: exifLocationName, countryCode: exifCountryCode } });
       }
 
       if (!exifLocation && !exifTime && !isVideo) {
         sendSSE({ status: "ℹ️ Keine GPS/Zeit-Metadaten im Bild gefunden" });
       }
 
-      const currentLocation = req.body?.currentLocation ? JSON.parse(req.body.currentLocation) : null;
-      let locationContext = "";
-      if (currentLocation) {
-        locationContext = `\nAktueller aktiver Ort im System: ${currentLocation.displayName} (${currentLocation.lat}°N, ${currentLocation.lon}°E)`;
-      }
-      if (metadataInfo) {
-        locationContext += `\nBild-Metadaten: ${metadataInfo}`;
-      }
-
-      const systemPrompt = PHOTO_ANALYSIS_PROMPT + (locationContext ? `\n\nKONTEXT:${locationContext}` : "");
+      const systemPrompt = PHOTO_ANALYSIS_PROMPT;
 
       if (isVideo) {
         sendSSE({ status: "🔍 Analysiere Video mit Gemini KI..." });

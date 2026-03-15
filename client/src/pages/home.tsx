@@ -266,7 +266,7 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
-  const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null }>>({});
+  const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null }>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -422,7 +422,7 @@ export default function Home() {
             if (data.exifMeta) {
               setUploadPreviews(prev => ({
                 ...prev,
-                [userId]: { ...prev[userId], time: data.exifMeta.time, locationName: data.exifMeta.locationName }
+                [userId]: { ...prev[userId], time: data.exifMeta.time, locationName: data.exifMeta.locationName, countryCode: data.exifMeta.countryCode }
               }));
             }
             if (data.content) {
@@ -545,6 +545,12 @@ export default function Home() {
 
             if (isUser) {
               const preview = uploadPreviews[msg.id];
+              const formatExifDate = (raw: string | null | undefined) => {
+                if (!raw) return null;
+                const m = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2})/);
+                if (!m) return raw;
+                return `${m[3]}.${m[2]}.${m[1]}, ${m[4]}:${m[5]}`;
+              };
               return (
                 <div key={msg.id} className="flex justify-end" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                   <div className="max-w-[75%]">
@@ -556,9 +562,29 @@ export default function Home() {
                           className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
                         />
                         {(preview.locationName || preview.time) && (
-                          <div className="text-xs text-muted-foreground mt-1 text-right space-x-2">
-                            {preview.locationName && <span>📍 {preview.locationName}</span>}
-                            {preview.time && <span>🕐 {preview.time}</span>}
+                          <div className="flex items-center justify-end gap-1.5 mt-1 flex-wrap">
+                            {preview.locationName && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                📍 {preview.locationName}
+                                {preview.countryCode && (
+                                  <>
+                                    <img
+                                      src={`https://flagcdn.com/w20/${preview.countryCode.toLowerCase()}.png`}
+                                      alt={preview.countryCode}
+                                      className="w-4 h-3 object-cover rounded-sm inline-block"
+                                    />
+                                    {COUNTRY_INFO[preview.countryCode]?.name && (
+                                      <span>{COUNTRY_INFO[preview.countryCode].name}</span>
+                                    )}
+                                  </>
+                                )}
+                              </span>
+                            )}
+                            {preview.time && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatExifDate(preview.time)}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
