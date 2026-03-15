@@ -411,10 +411,10 @@ QUELLEN-REGEL: Schreibe Quellen IMMER als klickbaren Markdown-Link: [(Quelle: Na
 Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 
 ## 1. Druck & Luftmassen
-- Fasse die europäische Wetterdynamik in 1-2 prägnanten Sätzen/Bullets zusammen
-- Basierend auf dem METEONEWS-TEXT und den Wetterdaten
-- Beschreibe dominierende Druckgebilde, Luftmassengrenzen, Hochs/Tiefs
-- Quelle als Link: [(Quelle: meteonews.at)](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa)
+- Genau EIN Bullet-Point: Fasse die europäische Wetterdynamik in EINEM prägnanten Satz zusammen
+- Basierend ausschließlich auf dem METEONEWS-TEXT
+- Gib die Quelle direkt im selben Bullet in Klammern an: [(Quelle: meteonews.at)](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa)
+- Kein weiterer Text, keine weiteren Bullets in dieser Sektion
 
 ## 2. Fronten
 - Basierend auf dem meteonews-Text, den Wetterdaten und dem Zielort
@@ -815,8 +815,8 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const sectionConfigs = [
         {
           id: "druck-luftmassen", title: "1. Druck & Luftmassen",
-          mapType: "windy", mapConfig: { lat: 51, lon: 0, overlay: "pressure", product: "ecmwf", level: "surface", zoom: 4 },
-          sourceLabel: "Bodendruck ECMWF Europa windy.com", sourceUrl: "https://www.windy.com/-pressure?ecmwf,51.000,0.000,4",
+          mapType: "windy", mapConfig: { lat: 51, lon: 0, overlay: "temp", product: "ecmwf", level: "850h", zoom: 4 },
+          sourceLabel: "Windy Temperatur 1.500m ECMWF", sourceUrl: "https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,51.000,0.000,4",
         },
         {
           id: "fronten", title: "2. Fronten",
