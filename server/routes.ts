@@ -426,9 +426,10 @@ Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 - Kein weiterer Text, keine weiteren Bullets in dieser Sektion
 
 ## 2. Fronten
-- Basierend auf dem meteonews-Text, den Wetterdaten und dem Zielort
-- Fasse die regional relevanten Fronten in 1-2 Bullets zusammen
-- Welche Fronten beeinflussen die Region? Zugweg?
+- Basierend auf dem KNMI-Frontenbild, der obigen meteonews-Beschreibung und dem Zielort
+- Genau 1-2 Bullets: Fasse die regional relevanten Fronten für den Zielort zusammen
+- Welche Fronten beeinflussen die Region? Zugweg in Richtung Revier?
+- Kalt-/Warmfronten, Okklusionen, Luftmassengrenzen — was ist relevant?
 - Quelle als Link: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
 
 ## 3. Wind & Welle
