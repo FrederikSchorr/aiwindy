@@ -266,6 +266,7 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
+  const hasUploadedRef = useRef(false);
   const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null }>>({});
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
@@ -355,7 +356,7 @@ export default function Home() {
         }
         return prev;
       });
-      if (isAnalyse && !uploadHintShownRef.current) {
+      if (isAnalyse && !uploadHintShownRef.current && !hasUploadedRef.current) {
         uploadHintShownRef.current = true;
         setUploadHintAfterMsgId(assistantId);
       }
@@ -389,6 +390,8 @@ export default function Home() {
     const isVideo = file.type.startsWith("video/");
     let processed = 0;
     let lineBuffer = "";
+
+    hasUploadedRef.current = true;
 
     let photoExifMeta: { locationName: string | null; countryCode: string | null } = { locationName: null, countryCode: null };
 
