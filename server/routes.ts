@@ -255,8 +255,8 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "MeteoAM Warnungen",
   },
   FR: {
-    forecastUrl: "https://www.meteofrance.fr/",
-    label: "Météo-France",
+    forecastUrl: "https://meteofrance.fr/meteo-marine",
+    label: "Météo-France Marine",
     warningUrl: "https://vigilance.meteofrance.fr/fr",
     warningLabel: "Météo-France Vigilance",
   },
