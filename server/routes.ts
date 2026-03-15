@@ -600,7 +600,11 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
 
           if (tags.DateTimeOriginal) {
             const ts = tags.DateTimeOriginal as number;
-            exifTime = new Date(ts * 1000).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+            exifTime = new Date(ts * 1000).toLocaleString("de-DE", {
+              timeZone: "Europe/Berlin",
+              year: "numeric", month: "2-digit", day: "2-digit",
+              hour: "2-digit", minute: "2-digit",
+            });
           }
         } catch (e) {
           console.log("EXIF parsing failed (non-critical):", e);
