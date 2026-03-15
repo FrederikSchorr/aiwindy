@@ -349,7 +349,7 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
 async function geocodeLocation(locationName: string): Promise<{
   lat: number; lon: number; displayName: string;
   regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
-  countryCode?: string;
+  countryCode?: string; cityName?: string;
 } | null> {
   try {
     const response = await fetch(
@@ -367,14 +367,16 @@ async function geocodeLocation(locationName: string): Promise<{
     const regional = await getRegionalModelAI(lat, lon, result.display_name);
 
     let countryCode: string | undefined;
+    let cityName: string | undefined;
     try {
       const reverseRes = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
         { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
       );
       if (reverseRes.ok) {
-        const reverseData = await reverseRes.json() as { address?: { country_code?: string } };
+        const reverseData = await reverseRes.json() as { address?: { country_code?: string; city?: string; town?: string; village?: string; suburb?: string; municipality?: string; county?: string } };
         countryCode = reverseData.address?.country_code?.toUpperCase();
+        cityName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village || reverseData.address?.municipality || reverseData.address?.suburb || reverseData.address?.county;
       }
     } catch {}
 
@@ -385,6 +387,7 @@ async function geocodeLocation(locationName: string): Promise<{
       regionalModelLabel: regional.label,
       regionalModelZoom: regional.zoom,
       countryCode,
+      cityName,
     };
   } catch {
     return null;
@@ -614,7 +617,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
         const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
         if (geocoded) {
           sendSSE({ location: geocoded });
-          exifLocationName = geocoded.displayName.split(",")[0].trim();
+          exifLocationName = geocoded.cityName || geocoded.displayName.split(",")[0].trim();
           exifCountryCode = geocoded.countryCode || null;
           metadataInfo += `\nOrt: ${geocoded.displayName}`;
         }

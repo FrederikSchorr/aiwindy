@@ -605,7 +605,7 @@ export default function Home() {
                   {loc && (
                     <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground/80">
                       <span>Wetteranalyse für</span>
-                      <span>{loc.displayName.split(",")[0]}</span>
+                      <span>{loc.cityName || loc.displayName.split(",")[0]}</span>
                       {loc.countryCode && (
                         <>
                           <img

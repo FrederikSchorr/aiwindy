@@ -31,6 +31,7 @@ export interface GeocodeResult {
   regionalModelLabel: string;
   regionalModelZoom: number;
   countryCode?: string;
+  cityName?: string;
   warningUrl?: string;
   warningLabel?: string;
 }
