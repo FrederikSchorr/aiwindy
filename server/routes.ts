@@ -452,24 +452,27 @@ const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte.
 
 WICHTIG: Schreibe die Abschnitte EXAKT mit diesen Überschriften (## N. Titel) — die Überschriften steuern die Kartendarstellung!
 
+QUELLEN-REGEL: Schreibe Quellen IMMER als klickbaren Markdown-Link: [(Quelle: Name)](URL)
+Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
+
 ## 1. Druck & Luftmassen
 - Fasse die europäische Wetterdynamik in 1-2 prägnanten Sätzen/Bullets zusammen
-- Basierend auf dem METEONEWS-TEXT (falls vorhanden) und den Wetterdaten
-- Gib die Quelle meteonews.at in Klammern an wenn verfügbar
+- Basierend auf dem METEONEWS-TEXT und den Wetterdaten
 - Beschreibe dominierende Druckgebilde, Luftmassengrenzen, Hochs/Tiefs
+- Quelle als Link: [(Quelle: meteonews.at)](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa)
 
 ## 2. Fronten
 - Basierend auf dem meteonews-Text, den Wetterdaten und dem Zielort
 - Fasse die regional relevanten Fronten in 1-2 Bullets zusammen
 - Welche Fronten beeinflussen die Region? Zugweg?
+- Quelle als Link: [(Quelle: meteonews.at)](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa)
 
 ## 3. Wind & Welle
-- Basierend auf dem REGIONALEN WETTERBERICHT (falls vorhanden) und den Wetterdaten
+- Basierend auf dem REGIONALEN WETTERBERICHT und den Wetterdaten
 - Beschreibe relevante Windsysteme und Windstärken für die nächsten 12h in 1-2 Bullets
 - Bora, Maestral, Meltemi, Mistral, thermische Winde — was ist relevant?
-- Windangaben: kt / Bft
-- Seezustand auf Douglas-Skala für die nächsten 12h (falls Seedaten vorhanden)
-- Gib die Quelle des regionalen Wetterberichts an
+- Windangaben: kt / Bft, Seezustand auf Douglas-Skala (falls Seedaten vorhanden)
+- Quelle als Link verwenden: [(Quelle: DIENSTNAME)](FORECASTURL) — URL aus QUELLENURLS
 
 ## 4. Wolken & Regen
 - Basierend auf dem regionalen Wetterbericht und den Wetterdaten
@@ -480,10 +483,10 @@ WICHTIG: Schreibe die Abschnitte EXAKT mit diesen Überschriften (## N. Titel) �
 - Tendenz: besser/schlechter/stabil?
 
 ## 6. Wetterwarnung
-- Basierend auf dem regionalen Wetterbericht
+- Basierend auf den REGIONALE WARNUNGEN
 - Aktive Warnungen oder "Keine aktuellen Wetterwarnungen"
 - Bei Warnungen: konkrete Werte und Zeitfenster
-- Gib die Quelle des regionalen Warndienstes an
+- Quelle als Link: [(Quelle: WARNDIENSTNAME)](WARNINGURL) — URL aus QUELLENURLS
 
 STIL-REGELN:
 - Deutsch, sachlich-professionell, KEINE Begrüßung, KEINE Floskeln
@@ -491,8 +494,7 @@ STIL-REGELN:
 - Jeder Abschnitt: maximal 1-3 Bullets, KURZ und PRÄGNANT
 - Emojis sparsam: 💨 Wind, 🌊 Welle, ☀️ Sonne, ☁️ Wolken, 🌧️ Regen, ⚠️ Warnung, ⛈️ Gewitter
 - Konkrete Zahlen aus den Daten, KEINE halluzinierten Werte
-- Windangaben: kt / Bft
-- Druckangaben: hPa
+- Windangaben: kt / Bft, Druckangaben: hPa
 
 ABSCHLUSS:
 "---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern."`;
@@ -931,6 +933,11 @@ ORT: ${geocoded.displayName} (${geocoded.lat.toFixed(4)}°N, ${geocoded.lon.toFi
 Ortskurzname: ${locationShort}
 Regionales Windmodell: ${geocoded.regionalModelLabel}
 Regionaler Wetterdienst: ${service?.label || "nicht verfügbar"}
+
+--- QUELLENURLS (für Markdown-Links verwenden) ---
+meteonews.at Allgemeine Lage: https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa
+Regionaler Wetterdienst (${service?.label || "nicht verfügbar"}): ${service?.forecastUrl || "nicht verfügbar"}
+Regionaler Warndienst (${service?.warningLabel || "nicht verfügbar"}): ${service?.warningUrl || "nicht verfügbar"}
 
 --- METEONEWS ALLGEMEINE LAGE EUROPA (Quelle: meteonews.at) ---
 ${meteonewsText || "(nicht verfügbar)"}
