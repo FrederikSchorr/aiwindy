@@ -441,6 +441,7 @@ Schreibe genau diese Bullets in dieser Reihenfolge:
 ## 4. Wolken & Regen
 - Basierend auf dem regionalen Wetterbericht und (falls möglich) der Windy-Wolkenkarte
 - Genau 1-2 Bullets: Beschreibung Bewölkung, Regen, Gewitterrisiko in den nächsten 12h
+- Am Ende des letzten Bullets die Quelle als Markdown-Link: [(Quelle: Dienstname)](URL) — URL aus QUELLENURLS
 
 ## 5. Prognose
 - Basierend auf dem regionalen Wetterbericht
