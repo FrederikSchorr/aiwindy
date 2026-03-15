@@ -418,16 +418,18 @@ QUELLEN-REGEL: Schreibe Quellen IMMER als klickbaren Markdown-Link: [(Quelle: Na
 Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 
 ## 1. Druck & Luftmassen
-- Genau EIN Bullet-Point: Fasse die europäische Wetterdynamik in EINEM prägnanten Satz zusammen
-- Basierend ausschließlich auf dem METEONEWS-TEXT
-- Gib die Quelle direkt im selben Bullet in Klammern an: [(Quelle: meteonews.at)](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa)
+- Genau ZWEI Bullet-Points, basierend ausschließlich auf dem METEONEWS-TEXT:
+  - Bullet 1: Dominierende Druckgebilde über Europa (Hochs, Tiefs, deren Lage und Einfluss)
+  - Bullet 2: Luftmassen und deren Grenzen über Europa (Kaltluft, Warmluft, Luftmassengrenze)
+- Jeder Bullet: 1 prägnanter Satz
+- Gib die Quelle am Ende des zweiten Bullets an: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
 - Kein weiterer Text, keine weiteren Bullets in dieser Sektion
 
 ## 2. Fronten
 - Basierend auf dem meteonews-Text, den Wetterdaten und dem Zielort
 - Fasse die regional relevanten Fronten in 1-2 Bullets zusammen
 - Welche Fronten beeinflussen die Region? Zugweg?
-- Quelle als Link: [(Quelle: meteonews.at)](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa)
+- Quelle als Link: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
 
 ## 3. Wind & Welle
 - Basierend auf dem REGIONALEN WETTERBERICHT und den Wetterdaten
@@ -866,7 +868,7 @@ Regionales Windmodell: ${geocoded.regionalModelLabel}
 Regionaler Wetterdienst: ${service?.label || "nicht verfügbar"}
 
 --- QUELLENURLS (für Markdown-Links verwenden) ---
-meteonews.at Allgemeine Lage: https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa
+meteonews.at Allgemeine Lage: https://meteonews.at/de/Allgemeine_Lage/K33/Europa
 Regionaler Wetterdienst (${service?.label || "nicht verfügbar"}): ${service?.forecastUrl || "nicht verfügbar"}
 Regionaler Warndienst (${service?.warningLabel || "nicht verfügbar"}): ${service?.warningUrl || "nicht verfügbar"}
 
