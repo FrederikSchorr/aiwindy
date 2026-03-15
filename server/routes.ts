@@ -461,8 +461,7 @@ STIL-REGELN:
 - Konkrete Zahlen aus den Daten, KEINE halluzinierten Werte
 - Windangaben: kt / Bft, Druckangaben: hPa
 
-ABSCHLUSS:
-"---\n**Rückfragen?** Gerne zu Details, Routenplanung oder Zeitfenstern."`;
+`;
 
 
 export async function registerRoutes(
@@ -852,7 +851,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         {
           id: "warnung", title: "6. Wetterwarnung",
           mapType: "none", mapConfig: {},
-          sourceLabel: service?.warningLabel || null, sourceUrl: service?.warningUrl || null,
+          sourceLabel: null, sourceUrl: null,
         },
       ];
 
