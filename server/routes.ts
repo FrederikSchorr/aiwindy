@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { geocodeRequestSchema } from "@shared/schema";
-import type { ForecastHour } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
 import exifParser from "exif-parser";
@@ -89,50 +88,6 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
   return getRegionalModelFallback(lat, lon);
 }
 
-async function fetchWeatherContext(lat: number, lon: number, displayName: string): Promise<string> {
-  const parts: string[] = [];
-
-  try {
-    const openMeteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=auto&forecast_days=5`;
-    const meteoRes = await fetch(openMeteoUrl);
-    if (meteoRes.ok) {
-      const meteoData = await meteoRes.json();
-      parts.push(`OPEN-METEO WETTERDATEN für ${displayName} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E):\n${JSON.stringify(meteoData.current, null, 2)}`);
-      if (meteoData.daily) {
-        parts.push(`TAGESVORHERSAGE:\n${JSON.stringify(meteoData.daily, null, 2)}`);
-      }
-      if (meteoData.hourly) {
-        const next24h = {
-          time: meteoData.hourly.time?.slice(0, 24),
-          temperature_2m: meteoData.hourly.temperature_2m?.slice(0, 24),
-          wind_speed_10m: meteoData.hourly.wind_speed_10m?.slice(0, 24),
-          wind_gusts_10m: meteoData.hourly.wind_gusts_10m?.slice(0, 24),
-          wind_direction_10m: meteoData.hourly.wind_direction_10m?.slice(0, 24),
-          pressure_msl: meteoData.hourly.pressure_msl?.slice(0, 24),
-          precipitation_probability: meteoData.hourly.precipitation_probability?.slice(0, 24),
-        };
-        parts.push(`STÜNDLICHE VORHERSAGE (nächste 24h):\n${JSON.stringify(next24h, null, 2)}`);
-      }
-    }
-  } catch (e) {
-    console.error("Open-Meteo fetch error:", e);
-  }
-
-  try {
-    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=wave_height,wave_direction,wave_period,wind_wave_height,wind_wave_direction,swell_wave_height,swell_wave_direction&hourly=wave_height,wave_direction,wave_period,wind_wave_height,swell_wave_height&timezone=auto&forecast_days=3`;
-    const marineRes = await fetch(marineUrl);
-    if (marineRes.ok) {
-      const marineData = await marineRes.json();
-      if (marineData.current) {
-        parts.push(`MARINE/SEEGANG DATEN:\n${JSON.stringify(marineData.current, null, 2)}`);
-      }
-    }
-  } catch (e) {
-    // Marine data not available for inland locations
-  }
-
-  return parts.join("\n\n");
-}
 
 function stripHtml(html: string): string {
   return html
@@ -561,34 +516,6 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/forecast", async (req, res) => {
-    const { lat, lon } = req.body;
-    if (!lat || !lon) {
-      return res.status(400).json({ error: "lat and lon required" });
-    }
-
-    try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto&forecast_days=5`;
-      const meteoRes = await fetch(url);
-      if (!meteoRes.ok) {
-        return res.status(502).json({ error: "Forecast service unavailable" });
-      }
-      const data = await meteoRes.json();
-      const hours: ForecastHour[] = (data.hourly?.time || []).map((t: string, i: number) => ({
-        time: t,
-        temp: data.hourly.temperature_2m?.[i] ?? 0,
-        rain: data.hourly.precipitation?.[i] ?? 0,
-        windSpeed: Math.round(data.hourly.wind_speed_10m?.[i] ?? 0),
-        windGusts: Math.round(data.hourly.wind_gusts_10m?.[i] ?? 0),
-        windDir: data.hourly.wind_direction_10m?.[i] ?? 0,
-        weatherCode: data.hourly.weather_code?.[i] ?? 0,
-      }));
-
-      return res.json({ hours, timezone: data.timezone || "UTC" });
-    } catch {
-      return res.status(500).json({ error: "Failed to fetch forecast" });
-    }
-  });
 
   const upload = multer({
     dest: "/tmp/uploads",
@@ -823,9 +750,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         let userContent = message;
         let systemPrompt = GENERAL_CHAT_PROMPT;
         if (currentLocation) {
-          const weatherContext = await fetchWeatherContext(currentLocation.lat, currentLocation.lon, currentLocation.displayName);
-          userContent = `${message}\n\n--- WETTERDATEN für ${currentLocation.displayName} (${currentLocation.lat.toFixed(2)}°N, ${currentLocation.lon.toFixed(2)}°E) ---\n${weatherContext}`;
-          systemPrompt = GENERAL_CHAT_PROMPT + `\n\nWICHTIG: Es ist ein Ort aktiv (${currentLocation.displayName}). Wenn die Frage sich auf diesen Ort bezieht, beantworte sie mit den vorhandenen Wetterdaten. Antworte kurz und präzise.`;
+          systemPrompt = GENERAL_CHAT_PROMPT + `\n\nWICHTIG: Es ist ein Ort aktiv (${currentLocation.displayName}, ${currentLocation.lat.toFixed(2)}°N, ${currentLocation.lon.toFixed(2)}°E). Beantworte allgemeine Segelfragen mit Bezug auf diesen Ort. Antworte kurz und präzise.`;
         }
 
         const msgs: OpenAI.ChatCompletionMessageParam[] = [
@@ -921,8 +846,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         },
       ];
 
-      const [weatherContext, meteonewsText, regionalReport, warningsText] = await Promise.all([
-        fetchWeatherContext(geocoded.lat, geocoded.lon, geocoded.displayName),
+      const [meteonewsText, regionalReport, warningsText] = await Promise.all([
         fetchMeteonews(),
         countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(""),
         countryCode ? fetchRegionalWarnings(countryCode) : Promise.resolve(""),
@@ -943,13 +867,10 @@ Regionaler Warndienst (${service?.warningLabel || "nicht verfügbar"}): ${servic
 ${meteonewsText || "(nicht verfügbar)"}
 
 --- REGIONALER WETTERBERICHT (Quelle: ${service?.label || "nicht verfügbar"}) ---
-${regionalReport || "(nicht verfügbar - verwende nur Open-Meteo Daten)"}
+${regionalReport || "(nicht verfügbar)"}
 
 --- REGIONALE WARNUNGEN (Quelle: ${service?.warningLabel || "nicht verfügbar"}) ---
 ${warningsText || "(keine Warnungsdaten verfügbar)"}
-
---- OPEN-METEO WETTERDATEN ---
-${weatherContext}
 `;
 
       const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
