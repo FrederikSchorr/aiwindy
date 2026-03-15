@@ -336,12 +336,25 @@ export default function Home() {
       const combined = lineBuffer + text;
       const lines = combined.split("\n");
       lineBuffer = lines.pop() || "";
+      let batchedContent = "";
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
-            handleEvent(JSON.parse(line.slice(6)));
+            const data = JSON.parse(line.slice(6));
+            if (data.content) {
+              batchedContent += data.content;
+            } else {
+              handleEvent(data);
+            }
           } catch {}
         }
+      }
+      if (batchedContent) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: m.content + batchedContent } : m
+          )
+        );
       }
     };
 

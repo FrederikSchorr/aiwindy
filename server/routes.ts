@@ -783,12 +783,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen. Keine Einleitung.`;
           stream: true,
         });
 
+        let chatBuf = "";
+        let chatTimer: ReturnType<typeof setTimeout> | null = null;
+        const flushChat = () => { if (chatBuf) { sendSSE({ content: chatBuf }); chatBuf = ""; } chatTimer = null; };
         for await (const chunk of stream) {
           const text = chunk.choices?.[0]?.delta?.content;
-          if (text) {
-            sendSSE({ content: text });
-          }
+          if (text) { chatBuf += text; if (!chatTimer) chatTimer = setTimeout(flushChat, 30); }
         }
+        if (chatTimer) clearTimeout(chatTimer);
+        flushChat();
 
         sendSSE({ done: true });
         res.end();
@@ -911,12 +914,15 @@ ${warningsText || "(keine Warnungsdaten verfügbar)"}
         stream: true,
       });
 
+      let anaBuf = "";
+      let anaTimer: ReturnType<typeof setTimeout> | null = null;
+      const flushAna = () => { if (anaBuf) { sendSSE({ content: anaBuf }); anaBuf = ""; } anaTimer = null; };
       for await (const chunk of stream) {
         const text = chunk.choices?.[0]?.delta?.content;
-        if (text) {
-          sendSSE({ content: text });
-        }
+        if (text) { anaBuf += text; if (!anaTimer) anaTimer = setTimeout(flushAna, 30); }
       }
+      if (anaTimer) clearTimeout(anaTimer);
+      flushAna();
 
       sendSSE({ done: true });
       res.end();
