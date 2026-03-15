@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Sailboat, Camera, MapPin } from "lucide-react";
+import { Send, Sailboat, Camera, MapPin, Image } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
 const COUNTRY_INFO: Record<string, { name: string }> = {
@@ -274,6 +274,7 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const captureInputRef = useRef<HTMLInputElement>(null);
 
   const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
@@ -801,6 +802,27 @@ export default function Home() {
               className="hidden"
               data-testid="input-file"
             />
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              ref={captureInputRef}
+              onChange={onFileChange}
+              className="hidden"
+              data-testid="input-capture"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => captureInputRef.current?.click()}
+              disabled={isStreaming}
+              data-testid="button-capture"
+              title="Foto aufnehmen"
+              className="shrink-0"
+            >
+              <Camera className="w-4 h-4" />
+            </Button>
             <Button
               type="button"
               size="icon"
@@ -808,10 +830,10 @@ export default function Home() {
               onClick={() => fileInputRef.current?.click()}
               disabled={isStreaming}
               data-testid="button-upload"
-              title="Foto/Video hochladen"
+              title="Foto/Video aus Galerie"
               className="shrink-0"
             >
-              <Camera className="w-4 h-4" />
+              <Image className="w-4 h-4" />
             </Button>
             <div className="relative flex-1">
               <Input
