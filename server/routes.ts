@@ -834,7 +834,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         },
         {
           id: "wind", title: "3. Wind & Welle",
-          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom },
+          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 1, 4) },
           sourceLabel: `Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
           regionalServiceLabel: service?.label || null, regionalServiceUrl: service?.forecastUrl || null,
         },
