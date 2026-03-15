@@ -817,7 +817,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
       const knmiTime = getKnmiChartTime();
 
       const windUrl = `https://www.windy.com/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
-      const cloudsUrl = `https://www.windy.com/-Wolken-clouds?${geocoded.regionalModel},clouds,${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
+      const cloudsUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}/meteogram?${geocoded.regionalModel},clouds,${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
       const meteogramUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}/meteogram`;
       const basisdatenUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}`;
 
@@ -846,7 +846,7 @@ STIL: Deutsch, sachlich-professionell, mit Emojis zur Strukturierung. Bullet-Poi
         {
           id: "prognose", title: "5. Prognose",
           mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom, forecast: true },
-          sourceLabel: `Basisdaten ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: basisdatenUrl,
+          sourceLabel: `Prognose ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: basisdatenUrl,
         },
         {
           id: "warnung", title: "6. Wetterwarnung",
