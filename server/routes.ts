@@ -448,10 +448,10 @@ Schreibe genau diese Bullets in dieser Reihenfolge:
 - Genau 1-2 Bullets: Ausblick auf die nächsten 2-3 Tage, Tendenz: besser/schlechter/stabil?
 
 ## 6. Wetterwarnung
-- Basierend auf dem REGIONALEN WETTERBERICHT und den REGIONALEN WARNUNGEN
-- Falls Warnungen aktiv: konkrete Werte und Zeitfenster als Bullet-Liste
-- Falls keine Warnungen: genau diesen Satz: "Keine aktuellen Wetterwarnungen. [(Quelle: WARNDIENSTNAME)](WARNINGURL)"
-- URL aus QUELLENURLS verwenden
+- Beginne mit dem Dienstnamen als Label, Beispiel: "[DHMZ Kroatien](WARNINGURL): Gelegentliche Böen..."
+- Der Dienstname ist ein klickbarer Markdown-Link zur Warnseite: [WARNDIENSTNAME](WARNINGURL) — URL aus QUELLENURLS
+- Falls Warnungen aktiv: "[Dienstname](URL): [Warntext mit konkreten Werten und Zeitfenstern]"
+- Falls keine Warnungen: "[Dienstname](URL): Keine aktuellen Wetterwarnungen"
 
 STIL-REGELN:
 - Deutsch, sachlich-professionell, KEINE Begrüßung, KEINE Floskeln
