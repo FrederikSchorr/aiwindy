@@ -267,6 +267,7 @@ export default function Home() {
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
   const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null }>>({});
+  const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -292,6 +293,7 @@ export default function Home() {
     const handleEvent = (data: SSEPayload) => {
       if (data.location) {
         setActiveLocation(data.location);
+        setMessageLocations(prev => ({ ...prev, [assistantId]: data.location! }));
       }
       if (data.analysisStart?.sections) {
         const sections = data.analysisStart.sections;
@@ -513,24 +515,6 @@ export default function Home() {
         <div className="max-w-2xl mx-auto px-4 py-2 flex items-center gap-2">
           <Sailboat className="w-5 h-5 text-primary shrink-0" />
           <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter AI</h1>
-          <div className="flex-1" />
-          {activeLocation && (
-            <span className="text-sm text-muted-foreground flex items-center gap-1.5 truncate max-w-[220px]" data-testid="text-active-location">
-              📍 {activeLocation.displayName.split(",")[0]}
-              {activeLocation.countryCode && COUNTRY_INFO[activeLocation.countryCode] && (
-                <>
-                  <img
-                    src={`https://flagcdn.com/w20/${activeLocation.countryCode.toLowerCase()}.png`}
-                    width={20}
-                    height={14}
-                    alt={activeLocation.countryCode}
-                    className="inline-block rounded-[2px] shrink-0"
-                  />
-                  {COUNTRY_INFO[activeLocation.countryCode].name}
-                </>
-              )}
-            </span>
-          )}
         </div>
       </header>
 
@@ -599,8 +583,29 @@ export default function Home() {
             }
 
             if (hasAnalysis) {
+              const loc = messageLocations[msg.id];
               return (
                 <div key={msg.id} data-testid={`message-${msg.id}`} data-message-id={msg.id}>
+                  {loc && (
+                    <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground/80">
+                      <span>Wetteranalyse für</span>
+                      <span>{loc.displayName.split(",")[0]}</span>
+                      {loc.countryCode && (
+                        <>
+                          <img
+                            src={`https://flagcdn.com/w20/${loc.countryCode.toLowerCase()}.png`}
+                            width={20}
+                            height={14}
+                            alt={loc.countryCode}
+                            className="inline-block rounded-[2px] shrink-0"
+                          />
+                          {COUNTRY_INFO[loc.countryCode]?.name && (
+                            <span>{COUNTRY_INFO[loc.countryCode].name}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div className="w-full">
                     <AnalysisContent
                       content={msg.content}
