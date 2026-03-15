@@ -435,7 +435,7 @@ Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
 ## 3. Wind & Welle
 Schreibe genau diese Bullets in dieser Reihenfolge:
 1. Erster Bullet: "Regionales Windmodell: [Modellname aus KONTEXT], Regionaler Wetterbericht: [Dienstname](URL)" — URL aus QUELLENURLS, KEINE Klammern um Dienstname
-2. 1-2 Bullets: Zuerst lokale Windsysteme namentlich nennen (Bora, Maestral, Meltemi, Mistral, Jugo, thermische Winde etc.) und erklären warum aktiv. Dann Windstärken & Böen in Knoten (kt) — KEIN Bft
+2. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. Windsysteme: Bora, Maestral, Meltemi, Mistral, Jugo/Scirocco, Tramontana, thermische Winde etc.
 3. Letzter Bullet: "Seezustand: [Douglas-Skala-Wert]" — aus dem regionalen Wetterbericht, nächste 12h
 
 ## 4. Wolken & Regen
