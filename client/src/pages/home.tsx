@@ -66,18 +66,11 @@ function SourceLink({ label, url }: { label: string; url: string }) {
 }
 
 function SectionCard({ section }: { section: SectionEvent }) {
-  const { mapType, mapConfig, sourceLabel, sourceUrl, regionalServiceLabel, regionalServiceUrl } = section;
+  const { mapType, mapConfig, sourceLabel, sourceUrl } = section;
 
   return (
     <div className="my-3" data-testid={`section-card-${section.id}`}>
-      {regionalServiceLabel && regionalServiceUrl && (
-        <div className="text-xs text-muted-foreground mb-2">
-          Regionaler Wetterdienst:{" "}
-          <a href={regionalServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-            {regionalServiceLabel} ↗
-          </a>
-        </div>
-      )}
+
       {mapType === "windy" && mapConfig.lat != null && mapConfig.lon != null && (
         <WindyEmbed
           lat={mapConfig.lat}
