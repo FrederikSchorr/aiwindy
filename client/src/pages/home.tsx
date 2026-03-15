@@ -293,15 +293,18 @@ export default function Home() {
     xhr.open("POST", "/api/chat");
     xhr.setRequestHeader("Content-Type", "application/json");
 
-    let pendingChatContent = "";
-    let chatRafId: number | null = null;
-    const flushChatContent = () => {
-      chatRafId = null;
-      if (!pendingChatContent) return;
-      const captured = pendingChatContent;
-      pendingChatContent = "";
+    let chatStreamContent = "";
+    let pendingAnalyseContent = "";
+    let analyseRafId: number | null = null;
+    const flushAnalyseContent = () => {
+      analyseRafId = null;
+      if (!pendingAnalyseContent) return;
+      const captured = pendingAnalyseContent;
+      pendingAnalyseContent = "";
       setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + captured } : m));
     };
+
+    const getChatStreamEl = () => document.getElementById(`stream-${assistantId}`);
 
     const handleEvent = (data: SSEPayload) => {
       if (data.location) {
@@ -313,6 +316,9 @@ export default function Home() {
         const sections = data.analysisStart.sections;
         setMessageSections(prev => ({ ...prev, [assistantId]: sections }));
         isAnalyse = true;
+        if (chatStreamContent) {
+          setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: chatStreamContent } : m));
+        }
       }
       if (data.section) {
         const sectionEvt = data.section;
@@ -344,8 +350,14 @@ export default function Home() {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.content) {
-              pendingChatContent += data.content;
-              if (!chatRafId) chatRafId = requestAnimationFrame(flushChatContent);
+              chatStreamContent += data.content;
+              if (isAnalyse) {
+                pendingAnalyseContent += data.content;
+                if (!analyseRafId) analyseRafId = requestAnimationFrame(flushAnalyseContent);
+              } else {
+                const el = getChatStreamEl();
+                if (el) el.textContent = chatStreamContent;
+              }
             } else {
               handleEvent(data);
             }
@@ -358,11 +370,19 @@ export default function Home() {
     xhr.onloadend = () => {
       lineBuffer += "\n";
       processChunk();
-      if (chatRafId) { cancelAnimationFrame(chatRafId); chatRafId = null; }
-      flushChatContent();
+      if (analyseRafId) { cancelAnimationFrame(analyseRafId); analyseRafId = null; }
+      if (isAnalyse) {
+        flushAnalyseContent();
+      } else {
+        setMessages((prev) => {
+          const msg = prev.find(m => m.id === assistantId);
+          if (msg && !chatStreamContent) return prev.filter(m => m.id !== assistantId);
+          return prev.map((m) => m.id === assistantId ? { ...m, content: chatStreamContent } : m);
+        });
+      }
       setMessages((prev) => {
         const msg = prev.find(m => m.id === assistantId);
-        if (msg && !msg.content) {
+        if (isAnalyse && msg && !msg.content) {
           return prev.filter(m => m.id !== assistantId);
         }
         return prev;
@@ -427,15 +447,8 @@ export default function Home() {
     abortRef.current = { abort: () => xhr.abort() } as AbortController;
     xhr.open("POST", "/api/upload");
 
-    let pendingUploadContent = "";
-    let uploadRafId: number | null = null;
-    const flushUploadContent = () => {
-      uploadRafId = null;
-      if (!pendingUploadContent) return;
-      const captured = pendingUploadContent;
-      pendingUploadContent = "";
-      setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + captured } : m));
-    };
+    let uploadStreamContent = "";
+    const getUploadStreamEl = () => document.getElementById(`stream-${assistantId}`);
 
     const processChunk = () => {
       const text = xhr.responseText.slice(processed);
@@ -459,8 +472,9 @@ export default function Home() {
               }));
             }
             if (data.content) {
-              pendingUploadContent += data.content;
-              if (!uploadRafId) uploadRafId = requestAnimationFrame(flushUploadContent);
+              uploadStreamContent += data.content;
+              const el = getUploadStreamEl();
+              if (el) el.textContent = uploadStreamContent;
             }
             if (data.error) {
               hasError = true;
@@ -481,14 +495,9 @@ export default function Home() {
     xhr.onloadend = () => {
       lineBuffer += "\n";
       processChunk();
-      if (uploadRafId) { cancelAnimationFrame(uploadRafId); uploadRafId = null; }
-      flushUploadContent();
       setMessages((prev) => {
-        const msg = prev.find(m => m.id === assistantId);
-        if (msg && !msg.content) {
-          return prev.filter(m => m.id !== assistantId);
-        }
-        return prev;
+        if (!uploadStreamContent) return prev.filter(m => m.id !== assistantId);
+        return prev.map((m) => m.id === assistantId ? { ...m, content: uploadStreamContent } : m);
       });
       if (!isVideo && photoExifMeta.locationName) {
         const lastAnalysis = lastAnalysisLocationRef.current;
@@ -671,11 +680,9 @@ export default function Home() {
             const isCurrentlyStreaming = isStreaming && isLast && msg.role === "assistant";
             return (
               <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
-                {msg.content
-                  ? isCurrentlyStreaming
-                    ? <div className="text-[15px] leading-relaxed whitespace-pre-wrap text-foreground">{msg.content}</div>
-                    : <MarkdownContent content={msg.content} />
-                  : null}
+                {isCurrentlyStreaming
+                  ? <div id={`stream-${msg.id}`} className="text-[15px] leading-relaxed whitespace-pre-wrap text-foreground" />
+                  : msg.content ? <MarkdownContent content={msg.content} /> : null}
                 {isCurrentlyStreaming && (
                   <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
