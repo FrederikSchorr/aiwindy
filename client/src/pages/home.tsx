@@ -4,10 +4,26 @@ import { Input } from "@/components/ui/input";
 import { Send, Cloud, Camera } from "lucide-react";
 import type { ChatMessage, GeocodeResult } from "@shared/schema";
 
-function countryFlag(code?: string): string {
-  if (!code || code.length !== 2) return "";
-  return [...code.toUpperCase()].map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join("");
-}
+const COUNTRY_INFO: Record<string, { flag: string; name: string }> = {
+  HR: { flag: "🇭🇷", name: "Kroatien" },
+  DE: { flag: "🇩🇪", name: "Deutschland" },
+  AT: { flag: "🇦🇹", name: "Österreich" },
+  IT: { flag: "🇮🇹", name: "Italien" },
+  FR: { flag: "🇫🇷", name: "Frankreich" },
+  GR: { flag: "🇬🇷", name: "Griechenland" },
+  SI: { flag: "🇸🇮", name: "Slowenien" },
+  ME: { flag: "🇲🇪", name: "Montenegro" },
+  GB: { flag: "🇬🇧", name: "Großbritannien" },
+  NL: { flag: "🇳🇱", name: "Niederlande" },
+  ES: { flag: "🇪🇸", name: "Spanien" },
+  PT: { flag: "🇵🇹", name: "Portugal" },
+  TR: { flag: "🇹🇷", name: "Türkei" },
+  DK: { flag: "🇩🇰", name: "Dänemark" },
+  SE: { flag: "🇸🇪", name: "Schweden" },
+  NO: { flag: "🇳🇴", name: "Norwegen" },
+  PL: { flag: "🇵🇱", name: "Polen" },
+  CH: { flag: "🇨🇭", name: "Schweiz" },
+};
 
 interface SectionMapConfig {
   lat?: number;
@@ -483,8 +499,8 @@ export default function Home() {
           {activeLocation && (
             <span className="text-sm text-muted-foreground truncate max-w-[220px]" data-testid="text-active-location">
               📍 {activeLocation.displayName.split(",")[0]}
-              {activeLocation.countryCode && (
-                <> {countryFlag(activeLocation.countryCode)} {activeLocation.displayName.split(",").at(-1)?.trim()}</>
+              {activeLocation.countryCode && COUNTRY_INFO[activeLocation.countryCode] && (
+                <> {COUNTRY_INFO[activeLocation.countryCode].flag} {COUNTRY_INFO[activeLocation.countryCode].name}</>
               )}
             </span>
           )}
