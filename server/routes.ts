@@ -943,7 +943,7 @@ STIL:
 - Bei Segelfragen: praktische Tipps aus Segler-Perspektive
 - Kurz und prägnant antworten, nicht übermäßig lang`;
 
-const SECTION_STYLE = `STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil, KURZ und PRÄGNANT. Verwende GROSSZÜGIG passende Emojis am Anfang jedes Bullets und im Text: 🌀 💨 🌊 ☀️ ⛅ ☁️ 🌥️ 🌧️ 🌦️ ⚠️ ⛈️ 🌡️ 🧭 🌬️ ❄️ 🔵 🔴 📍 ✅. Konkrete Zahlen, KEINE halluzinierten Werte. KEINE Begrüßung, KEINE Floskeln. Schreibe KEINE Überschrift — nur die Bullet-Points.`;
+const SECTION_STYLE = `STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil, KURZ und PRÄGNANT. Verwende GROSSZÜGIG passende Emojis am Anfang jedes Bullets und im Text: 🌀 💨 🌊 ☀️ ⛅ ☁️ 🌥️ 🌧️ 🌦️ ⚠️ ⛈️ 🌡️ 🧭 🌬️ ❄️ 🔵 🔴 📍 ✅. Konkrete Zahlen, KEINE halluzinierten Werte. KEINE Begrüßung, KEINE Floskeln. Schreibe KEINE Überschrift — nur die Bullet-Points. KEIN Fettdruck (kein **text**), nur normaler Text.`;
 
 const SECTION1_PROMPT = `Du bist ein Meteorologe. Beschreibe die aktuelle Großwetterlage über Europa.
 
