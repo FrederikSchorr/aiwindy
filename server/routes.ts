@@ -981,7 +981,7 @@ Beispiele: "- 💨 Heute Nachmittag: N 10-15kt (Böen 20kt)", "- 💨 Morgen: NW
 - NUR Werte aus dem REGIONALEN WETTERBERICHT, KEINE Schätzungen
 - PFLICHT: Zeitbezug in jedem Bullet (heute/morgen/nachts)
 - Regionale Windsysteme nur wenn geographisch zutreffend (Bora, Maestral, Meltemi, Föhn etc.)
-2. Letzter Bullet: "- 🌊 Seezustand: [Zustand auf Deutsch]" — NUR wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält (z.B. "sea 3-4", "slight", "moderate", "rough", Wellenhöhe). NIEMALS Seegang aus Windstärke schätzen oder ableiten! Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Falls KEINE Seegangsdaten im Wetterbericht: diesen Bullet KOMPLETT weglassen.
+2. Letzter Bullet: "- 🌊 Seegang: Douglas [Zahl]-[Zahl], [Beschreibung]" — NUR wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält. KEINE Wellenhöhe in Metern. NIEMALS Seegang aus Windstärke schätzen! Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=rau (rough), 6=sehr rau. Beispiel: "- 🌊 Seegang: Douglas 3-4, leicht bis mäßig". Falls KEINE Seegangsdaten im Wetterbericht: diesen Bullet KOMPLETT weglassen.
 WICHTIG: Schreibe AUSSCHLIESSLICH über Wind und Wellen. Keine weiteren Themen. JEDER Bullet beginnt mit "- ".
 
 ${SECTION_STYLE}`;
