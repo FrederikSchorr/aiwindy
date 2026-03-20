@@ -114,6 +114,21 @@ function debugLogLLM(model: string, context: string, messages: unknown[], system
   } catch {}
 }
 
+function debugLogLLMResponse(model: string, context: string, response: string): void {
+  if (process.env.DEBUG !== "1") return;
+  const preview = response.length > 200 ? response.slice(0, 200) + "..." : response;
+  console.log(`[DEBUG] LLM Response [${model} / ${context}] ${response.length} chars: ${preview.replace(/\n/g, " ")}`);
+  const timestamp = new Date().toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const detail = `── LLM Response: ${model} / ${context} (${response.length} chars) ──\n${response}\n${"─".repeat(40)}\n`;
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, `[${timestamp}] ${detail}\n`);
+  } catch {}
+}
+
 function debugLogScrape(source: string, url: string, status: number, text: string): void {
   if (process.env.DEBUG !== "1") return;
   const summary = `Scrape ${source} → ${status}, ${text.length} chars`;
@@ -284,6 +299,7 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
     });
 
     const text = result.choices[0]?.message?.content?.trim() || "";
+    debugLogLLMResponse("gpt-4.1-mini", "getRegionalModelAI", text);
     const jsonMatch = text.match(/\{[^}]+\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -609,6 +625,7 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
       temperature: 0,
     });
     const text = result.choices[0]?.message?.content?.trim() || "";
+    debugLogLLMResponse("gpt-4.1-mini", "classifyMessage", text);
     if (text.startsWith("ANALYSE")) {
       const location = text.replace("ANALYSE", "").trim();
       return { type: "ANALYSE", location: location || undefined };
@@ -1010,6 +1027,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
             config: { systemInstruction: videoPrompt },
           });
           vidText = result.text || "";
+          debugLogLLMResponse("gemini-2.5-flash", "video analysis", vidText);
         } catch (geminiErr) {
           console.warn("Gemini video analysis failed, falling back to GPT-4.1 Vision with thumbnail:", geminiErr instanceof Error ? geminiErr.message : geminiErr);
         }
@@ -1035,6 +1053,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
             stream: false,
           });
           const fallbackContent = fallbackRes.choices[0]?.message?.content || "";
+          debugLogLLMResponse("gpt-4.1", "video fallback", fallbackContent);
           if (fallbackContent) {
             vidText = `> ⚠️ *Video-Analyse nicht verfügbar — Analyse basiert auf einem Standbild (1. Sekunde).*\n\n${fallbackContent}`;
           }
@@ -1078,6 +1097,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           stream: false,
         });
         const imgText = imgResponse.choices[0]?.message?.content || "";
+        debugLogLLMResponse("gpt-4.1", "image analysis", imgText);
         if (imgText) sendSSE({ content: imgText });
       }
 
@@ -1147,6 +1167,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           stream: false,
         });
         const chatText = chatResponse.choices[0]?.message?.content || "";
+        debugLogLLMResponse("gpt-4.1", "general chat", chatText);
         if (chatText) sendSSE({ content: chatText });
 
         sendSSE({ done: true });
@@ -1287,14 +1308,16 @@ ${warningsText.available ? warningsText.text : "(NICHT VERFÜGBAR — Warnseite 
       });
 
       let anaBuf = "";
+      let fullResponse = "";
       let anaTimer: ReturnType<typeof setTimeout> | null = null;
       const flushAna = () => { if (anaBuf) { sendSSE({ content: anaBuf }); anaBuf = ""; } anaTimer = null; };
       for await (const chunk of stream) {
         const text = chunk.choices?.[0]?.delta?.content;
-        if (text) { anaBuf += text; if (!anaTimer) anaTimer = setTimeout(flushAna, 30); }
+        if (text) { anaBuf += text; fullResponse += text; if (!anaTimer) anaTimer = setTimeout(flushAna, 30); }
       }
       if (anaTimer) clearTimeout(anaTimer);
       flushAna();
+      debugLogLLMResponse("gpt-4.1", "sailing weather analysis", fullResponse);
 
       sendSSE({ done: true });
       res.end();
