@@ -248,42 +248,98 @@ const gemini = new GoogleGenAI({
 });
 
 function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
-  if (lat >= 41 && lat <= 51.5 && lon >= -5.5 && lon <= 10) {
-    return { model: "aromeHd", label: "AROME-HD (1.25km)", zoom: 8 };
+  if (lat >= 42 && lat <= 51 && lon >= -5 && lon <= 8) {
+    return { model: "aromeHd", label: "AROME-HD 1.3km", zoom: 8 };
   }
-  if (lat >= 49 && lat <= 61 && lon >= -11 && lon <= 2) {
-    return { model: "ukv", label: "UKV (Met Office)", zoom: 7 };
+  if (lat >= 46 && lat <= 52 && lon >= 10 && lon <= 22) {
+    return { model: "czeAladin", label: "ALADIN 2.3km", zoom: 7 };
   }
-  if (lat >= 36 && lat <= 58 && lon >= -2 && lon <= 40) {
-    return { model: "czeAladin", label: "ALADIN (2.3km)", zoom: 7 };
+  if (lat >= 51 && lat <= 58 && lon >= -8 && lon <= 0) {
+    return { model: "ukv", label: "UKV 2km", zoom: 7 };
   }
   if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45) {
-    return { model: "iconEu", label: "ICON-EU (7km)", zoom: 6 };
+    return { model: "iconEu", label: "ICON-EU 7km", zoom: 6 };
   }
-  return { model: "gfs", label: "GFS", zoom: 5 };
+  return { model: "gfs", label: "GFS 22km", zoom: 5 };
 }
 
 const MODEL_SELECTION_PROMPT = `Du bist ein Meteorologie-Experte. Wähle das BESTE hochauflösende Windmodell für den gegebenen Ort auf Windy.com.
 
-VERFÜGBARE MODELLE (Windy product parameter):
-- "aromeHd" = AROME-HD (1.25km) - Frankreich, Korsika
-- "ukv" = UKV Met Office - Großbritannien, Irland
-- "czeAladin" = ALADIN (2.3km) - Mittel-/Südosteuropa, Adria, südl. Ostsee, südl. Nordsee (Abdeckung: Ostengland–Ukraine, Südschweden–Süditalien/Albanien)
-- "iconEu" = ICON-EU (7km) - ganz Europa (Fallback für Skandinavien, nördl. Ostsee, nördl. Nordsee, Griechenland, Iberische Halbinsel, alles außerhalb der obigen Domains)
-- "gfs" = GFS - außerhalb Europas
+## Wichtige Regel
+Der Ort muss mindestens ~300km vom Rand der Modell-Domain entfernt liegen, damit man auf der Windy-Karte das heranziehende Wetter aus allen Richtungen sieht. Liegt ein Ort zu nahe am Domain-Rand, nimm das nächstbeste Modell mit größerer Abdeckung.
 
-ENTSCHEIDUNGSKRITERIEN (in dieser Priorität):
-1. Frankreich, Korsika: "aromeHd" (1.25km)
-2. UK, Irland: "ukv"
-3. Mittel-/Südosteuropa, Adria, südl. Ostsee, südl. Nordsee: "czeAladin" (2.3km) — Abdeckung: Ostengland–Ukraine, Südschweden–Süditalien/Albanien. Gilt für Deutschland, Österreich, Schweiz, Tschechien, Polen, Ungarn, Kroatien, Slowenien, Serbien, Italien (nördl./mittl.), Benelux, Dänemark, südl. Schweden, südl. Norwegen
-4. Skandinavien (nördlich), nördl. Ostsee, nördl. Nordsee, Griechenland, Iberische Halbinsel, Türkei, alles außerhalb der obigen Domains: "iconEu" (7km)
-5. Außerhalb Europas: "gfs"
-6. Der Zoom-Level sollte die lokale Situation gut zeigen (8-9 für hochauflösende Modelle, 7 für regionale, 5-6 für europäische/globale)
+## Verfügbare Modelle (Windy product parameter)
+
+| Parameter | Modell | Auflösung | Aktualisierung |
+|-----------|--------|-----------|----------------|
+| aromeHd | AROME-HD (Météo-France) | 1.3 km | 4×/Tag, +48h |
+| czeAladin | ALADIN (CHMI Tschechien) | 2.3 km | 4×/Tag, +72h |
+| ukv | UKV (Met Office) | 2 km | 4×/Tag, +48h |
+| iconEu | ICON-EU (DWD) | 7 km | 4×/Tag, +120h |
+| gfs | GFS (NOAA) | 22 km | 4×/Tag, +240h |
+
+## Modell-Domains (Kerngebiete mit ≥300km Puffer zum Domain-Rand)
+
+### aromeHd — 1.3 km (höchste Priorität wo verfügbar)
+Kerngebiet: Frankreich (komplett), Belgien, Luxemburg, Westdeutschland (Rheinland, Ruhrgebiet, Hessen, Saarland), Schweiz, Nordspanien (Pyrenäen, Katalonien, Baskenland), Korsika
+Grenzfälle (eher NICHT aromeHd): München, Stuttgart, Norditalien, Niederlande-Nord, Südengland, Zentralspanien
+NICHT verwenden: Österreich, Ostdeutschland, Tschechien, Adria, UK nördlich London, Skandinavien, Portugal, Süditalien
+
+### czeAladin — 2.3 km
+Kerngebiet: Österreich, Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Bosnien, Zentralpolen (Warschau, Krakau), Rumänien-West, Bayern, Sachsen, Norditalien-Ost (Venetien, Friaul, Triest)
+Grenzfälle (eher NICHT czeAladin): Berlin, Bulgarien-Süd, Norditalien-West (Gardasee, Lombardei), Südliche Ostsee, Norddeutschland
+NICHT verwenden: Griechenland, Türkei, Skandinavien, Westfrankreich, Süditalien südlich Rom, UK, nördl. Ostsee, Baltikum nördlich Vilnius
+
+### ukv — 2 km
+Kerngebiet: England (Mitte und Nord), Wales, Schottland-Süd, Irland-Ost, Irische See
+Grenzfälle (eher NICHT ukv): Südengland (Ärmelkanal), Schottland-Nord, Irland-West, Nordsee-Mitte
+NICHT verwenden: Kontinentaleuropa, Island, Norwegen, Färöer
+
+### iconEu — 7 km (Europa-Fallback)
+Kerngebiet: Ganz Europa inkl. Skandinavien, Ostsee, Nordsee, Griechenland, Ägäis, Ionische Inseln, Spanien, Portugal, Island, Türkei-West, Mittelmeer komplett, Nordafrika-Küste
+Verwende iconEu immer wenn kein hochauflösendes Modell den Ort mit 300km Puffer abdeckt.
+
+### gfs — 22 km (Global-Fallback)
+Außerhalb Europas, oder wenn iconEu nicht verfügbar.
+
+## Entscheidungslogik
+
+Prüfe in dieser Reihenfolge (erste Übereinstimmung gewinnt):
+1. Liegt der Ort im Kerngebiet von aromeHd? → aromeHd
+2. Liegt der Ort im Kerngebiet von czeAladin? → czeAladin
+3. Liegt der Ort im Kerngebiet von ukv? → ukv
+4. Liegt der Ort in Europa? → iconEu
+5. Sonst → gfs
+
+### Sonderfälle bei Überlappung und Grenzgebieten
+- Bayern (München, Augsburg): czeAladin — liegt zentral in ALADIN, aber am Ostrand von AROME-HD
+- Schweiz: aromeHd — liegt zentral in der AROME-HD-Domain
+- Baden-Württemberg (Stuttgart, Freiburg): aromeHd — noch ausreichend Puffer
+- Norditalien-West (Gardasee, Lombardei): iconEu — Grenzfall bei beiden hochauflösenden Modellen
+- Norditalien-Ost (Venetien, Friaul, Triest): czeAladin
+- Berlin, Brandenburg: iconEu — am Rand von sowohl AROME-HD als auch ALADIN
+- Niederlande: iconEu — am Nordrand von AROME-HD
+- Nordsee, Deutsche Bucht: iconEu
+- Ostsee (Gotland, Stockholm, Helsinki): iconEu
+- Südengland, Ärmelkanal: Im Zweifel iconEu — Grenzfall für ukv und aromeHd
+- Levkada, Ionische Inseln, Peloponnes: iconEu
+- Dubrovnik: czeAladin — noch im Kern, aber knapp; im Zweifel iconEu
+
+## Zoom-Level
+
+| Situation | Zoom |
+|-----------|------|
+| Hochauflösende Modelle — Küste, See, Insel | 8–9 |
+| Hochauflösende Modelle — Binnenland, Stadt | 7–8 |
+| iconEu — regional | 6–7 |
+| gfs — großräumig | 5–6 |
+
+## Antwortformat
 
 Antworte NUR mit einem JSON-Objekt, KEINE weiteren Erklärungen:
 {"model": "...", "label": "...", "zoom": 8}
 
-Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "AROME-HD (1.25km)", "ALADIN (2.3km)", "ICON-EU (7km)". Schreibe NIEMALS "Czech" oder "Aladin Czech" — nur "ALADIN".`;
+Wobei "label" der angezeigte Modellname ist, z.B. "AROME-HD 1.3km", "ALADIN 2.3km", "ICON-EU 7km".`;
 
 async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
   try {

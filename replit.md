@@ -76,12 +76,12 @@ GPT-4.1-mini classifies each user message:
 - LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
 
 ## Regional Model Selection (AI-based)
-GPT-4.1-mini selects the best Windy.com wind model:
-- France/Corsica: AROME-HD (aromeHd, 1.25km)
-- UK/Ireland: UKV
-- Central/SE Europe, Adriatic, southern Baltic/North Sea: ALADIN (czeAladin, 2.3km) — coverage: East England–Ukraine, Southern Sweden–Southern Italy/Albania
-- Scandinavia, northern Baltic/North Sea, Greece, Iberian Peninsula, outside above domains: ICON-EU (iconEu, 7km)
-- Outside Europe: GFS
+GPT-4.1-mini selects the best Windy.com wind model based on 300km domain-edge rule:
+- aromeHd (1.3km): France, Belgium, Luxembourg, W-Germany, Switzerland, N-Spain, Corsica
+- czeAladin (2.3km): Austria, Czechia, Slovakia, Hungary, Croatia, Slovenia, Serbia, Bosnia, C-Poland, W-Romania, Bavaria, Saxony, NE-Italy
+- ukv (2km): England (mid+north), Wales, S-Scotland, E-Ireland
+- iconEu (7km): Europe fallback (Scandinavia, Baltics, Greece, Iberia, Netherlands, Berlin, N-Italy-West, etc.)
+- gfs (22km): Outside Europe
 
 ## Custom Domain
 - Domain: aiwindy.schorr.wien
