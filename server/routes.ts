@@ -12,6 +12,49 @@ import { GoogleGenAI } from "@google/genai";
 
 const execFileAsync = promisify(execFile);
 
+function debugLog(...args: unknown[]): void {
+  if (process.env.DEBUG === "1") {
+    console.log("[DEBUG]", ...args);
+  }
+}
+
+function sanitizeForDebug(messages: unknown): unknown {
+  if (Array.isArray(messages)) {
+    return messages.map(sanitizeForDebug);
+  }
+  if (messages && typeof messages === "object") {
+    const obj = messages as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === "string" && v.length > 500 && /^[A-Za-z0-9+/=]{100,}$/.test(v)) {
+        result[k] = `[BASE64_IMAGE ${v.length} bytes]`;
+      } else if (Array.isArray(v)) {
+        result[k] = v.map((item: unknown) => {
+          if (item && typeof item === "object") {
+            const part = item as Record<string, unknown>;
+            if (part.type === "image_url" && part.image_url && typeof (part.image_url as Record<string, unknown>).url === "string") {
+              const url = (part.image_url as Record<string, unknown>).url as string;
+              const base64Match = url.match(/^data:[^;]+;base64,(.+)$/);
+              if (base64Match) {
+                return { ...part, image_url: { ...(part.image_url as Record<string, unknown>), url: `[BASE64_IMAGE ${base64Match[1].length} bytes]` } };
+              }
+            }
+            if (part.inlineData && typeof (part.inlineData as Record<string, unknown>).data === "string") {
+              const data = (part.inlineData as Record<string, unknown>).data as string;
+              return { ...part, inlineData: { ...(part.inlineData as Record<string, unknown>), data: `[BASE64_IMAGE ${data.length} bytes]` } };
+            }
+          }
+          return item;
+        });
+      } else {
+        result[k] = v;
+      }
+    }
+    return result;
+  }
+  return messages;
+}
+
 async function extractVideoThumbnail(filePath: string): Promise<string | null> {
   try {
     const outputPath = `/tmp/vthumb-${Date.now()}.jpg`;
@@ -154,12 +197,14 @@ Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "ICON-D2 (2.2km)
 
 async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
   try {
+    const modelSelMessages = [
+      { role: "system", content: MODEL_SELECTION_PROMPT },
+      { role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` },
+    ];
+    debugLog(`LLM [gpt-4.1-mini / getRegionalModelAI] messages:\n${JSON.stringify(sanitizeForDebug(modelSelMessages), null, 2)}`);
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: MODEL_SELECTION_PROMPT },
-        { role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` },
-      ],
+      messages: modelSelMessages as OpenAI.ChatCompletionMessageParam[],
       max_completion_tokens: 256,
       temperature: 0,
     });
@@ -202,10 +247,12 @@ function stripHtml(html: string): string {
 async function fetchMeteonews(): Promise<string> {
   // Fetches only the European overview bulletin from meteonews.at
   try {
-    const res = await fetch("https://meteonews.at/de/Allgemeine_Lage/K33/Europa", {
+    const url = "https://meteonews.at/de/Allgemeine_Lage/K33/Europa";
+    const res = await fetch(url, {
       headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
       signal: AbortSignal.timeout(8000),
     });
+    debugLog(`fetchMeteonews: URL=${url} HTTP=${res.status}`);
     if (!res.ok) return "";
     const html = await res.text();
 
@@ -214,14 +261,21 @@ async function fetchMeteonews(): Promise<string> {
       || html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
 
     if (bulletinMatch) {
-      return stripHtml(bulletinMatch[1]).slice(0, 1500).trim();
+      const fullText = stripHtml(bulletinMatch[1]).trim();
+      debugLog(`fetchMeteonews: scraped text (${fullText.length} chars):\n${fullText}`);
+      return fullText.slice(0, 1500);
     }
 
     // Fallback: find "Europawetter" section in plain text
     const plainText = stripHtml(html);
     const startIdx = plainText.indexOf("Europawetter");
-    if (startIdx >= 0) return plainText.slice(startIdx, startIdx + 1500).trim();
+    if (startIdx >= 0) {
+      const fullText = plainText.slice(startIdx).trim();
+      debugLog(`fetchMeteonews: scraped text fallback (${fullText.length} chars):\n${fullText}`);
+      return fullText.slice(0, 1500);
+    }
 
+    debugLog(`fetchMeteonews: scraped text last-resort (${plainText.length} chars):\n${plainText}`);
     return plainText.slice(0, 1500);
   } catch (e) {
     console.error("Meteonews fetch failed:", e);
@@ -350,10 +404,12 @@ const REGIONAL_MIN_TEXT_LENGTH = 150;
 
 async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"]): Promise<FetchResult> {
   if (countryCode === "DK") {
-    const dmiRes = await fetch("https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land", {
+    const dkUrl = "https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land";
+    const dmiRes = await fetch(dkUrl, {
       headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
       signal: AbortSignal.timeout(10000),
     });
+    debugLog(`tryFetchForecast [${countryCode}]: URL=${dkUrl} HTTP=${dmiRes.status}`);
     if (!dmiRes.ok) return { text: "", available: false };
     const data = await dmiRes.json() as { date?: string; valid?: string; weatherForecast?: string; slipperyWarning?: string | null };
     const parts: string[] = [];
@@ -361,8 +417,10 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
     if (data.valid) parts.push(data.valid);
     if (data.weatherForecast) parts.push(data.weatherForecast);
     if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
-    const text = parts.join(" ").slice(0, 3000);
-    return { text, available: text.length >= REGIONAL_MIN_TEXT_LENGTH };
+    const fullText = parts.join(" ");
+    debugLog(`tryFetchForecast [${countryCode}]: scraped text (${fullText.length} chars):\n${fullText}`);
+    const text = fullText.slice(0, 3000);
+    return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
   }
 
   const res = await fetch(service.forecastUrl, {
@@ -373,10 +431,13 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
     },
     signal: AbortSignal.timeout(10000),
   });
+  debugLog(`tryFetchForecast [${countryCode}]: URL=${service.forecastUrl} HTTP=${res.status}`);
   if (!res.ok) return { text: "", available: false };
   const html = await res.text();
-  const text = stripHtml(html).slice(0, 3000);
-  return { text, available: text.length >= REGIONAL_MIN_TEXT_LENGTH };
+  const fullText = stripHtml(html);
+  debugLog(`tryFetchForecast [${countryCode}]: scraped text (${fullText.length} chars):\n${fullText}`);
+  const text = fullText.slice(0, 3000);
+  return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
 }
 
 async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<FetchResult> {
@@ -407,10 +468,13 @@ async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]
     },
     signal: AbortSignal.timeout(8000),
   });
+  debugLog(`tryFetchWarnings [${service.warningLabel}]: URL=${service.warningUrl} HTTP=${res.status}`);
   if (!res.ok) return { text: "", available: false };
   const html = await res.text();
-  const text = stripHtml(html).slice(0, 2000);
-  return { text, available: text.length >= REGIONAL_MIN_TEXT_LENGTH };
+  const fullText = stripHtml(html);
+  debugLog(`tryFetchWarnings [${service.warningLabel}]: scraped text (${fullText.length} chars):\n${fullText}`);
+  const text = fullText.slice(0, 2000);
+  return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
 }
 
 async function fetchRegionalWarnings(countryCode: string): Promise<FetchResult> {
@@ -434,12 +498,10 @@ async function fetchRegionalWarnings(countryCode: string): Promise<FetchResult> 
 
 async function classifyMessage(message: string, hasActiveLocation: boolean): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR"; location?: string }> {
   try {
-    const result = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content: `Klassifiziere die Benutzernachricht in eine von drei Kategorien:
+    const classifyMessages = [
+      {
+        role: "system",
+        content: `Klassifiziere die Benutzernachricht in eine von drei Kategorien:
 
 ANALYSE <Ortsname> — wenn der Benutzer nach Wetterlage/Segelbedingungen an einem konkreten Ort fragt, oder einfach nur einen Ortsnamen/See/Insel/Hafen/Küste eingibt. Beispiele:
 - "Punat" → ANALYSE Punat
@@ -464,7 +526,11 @@ ${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN O
 Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`,
         },
         { role: "user", content: message },
-      ],
+    ];
+    debugLog(`LLM [gpt-4.1-mini / classifyMessage] messages:\n${JSON.stringify(sanitizeForDebug(classifyMessages), null, 2)}`);
+    const result = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: classifyMessages as OpenAI.ChatCompletionMessageParam[],
       max_completion_tokens: 64,
       temperature: 0,
     });
@@ -848,15 +914,17 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
         let vidText = "";
         try {
+          const geminiContents = [{
+            role: "user",
+            parts: [
+              { inlineData: { mimeType: req.file!.mimetype, data: base64Video } },
+              { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
+            ],
+          }];
+          debugLog(`LLM [gemini-2.5-flash / video analysis] systemInstruction (${videoPrompt.length} chars):\n${videoPrompt}\ncontents:\n${JSON.stringify(sanitizeForDebug(geminiContents), null, 2)}`);
           const result = await gemini.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: [{
-              role: "user",
-              parts: [
-                { inlineData: { mimeType: req.file!.mimetype, data: base64Video } },
-                { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
-              ],
-            }],
+            contents: geminiContents,
             config: { systemInstruction: videoPrompt },
           });
           vidText = result.text || "";
@@ -876,6 +944,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
               ],
             },
           ];
+          debugLog(`LLM [gpt-4.1 / video fallback] messages:\n${JSON.stringify(sanitizeForDebug(fallbackMessages), null, 2)}`);
           const fallbackRes = await openai.chat.completions.create({
             model: "gpt-4.1",
             messages: fallbackMessages,
@@ -918,6 +987,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           },
         ];
 
+        debugLog(`LLM [gpt-4.1 / image analysis] messages:\n${JSON.stringify(sanitizeForDebug(imageMessages), null, 2)}`);
         const imgResponse = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: imageMessages,
@@ -985,6 +1055,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           { role: "user", content: userContent },
         ];
 
+        debugLog(`LLM [gpt-4.1 / general chat] messages:\n${JSON.stringify(sanitizeForDebug(msgs), null, 2)}`);
         const chatResponse = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: msgs,
@@ -1123,6 +1194,7 @@ ${warningsText.available ? warningsText.text : "(NICHT VERFÜGBAR — Warnseite 
 
       sendSSE({ analysisStart: { sections: sectionConfigs } });
 
+      debugLog(`LLM [gpt-4.1 / sailing weather analysis] messages:\n${JSON.stringify(sanitizeForDebug(msgs), null, 2)}`);
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages: msgs,
