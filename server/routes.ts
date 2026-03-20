@@ -1682,18 +1682,31 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         ? `Zielort: ${locationShort}\n\nWARNUNGEN:\n${warningsText.text}`
         : `Zielort: ${locationShort}\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
       // Check for Douglas >= 5 sea state warning in source text
+      // Matches: "sea 5-6", "Sea: 5", "Seegang 5-6", "Douglas 5-6", "seastate 5"
       let douglasWarningBullet = "";
       if (warningsText.available) {
-        const douglasMatch = warningsText.text.match(/(?:sea|seegang|douglas|wave)[\s\S]{0,50}?(\d)\s*[-–]\s*(\d)/i)
-          || warningsText.text.match(/(?:sea|seegang|douglas)[\s\S]{0,30}?(\d)/i);
-        if (douglasMatch) {
-          const upperVal = douglasMatch[2] ? parseInt(douglasMatch[2]) : parseInt(douglasMatch[1]);
-          const lowerVal = parseInt(douglasMatch[1]);
-          if (lowerVal >= 5 || upperVal >= 5) {
-            const desc = upperVal >= 6 ? "sehr rau" : "rau";
-            douglasWarningBullet = douglasMatch[2]
-              ? `\n- ⚠️ 🌊 Seegang Douglas ${lowerVal}-${upperVal}, ${desc}`
-              : `\n- ⚠️ 🌊 Seegang Douglas ${lowerVal}, ${desc}`;
+        const seaMatches = warningsText.text.match(/\b(?:sea|seegang|douglas)\s+(\d)\s*[-–]\s*(\d)/gi)
+          || warningsText.text.match(/\b(?:sea|seegang|douglas)\s+(\d)\b/gi);
+        if (seaMatches) {
+          let maxLower = 0, maxUpper = 0;
+          for (const m of seaMatches) {
+            const nums = m.match(/(\d)\s*[-–]\s*(\d)/);
+            if (nums) {
+              const lo = parseInt(nums[1]), hi = parseInt(nums[2]);
+              if (hi > maxUpper || (hi === maxUpper && lo > maxLower)) { maxLower = lo; maxUpper = hi; }
+            } else {
+              const single = m.match(/(\d)\s*$/);
+              if (single) {
+                const v = parseInt(single[1]);
+                if (v > maxUpper) { maxLower = v; maxUpper = v; }
+              }
+            }
+          }
+          if (maxUpper >= 5) {
+            const desc = maxUpper >= 6 ? "sehr rau" : "rau";
+            douglasWarningBullet = maxLower !== maxUpper
+              ? `\n- ⚠️ 🌊 Seegang Douglas ${maxLower}-${maxUpper}, ${desc}`
+              : `\n- ⚠️ 🌊 Seegang Douglas ${maxUpper}, ${desc}`;
           }
         }
       }
