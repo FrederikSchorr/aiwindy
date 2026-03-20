@@ -77,7 +77,6 @@ GPT-4.1-mini classifies each user message:
 
 ## Regional Model Selection (AI-based)
 GPT-4.1-mini selects the best Windy.com wind model:
-- Austria: ALADIN (czeAladin) — hardcoded override, always used for AT
 - Lakes/inland waters: Meteoblue (mblue)
 - Adriatic coast: ALADIN (czeAladin)
 - France: AROME-HD (aromeHd, 1.25km)

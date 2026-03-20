@@ -752,17 +752,14 @@ async function geocodeLocation(locationName: string): Promise<{
     }
 
     debugLog(`geocodeLocation: countryCode=${countryCode}, cityName=${cityName}, isWater=${isWater}`, `countryCode=${countryCode}\ncityName=${cityName}\nisWater=${isWater}`);
-    const finalModel = countryCode === "AT"
-      ? { model: "czeAladin", label: "ALADIN", zoom: 7 }
-      : regional;
-    debugLog(`geocodeLocation: model=${finalModel.model} (${finalModel.label})`);
+    debugLog(`geocodeLocation: model=${regional.model} (${regional.label})`);
 
     return {
       lat, lon,
       displayName: result.display_name,
-      regionalModel: finalModel.model,
-      regionalModelLabel: finalModel.label,
-      regionalModelZoom: finalModel.zoom,
+      regionalModel: regional.model,
+      regionalModelLabel: regional.label,
+      regionalModelZoom: regional.zoom,
       countryCode,
       cityName,
     };
