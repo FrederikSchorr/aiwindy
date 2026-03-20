@@ -967,7 +967,7 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 
 Schreibe genau 2 KURZE Bullets, MAXIMAL 15 Wörter pro Bullet. STRIKT einhalten!
 - Bullet 1: Große Fronten über Europa. Beispiel: "- 🌀 Kaltfront zog vor 10h von Nordatlantik über Skandinavien nach Südosten"
-- Bullet 2: Nächste Front zum Zielort: Typ + Entfernung. Beispiel: "- ✅ Keine Fronten nahe Wien vor 10h. [(KNMI)](URL)"
+- Bullet 2: Nächste Front zum Zielort: Typ + Entfernung. Falls keine Front innerhalb 100km: "- ✅ Keine Fronten im Umkreis von 100km um [Zielort]. [(KNMI)](URL)"
 - PFLICHT: Schreibe "vor Xh" in JEDEN Bullet — den Wert für X findest du im Context beim KNMI-Analysezeitpunkt
 - NUR Fronten — KEINE Hoch-/Tiefdruckgebiete, KEINE Isobaren, KEINE Erklärungen
 - Quelle am letzten Bullet: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
