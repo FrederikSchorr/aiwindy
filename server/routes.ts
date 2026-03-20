@@ -624,12 +624,16 @@ async function geocodeLocation(locationName: string): Promise<{
       } catch {}
     }
 
+    const finalModel = countryCode === "AT"
+      ? { model: "czeAladin", label: "ALADIN", zoom: 7 }
+      : regional;
+
     return {
       lat, lon,
       displayName: result.display_name,
-      regionalModel: regional.model,
-      regionalModelLabel: regional.label,
-      regionalModelZoom: regional.zoom,
+      regionalModel: finalModel.model,
+      regionalModelLabel: finalModel.label,
+      regionalModelZoom: finalModel.zoom,
       countryCode,
       cityName,
     };
