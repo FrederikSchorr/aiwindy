@@ -1012,9 +1012,10 @@ const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib NUR echte, relevante Wette
 MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]"
 Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh"
 - KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
-- NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
+- NUR echte, für Segler GEFÄHRLICHE Warnungen: Starkwind (>30kt), Sturmböen, Gewitter, Sturmflut, Hagel
+- "Leichter Regen", "vereinzelte Schauer", "Bewölkung", "kühle Temperaturen" sind KEINE Warnungen — NIEMALS erwähnen!
 - SEEGANG/WELLEN: Schreibe NICHTS über Seegang, Wellen oder Douglas-Skala. Die Seegangs-Warnung wird separat automatisch hinzugefügt.
-- Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
+- Es müssen NICHT 2 Bullets sein. Nur echte Gefahren auflisten. Wenn es nur 1 gibt, schreibe nur 1.
 - Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
 
