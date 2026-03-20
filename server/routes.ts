@@ -948,8 +948,9 @@ const SECTION_STYLE = `STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil,
 const SECTION1_PROMPT = `Du bist ein Meteorologe. Beschreibe die aktuelle Großwetterlage über Europa.
 
 Schreibe genau ZWEI Bullet-Points basierend ausschließlich auf dem METEONEWS-TEXT:
-- Bullet 1: Druckgebilde über Europa. 12-15 Wörter. Beispiel: "Hoch über Mitteleuropa, Tief über Island steuert feuchte Luft nach Nordeuropa."
-- Bullet 2: Luftmassen — kalt/warm, feucht/trocken, Luftmassengrenze. 12-15 Wörter. Quelle anhängen: [(meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
+- Bullet 1: "- 🌀 [Druckgebilde über Europa]". 12-15 Wörter.
+- Bullet 2: "- 🌡️ [Luftmassen — kalt/warm, feucht/trocken, Luftmassengrenze]". 12-15 Wörter. Quelle anhängen: [(meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
+JEDER Bullet MUSS mit "- " beginnen (Markdown-Bullet).
 KEINE Schachtelsätze, KEINE Nebensätze. Kein Bezug zu einem konkreten Ort.
 
 ${SECTION_STYLE}`;
@@ -961,9 +962,7 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 - Kaltfront: blaue Linie mit Dreiecken (zeigen in Zugrichtung)
 - Warmfront: rote Linie mit Halbkreisen (zeigen in Zugrichtung)
 - Okklusion: lila/violette Linie mit abwechselnd Dreiecken und Halbkreisen
-- Konvergenzlinie: gestrichelte Linie
-- Isobaren: dünne schwarze Linien mit Druckwerten in hPa
-- Druckzentren: "H"/"L" oder "H"/"T" mit Druckwert
+- Isobaren: dünne blaue Linien mit Druckwerten in hPa
 - Schau dir die GESAMTE Karte systematisch an, besonders die Region um den Zielort
 
 Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
@@ -987,10 +986,9 @@ ${SECTION_STYLE}`;
 
 const SECTION4_PROMPT = `Du bist ein Meteorologe. Beschreibe NUR Bewölkung, Regen und Gewitterrisiko für den Zielort. KEIN Wind, KEINE Temperaturen, KEIN Seezustand.
 
-Schreibe genau 1-2 Bullets. JEDER Bullet MUSS mit "- " beginnen:
-- Beschreibung Bewölkung, Regen, Gewitterrisiko — mit klarem Zeitbezug (z.B. "heute Nachmittag", "in der Nacht", "morgen Vormittag")
-- Basierend auf dem regionalen Wetterbericht
-- Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)"
+Schreibe GENAU 1 Bullet (max 15 Wörter). MUSS mit "- " beginnen:
+- Bewölkung + Niederschlag + Gewitterrisiko kompakt in einem Satz, mit Zeitbezug
+- Die Quelle direkt anhängen: "...Text. [(Quelle: Dienstname)](URL)"
 - WICHTIG: Falls der regionale Wetterbericht "(NICHT VERFÜGBAR)" ist, schreibe NUR: "- Regionaler Wetterbericht nicht verfügbar". Erfinde KEINE Wetterdaten.
 
 ${SECTION_STYLE}`;
