@@ -1681,33 +1681,37 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const warningContext = warningsText.available
         ? `Zielort: ${locationShort}\n\nWARNUNGEN:\n${warningsText.text}`
         : `Zielort: ${locationShort}\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
-      // Check for Douglas >= 5 sea state warning in source text
-      // Matches: "sea 5-6", "Sea: 5", "Seegang 5-6", "Douglas 5-6", "seastate 5"
+      // Use LLM to extract max Douglas sea state value from warning text
       let douglasWarningBullet = "";
       if (warningsText.available) {
-        const seaMatches = warningsText.text.match(/\b(?:sea|seegang|douglas)\s+(\d)\s*[-–]\s*(\d)/gi)
-          || warningsText.text.match(/\b(?:sea|seegang|douglas)\s+(\d)\b/gi);
-        if (seaMatches) {
-          let maxLower = 0, maxUpper = 0;
-          for (const m of seaMatches) {
-            const nums = m.match(/(\d)\s*[-–]\s*(\d)/);
-            if (nums) {
-              const lo = parseInt(nums[1]), hi = parseInt(nums[2]);
-              if (hi > maxUpper || (hi === maxUpper && lo > maxLower)) { maxLower = lo; maxUpper = hi; }
-            } else {
-              const single = m.match(/(\d)\s*$/);
-              if (single) {
-                const v = parseInt(single[1]);
-                if (v > maxUpper) { maxLower = v; maxUpper = v; }
-              }
-            }
+        try {
+          const douglasExtract = await openai.chat.completions.create({
+            model: "gpt-4.1-mini",
+            messages: [
+              {
+                role: "system",
+                content: `Extract the HIGHEST sea state (Douglas scale / Seegang) number from this marine weather text.
+Rules:
+- Look for sea state values like "sea 3-4", "Seegang 5", "Douglas 4-5", "rough sea", etc.
+- Wind speeds (knots) are NOT sea state — ignore them!
+- If a range is given (e.g. "3-4"), report the HIGHER number.
+- Reply with ONLY a single digit 0-9, nothing else.
+- If no sea state information is found, reply with "0".`
+              },
+              { role: "user", content: warningsText.text.slice(0, 3000) }
+            ] as OpenAI.ChatCompletionMessageParam[],
+            max_completion_tokens: 8,
+            temperature: 0,
+          });
+          const douglasStr = douglasExtract.choices[0]?.message?.content?.trim() || "0";
+          const douglasVal = parseInt(douglasStr);
+          debugLogLLMResponse("gpt-4.1-mini", "douglas-extract", `Douglas value: ${douglasVal}`);
+          if (!isNaN(douglasVal) && douglasVal >= 5) {
+            const desc = douglasVal >= 6 ? "sehr rau" : "rau";
+            douglasWarningBullet = `\n- ⚠️ 🌊 Seegang Douglas ${douglasVal}, ${desc}`;
           }
-          if (maxUpper >= 5) {
-            const desc = maxUpper >= 6 ? "sehr rau" : "rau";
-            douglasWarningBullet = maxLower !== maxUpper
-              ? `\n- ⚠️ 🌊 Seegang Douglas ${maxLower}-${maxUpper}, ${desc}`
-              : `\n- ⚠️ 🌊 Seegang Douglas ${maxUpper}, ${desc}`;
-          }
+        } catch (e) {
+          console.error("Douglas extraction failed:", e instanceof Error ? e.message : e);
         }
       }
       const s6Source = `([${warningServiceLabel}](${warningServiceUrl}))`;
