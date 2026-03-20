@@ -416,7 +416,7 @@ async function fetchMeteonews(): Promise<string> {
     if (bulletinMatch) {
       const fullText = stripHtml(bulletinMatch[1]).trim();
       debugLogScrape("meteonews.at", url, res.status, fullText);
-      return fullText.slice(0, 1500);
+      return fullText;
     }
 
     // Fallback: find "Europawetter" section in plain text
@@ -425,11 +425,11 @@ async function fetchMeteonews(): Promise<string> {
     if (startIdx >= 0) {
       const fullText = plainText.slice(startIdx).trim();
       debugLogScrape("meteonews.at (fallback)", url, res.status, fullText);
-      return fullText.slice(0, 1500);
+      return fullText;
     }
 
     debugLogScrape("meteonews.at (last-resort)", url, res.status, plainText);
-    return plainText.slice(0, 1500);
+    return plainText;
   } catch (e) {
     console.error("Meteonews fetch failed:", e);
     return "";
@@ -631,7 +631,7 @@ async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchR
 
     const fullText = `Wetterprognose ${bestName}: ${parts.join(" ")}`;
     debugLogScrape("forecast [AT]", url, res.status, fullText);
-    return { text: fullText.slice(0, 3000), available: true };
+    return { text: fullText, available: true };
   } catch (e) {
     console.error("GeoSphere textforecasts fetch error:", e instanceof Error ? e.message : e);
     return { text: "", available: false };
@@ -668,7 +668,7 @@ async function fetchGeoSphereWarnings(lat: number, lon: number): Promise<FetchRe
     });
     const fullText = `Wetterwarnungen ${locationName}: ${warnTexts.join(" | ")}`;
     debugLogScrape("warnings [AT]", url, res.status, fullText);
-    return { text: fullText.slice(0, 2000), available: true };
+    return { text: fullText, available: true };
   } catch (e) {
     console.error("GeoSphere warnings fetch error:", e instanceof Error ? e.message : e);
     return { text: "", available: false };
@@ -692,9 +692,8 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
     if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
     const fullText = parts.join(" ");
     debugLogScrape(`forecast [${countryCode}]`, dkUrl, dmiRes.status, fullText);
-    const text = fullText.slice(0, 3000);
     const valid = await validateScrapedContent(fullText, "forecast", countryCode);
-    return { text, available: valid };
+    return { text: fullText, available: valid };
   }
 
   const res = await fetch(service.forecastUrl, {
@@ -710,9 +709,8 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
   const html = await res.text();
   const fullText = stripHtml(html);
   debugLogScrape(`forecast [${countryCode}]`, service.forecastUrl, res.status, fullText);
-  const text = fullText.slice(0, 5000);
   const valid = await validateScrapedContent(fullText, "forecast", countryCode);
-  return { text, available: valid };
+  return { text: fullText, available: valid };
 }
 
 async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<FetchResult> {
@@ -750,9 +748,8 @@ async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]
   const html = await res.text();
   const fullText = stripHtml(html);
   debugLogScrape(`warnings [${service.warningLabel}]`, service.warningUrl, res.status, fullText);
-  const text = fullText.slice(0, 5000);
   const valid = await validateScrapedContent(fullText, "warning", service.warningLabel);
-  return { text, available: valid };
+  return { text: fullText, available: valid };
 }
 
 async function fetchRegionalWarnings(countryCode: string, lat?: number, lon?: number): Promise<FetchResult> {
