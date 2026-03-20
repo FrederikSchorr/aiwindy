@@ -1005,12 +1005,12 @@ Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen b
 
 ${SECTION_STYLE}`;
 
-const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib die aktuellen Wetterwarnungen für den Zielort wieder.
+const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib NUR echte, relevante Wetterwarnungen für den Zielort wieder — z.B. Starkwind (>35kt), Gewitter, Sturmflut, Hagel etc.
 
-- Beginne mit dem Dienstnamen als Label, Beispiel: "[DHMZ Kroatien](WARNINGURL): Gelegentliche Böen..."
-- Der Dienstname ist ein klickbarer Markdown-Link zur Warnseite: [WARNDIENSTNAME](WARNINGURL)
-- Falls Warnungen aktiv: "[Dienstname](URL): [Warntext mit konkreten Werten und Zeitfenstern]"
-- Falls keine Warnungen: "[Dienstname](URL): ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
+MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]. [(Dienstname)](URL)"
+- NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
+- Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
+- Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]. [(Dienstname)](URL)"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
 
 ${SECTION_STYLE}`;
