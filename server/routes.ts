@@ -996,7 +996,8 @@ ${SECTION_STYLE}`;
 const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Temperaturen für heute und morgen in einem Satz.
 
 Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C. [(Quelle: Dienstname)](URL)"
-- NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
+- NUR Temperaturwerte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
+- AUSSCHLIESSLICH Temperaturen — KEINE Wolken, KEIN Regen, KEIN Wind, KEINE Bewölkung, KEINE Niederschläge
 - Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
 - Schreibe NUR diesen einen Bullet, NICHTS ANDERES.
 
