@@ -710,7 +710,7 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
   const html = await res.text();
   const fullText = stripHtml(html);
   debugLogScrape(`forecast [${countryCode}]`, service.forecastUrl, res.status, fullText);
-  const text = fullText.slice(0, 3000);
+  const text = fullText.slice(0, 5000);
   const valid = await validateScrapedContent(fullText, "forecast", countryCode);
   return { text, available: valid };
 }
@@ -750,7 +750,7 @@ async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]
   const html = await res.text();
   const fullText = stripHtml(html);
   debugLogScrape(`warnings [${service.warningLabel}]`, service.warningUrl, res.status, fullText);
-  const text = fullText.slice(0, 2000);
+  const text = fullText.slice(0, 5000);
   const valid = await validateScrapedContent(fullText, "warning", service.warningLabel);
   return { text, available: valid };
 }
