@@ -976,10 +976,9 @@ ${SECTION_STYLE}`;
 
 const SECTION3_PROMPT = `Du bist ein Segelwetter-Experte. Beschreibe Wind und Seezustand für den Zielort.
 
-Schreibe genau diese Bullets in dieser Reihenfolge:
-1. Erster Bullet: EXAKT den Text aus "ABSCHNITT-3-BULLET-1" kopieren — keine Änderungen, keine Ergänzungen
-2. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen. WICHTIG: Nur Windsysteme nennen, die am konkreten Ort geographisch tatsächlich vorkommen können — niemals ein Windsystem erfinden oder aus anderen Regionen übertragen. Beispiele für typische regionale Windsysteme (nur wenn geographisch zutreffend): Küste/Adria: Bora, Maestral, Jugo/Scirocco; Mittelmeer: Meltemi, Mistral, Tramontana, Sirocco, Levante; Alpen/Binnenland: Föhn, thermische Winde (Tag-/Nachtwind), Talwind, Bergwind; Nordsee/Ostsee: keine speziellen Eigennamen. Falls kein benanntes Windsystem aktiv ist: diesen Bullet weglassen und nur den Hauptwind (Richtung, Stärke) im ersten Bullet beschreiben.
-3. Letzter Bullet: "Seezustand: [Zustand auf Deutsch]" — exakt aus dem regionalen Wetterbericht übernehmen und korrekt ins Deutsche übersetzen. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Beispiele: "slight and moderate" → "leicht bis mäßig", "The sea 3-4" → "leicht bis mäßig (Douglas 3-4)". Falls regionaler Wetterbericht nicht verfügbar: "Seezustand: nicht verfügbar"
+Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT:
+1. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen. WICHTIG: Nur Windsysteme nennen, die am konkreten Ort geographisch tatsächlich vorkommen können — niemals ein Windsystem erfinden oder aus anderen Regionen übertragen. Beispiele für typische regionale Windsysteme (nur wenn geographisch zutreffend): Küste/Adria: Bora, Maestral, Jugo/Scirocco; Mittelmeer: Meltemi, Mistral, Tramontana, Sirocco, Levante; Alpen/Binnenland: Föhn, thermische Winde (Tag-/Nachtwind), Talwind, Bergwind; Nordsee/Ostsee: keine speziellen Eigennamen. Falls kein benanntes Windsystem aktiv ist: diesen Bullet weglassen und nur den Hauptwind (Richtung, Stärke) beschreiben.
+2. Letzter Bullet: "Seezustand: [Zustand auf Deutsch]" — exakt aus dem regionalen Wetterbericht übernehmen und korrekt ins Deutsche übersetzen. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Beispiele: "slight and moderate" → "leicht bis mäßig", "The sea 3-4" → "leicht bis mäßig (Douglas 3-4)". Falls regionaler Wetterbericht nicht verfügbar: "Seezustand: nicht verfügbar"
 
 ${SECTION_STYLE}`;
 
@@ -1487,9 +1486,12 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         userContent: string | OpenAI.ChatCompletionContentPart[],
         model: string,
         debugLabel: string,
+        skipHeader: boolean = false,
       ) => {
-        sendSSE({ section: sectionConfigs[sectionIndex] });
-        sendSSE({ content: `## ${sectionTitle}\n\n` });
+        if (!skipHeader) {
+          sendSSE({ section: sectionConfigs[sectionIndex] });
+          sendSSE({ content: `## ${sectionTitle}\n\n` });
+        }
 
         const msgs: OpenAI.ChatCompletionMessageParam[] = [
           { role: "system", content: systemPrompt },
@@ -1599,7 +1601,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // Section 3: Wind & Welle (regional report + model info)
       const regionalReportText = regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR)";
-      const section3Context = `Zielort: ${locationShort}\nABSCHNITT-3-BULLET-1: ${abschnitt3Bullet1}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
+      sendSSE({ section: sectionConfigs[2] });
+      sendSSE({ content: `## 3. Wind & Welle\n\n- ${abschnitt3Bullet1}\n` });
+      const section3Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
       await streamSectionLLM(
         2,
         "3. Wind & Welle",
@@ -1607,6 +1611,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         section3Context,
         "gpt-4.1-mini",
         "section3-wind-welle",
+        true,
       );
 
       // Section 4: Wolken & Regen (regional report)
