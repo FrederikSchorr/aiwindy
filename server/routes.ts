@@ -942,23 +942,18 @@ const SECTION_STYLE = `STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil,
 const SECTION1_PROMPT = `Du bist ein Meteorologe. Beschreibe die aktuelle Großwetterlage über Europa.
 
 Schreibe genau ZWEI Bullet-Points basierend ausschließlich auf dem METEONEWS-TEXT:
-- Bullet 1: Dominierende Druckgebilde über Europa (Hochs, Tiefs, deren Lage und Einfluss)
-- Bullet 2: Luftmassen und deren Grenzen über Europa (Kaltluft, Warmluft, Luftmassengrenze)
-Jeder Bullet: 1 prägnanter Satz.
-Gib die Quelle am Ende des zweiten Bullets an: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
-Kein weiterer Text, keine weiteren Bullets.
-WICHTIG: Kein Bezug zu einem konkreten Ort — nur die europäische Gesamtlage beschreiben.
-Windangaben: kt, Druckangaben: hPa.
+- Bullet 1: Druckgebilde über Europa (Hochs, Tiefs, Lage). MAX 1 SATZ.
+- Bullet 2: Luftmassen und Grenzen (Kaltluft, Warmluft). MAX 1 SATZ. Quelle anhängen: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
+Kein weiterer Text, keine weiteren Bullets. Kein Bezug zu einem konkreten Ort.
 
 ${SECTION_STYLE}`;
 
-const SECTION2_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Analysiere das beigefügte KNMI-Frontenbild und den meteonews-Text.
+const SECTION2_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Analysiere AUSSCHLIESSLICH das beigefügte KNMI-Frontenbild.
 
-Schreibe genau 1-2 Bullets:
-- Fasse die regional relevanten Fronten für den Zielort zusammen
-- Welche Fronten beeinflussen die Region? Zugweg in Richtung Revier?
-- Kalt-/Warmfronten, Okklusionen, Luftmassengrenzen — was ist relevant?
-- Analysiere die Symbole auf der KNMI-Karte: blaue Dreiecke = Kaltfront, rote Halbkreise = Warmfront, abwechselnd = Okklusion, gestrichelt = Konvergenz
+Schreibe genau 1-2 Bullets, MAX 1 SATZ pro Bullet:
+- Welche Fronten sind auf der KNMI-Karte nahe dem Zielort sichtbar? Zugrichtung?
+- Symbole: blaue Dreiecke = Kaltfront, rote Halbkreise = Warmfront, abwechselnd = Okklusion, gestrichelt = Konvergenz
+- Verwende NUR Informationen aus dem KNMI-Bild, NICHT aus dem meteonews-Text
 - Quelle am letzten Bullet: [(Quelle: KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
 
 ${SECTION_STYLE}`;
@@ -1528,7 +1523,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       }
       section2UserContent.push({
         type: "text",
-        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\n\nMETEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — nur meteonews-Text verwenden)" : ""}`,
+        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
       });
       await streamSectionLLM(
         1,
