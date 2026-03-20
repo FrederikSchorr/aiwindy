@@ -497,6 +497,33 @@ type FetchResult = { text: string; available: boolean };
 
 const REGIONAL_MIN_TEXT_LENGTH = 150;
 
+async function validateScrapedContent(text: string, expectedType: "forecast" | "warning", label: string): Promise<boolean> {
+  if (text.length < REGIONAL_MIN_TEXT_LENGTH) return false;
+  try {
+    const typeDesc = expectedType === "forecast"
+      ? "einen echten Wetterbericht oder eine Wettervorhersage mit konkreten Wetterdaten (Temperatur, Wind, Niederschlag, Bewölkung, Drucklage)"
+      : "echte Wetterwarninformationen (aktive Warnungen ODER die explizite Meldung dass keine Warnungen aktiv sind)";
+    const messages: OpenAI.ChatCompletionMessageParam[] = [
+      { role: "system", content: `Enthält der folgende Text ${typeDesc}? Oder ist es nur Website-Navigation, Menüs, Impressum, JavaScript-Code, Beaufort-Tabellen, oder sonstiger Nicht-Wetter-Inhalt? Antworte NUR mit JA oder NEIN.` },
+      { role: "user", content: text.slice(0, 1500) },
+    ];
+    const result = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages,
+      max_completion_tokens: 4,
+      temperature: 0,
+    });
+    const answer = result.choices[0]?.message?.content?.trim().toUpperCase() || "";
+    const isValid = answer.startsWith("JA");
+    debugLog(`Validierung ${expectedType} [${label}]: ${answer} → ${isValid ? "gültig" : "als nicht verfügbar markiert"}`);
+    debugLogLLMResponse("gpt-4.1-mini", `validate ${expectedType} [${label}]`, answer);
+    return isValid;
+  } catch (e) {
+    debugLog(`Validierung ${expectedType} [${label}]: Fehler, als gültig behandelt`);
+    return true;
+  }
+}
+
 async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"]): Promise<FetchResult> {
   if (countryCode === "DK") {
     const dkUrl = "https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land";
@@ -515,7 +542,8 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
     const fullText = parts.join(" ");
     debugLogScrape(`forecast [${countryCode}]`, dkUrl, dmiRes.status, fullText);
     const text = fullText.slice(0, 3000);
-    return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
+    const valid = await validateScrapedContent(fullText, "forecast", countryCode);
+    return { text, available: valid };
   }
 
   const res = await fetch(service.forecastUrl, {
@@ -532,7 +560,8 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
   const fullText = stripHtml(html);
   debugLogScrape(`forecast [${countryCode}]`, service.forecastUrl, res.status, fullText);
   const text = fullText.slice(0, 3000);
-  return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
+  const valid = await validateScrapedContent(fullText, "forecast", countryCode);
+  return { text, available: valid };
 }
 
 async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<FetchResult> {
@@ -569,7 +598,8 @@ async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]
   const fullText = stripHtml(html);
   debugLogScrape(`warnings [${service.warningLabel}]`, service.warningUrl, res.status, fullText);
   const text = fullText.slice(0, 2000);
-  return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
+  const valid = await validateScrapedContent(fullText, "warning", service.warningLabel);
+  return { text, available: valid };
 }
 
 async function fetchRegionalWarnings(countryCode: string): Promise<FetchResult> {

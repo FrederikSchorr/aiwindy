@@ -73,6 +73,7 @@ GPT-4.1-mini classifies each user message:
 - `fetchRegionalWarnings(countryCode)`: Scrapes national weather service warnings page
 - Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
 - HTML stripped via regex, fallback to Open-Meteo data if scraping fails
+- LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
 
 ## Regional Model Selection (AI-based)
 GPT-4.1-mini selects the best Windy.com wind model:
