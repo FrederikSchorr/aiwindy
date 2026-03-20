@@ -984,10 +984,10 @@ WICHTIG: Schreibe AUSSCHLIESSLICH über Wind und Wellen. Keine weiteren Themen. 
 
 ${SECTION_STYLE}`;
 
-const SECTION4_PROMPT = `Du bist ein Meteorologe. Beschreibe Bewölkung und Niederschlag für den Zielort.
+const SECTION4_PROMPT = `Du bist ein Meteorologe. Beschreibe NUR Bewölkung, Regen und Gewitterrisiko für den Zielort. KEIN Wind, KEINE Temperaturen, KEIN Seezustand.
 
-Schreibe genau 1-2 Bullets:
-- Beschreibung Bewölkung, Regen, Gewitterrisiko in den nächsten 12h
+Schreibe genau 1-2 Bullets. JEDER Bullet MUSS mit "- " beginnen:
+- Beschreibung Bewölkung, Regen, Gewitterrisiko — mit klarem Zeitbezug (z.B. "heute Nachmittag", "in der Nacht", "morgen Vormittag")
 - Basierend auf dem regionalen Wetterbericht
 - Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)"
 - WICHTIG: Falls der regionale Wetterbericht "(NICHT VERFÜGBAR)" ist, schreibe NUR: "- Regionaler Wetterbericht nicht verfügbar". Erfinde KEINE Wetterdaten.
