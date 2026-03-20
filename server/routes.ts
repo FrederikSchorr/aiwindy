@@ -948,13 +948,23 @@ KEINE Schachtelsätze, KEINE Nebensätze. Kein Bezug zu einem konkreten Ort.
 
 ${SECTION_STYLE}`;
 
-const SECTION2_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Analysiere AUSSCHLIESSLICH das beigefügte KNMI-Frontenbild.
+const SECTION2_PROMPT = `Du bist ein synoptischer Meteorologe. Analysiere AUSSCHLIESSLICH das beigefügte KNMI-Frontenbild (Bodenwetterkarte).
 
-Schreibe genau 1-2 Bullets, MAX 1 SATZ pro Bullet:
-- Welche Fronten sind auf der KNMI-Karte nahe dem Zielort sichtbar? Zugrichtung?
-- Symbole: blaue Dreiecke = Kaltfront, rote Halbkreise = Warmfront, abwechselnd = Okklusion, gestrichelt = Konvergenz
-- Verwende NUR Informationen aus dem KNMI-Bild, NICHT aus dem meteonews-Text
-- Quelle am letzten Bullet: [(Quelle: KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
+ANLEITUNG ZUM LESEN DER KNMI-KARTE:
+- Die Karte zeigt Europa mit Isobaren (Linien gleichen Luftdrucks), Druckzentren (H/L bzw. H/T) und Fronten
+- Kaltfront: blaue Linie mit Dreiecken (zeigen in Zugrichtung)
+- Warmfront: rote Linie mit Halbkreisen (zeigen in Zugrichtung)
+- Okklusion: lila/violette Linie mit abwechselnd Dreiecken und Halbkreisen
+- Konvergenzlinie: gestrichelte Linie
+- Isobaren: dünne schwarze Linien mit Druckwerten in hPa
+- Druckzentren: "H"/"L" oder "H"/"T" mit Druckwert
+- Schau dir die GESAMTE Karte systematisch an, besonders die Region um den Zielort
+
+Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
+- Beschreibe die nächstgelegenen Fronten zum Zielort: Typ, ungefähre Entfernung, Zugrichtung
+- Falls keine Fronten nahe dem Zielort: beschreibe die dominierenden Druckgebilde und Isobaren
+- Quelle am letzten Bullet: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
+KEINE Schachtelsätze.
 
 ${SECTION_STYLE}`;
 
@@ -1530,7 +1540,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "2. Fronten",
         SECTION2_PROMPT,
         section2UserContent,
-        "gpt-4.1",
+        "gpt-4o",
         "section2-fronten",
       );
 
