@@ -942,9 +942,9 @@ const SECTION_STYLE = `STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil,
 const SECTION1_PROMPT = `Du bist ein Meteorologe. Beschreibe die aktuelle Großwetterlage über Europa.
 
 Schreibe genau ZWEI Bullet-Points basierend ausschließlich auf dem METEONEWS-TEXT:
-- Bullet 1: Druckgebilde über Europa (Hochs, Tiefs, Lage). MAX 1 SATZ.
-- Bullet 2: Luftmassen und Grenzen (Kaltluft, Warmluft). MAX 1 SATZ. Quelle anhängen: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
-Kein weiterer Text, keine weiteren Bullets. Kein Bezug zu einem konkreten Ort.
+- Bullet 1: Druckgebilde über Europa. MAXIMAL 8-12 Wörter. Beispiel: "Hoch über Mitteleuropa, Tief über Island und Skandinavien."
+- Bullet 2: Luftmassen. MAXIMAL 8-12 Wörter. Quelle anhängen: [(meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
+KEINE Schachtelsätze, KEINE Nebensätze, KEINE Aufzählungen mit "und...und...und". Kein Bezug zu einem konkreten Ort.
 
 ${SECTION_STYLE}`;
 
