@@ -967,8 +967,9 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 - Schau dir die GESAMTE Karte systematisch an, besonders die Region um den Zielort
 
 Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
-- Beschreibe die nächstgelegenen Fronten zum Zielort: Typ, ungefähre Entfernung, Zugrichtung
-- Falls keine Fronten nahe dem Zielort: schreibe "✅ Keine Fronten in der Nähe von [Zielort]" und beschreibe kurz die dominierenden Druckgebilde
+- Beschreibe NUR Fronten (Kalt-, Warm-, Okklusionen, Konvergenzlinien) nahe dem Zielort: Typ, ungefähre Entfernung, Zugrichtung
+- Falls keine Fronten nahe dem Zielort: schreibe NUR "- ✅ Keine Fronten in der Nähe von [Zielort]"
+- KEINE Beschreibung von Hoch- oder Tiefdruckgebieten, KEINE Isobaren — NUR Fronten
 - Quelle am letzten Bullet: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
 KEINE Schachtelsätze.
 
