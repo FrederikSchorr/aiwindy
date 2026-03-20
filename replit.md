@@ -23,8 +23,9 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 3. For ANALYSE mode:
    - Geocodes via Nominatim, selects regional model via AI
    - Scrapes meteonews.at for European weather overview
-   - Scrapes regional weather service (DHMZ, DWD, GeoSphere, etc.) for local forecast
-   - Scrapes regional warnings from national weather service
+   - Scrapes ONE regional weather page per country (forecast page, which typically includes warnings)
+   - For AT: uses GeoSphere JSON APIs for both forecast and warnings (clean data, no preprocessing needed)
+   - LLM-preprocesses scraped text to extract only meteorological content (removes navigation HTML, menus, boilerplate)
    - Fetches KNMI fronts chart as base64 for Vision analysis
    - Emits per-section SSE events `{ section: { id, title, mapType, mapConfig, sourceLabel, sourceUrl } }` when each section starts in the AI stream
    - Runs 5 separate LLM calls (one per section, section 5 has no LLM call) with focused prompts and only relevant context
@@ -42,15 +43,15 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 3. **Wind & Welle** - Windy regional wind model map, regional weather service link
 4. **Wolken & Regen** - Windy clouds overlay map
 5. **Prognose** - Windy meteogram (forecast type embed)
-6. **Wetterwarnung** - Scraped warning text from regional service, warning service link
+6. **Wetterwarnung** - Warning text from preprocessed regional report, warning service link
 
 Each section runs as a separate LLM call with focused context:
 - Section 1 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + meteonews text, no location — European overview
 - Section 2 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + location (no meteonews text)
-- Section 3 (gpt-4.1): regional weather report + model info + location
-- Section 4 (gpt-4.1-mini): regional weather report + location
+- Section 3 (gpt-4.1-mini): preprocessed regional weather report + model info + location
+- Section 4 (gpt-4.1-mini): preprocessed regional weather report + location
 - Section 5: No LLM call (chart only)
-- Section 6 (gpt-4.1-mini): warning text + location
+- Section 6 (gpt-4.1-mini): preprocessed regional weather report (incl. warnings) + location
 
 ## Photo/Video Upload
 - Camera button in chat input
@@ -78,11 +79,12 @@ GPT-4.1-mini classifies each user message:
 ## Regional Weather Scraping
 - `fetchMeteonews()`: Scrapes meteonews.at/de/Allgemeine_Lage/K33/Europa for European overview
 - `fetchRegionalWeatherReport(countryCode, lat, lon)`: Scrapes national weather service for local forecast
-- `fetchRegionalWarnings(countryCode)`: Scrapes national weather service warnings page
 - Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
 - HTML stripped via regex, fallback message if scraping fails
+- Only ONE scrape per region — forecast page is used for both forecast data AND warnings (sections 3-6)
 - Austria (AT): Uses GeoSphere JSON APIs instead of scraping — `geosphere.at/data/textforecasts` for regional text forecasts (matched to nearest Bundesland by coordinates), `warnungen.zamg.at/wsapp/api/getWarningsForCoords` for coordinate-based warnings
 - LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
+- LLM preprocessing: after validation, gpt-4.1-mini extracts only meteorological content from raw scraped text (removes navigation, menus, boilerplate). Clean text is used by all downstream section LLM calls.
 
 ## Regional Model Selection (AI-based)
 GPT-4.1-mini selects the best Windy.com wind model based on 300km domain-edge rule:

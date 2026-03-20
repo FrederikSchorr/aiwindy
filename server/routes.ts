@@ -775,6 +775,50 @@ async function fetchRegionalWarnings(countryCode: string, lat?: number, lon?: nu
   }
 }
 
+async function preprocessWeatherText(rawText: string, serviceName: string): Promise<string> {
+  if (!rawText || rawText.length < 50) return rawText;
+  try {
+    const messages: OpenAI.ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content: `Extract ONLY the meteorological content from this weather service page text. Remove all website navigation, menus, headers, footers, disclaimers, and non-weather content.
+
+Keep and preserve EXACTLY:
+- Wind: directions, speeds (knots, km/h, Bft), gusts — ALL numbers must be preserved exactly
+- Sea state: Douglas scale values, wave heights, sea conditions
+- Temperature: all values in °C
+- Precipitation: rain, snow, thunderstorms
+- Warnings: all active weather warnings with severity, timing, and values
+- Pressure: high/low pressure systems
+- Cloud cover, visibility
+- Time references: dates, periods, "today", "tomorrow", etc.
+
+Rules:
+- Preserve ALL numeric values exactly as written
+- Keep the original language (English, German, Croatian, etc.)
+- Output clean text paragraphs, no HTML
+- If text contains forecast AND warnings, include BOTH
+- Do NOT add any information not in the source text`
+      },
+      { role: "user", content: rawText.slice(0, 8000) }
+    ];
+    debugLogLLM("gpt-4.1-mini", `preprocess [${serviceName}]`, messages);
+    const result = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages,
+      max_completion_tokens: 2000,
+      temperature: 0,
+    });
+    const cleaned = result.choices[0]?.message?.content?.trim() || rawText;
+    debugLog(`Preprocess [${serviceName}]: ${rawText.length} chars → ${cleaned.length} chars`);
+    debugLogLLMResponse("gpt-4.1-mini", `preprocess [${serviceName}]`, cleaned);
+    return cleaned;
+  } catch (e) {
+    console.error(`Preprocess failed for ${serviceName}:`, e instanceof Error ? e.message : e);
+    return rawText;
+  }
+}
+
 async function classifyMessage(message: string, hasActiveLocation: boolean): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR"; location?: string }> {
   try {
     const classifyMessages = [
@@ -1482,12 +1526,20 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       ];
 
       const noResult: FetchResult = { text: "", available: false };
-      const [meteonewsText, regionalReport, warningsText, knmiBase64] = await Promise.all([
+      const [meteonewsText, regionalReport, atWarnings, knmiBase64] = await Promise.all([
         fetchMeteonews(),
         countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
-        countryCode ? fetchRegionalWarnings(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
+        countryCode === "AT" ? fetchRegionalWarnings("AT", geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
         fetchKnmiChartBase64(),
       ]);
+
+      let preprocessedReport = "";
+      if (regionalReport.available) {
+        const combinedRaw = countryCode === "AT" && atWarnings.available
+          ? `${regionalReport.text}\n\nWARNUNGEN:\n${atWarnings.text}`
+          : regionalReport.text;
+        preprocessedReport = await preprocessWeatherText(combinedRaw, service?.label || countryCode || "unknown");
+      }
 
       const bullet1Available = service
         ? `Regionales Windmodell: ${geocoded.regionalModelLabel}, Regionaler Wetterbericht: [${service.label}](${service.forecastUrl})`
@@ -1632,22 +1684,22 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       sendSSE({ content: "\n\n" });
 
       // Section 3: Wind & Welle (regional report + model info)
-      const regionalReportText = regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR)";
+      const reportText = regionalReport.available ? preprocessedReport : "(NICHT VERFÜGBAR)";
       sendSSE({ section: sectionConfigs[2] });
       sendSSE({ content: `## 3. Wind & Welle\n\n- ${abschnitt3Bullet1}\n` });
-      const section3Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
+      const section3Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${reportText}`;
       await streamSectionLLM(
         2,
         "3. Wind & Welle",
         SECTION3_PROMPT,
         section3Context,
-        "gpt-4.1",
+        "gpt-4.1-mini",
         "section3-wind-welle",
         true,
       );
 
-      // Section 4: Wolken & Regen (regional report)
-      const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      // Section 4: Wolken & Regen (preprocessed report)
+      const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
       const s4Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
       await streamSectionLLM(
         3,
@@ -1663,7 +1715,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       // Section 5: Prognose (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
-      const section5Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const section5Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
       const s5Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
       await streamSectionLLM(
         4,
@@ -1676,15 +1728,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         s5Source,
       );
 
-      // Section 6: Wetterwarnung
-      const warningServiceLabel = service?.warningLabel || "Warnseite";
+      // Section 6: Wetterwarnung (uses same preprocessed report)
+      const warningServiceLabel = service?.warningLabel || service?.label || "Warnseite";
       const warningServiceUrl = service?.warningUrl || "#";
-      const warningContext = warningsText.available
-        ? `Zielort: ${locationShort}\n\nWARNUNGEN:\n${warningsText.text}`
-        : `Zielort: ${locationShort}\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
-      // Use LLM to extract max Douglas sea state value from warning text
+      const warningContext = regionalReport.available
+        ? `Zielort: ${locationShort}\n\nWETTERBERICHT (inkl. Warnungen):\n${reportText}`
+        : `Zielort: ${locationShort}\n\n⚠️ Der Wetterdienst (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
+      // Use LLM to extract max Douglas sea state value from preprocessed text
       let douglasWarningBullet = "";
-      if (warningsText.available) {
+      if (regionalReport.available) {
         try {
           const douglasExtract = await openai.chat.completions.create({
             model: "gpt-4.1-mini",
@@ -1699,7 +1751,7 @@ Rules:
 - Reply with ONLY a single digit 0-9, nothing else.
 - If no sea state information is found, reply with "0".`
               },
-              { role: "user", content: warningsText.text.slice(0, 3000) }
+              { role: "user", content: reportText }
             ] as OpenAI.ChatCompletionMessageParam[],
             max_completion_tokens: 8,
             temperature: 0,
