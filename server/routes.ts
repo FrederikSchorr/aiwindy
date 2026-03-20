@@ -971,7 +971,7 @@ Schreibe genau 2 Bullets, jeweils 12-15 Wörter:
 - WICHTIG: Zeitbezug angeben — der KNMI-Analysezeitpunkt wird im Context mitgegeben. Verwende relative Zeitangaben wie "vor Xh" (z.B. "Kaltfront lag vor 10h ca. 200km westlich...")
 - KEINE Beschreibung von Hoch- oder Tiefdruckgebieten, KEINE Isobaren — NUR Fronten
 - Quelle am LETZTEN Bullet anhängen: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
-KEINE Schachtelsätze.
+JEDER Bullet MUSS mit "- " beginnen (Markdown-Bullet). KEINE Schachtelsätze.
 
 ${SECTION_STYLE}`;
 
