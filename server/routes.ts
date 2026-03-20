@@ -1545,7 +1545,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
       });
 
-      debugLogLLMInput("claude-sonnet-4-6", "section2-fronten", JSON.stringify(section2UserContent).slice(0, 500));
+      debugLogLLM("claude-sonnet-4-6", "section2-fronten", [{ role: "user", content: "(KNMI image + location)" }], SECTION2_PROMPT.slice(0, 200));
       const claudeStream = anthropic.messages.stream({
         model: "claude-sonnet-4-6",
         max_tokens: 512,
