@@ -624,9 +624,11 @@ async function geocodeLocation(locationName: string): Promise<{
       } catch {}
     }
 
+    debugLog(`geocodeLocation: countryCode=${countryCode}, cityName=${cityName}, isWater=${isWater}`);
     const finalModel = countryCode === "AT"
       ? { model: "czeAladin", label: "ALADIN", zoom: 7 }
       : regional;
+    debugLog(`geocodeLocation: model override check: countryCode="${countryCode}" === "AT" → ${countryCode === "AT"}, using model=${finalModel.model}`);
 
     return {
       lat, lon,
