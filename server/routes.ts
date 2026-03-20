@@ -991,15 +991,15 @@ const SECTION4_PROMPT = `Du bist ein Meteorologe. Beschreibe NUR Bewölkung, Reg
 
 Schreibe GENAU 1 Bullet (max 15 Wörter). MUSS mit "- " beginnen:
 - Bewölkung + Niederschlag + Gewitterrisiko kompakt in einem Satz, mit Zeitbezug
-- Die Quelle direkt anhängen: "...Text. ([Dienstname](URL))"
+- KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
 - WICHTIG: Falls der regionale Wetterbericht "(NICHT VERFÜGBAR)" ist, schreibe NUR: "- Regionaler Wetterbericht nicht verfügbar". Erfinde KEINE Wetterdaten.
 
 ${SECTION_STYLE}`;
 
 const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Temperaturen für heute und morgen in einem Satz.
 
-Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C. ([Dienstname](URL))"
-WICHTIG: Die Quelle MUSS in runden Klammern stehen und als Markdown-Link formatiert sein: ([Dienstname](URL))
+Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C"
+- KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
 - NUR Temperaturwerte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
 - AUSSCHLIESSLICH Temperaturen — KEINE Wolken, KEIN Regen, KEIN Wind, KEINE Bewölkung, KEINE Niederschläge
 - Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
@@ -1010,12 +1010,12 @@ ${SECTION_STYLE}`;
 const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib NUR echte, relevante Wetterwarnungen für den Zielort wieder — z.B. Starkwind (>35kt), Gewitter, Sturmflut, Hagel etc.
 
 MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]"
-- Quelle NUR am LETZTEN Bullet anhängen: "...Text. ([Dienstname](URL))"
-Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh. ([DHMZ Kroatien](URL))"
+Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh"
+- KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
 - NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
 - Seegang NUR in Douglas-Skala angeben (z.B. "Douglas 5-6"), KEINE Meter, KEINE Fuß
 - Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
-- Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]. ([Dienstname](URL))"
+- Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
 
 ${SECTION_STYLE}`;
@@ -1635,7 +1635,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       );
 
       // Section 4: Wolken & Regen (regional report)
-      const section4Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
       await streamSectionLLM(
         3,
         "4. Wolken & Regen",
@@ -1644,11 +1644,12 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "gpt-4.1-mini",
         "section4-wolken-regen",
       );
+      if (service) sendSSE({ content: ` ([${service.label}](${service.forecastUrl}))` });
 
       // Section 5: Prognose (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
-      const section5Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const section5Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
       await streamSectionLLM(
         4,
         "5. Prognose",
@@ -1658,13 +1659,14 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "section5-prognose",
         true,
       );
+      if (service) sendSSE({ content: ` ([${service.label}](${service.forecastUrl}))` });
 
       // Section 6: Wetterwarnung
       const warningServiceLabel = service?.warningLabel || "Warnseite";
       const warningServiceUrl = service?.warningUrl || "#";
       const warningContext = warningsText.available
-        ? `Zielort: ${locationShort}\nWarndienst: [${warningServiceLabel}](${warningServiceUrl})\n\nWARNUNGEN:\n${warningsText.text}`
-        : `Zielort: ${locationShort}\nWarndienst: [${warningServiceLabel}](${warningServiceUrl})\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ [${warningServiceLabel}](${warningServiceUrl}) nicht erreichbar – bitte direkt auf der Seite prüfen."`;
+        ? `Zielort: ${locationShort}\n\nWARNUNGEN:\n${warningsText.text}`
+        : `Zielort: ${locationShort}\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
       await streamSectionLLM(
         5,
         "6. Wetterwarnung",
@@ -1673,6 +1675,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "gpt-4.1-mini",
         "section6-warnung",
       );
+      sendSSE({ content: ` ([${warningServiceLabel}](${warningServiceUrl}))` });
 
       sendSSE({ done: true });
       res.end();
