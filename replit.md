@@ -11,7 +11,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 
 ## Key Files
 - `client/src/pages/home.tsx` - Single-column chat UI with SectionCard event-driven inline maps
-- `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, forecast, upload)
+- `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, upload)
 - `shared/schema.ts` - Zod schemas and TypeScript types
 
 ## How It Works

@@ -1469,12 +1469,14 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       sendSSE({ analysisStart: { sections: sectionConfigs } });
 
       const streamSectionLLM = async (
+        sectionIndex: number,
         sectionTitle: string,
         systemPrompt: string,
         userContent: string | OpenAI.ChatCompletionContentPart[],
         model: string,
         debugLabel: string,
       ) => {
+        sendSSE({ section: sectionConfigs[sectionIndex] });
         sendSSE({ content: `## ${sectionTitle}\n\n` });
 
         const msgs: OpenAI.ChatCompletionMessageParam[] = [
@@ -1507,6 +1509,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // Section 1: Druck & Luftmassen (no location context)
       await streamSectionLLM(
+        0,
         "1. Druck & Luftmassen",
         SECTION1_PROMPT,
         `METEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}`,
@@ -1527,6 +1530,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\n\nMETEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — nur meteonews-Text verwenden)" : ""}`,
       });
       await streamSectionLLM(
+        1,
         "2. Fronten",
         SECTION2_PROMPT,
         section2UserContent,
@@ -1538,6 +1542,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const regionalReportText = regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR)";
       const section3Context = `Zielort: ${locationShort}\nABSCHNITT-3-BULLET-1: ${abschnitt3Bullet1}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
       await streamSectionLLM(
+        2,
         "3. Wind & Welle",
         SECTION3_PROMPT,
         section3Context,
@@ -1548,6 +1553,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       // Section 4: Wolken & Regen (regional report)
       const section4Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
       await streamSectionLLM(
+        3,
         "4. Wolken & Regen",
         SECTION4_PROMPT,
         section4Context,
@@ -1556,6 +1562,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       );
 
       // Section 5: Prognose (no LLM call — chart speaks for itself)
+      sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
 
       // Section 6: Wetterwarnung
@@ -1565,6 +1572,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         ? `Zielort: ${locationShort}\nWarndienst: [${warningServiceLabel}](${warningServiceUrl})\n\nWARNUNGEN:\n${warningsText.text}`
         : `Zielort: ${locationShort}\nWarndienst: [${warningServiceLabel}](${warningServiceUrl})\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ [${warningServiceLabel}](${warningServiceUrl}) nicht erreichbar – bitte direkt auf der Seite prüfen."`;
       await streamSectionLLM(
+        5,
         "6. Wetterwarnung",
         SECTION6_PROMPT,
         warningContext,
