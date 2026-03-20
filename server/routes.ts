@@ -441,7 +441,7 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     forecastUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
     label: "DHMZ Kroatien",
     warningUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
-    warningLabel: "DHMZ Small Marine Craft",
+    warningLabel: "DHMZ Kroatien",
   },
   DE: {
     forecastUrl: "https://www.dwd.de/DWD/wetter/wv_allg/deutschland/text/vhdl13_dwoh.html",
@@ -991,14 +991,15 @@ const SECTION4_PROMPT = `Du bist ein Meteorologe. Beschreibe NUR Bewölkung, Reg
 
 Schreibe GENAU 1 Bullet (max 15 Wörter). MUSS mit "- " beginnen:
 - Bewölkung + Niederschlag + Gewitterrisiko kompakt in einem Satz, mit Zeitbezug
-- Die Quelle direkt anhängen: "...Text. [(Dienstname)](URL)"
+- Die Quelle direkt anhängen: "...Text. ([Dienstname](URL))"
 - WICHTIG: Falls der regionale Wetterbericht "(NICHT VERFÜGBAR)" ist, schreibe NUR: "- Regionaler Wetterbericht nicht verfügbar". Erfinde KEINE Wetterdaten.
 
 ${SECTION_STYLE}`;
 
 const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Temperaturen für heute und morgen in einem Satz.
 
-Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C. [(Dienstname)](URL)"
+Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C. ([Dienstname](URL))"
+WICHTIG: Die Quelle MUSS in runden Klammern stehen und als Markdown-Link formatiert sein: ([Dienstname](URL))
 - NUR Temperaturwerte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
 - AUSSCHLIESSLICH Temperaturen — KEINE Wolken, KEIN Regen, KEIN Wind, KEINE Bewölkung, KEINE Niederschläge
 - Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
@@ -1009,12 +1010,12 @@ ${SECTION_STYLE}`;
 const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib NUR echte, relevante Wetterwarnungen für den Zielort wieder — z.B. Starkwind (>35kt), Gewitter, Sturmflut, Hagel etc.
 
 MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]"
-- Quelle NUR am LETZTEN Bullet anhängen: "...Text. [(Dienstname)](URL)"
-Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh. [(DHMZ Kroatien)](URL)"
+- Quelle NUR am LETZTEN Bullet anhängen: "...Text. ([Dienstname](URL))"
+Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh. ([DHMZ Kroatien](URL))"
 - NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
 - Seegang NUR in Douglas-Skala angeben (z.B. "Douglas 5-6"), KEINE Meter, KEINE Fuß
 - Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
-- Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]. [(Dienstname)](URL)"
+- Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]. ([Dienstname](URL))"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
 
 ${SECTION_STYLE}`;
