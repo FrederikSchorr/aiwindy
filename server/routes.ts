@@ -965,13 +965,13 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 - Isobaren: dünne blaue Linien mit Druckwerten in hPa
 - Schau dir die GESAMTE Karte systematisch an, besonders die Region um den Zielort
 
-Schreibe genau 2 Bullets, jeweils 12-15 Wörter:
-- Bullet 1: Überblick der großen Fronten über Europa (z.B. "Kaltfront zieht von Nordatlantik über Skandinavien nach Südosten")
-- Bullet 2: Konkret für den Zielort — nächste Front(en): Typ, ungefähre Entfernung. Falls keine Fronten nahe: "✅ Keine Fronten in der Nähe von [Zielort]"
-- WICHTIG: Zeitbezug angeben — der KNMI-Analysezeitpunkt wird im Context mitgegeben. Verwende relative Zeitangaben wie "vor Xh" (z.B. "Kaltfront lag vor 10h ca. 200km westlich...")
-- KEINE Beschreibung von Hoch- oder Tiefdruckgebieten, KEINE Isobaren — NUR Fronten
-- Quelle am LETZTEN Bullet anhängen: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
-JEDER Bullet MUSS mit "- " beginnen (Markdown-Bullet). KEINE Schachtelsätze.
+Schreibe genau 2 KURZE Bullets, MAXIMAL 15 Wörter pro Bullet. STRIKT einhalten!
+- Bullet 1: Große Fronten über Europa, 1 Satz. Beispiel: "- 🌀 Kaltfront zieht von Nordatlantik über Skandinavien nach Südosten"
+- Bullet 2: Nächste Front zum Zielort: Typ + Entfernung. Beispiel: "- ✅ Keine Fronten nahe Wien. [(KNMI)](URL)"
+- Zeitbezug mit "vor Xh" (aus KNMI-Analysezeitpunkt im Context)
+- NUR Fronten — KEINE Hoch-/Tiefdruckgebiete, KEINE Isobaren, KEINE Erklärungen
+- Quelle am letzten Bullet: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
+JEDER Bullet MUSS mit "- " beginnen. KEINE Schachtelsätze. KEINE langen Beschreibungen.
 
 ${SECTION_STYLE}`;
 
