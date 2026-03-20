@@ -1506,6 +1506,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         model: string,
         debugLabel: string,
         skipHeader: boolean = false,
+        sourceSuffix?: string,
       ) => {
         if (!skipHeader) {
           sendSSE({ section: sectionConfigs[sectionIndex] });
@@ -1526,16 +1527,26 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           stream: true,
         });
 
-        let buf = "";
         let fullText = "";
-        let timer: ReturnType<typeof setTimeout> | null = null;
-        const flush = () => { if (buf) { sendSSE({ content: buf }); buf = ""; } timer = null; };
-        for await (const chunk of stream) {
-          const text = chunk.choices?.[0]?.delta?.content;
-          if (text) { buf += text; fullText += text; if (!timer) timer = setTimeout(flush, 30); }
+        if (sourceSuffix) {
+          // Collect all text first, then append source inline
+          for await (const chunk of stream) {
+            const text = chunk.choices?.[0]?.delta?.content;
+            if (text) fullText += text;
+          }
+          const trimmed = fullText.replace(/\n+$/, "");
+          sendSSE({ content: `${trimmed} ${sourceSuffix}` });
+        } else {
+          let buf = "";
+          let timer: ReturnType<typeof setTimeout> | null = null;
+          const flush = () => { if (buf) { sendSSE({ content: buf }); buf = ""; } timer = null; };
+          for await (const chunk of stream) {
+            const text = chunk.choices?.[0]?.delta?.content;
+            if (text) { buf += text; fullText += text; if (!timer) timer = setTimeout(flush, 30); }
+          }
+          if (timer) clearTimeout(timer);
+          flush();
         }
-        if (timer) clearTimeout(timer);
-        flush();
         debugLogLLMResponse(model, debugLabel, fullText);
         sendSSE({ content: "\n\n" });
       };
@@ -1636,6 +1647,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // Section 4: Wolken & Regen (regional report)
       const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const s4Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
       await streamSectionLLM(
         3,
         "4. Wolken & Regen",
@@ -1643,13 +1655,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         section4Context,
         "gpt-4.1-mini",
         "section4-wolken-regen",
+        false,
+        s4Source,
       );
-      if (service) sendSSE({ content: ` ([${service.label}](${service.forecastUrl}))` });
 
       // Section 5: Prognose (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
       const section5Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const s5Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
       await streamSectionLLM(
         4,
         "5. Prognose",
@@ -1658,8 +1672,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "gpt-4.1-mini",
         "section5-prognose",
         true,
+        s5Source,
       );
-      if (service) sendSSE({ content: ` ([${service.label}](${service.forecastUrl}))` });
 
       // Section 6: Wetterwarnung
       const warningServiceLabel = service?.warningLabel || "Warnseite";
@@ -1667,6 +1681,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const warningContext = warningsText.available
         ? `Zielort: ${locationShort}\n\nWARNUNGEN:\n${warningsText.text}`
         : `Zielort: ${locationShort}\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
+      const s6Source = `([${warningServiceLabel}](${warningServiceUrl}))`;
       await streamSectionLLM(
         5,
         "6. Wetterwarnung",
@@ -1674,8 +1689,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         warningContext,
         "gpt-4.1-mini",
         "section6-warnung",
+        false,
+        s6Source,
       );
-      sendSSE({ content: ` ([${warningServiceLabel}](${warningServiceUrl}))` });
 
       sendSSE({ done: true });
       res.end();
