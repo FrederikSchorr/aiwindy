@@ -77,12 +77,11 @@ GPT-4.1-mini classifies each user message:
 
 ## Regional Model Selection (AI-based)
 GPT-4.1-mini selects the best Windy.com wind model:
-- Lakes/inland waters: Meteoblue (mblue)
-- Adriatic coast: ALADIN (czeAladin)
-- France: AROME-HD (aromeHd, 1.25km)
-- Germany/Switzerland: ICON-D2 (iconD2, 2.2km)
+- France/Corsica: AROME-HD (aromeHd, 1.25km)
 - UK/Ireland: UKV
-- Default Europe: ICON-EU (iconEu, 7km)
+- Central/SE Europe, Adriatic, southern Baltic/North Sea: ALADIN (czeAladin, 2.3km) — coverage: East England–Ukraine, Southern Sweden–Southern Italy/Albania
+- Scandinavia, northern Baltic/North Sea, Greece, Iberian Peninsula, outside above domains: ICON-EU (iconEu, 7km)
+- Outside Europe: GFS
 
 ## Custom Domain
 - Domain: aiwindy.schorr.wien

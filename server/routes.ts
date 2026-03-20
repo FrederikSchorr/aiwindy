@@ -248,46 +248,42 @@ const gemini = new GoogleGenAI({
 });
 
 function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
-  if (lat >= 47 && lat <= 55.5 && lon >= 5 && lon <= 16) {
-    return { model: "iconD2", label: "ICON-D2 (2.2km)", zoom: 8 };
-  }
-  if (lat >= 43 && lat <= 52 && lon >= 10 && lon <= 25) {
-    return { model: "czeAladin", label: "ALADIN", zoom: 7 };
-  }
   if (lat >= 41 && lat <= 51.5 && lon >= -5.5 && lon <= 10) {
     return { model: "aromeHd", label: "AROME-HD (1.25km)", zoom: 8 };
   }
   if (lat >= 49 && lat <= 61 && lon >= -11 && lon <= 2) {
     return { model: "ukv", label: "UKV (Met Office)", zoom: 7 };
   }
-  return { model: "iconEu", label: "ICON-EU (7km)", zoom: 6 };
+  if (lat >= 36 && lat <= 58 && lon >= -2 && lon <= 40) {
+    return { model: "czeAladin", label: "ALADIN (2.3km)", zoom: 7 };
+  }
+  if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45) {
+    return { model: "iconEu", label: "ICON-EU (7km)", zoom: 6 };
+  }
+  return { model: "gfs", label: "GFS", zoom: 5 };
 }
 
 const MODEL_SELECTION_PROMPT = `Du bist ein Meteorologie-Experte. Wähle das BESTE hochauflösende Windmodell für den gegebenen Ort auf Windy.com.
 
 VERFÜGBARE MODELLE (Windy product parameter):
-- "iconD2" = ICON-D2 (2.2km) - Deutschland, Österreich, Schweiz, Tschechien, Benelux
-- "czeAladin" = ALADIN - Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Adria
-- "aromeHd" = AROME-HD (1.25km) - Frankreich, Korsika  
-- "arome" = AROME (2.5km) - Frankreich erweitert
+- "aromeHd" = AROME-HD (1.25km) - Frankreich, Korsika
 - "ukv" = UKV Met Office - Großbritannien, Irland
-- "mblue" = Meteoblue - global verfügbar, gut für Binnengewässer und Seen
-- "iconEu" = ICON-EU (7km) - ganz Europa (Fallback)
-- "gfs" = GFS - global (niedrige Auflösung)
+- "czeAladin" = ALADIN (2.3km) - Mittel-/Südosteuropa, Adria, südl. Ostsee, südl. Nordsee (Abdeckung: Ostengland–Ukraine, Südschweden–Süditalien/Albanien)
+- "iconEu" = ICON-EU (7km) - ganz Europa (Fallback für Skandinavien, nördl. Ostsee, nördl. Nordsee, Griechenland, Iberische Halbinsel, alles außerhalb der obigen Domains)
+- "gfs" = GFS - außerhalb Europas
 
 ENTSCHEIDUNGSKRITERIEN (in dieser Priorität):
-1. SEEN und BINNENGEWÄSSER (Neusiedler See, Bodensee, Gardasee, Balaton, Plattensee, Ammersee, Chiemsee, Genfer See, Zürichsee, etc.): IMMER "mblue" verwenden! Meteoblue modelliert lokale See-Thermik und Seewind am besten.
-2. Adriatische Küste (Kroatien, Slowenien, Montenegro, Albanien): "czeAladin" wegen Bora, lokale Windphänomene
-3. Frankreich, Korsika: "aromeHd" (höchste Auflösung 1.25km)
-4. Deutschland, Österreich (NICHT an Seen), Schweiz: "iconD2" (2.2km)
-5. UK, Irland: "ukv"
-6. Sonstiges Europa: "iconEu"
-7. Der Zoom-Level sollte die lokale Situation gut zeigen (8-9 für Seen und hochauflösende Modelle, 7 für regionale, 6 für europäische)
+1. Frankreich, Korsika: "aromeHd" (1.25km)
+2. UK, Irland: "ukv"
+3. Mittel-/Südosteuropa, Adria, südl. Ostsee, südl. Nordsee: "czeAladin" (2.3km) — Abdeckung: Ostengland–Ukraine, Südschweden–Süditalien/Albanien. Gilt für Deutschland, Österreich, Schweiz, Tschechien, Polen, Ungarn, Kroatien, Slowenien, Serbien, Italien (nördl./mittl.), Benelux, Dänemark, südl. Schweden, südl. Norwegen
+4. Skandinavien (nördlich), nördl. Ostsee, nördl. Nordsee, Griechenland, Iberische Halbinsel, Türkei, alles außerhalb der obigen Domains: "iconEu" (7km)
+5. Außerhalb Europas: "gfs"
+6. Der Zoom-Level sollte die lokale Situation gut zeigen (8-9 für hochauflösende Modelle, 7 für regionale, 5-6 für europäische/globale)
 
 Antworte NUR mit einem JSON-Objekt, KEINE weiteren Erklärungen:
 {"model": "...", "label": "...", "zoom": 8}
 
-Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "ICON-D2 (2.2km)", "ALADIN" oder "Meteoblue (lokal)". Schreibe NIEMALS "Czech" oder "Aladin Czech" — nur "ALADIN".`;
+Das "label" soll den Modellnamen und Auflösung enthalten, z.B. "AROME-HD (1.25km)", "ALADIN (2.3km)", "ICON-EU (7km)". Schreibe NIEMALS "Czech" oder "Aladin Czech" — nur "ALADIN".`;
 
 async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
   try {
@@ -308,7 +304,7 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
     const jsonMatch = text.match(/\{[^}]+\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      const validModels = ["iconD2", "czeAladin", "aromeHd", "arome", "ukv", "mblue", "iconEu", "gfs"];
+      const validModels = ["czeAladin", "aromeHd", "ukv", "iconEu", "gfs"];
       if (parsed.model && validModels.includes(parsed.model) && parsed.label) {
         return {
           model: parsed.model,
