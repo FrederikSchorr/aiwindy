@@ -937,57 +937,81 @@ STIL:
 - Bei Segelfragen: praktische Tipps aus Segler-Perspektive
 - Kurz und prägnant antworten, nicht übermäßig lang`;
 
-const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Erstelle eine strukturierte Segelwetteranalyse in genau 6 Abschnitten.
+const SECTION_STYLE = `STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil, KURZ und PRÄGNANT. Emojis sparsam: 💨 🌊 ☀️ ☁️ 🌧️ ⚠️ ⛈️. Konkrete Zahlen, KEINE halluzinierten Werte. KEINE Begrüßung, KEINE Floskeln. Schreibe KEINE Überschrift — nur die Bullet-Points.`;
 
-WICHTIG: Schreibe die Abschnitte EXAKT mit diesen Überschriften (## N. Titel) — die Überschriften steuern die Kartendarstellung!
+const SECTION1_PROMPT = `Du bist ein Meteorologe. Beschreibe die aktuelle Großwetterlage über Europa.
 
-QUELLEN-REGEL: Schreibe Quellen IMMER als klickbaren Markdown-Link: [(Quelle: Name)](URL)
-Die URLs der verfügbaren Quellen stehen im Datenkontext unter "QUELLENURLS".
+Schreibe genau ZWEI Bullet-Points basierend ausschließlich auf dem METEONEWS-TEXT:
+- Bullet 1: Dominierende Druckgebilde über Europa (Hochs, Tiefs, deren Lage und Einfluss)
+- Bullet 2: Luftmassen und deren Grenzen über Europa (Kaltluft, Warmluft, Luftmassengrenze)
+Jeder Bullet: 1 prägnanter Satz.
+Gib die Quelle am Ende des zweiten Bullets an: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
+Kein weiterer Text, keine weiteren Bullets.
+WICHTIG: Kein Bezug zu einem konkreten Ort — nur die europäische Gesamtlage beschreiben.
+Windangaben: kt, Druckangaben: hPa.
 
-## 1. Druck & Luftmassen
-- Genau ZWEI Bullet-Points, basierend ausschließlich auf dem METEONEWS-TEXT:
-  - Bullet 1: Dominierende Druckgebilde über Europa (Hochs, Tiefs, deren Lage und Einfluss)
-  - Bullet 2: Luftmassen und deren Grenzen über Europa (Kaltluft, Warmluft, Luftmassengrenze)
-- Jeder Bullet: 1 prägnanter Satz
-- Gib die Quelle am Ende des zweiten Bullets an: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
-- Kein weiterer Text, keine weiteren Bullets in dieser Sektion
+${SECTION_STYLE}`;
 
-## 2. Fronten
-- Basierend auf dem KNMI-Frontenbild, der obigen meteonews-Beschreibung und dem Zielort
-- Genau 1-2 Bullets: Fasse die regional relevanten Fronten für den Zielort zusammen
+const SECTION2_PROMPT = `Du bist ein Meteorologe und Segelwetter-Experte. Analysiere das beigefügte KNMI-Frontenbild und den meteonews-Text.
+
+Schreibe genau 1-2 Bullets:
+- Fasse die regional relevanten Fronten für den Zielort zusammen
 - Welche Fronten beeinflussen die Region? Zugweg in Richtung Revier?
 - Kalt-/Warmfronten, Okklusionen, Luftmassengrenzen — was ist relevant?
-- Quelle als Link: [(Quelle: meteonews.at)](https://meteonews.at/de/Allgemeine_Lage/K33/Europa)
+- Analysiere die Symbole auf der KNMI-Karte: blaue Dreiecke = Kaltfront, rote Halbkreise = Warmfront, abwechselnd = Okklusion, gestrichelt = Konvergenz
+- Quelle am letzten Bullet: [(Quelle: KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
 
-## 3. Wind & Welle
+${SECTION_STYLE}`;
+
+const SECTION3_PROMPT = `Du bist ein Segelwetter-Experte. Beschreibe Wind und Seezustand für den Zielort.
+
 Schreibe genau diese Bullets in dieser Reihenfolge:
-1. Erster Bullet: EXAKT den Text aus "ABSCHNITT-3-BULLET-1" im KONTEXT kopieren — keine Änderungen, keine Ergänzungen
+1. Erster Bullet: EXAKT den Text aus "ABSCHNITT-3-BULLET-1" kopieren — keine Änderungen, keine Ergänzungen
 2. Je aktives oder nahendes Windsystem 1 eigener Bullet: Name des Windsystems, warum aktiv/nahend, Windstärke & Böen in Knoten (kt) — KEIN Bft. NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen. WICHTIG: Nur Windsysteme nennen, die am konkreten Ort geographisch tatsächlich vorkommen können — niemals ein Windsystem erfinden oder aus anderen Regionen übertragen. Beispiele für typische regionale Windsysteme (nur wenn geographisch zutreffend): Küste/Adria: Bora, Maestral, Jugo/Scirocco; Mittelmeer: Meltemi, Mistral, Tramontana, Sirocco, Levante; Alpen/Binnenland: Föhn, thermische Winde (Tag-/Nachtwind), Talwind, Bergwind; Nordsee/Ostsee: keine speziellen Eigennamen. Falls kein benanntes Windsystem aktiv ist: diesen Bullet weglassen und nur den Hauptwind (Richtung, Stärke) im ersten Bullet beschreiben.
 3. Letzter Bullet: "Seezustand: [Zustand auf Deutsch]" — exakt aus dem regionalen Wetterbericht übernehmen und korrekt ins Deutsche übersetzen. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Beispiele: "slight and moderate" → "leicht bis mäßig", "The sea 3-4" → "leicht bis mäßig (Douglas 3-4)". Falls regionaler Wetterbericht nicht verfügbar: "Seezustand: nicht verfügbar"
 
-## 4. Wolken & Regen
-- Basierend auf dem regionalen Wetterbericht und (falls möglich) der Windy-Wolkenkarte
-- Genau 1-2 Bullets: Beschreibung Bewölkung, Regen, Gewitterrisiko in den nächsten 12h
-- Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)" — URL aus QUELLENURLS
+${SECTION_STYLE}`;
 
-## 5. Prognose
-- KEIN Fließtext, KEINE Bullets — nur die Überschrift, die Karte spricht für sich
+const SECTION4_PROMPT = `Du bist ein Meteorologe. Beschreibe Bewölkung und Niederschlag für den Zielort.
 
-## 6. Wetterwarnung
+Schreibe genau 1-2 Bullets:
+- Beschreibung Bewölkung, Regen, Gewitterrisiko in den nächsten 12h
+- Basierend auf dem regionalen Wetterbericht
+- Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)"
+
+${SECTION_STYLE}`;
+
+const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib die aktuellen Wetterwarnungen für den Zielort wieder.
+
 - Beginne mit dem Dienstnamen als Label, Beispiel: "[DHMZ Kroatien](WARNINGURL): Gelegentliche Böen..."
-- Der Dienstname ist ein klickbarer Markdown-Link zur Warnseite: [WARNDIENSTNAME](WARNINGURL) — URL aus QUELLENURLS
+- Der Dienstname ist ein klickbarer Markdown-Link zur Warnseite: [WARNDIENSTNAME](WARNINGURL)
 - Falls Warnungen aktiv: "[Dienstname](URL): [Warntext mit konkreten Werten und Zeitfenstern]"
 - Falls keine Warnungen: "[Dienstname](URL): Keine aktuellen Wetterwarnungen"
 
-STIL-REGELN:
-- Deutsch, sachlich-professionell, KEINE Begrüßung, KEINE Floskeln
-- Bullet-Point-Stil, Fließtext minimieren
-- Jeder Abschnitt: maximal 1-3 Bullets, KURZ und PRÄGNANT
-- Emojis sparsam: 💨 Wind, 🌊 Welle, ☀️ Sonne, ☁️ Wolken, 🌧️ Regen, ⚠️ Warnung, ⛈️ Gewitter
-- Konkrete Zahlen aus den Daten, KEINE halluzinierten Werte
-- Windangaben: kt / Bft, Druckangaben: hPa
+${SECTION_STYLE}`;
 
-`;
+async function fetchKnmiChartBase64(): Promise<string | null> {
+  try {
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcDay = now.getUTCDate();
+    const chartHour = utcHour >= 12 ? "12" : "00";
+    const dayStr = utcDay.toString().padStart(2, "0");
+    const chartUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
+
+    let chartRes = await fetch(chartUrl, { signal: AbortSignal.timeout(10000) });
+    if (!chartRes.ok) {
+      const fallbackUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}00_large.gif`;
+      chartRes = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000) });
+      if (!chartRes.ok) return null;
+    }
+    const buffer = Buffer.from(await chartRes.arrayBuffer());
+    return buffer.toString("base64");
+  } catch (e) {
+    console.error("KNMI chart fetch for vision failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
 
 
 export async function registerRoutes(
@@ -1427,10 +1451,11 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       ];
 
       const noResult: FetchResult = { text: "", available: false };
-      const [meteonewsText, regionalReport, warningsText] = await Promise.all([
+      const [meteonewsText, regionalReport, warningsText, knmiBase64] = await Promise.all([
         fetchMeteonews(),
         countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
         countryCode ? fetchRegionalWarnings(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
+        fetchKnmiChartBase64(),
       ]);
 
       const bullet1Available = service
@@ -1441,66 +1466,111 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         : `⚠️ Regionales Windmodell: ${geocoded.regionalModelLabel} — kein regionaler Wetterbericht verfügbar`;
       const abschnitt3Bullet1 = regionalReport.available ? bullet1Available : bullet1Unavailable;
 
-      const warningsUnavailableNote = !warningsText.available
-        ? `\n⚠️ PFLICHT-ANWEISUNG: Die Warnseite (${service?.warningLabel || "unbekannt"}) ist NICHT ABRUFBAR. Beginne Abschnitt 6 mit: "⚠️ [${service?.warningLabel || "Warnseite"}](${service?.warningUrl || "#"}) nicht erreichbar – bitte direkt auf der Seite prüfen."`
-        : "";
-
-      const dataContext = `
-ORT: ${geocoded.displayName} (${geocoded.lat.toFixed(4)}°N, ${geocoded.lon.toFixed(4)}°E)
-Ortskurzname: ${locationShort}
-Regionales Windmodell: ${geocoded.regionalModelLabel}
-Regionaler Wetterdienst: ${service?.label || "nicht verfügbar"}
-ABSCHNITT-3-BULLET-1: ${abschnitt3Bullet1}
-${warningsUnavailableNote}
-
---- QUELLENURLS (für Markdown-Links verwenden) ---
-meteonews.at Allgemeine Lage: https://meteonews.at/de/Allgemeine_Lage/K33/Europa
-Regionaler Wetterdienst (${service?.label || "nicht verfügbar"}): ${service?.forecastUrl || "nicht verfügbar"}
-Regionaler Warndienst (${service?.warningLabel || "nicht verfügbar"}): ${service?.warningUrl || "nicht verfügbar"}
-
---- METEONEWS ALLGEMEINE LAGE EUROPA (Quelle: meteonews.at) ---
-${meteonewsText || "(nicht verfügbar)"}
-
---- REGIONALER WETTERBERICHT (Quelle: ${service?.label || "nicht verfügbar"}) ---
-${regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR — Quelle nicht abrufbar)"}
-
---- REGIONALE WARNUNGEN (Quelle: ${service?.warningLabel || "nicht verfügbar"}) ---
-${warningsText.available ? warningsText.text : "(NICHT VERFÜGBAR — Warnseite nicht abrufbar)"}
-`;
-
-      const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      }));
-
-      const msgs: OpenAI.ChatCompletionMessageParam[] = [
-        { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
-        ...chatHistory,
-        { role: "user", content: `Erstelle Segelwetteranalyse für ${locationShort}.\n\n${dataContext}` },
-      ];
-
       sendSSE({ analysisStart: { sections: sectionConfigs } });
 
-      debugLogLLM("gpt-4.1", "sailing weather analysis", msgs);
-      const stream = await openai.chat.completions.create({
-        model: "gpt-4.1",
-        messages: msgs,
-        max_completion_tokens: 4096,
-        temperature: 0.3,
-        stream: true,
-      });
+      const streamSectionLLM = async (
+        sectionTitle: string,
+        systemPrompt: string,
+        userContent: string | OpenAI.ChatCompletionContentPart[],
+        model: string,
+        debugLabel: string,
+      ) => {
+        sendSSE({ content: `## ${sectionTitle}\n\n` });
 
-      let anaBuf = "";
-      let fullResponse = "";
-      let anaTimer: ReturnType<typeof setTimeout> | null = null;
-      const flushAna = () => { if (anaBuf) { sendSSE({ content: anaBuf }); anaBuf = ""; } anaTimer = null; };
-      for await (const chunk of stream) {
-        const text = chunk.choices?.[0]?.delta?.content;
-        if (text) { anaBuf += text; fullResponse += text; if (!anaTimer) anaTimer = setTimeout(flushAna, 30); }
+        const msgs: OpenAI.ChatCompletionMessageParam[] = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ];
+        debugLogLLM(model, debugLabel, msgs);
+
+        const stream = await openai.chat.completions.create({
+          model,
+          messages: msgs,
+          max_completion_tokens: 512,
+          temperature: 0.3,
+          stream: true,
+        });
+
+        let buf = "";
+        let fullText = "";
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const flush = () => { if (buf) { sendSSE({ content: buf }); buf = ""; } timer = null; };
+        for await (const chunk of stream) {
+          const text = chunk.choices?.[0]?.delta?.content;
+          if (text) { buf += text; fullText += text; if (!timer) timer = setTimeout(flush, 30); }
+        }
+        if (timer) clearTimeout(timer);
+        flush();
+        debugLogLLMResponse(model, debugLabel, fullText);
+        sendSSE({ content: "\n\n" });
+      };
+
+      // Section 1: Druck & Luftmassen (no location context)
+      await streamSectionLLM(
+        "1. Druck & Luftmassen",
+        SECTION1_PROMPT,
+        `METEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}`,
+        "gpt-4.1-mini",
+        "section1-druck-luftmassen",
+      );
+
+      // Section 2: Fronten (KNMI image + meteonews + location)
+      const section2UserContent: OpenAI.ChatCompletionContentPart[] = [];
+      if (knmiBase64) {
+        section2UserContent.push({
+          type: "image_url",
+          image_url: { url: `data:image/gif;base64,${knmiBase64}`, detail: "high" },
+        });
       }
-      if (anaTimer) clearTimeout(anaTimer);
-      flushAna();
-      debugLogLLMResponse("gpt-4.1", "sailing weather analysis", fullResponse);
+      section2UserContent.push({
+        type: "text",
+        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\n\nMETEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — nur meteonews-Text verwenden)" : ""}`,
+      });
+      await streamSectionLLM(
+        "2. Fronten",
+        SECTION2_PROMPT,
+        section2UserContent,
+        "gpt-4.1",
+        "section2-fronten",
+      );
+
+      // Section 3: Wind & Welle (regional report + model info)
+      const regionalReportText = regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR)";
+      const section3Context = `Zielort: ${locationShort}\nABSCHNITT-3-BULLET-1: ${abschnitt3Bullet1}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
+      await streamSectionLLM(
+        "3. Wind & Welle",
+        SECTION3_PROMPT,
+        section3Context,
+        "gpt-4.1-mini",
+        "section3-wind-welle",
+      );
+
+      // Section 4: Wolken & Regen (regional report)
+      const section4Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      await streamSectionLLM(
+        "4. Wolken & Regen",
+        SECTION4_PROMPT,
+        section4Context,
+        "gpt-4.1-mini",
+        "section4-wolken-regen",
+      );
+
+      // Section 5: Prognose (no LLM call — chart speaks for itself)
+      sendSSE({ content: "## 5. Prognose\n\n" });
+
+      // Section 6: Wetterwarnung
+      const warningServiceLabel = service?.warningLabel || "Warnseite";
+      const warningServiceUrl = service?.warningUrl || "#";
+      const warningContext = warningsText.available
+        ? `Zielort: ${locationShort}\nWarndienst: [${warningServiceLabel}](${warningServiceUrl})\n\nWARNUNGEN:\n${warningsText.text}`
+        : `Zielort: ${locationShort}\nWarndienst: [${warningServiceLabel}](${warningServiceUrl})\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ [${warningServiceLabel}](${warningServiceUrl}) nicht erreichbar – bitte direkt auf der Seite prüfen."`;
+      await streamSectionLLM(
+        "6. Wetterwarnung",
+        SECTION6_PROMPT,
+        warningContext,
+        "gpt-4.1-mini",
+        "section6-warnung",
+      );
 
       sendSSE({ done: true });
       res.end();

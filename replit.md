@@ -5,8 +5,8 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
-- **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, weather data fetching (Open-Meteo), regional weather scraping, and OpenAI streaming chat
-- **AI**: OpenAI GPT-4.1 for meteorological analysis/chat/photos, GPT-4.1-mini for message classification and regional model selection, Gemini 2.5 Flash for video analysis
+- **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, regional weather scraping, and OpenAI streaming chat
+- **AI**: OpenAI GPT-4.1 for fronts analysis (Vision with KNMI chart)/chat/photos, GPT-4.1-mini for section analysis/message classification/regional model selection, Gemini 2.5 Flash for video analysis
 - **No database required** - stateless app
 
 ## Key Files
@@ -25,8 +25,9 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
    - Scrapes meteonews.at for European weather overview
    - Scrapes regional weather service (DHMZ, DWD, GeoSphere, etc.) for local forecast
    - Scrapes regional warnings from national weather service
-   - Fetches Open-Meteo data (current + hourly + marine)
+   - Fetches KNMI fronts chart as base64 for Vision analysis
    - Emits per-section SSE events `{ section: { id, title, mapType, mapConfig, sourceLabel, sourceUrl } }` when each section starts in the AI stream
+   - Runs 5 separate LLM calls (one per section, section 5 has no LLM call) with focused prompts and only relevant context
    - Streams 6-section analysis text with inline maps driven by section events
 
 ## Chat Layout
@@ -42,6 +43,14 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 4. **Wolken & Regen** - Windy clouds overlay map
 5. **Prognose** - Windy meteogram (forecast type embed)
 6. **Wetterwarnung** - Scraped warning text from regional service, warning service link
+
+Each section runs as a separate LLM call with focused context:
+- Section 1 (gpt-4.1-mini): meteonews text only, no location — European overview
+- Section 2 (gpt-4.1 Vision): KNMI fronts chart image + meteonews text + location
+- Section 3 (gpt-4.1-mini): regional weather report + model info + location
+- Section 4 (gpt-4.1-mini): regional weather report + location
+- Section 5: No LLM call (chart only)
+- Section 6 (gpt-4.1-mini): warning text + location
 
 ## Photo/Video Upload
 - Camera button in chat input
@@ -59,7 +68,6 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - `POST /api/upload` - Multipart form: `photo` (file) + optional `currentLocation` (JSON string) - Streams SSE
 - `POST /api/geocode` - Body: `{ location }` - Returns geocoded result with regional model
 - `GET /api/knmi-chart` - Proxies the latest KNMI weather analysis chart (image/gif)
-- `POST /api/forecast` - Body: `{ lat, lon }` - Returns hourly forecast data
 
 ## Message Classification (AI-based)
 GPT-4.1-mini classifies each user message:
@@ -72,7 +80,7 @@ GPT-4.1-mini classifies each user message:
 - `fetchRegionalWeatherReport(countryCode, lat, lon)`: Scrapes national weather service for local forecast
 - `fetchRegionalWarnings(countryCode)`: Scrapes national weather service warnings page
 - Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
-- HTML stripped via regex, fallback to Open-Meteo data if scraping fails
+- HTML stripped via regex, fallback message if scraping fails
 - Austria (AT): Uses GeoSphere JSON APIs instead of scraping — `geosphere.at/data/textforecasts` for regional text forecasts (matched to nearest Bundesland by coordinates), `warnungen.zamg.at/wsapp/api/getWarningsForCoords` for coordinate-based warnings
 - LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
 
