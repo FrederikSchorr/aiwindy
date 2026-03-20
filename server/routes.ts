@@ -13,6 +13,11 @@ import { GoogleGenAI } from "@google/genai";
 const execFileAsync = promisify(execFile);
 
 const DEBUG_LOG_PATH = path.join(process.cwd(), "debug.log");
+if (process.env.DEBUG === "1") {
+  try {
+    fs.writeFileSync(DEBUG_LOG_PATH, `── Debug Log gestartet: ${new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" })} ──\n\n`);
+  } catch {}
+}
 
 function debugLog(summary: string, fullDetail?: string): void {
   if (process.env.DEBUG !== "1") return;
