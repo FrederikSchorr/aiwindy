@@ -1641,7 +1641,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "3. Wind & Welle",
         SECTION3_PROMPT,
         section3Context,
-        "gpt-4.1-mini",
+        "gpt-4.1",
         "section3-wind-welle",
         true,
       );

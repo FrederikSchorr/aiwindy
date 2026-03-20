@@ -47,7 +47,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 Each section runs as a separate LLM call with focused context:
 - Section 1 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + meteonews text, no location — European overview
 - Section 2 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + location (no meteonews text)
-- Section 3 (gpt-4.1-mini): regional weather report + model info + location
+- Section 3 (gpt-4.1): regional weather report + model info + location
 - Section 4 (gpt-4.1-mini): regional weather report + location
 - Section 5: No LLM call (chart only)
 - Section 6 (gpt-4.1-mini): warning text + location
