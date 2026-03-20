@@ -995,16 +995,12 @@ Schreibe genau 1-2 Bullets. JEDER Bullet MUSS mit "- " beginnen:
 
 ${SECTION_STYLE}`;
 
-const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1-2 Bullets mit Temperaturen, getrennt nach heute und morgen.
+const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Temperaturen für heute und morgen in einem Satz.
 
-Format-Beispiele:
-- "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C"
-- "- 🌡️ Morgen: [Tiefstwert]°C bis [Höchstwert]°C"
+Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C. [(Quelle: Dienstname)](URL)"
 - NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
-- Falls nur 1 Tag verfügbar: nur 1 Bullet
 - Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
-- Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)"
-- Schreibe NUR diese Bullets, NICHTS ANDERES.
+- Schreibe NUR diesen einen Bullet, NICHTS ANDERES.
 
 ${SECTION_STYLE}`;
 
