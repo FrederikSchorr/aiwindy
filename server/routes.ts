@@ -577,7 +577,99 @@ async function validateScrapedContent(text: string, expectedType: "forecast" | "
   }
 }
 
-async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"]): Promise<FetchResult> {
+const AT_BUNDESLAND_COORDS: Record<number, { name: string; lat: number; lon: number }> = {
+  8009100: { name: "Vorarlberg", lat: 47.25, lon: 9.9 },
+  8009200: { name: "Tirol", lat: 47.26, lon: 11.39 },
+  8009300: { name: "Salzburg", lat: 47.26, lon: 13.05 },
+  8009400: { name: "Oberösterreich", lat: 48.15, lon: 13.98 },
+  8009500: { name: "Niederösterreich", lat: 48.3, lon: 15.75 },
+  8009600: { name: "Wien", lat: 48.21, lon: 16.37 },
+  8009700: { name: "Burgenland", lat: 47.5, lon: 16.42 },
+  8009800: { name: "Steiermark", lat: 47.27, lon: 15.0 },
+  8009900: { name: "Kärnten", lat: 46.72, lon: 14.3 },
+};
+
+async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchResult> {
+  const url = "https://www.geosphere.at/data/textforecasts";
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    debugLog(`GeoSphere textforecasts API → ${res.status}`);
+    if (!res.ok) return { text: "", available: false };
+    const data = await res.json() as Array<{ stationid: number; text: string; validity_range: string[] }>;
+    if (!Array.isArray(data) || data.length === 0) return { text: "", available: false };
+
+    let bestId = 8009000;
+    let bestDist = Infinity;
+    for (const [idStr, info] of Object.entries(AT_BUNDESLAND_COORDS)) {
+      const dist = Math.sqrt(Math.pow(lat - info.lat, 2) + Math.pow(lon - info.lon, 2));
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = Number(idStr);
+      }
+    }
+    const bestName = AT_BUNDESLAND_COORDS[bestId]?.name || "Österreich";
+
+    const regionalEntries = data.filter(e => e.stationid === bestId);
+    const generalEntries = data.filter(e => e.stationid === 8009000);
+    const entries = regionalEntries.length > 0 ? regionalEntries : generalEntries;
+
+    const parts = entries
+      .slice(0, 3)
+      .map(e => e.text)
+      .filter(t => t && t.length > 10);
+
+    if (parts.length === 0) return { text: "", available: false };
+
+    const fullText = `Wetterprognose ${bestName}: ${parts.join(" ")}`;
+    debugLogScrape("forecast [AT]", url, res.status, fullText);
+    return { text: fullText.slice(0, 3000), available: true };
+  } catch (e) {
+    console.error("GeoSphere textforecasts fetch error:", e instanceof Error ? e.message : e);
+    return { text: "", available: false };
+  }
+}
+
+async function fetchGeoSphereWarnings(lat: number, lon: number): Promise<FetchResult> {
+  const url = `https://warnungen.zamg.at/wsapp/api/getWarningsForCoords?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    debugLog(`GeoSphere warnings API → ${res.status}`);
+    if (!res.ok) return { text: "", available: false };
+    const data = await res.json() as { properties?: { location?: { properties?: { name?: string } }; warnings?: Array<{ type?: string; level?: number; text?: string; start?: string; end?: string }> } };
+    const warnings = data?.properties?.warnings;
+    const locationName = data?.properties?.location?.properties?.name || "";
+
+    if (!warnings || warnings.length === 0) {
+      const noWarnText = locationName
+        ? `Keine aktiven Wetterwarnungen für ${locationName}.`
+        : "Keine aktiven Wetterwarnungen.";
+      debugLogScrape("warnings [AT]", url, res.status, noWarnText);
+      return { text: noWarnText, available: true };
+    }
+
+    const warnTexts = warnings.map(w => {
+      const parts: string[] = [];
+      if (w.type) parts.push(w.type);
+      if (w.text) parts.push(w.text);
+      if (w.start && w.end) parts.push(`(${w.start} bis ${w.end})`);
+      return parts.join(": ");
+    });
+    const fullText = `Wetterwarnungen ${locationName}: ${warnTexts.join(" | ")}`;
+    debugLogScrape("warnings [AT]", url, res.status, fullText);
+    return { text: fullText.slice(0, 2000), available: true };
+  } catch (e) {
+    console.error("GeoSphere warnings fetch error:", e instanceof Error ? e.message : e);
+    return { text: "", available: false };
+  }
+}
+
+async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"], _lat?: number, _lon?: number): Promise<FetchResult> {
   if (countryCode === "DK") {
     const dkUrl = "https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land";
     const dmiRes = await fetch(dkUrl, {
@@ -618,6 +710,8 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
 }
 
 async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<FetchResult> {
+  if (countryCode === "AT") return fetchGeoSphereForecasts(lat, lon);
+
   const service = REGIONAL_FORECAST_SERVICES[countryCode];
   if (!service) return { text: "", available: false };
 
@@ -655,7 +749,11 @@ async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]
   return { text, available: valid };
 }
 
-async function fetchRegionalWarnings(countryCode: string): Promise<FetchResult> {
+async function fetchRegionalWarnings(countryCode: string, lat?: number, lon?: number): Promise<FetchResult> {
+  if (countryCode === "AT" && lat !== undefined && lon !== undefined) {
+    return fetchGeoSphereWarnings(lat, lon);
+  }
+
   const service = REGIONAL_FORECAST_SERVICES[countryCode];
   if (!service) return { text: "", available: false };
 
@@ -1332,7 +1430,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const [meteonewsText, regionalReport, warningsText] = await Promise.all([
         fetchMeteonews(),
         countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
-        countryCode ? fetchRegionalWarnings(countryCode) : Promise.resolve(noResult),
+        countryCode ? fetchRegionalWarnings(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
       ]);
 
       const bullet1Available = service
