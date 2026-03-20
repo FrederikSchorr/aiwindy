@@ -1003,6 +1003,7 @@ Format-Beispiele:
 - NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
 - Falls nur 1 Tag verfügbar: nur 1 Bullet
 - Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
+- Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)"
 - Schreibe NUR diese Bullets, NICHTS ANDERES.
 
 ${SECTION_STYLE}`;
