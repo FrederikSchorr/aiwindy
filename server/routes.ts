@@ -9,6 +9,7 @@ import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
+import Anthropic from "@anthropic-ai/sdk";
 
 const execFileAsync = promisify(execFile);
 
@@ -237,6 +238,11 @@ async function extractVideoMetadata(filePath: string): Promise<{
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+const anthropic = new Anthropic({
+  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
 const gemini = new GoogleGenAI({
@@ -1523,26 +1529,44 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "section1-druck-luftmassen",
       );
 
-      // Section 2: Fronten (KNMI image + meteonews + location)
-      const section2UserContent: OpenAI.ChatCompletionContentPart[] = [];
+      // Section 2: Fronten (KNMI image via Claude Sonnet 4.6)
+      sendSSE({ section: sectionConfigs[1] });
+      sendSSE({ content: "## 2. Fronten\n\n" });
+
+      const section2UserContent: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
       if (knmiBase64) {
         section2UserContent.push({
-          type: "image_url",
-          image_url: { url: `data:image/gif;base64,${knmiBase64}`, detail: "high" },
+          type: "image",
+          source: { type: "base64", media_type: "image/gif", data: knmiBase64 },
         });
       }
       section2UserContent.push({
         type: "text",
         text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
       });
-      await streamSectionLLM(
-        1,
-        "2. Fronten",
-        SECTION2_PROMPT,
-        section2UserContent,
-        "gpt-4o",
-        "section2-fronten",
-      );
+
+      debugLogLLMInput("claude-sonnet-4-6", "section2-fronten", JSON.stringify(section2UserContent).slice(0, 500));
+      const claudeStream = anthropic.messages.stream({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        system: SECTION2_PROMPT,
+        messages: [{ role: "user", content: section2UserContent }],
+      });
+
+      let s2Buf = "";
+      let s2Full = "";
+      let s2Timer: ReturnType<typeof setTimeout> | null = null;
+      const s2Flush = () => { if (s2Buf) { sendSSE({ content: s2Buf }); s2Buf = ""; } s2Timer = null; };
+      for await (const event of claudeStream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          const text = event.delta.text;
+          if (text) { s2Buf += text; s2Full += text; if (!s2Timer) s2Timer = setTimeout(s2Flush, 30); }
+        }
+      }
+      if (s2Timer) clearTimeout(s2Timer);
+      s2Flush();
+      debugLogLLMResponse("claude-sonnet-4-6", "section2-fronten", s2Full);
+      sendSSE({ content: "\n\n" });
 
       // Section 3: Wind & Welle (regional report + model info)
       const regionalReportText = regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR)";

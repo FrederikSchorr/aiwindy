@@ -6,7 +6,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
 - **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, regional weather scraping, and OpenAI streaming chat
-- **AI**: OpenAI GPT-4o for fronts analysis (Vision with KNMI chart), GPT-4.1 for chat/photos, GPT-4.1-mini for section analysis/message classification/regional model selection, Gemini 2.5 Flash for video analysis
+- **AI**: Anthropic Claude Sonnet 4.6 for fronts analysis (Vision with KNMI chart), OpenAI GPT-4.1 for chat/photos, GPT-4.1-mini for section analysis/message classification/regional model selection, Gemini 2.5 Flash for video analysis
 - **No database required** - stateless app
 
 ## Key Files
@@ -46,7 +46,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 
 Each section runs as a separate LLM call with focused context:
 - Section 1 (gpt-4.1-mini): meteonews text only, no location — European overview
-- Section 2 (gpt-4o Vision): KNMI fronts chart image + location (no meteonews text)
+- Section 2 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + location (no meteonews text)
 - Section 3 (gpt-4.1-mini): regional weather report + model info + location
 - Section 4 (gpt-4.1-mini): regional weather report + location
 - Section 5: No LLM call (chart only)
