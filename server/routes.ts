@@ -975,7 +975,12 @@ ${SECTION_STYLE}`;
 const SECTION3_PROMPT = `Du bist ein Segelwetter-Experte. Beschreibe NUR Wind und Wellen/Seezustand für den Zielort. KEINE Wolken, KEINE Temperaturen, KEINE Niederschläge.
 
 Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT. JEDER Bullet MUSS mit "- " beginnen (Markdown-Bullet):
-1. Je aktives oder nahendes Windsystem 1 eigener Bullet: "- 💨 Wind: ..." oder "- 💨 [Windsystem]: ...". Windstärke & Böen in Knoten (kt) — KEIN Bft. NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen. PFLICHT: JEDER Bullet MUSS einen konkreten Zeitbezug enthalten — z.B. "heute Nachmittag 10-15kt", "heute Abend abflauend auf 5kt", "in der Nacht NW 8kt", "morgen Vormittag auffrischend auf 20kt". NIEMALS Werte ohne Zeitangabe! WICHTIG: Nur Windsysteme nennen, die am konkreten Ort geographisch tatsächlich vorkommen können — niemals ein Windsystem erfinden oder aus anderen Regionen übertragen. Beispiele für typische regionale Windsysteme (nur wenn geographisch zutreffend): Küste/Adria: Bora, Maestral, Jugo/Scirocco; Mittelmeer: Meltemi, Mistral, Tramontana, Sirocco, Levante; Alpen/Binnenland: Föhn, thermische Winde (Tag-/Nachtwind), Talwind, Bergwind; Nordsee/Ostsee: keine speziellen Eigennamen. Falls kein benanntes Windsystem aktiv ist: diesen Bullet weglassen und nur den Hauptwind (Richtung, Stärke) beschreiben.
+1. MAXIMAL 2 Wind-Bullets, KURZ (max 15 Wörter). Format: "- 💨 [Zeitbezug]: [Richtung] [Stärke]kt (Böen [Wert]kt)"
+Beispiele: "- 💨 Heute Nachmittag: N 10-15kt (Böen 20kt)", "- 💨 Morgen: NW 5-8kt"
+- Windstärke in Knoten (kt), Böen in Klammern wenn vorhanden. KEIN Bft.
+- NUR Werte aus dem REGIONALEN WETTERBERICHT, KEINE Schätzungen
+- PFLICHT: Zeitbezug in jedem Bullet (heute/morgen/nachts)
+- Regionale Windsysteme nur wenn geographisch zutreffend (Bora, Maestral, Meltemi, Föhn etc.)
 2. Letzter Bullet: "- 🌊 Seezustand: [Zustand auf Deutsch]" — NUR wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält (z.B. "sea 3-4", "slight", "moderate", "rough", Wellenhöhe). NIEMALS Seegang aus Windstärke schätzen oder ableiten! Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=bewegt/rau (rough), 6=sehr bewegt. Falls KEINE Seegangsdaten im Wetterbericht: diesen Bullet KOMPLETT weglassen.
 WICHTIG: Schreibe AUSSCHLIESSLICH über Wind und Wellen. Keine weiteren Themen. JEDER Bullet beginnt mit "- ".
 
