@@ -1464,7 +1464,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         {
           id: "prognose", title: "5. Prognose",
           mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom, forecast: true },
-          sourceLabel: `Prognose ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: basisdatenUrl,
+          sourceLabel: `Prognose ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
         },
         {
           id: "warnung", title: "6. Wetterwarnung",
@@ -1616,7 +1616,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const regionalReportText = regionalReport.available ? regionalReport.text : "(NICHT VERFÜGBAR)";
       sendSSE({ section: sectionConfigs[2] });
       sendSSE({ content: `## 3. Wind & Welle\n\n- ${abschnitt3Bullet1}\n` });
-      const section3Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
+      const section3Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${regionalReportText}`;
       await streamSectionLLM(
         2,
         "3. Wind & Welle",
@@ -1641,7 +1641,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       // Section 5: Prognose (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
-      const section5Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const section5Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
       await streamSectionLLM(
         4,
         "5. Prognose",
