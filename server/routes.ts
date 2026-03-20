@@ -440,8 +440,8 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
   HR: {
     forecastUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
     label: "DHMZ Kroatien",
-    warningUrl: "https://meteo.hr/naslovnica-upozorenja.php?lang=en&tab=upozorenja",
-    warningLabel: "DHMZ Warnungen",
+    warningUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
+    warningLabel: "DHMZ Small Marine Craft",
   },
   DE: {
     forecastUrl: "https://www.dwd.de/DWD/wetter/wv_allg/deutschland/text/vhdl13_dwoh.html",
