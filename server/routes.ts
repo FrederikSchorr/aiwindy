@@ -1641,7 +1641,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       // Section 5: Prognose (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
-      const section5Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      const section5Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
       await streamSectionLLM(
         4,
         "5. Prognose",
