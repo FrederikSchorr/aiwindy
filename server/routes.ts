@@ -12,47 +12,121 @@ import { GoogleGenAI } from "@google/genai";
 
 const execFileAsync = promisify(execFile);
 
-function debugLog(...args: unknown[]): void {
-  if (process.env.DEBUG === "1") {
-    console.log("[DEBUG]", ...args);
-  }
+const DEBUG_LOG_PATH = path.join(process.cwd(), "debug.log");
+
+function debugLog(summary: string, fullDetail?: string): void {
+  if (process.env.DEBUG !== "1") return;
+  console.log(`[DEBUG] ${summary}`);
+  const timestamp = new Date().toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const fileContent = fullDetail
+    ? `[${timestamp}] ${summary}\n${fullDetail}\n`
+    : `[${timestamp}] ${summary}\n`;
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, fileContent);
+  } catch {}
 }
 
-function sanitizeForDebug(messages: unknown): unknown {
-  if (Array.isArray(messages)) {
-    return messages.map(sanitizeForDebug);
-  }
-  if (messages && typeof messages === "object") {
-    const obj = messages as Record<string, unknown>;
-    const result: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(obj)) {
-      if (typeof v === "string" && v.length > 500 && /^[A-Za-z0-9+/=]{100,}$/.test(v)) {
-        result[k] = `[BASE64_IMAGE ${v.length} bytes]`;
-      } else if (Array.isArray(v)) {
-        result[k] = v.map((item: unknown) => {
-          if (item && typeof item === "object") {
-            const part = item as Record<string, unknown>;
-            if (part.type === "image_url" && part.image_url && typeof (part.image_url as Record<string, unknown>).url === "string") {
-              const url = (part.image_url as Record<string, unknown>).url as string;
-              const base64Match = url.match(/^data:[^;]+;base64,(.+)$/);
-              if (base64Match) {
-                return { ...part, image_url: { ...(part.image_url as Record<string, unknown>), url: `[BASE64_IMAGE ${base64Match[1].length} bytes]` } };
-              }
-            }
-            if (part.inlineData && typeof (part.inlineData as Record<string, unknown>).data === "string") {
-              const data = (part.inlineData as Record<string, unknown>).data as string;
-              return { ...part, inlineData: { ...(part.inlineData as Record<string, unknown>), data: `[BASE64_IMAGE ${data.length} bytes]` } };
-            }
+function debugLogRequestSeparator(label: string): void {
+  if (process.env.DEBUG !== "1") return;
+  const timestamp = new Date().toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const separator = `\n${"=".repeat(80)}\n  REQUEST: ${label}\n  Zeit: ${timestamp}\n${"=".repeat(80)}\n`;
+  console.log(`[DEBUG] ── New Request: ${label}`);
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, separator);
+  } catch {}
+}
+
+function formatLLMMessages(messages: unknown[]): string {
+  const lines: string[] = [];
+  for (const msg of messages) {
+    if (!msg || typeof msg !== "object") continue;
+    const m = msg as Record<string, unknown>;
+    const role = String(m.role || "unknown").toUpperCase();
+    lines.push(`─── ${role} ───`);
+    if (typeof m.content === "string") {
+      lines.push(m.content);
+    } else if (Array.isArray(m.content)) {
+      for (const part of m.content) {
+        if (!part || typeof part !== "object") continue;
+        const p = part as Record<string, unknown>;
+        if (p.type === "text" && typeof p.text === "string") {
+          lines.push(p.text);
+        } else if (p.type === "image_url") {
+          const imgUrl = (p.image_url as Record<string, unknown>)?.url;
+          if (typeof imgUrl === "string" && imgUrl.startsWith("data:")) {
+            lines.push(`[BASE64_IMAGE ~${Math.round(imgUrl.length / 1024)}KB]`);
+          } else {
+            lines.push(`[IMAGE: ${imgUrl}]`);
           }
-          return item;
-        });
-      } else {
-        result[k] = v;
+        } else if (p.text && typeof p.text === "string") {
+          lines.push(p.text);
+        } else if (p.inlineData) {
+          const d = p.inlineData as Record<string, unknown>;
+          const dataLen = typeof d.data === "string" ? d.data.length : 0;
+          lines.push(`[INLINE_DATA ${d.mimeType || "unknown"} ~${Math.round(dataLen / 1024)}KB]`);
+        }
       }
     }
-    return result;
+    if (Array.isArray(m.parts)) {
+      for (const part of m.parts) {
+        if (!part || typeof part !== "object") continue;
+        const p = part as Record<string, unknown>;
+        if (typeof p.text === "string") {
+          lines.push(p.text);
+        } else if (p.inlineData) {
+          const d = p.inlineData as Record<string, unknown>;
+          const dataLen = typeof d.data === "string" ? d.data.length : 0;
+          lines.push(`[INLINE_DATA ${d.mimeType || "unknown"} ~${Math.round(dataLen / 1024)}KB]`);
+        }
+      }
+    }
+    lines.push("");
   }
-  return messages;
+  return lines.join("\n");
+}
+
+function debugLogLLM(model: string, context: string, messages: unknown[], systemInstruction?: string): void {
+  if (process.env.DEBUG !== "1") return;
+  const msgCount = messages.length;
+  const summary = `LLM [${model} / ${context}] ${msgCount} messages`;
+  console.log(`[DEBUG] ${summary}`);
+  let detail = `── LLM Call: ${model} / ${context} ──\n`;
+  if (systemInstruction) {
+    detail += `─── SYSTEM INSTRUCTION ───\n${systemInstruction}\n\n`;
+  }
+  detail += formatLLMMessages(messages);
+  detail += `${"─".repeat(40)}\n`;
+  const timestamp = new Date().toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, `[${timestamp}] ${summary}\n${detail}\n`);
+  } catch {}
+}
+
+function debugLogScrape(source: string, url: string, status: number, text: string): void {
+  if (process.env.DEBUG !== "1") return;
+  const summary = `Scrape ${source} → ${status}, ${text.length} chars`;
+  console.log(`[DEBUG] ${summary}`);
+  const timestamp = new Date().toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const detail = `── Scrape: ${source} ──\nURL: ${url}\nHTTP Status: ${status}\nText (${text.length} chars):\n${text}\n${"─".repeat(40)}\n`;
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, `[${timestamp}] ${summary}\n${detail}\n`);
+  } catch {}
 }
 
 async function extractVideoThumbnail(filePath: string): Promise<string | null> {
@@ -201,7 +275,7 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
       { role: "system", content: MODEL_SELECTION_PROMPT },
       { role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` },
     ];
-    debugLog(`LLM [gpt-4.1-mini / getRegionalModelAI] messages:\n${JSON.stringify(sanitizeForDebug(modelSelMessages), null, 2)}`);
+    debugLogLLM("gpt-4.1-mini", "getRegionalModelAI", modelSelMessages);
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: modelSelMessages as OpenAI.ChatCompletionMessageParam[],
@@ -252,7 +326,7 @@ async function fetchMeteonews(): Promise<string> {
       headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
       signal: AbortSignal.timeout(8000),
     });
-    debugLog(`fetchMeteonews: URL=${url} HTTP=${res.status}`);
+    debugLog(`Scrape meteonews.at → ${res.status}`);
     if (!res.ok) return "";
     const html = await res.text();
 
@@ -262,7 +336,7 @@ async function fetchMeteonews(): Promise<string> {
 
     if (bulletinMatch) {
       const fullText = stripHtml(bulletinMatch[1]).trim();
-      debugLog(`fetchMeteonews: scraped text (${fullText.length} chars):\n${fullText}`);
+      debugLogScrape("meteonews.at", url, res.status, fullText);
       return fullText.slice(0, 1500);
     }
 
@@ -271,11 +345,11 @@ async function fetchMeteonews(): Promise<string> {
     const startIdx = plainText.indexOf("Europawetter");
     if (startIdx >= 0) {
       const fullText = plainText.slice(startIdx).trim();
-      debugLog(`fetchMeteonews: scraped text fallback (${fullText.length} chars):\n${fullText}`);
+      debugLogScrape("meteonews.at (fallback)", url, res.status, fullText);
       return fullText.slice(0, 1500);
     }
 
-    debugLog(`fetchMeteonews: scraped text last-resort (${plainText.length} chars):\n${plainText}`);
+    debugLogScrape("meteonews.at (last-resort)", url, res.status, plainText);
     return plainText.slice(0, 1500);
   } catch (e) {
     console.error("Meteonews fetch failed:", e);
@@ -409,7 +483,7 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
       headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
       signal: AbortSignal.timeout(10000),
     });
-    debugLog(`tryFetchForecast [${countryCode}]: URL=${dkUrl} HTTP=${dmiRes.status}`);
+    debugLog(`Scrape forecast [${countryCode}] → ${dmiRes.status}`);
     if (!dmiRes.ok) return { text: "", available: false };
     const data = await dmiRes.json() as { date?: string; valid?: string; weatherForecast?: string; slipperyWarning?: string | null };
     const parts: string[] = [];
@@ -418,7 +492,7 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
     if (data.weatherForecast) parts.push(data.weatherForecast);
     if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
     const fullText = parts.join(" ");
-    debugLog(`tryFetchForecast [${countryCode}]: scraped text (${fullText.length} chars):\n${fullText}`);
+    debugLogScrape(`forecast [${countryCode}]`, dkUrl, dmiRes.status, fullText);
     const text = fullText.slice(0, 3000);
     return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
   }
@@ -431,11 +505,11 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
     },
     signal: AbortSignal.timeout(10000),
   });
-  debugLog(`tryFetchForecast [${countryCode}]: URL=${service.forecastUrl} HTTP=${res.status}`);
+  debugLog(`Scrape forecast [${countryCode}] → ${res.status}`);
   if (!res.ok) return { text: "", available: false };
   const html = await res.text();
   const fullText = stripHtml(html);
-  debugLog(`tryFetchForecast [${countryCode}]: scraped text (${fullText.length} chars):\n${fullText}`);
+  debugLogScrape(`forecast [${countryCode}]`, service.forecastUrl, res.status, fullText);
   const text = fullText.slice(0, 3000);
   return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
 }
@@ -468,11 +542,11 @@ async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]
     },
     signal: AbortSignal.timeout(8000),
   });
-  debugLog(`tryFetchWarnings [${service.warningLabel}]: URL=${service.warningUrl} HTTP=${res.status}`);
+  debugLog(`Scrape warnings [${service.warningLabel}] → ${res.status}`);
   if (!res.ok) return { text: "", available: false };
   const html = await res.text();
   const fullText = stripHtml(html);
-  debugLog(`tryFetchWarnings [${service.warningLabel}]: scraped text (${fullText.length} chars):\n${fullText}`);
+  debugLogScrape(`warnings [${service.warningLabel}]`, service.warningUrl, res.status, fullText);
   const text = fullText.slice(0, 2000);
   return { text, available: fullText.length >= REGIONAL_MIN_TEXT_LENGTH };
 }
@@ -527,7 +601,7 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
         },
         { role: "user", content: message },
     ];
-    debugLog(`LLM [gpt-4.1-mini / classifyMessage] messages:\n${JSON.stringify(sanitizeForDebug(classifyMessages), null, 2)}`);
+    debugLogLLM("gpt-4.1-mini", "classifyMessage", classifyMessages);
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: classifyMessages as OpenAI.ChatCompletionMessageParam[],
@@ -624,11 +698,11 @@ async function geocodeLocation(locationName: string): Promise<{
       } catch {}
     }
 
-    debugLog(`geocodeLocation: countryCode=${countryCode}, cityName=${cityName}, isWater=${isWater}`);
+    debugLog(`geocodeLocation: countryCode=${countryCode}, cityName=${cityName}, isWater=${isWater}`, `countryCode=${countryCode}\ncityName=${cityName}\nisWater=${isWater}`);
     const finalModel = countryCode === "AT"
       ? { model: "czeAladin", label: "ALADIN", zoom: 7 }
       : regional;
-    debugLog(`geocodeLocation: model override check: countryCode="${countryCode}" === "AT" → ${countryCode === "AT"}, using model=${finalModel.model}`);
+    debugLog(`geocodeLocation: model=${finalModel.model} (${finalModel.label})`);
 
     return {
       lat, lon,
@@ -721,6 +795,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   app.post("/api/geocode", async (req, res) => {
+    debugLogRequestSeparator(`POST /api/geocode — ${req.body?.location || "unknown"}`);
     const parsed = geocodeRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid request. Please provide a location." });
@@ -815,6 +890,7 @@ WENN JA: Beginne sofort mit dem ersten Abschnitt — KEIN einleitender Satz, KEI
 STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
   app.post("/api/upload", upload.single("photo"), async (req, res) => {
+    debugLogRequestSeparator(`POST /api/upload — ${req.file?.originalname || "no file"}`);
     if (!req.file) {
       return res.status(400).json({ error: "Keine Datei hochgeladen" });
     }
@@ -927,7 +1003,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
               { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
             ],
           }];
-          debugLog(`LLM [gemini-2.5-flash / video analysis] systemInstruction (${videoPrompt.length} chars):\n${videoPrompt}\ncontents:\n${JSON.stringify(sanitizeForDebug(geminiContents), null, 2)}`);
+          debugLogLLM("gemini-2.5-flash", "video analysis", geminiContents, videoPrompt);
           const result = await gemini.models.generateContent({
             model: "gemini-2.5-flash",
             contents: geminiContents,
@@ -950,7 +1026,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
               ],
             },
           ];
-          debugLog(`LLM [gpt-4.1 / video fallback] messages:\n${JSON.stringify(sanitizeForDebug(fallbackMessages), null, 2)}`);
+          debugLogLLM("gpt-4.1", "video fallback", fallbackMessages);
           const fallbackRes = await openai.chat.completions.create({
             model: "gpt-4.1",
             messages: fallbackMessages,
@@ -993,7 +1069,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           },
         ];
 
-        debugLog(`LLM [gpt-4.1 / image analysis] messages:\n${JSON.stringify(sanitizeForDebug(imageMessages), null, 2)}`);
+        debugLogLLM("gpt-4.1", "image analysis", imageMessages);
         const imgResponse = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: imageMessages,
@@ -1023,6 +1099,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
   app.post("/api/chat", async (req, res) => {
     const { message, history, currentLocation } = req.body;
+    debugLogRequestSeparator(`POST /api/chat — "${(message || "").slice(0, 80)}"`);
 
     if (!message) {
       return res.status(400).json({ error: "Message required" });
@@ -1061,7 +1138,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           { role: "user", content: userContent },
         ];
 
-        debugLog(`LLM [gpt-4.1 / general chat] messages:\n${JSON.stringify(sanitizeForDebug(msgs), null, 2)}`);
+        debugLogLLM("gpt-4.1", "general chat", msgs);
         const chatResponse = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: msgs,
@@ -1200,7 +1277,7 @@ ${warningsText.available ? warningsText.text : "(NICHT VERFÜGBAR — Warnseite 
 
       sendSSE({ analysisStart: { sections: sectionConfigs } });
 
-      debugLog(`LLM [gpt-4.1 / sailing weather analysis] messages:\n${JSON.stringify(sanitizeForDebug(msgs), null, 2)}`);
+      debugLogLLM("gpt-4.1", "sailing weather analysis", msgs);
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages: msgs,
