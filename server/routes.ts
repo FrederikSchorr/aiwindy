@@ -563,7 +563,7 @@ async function validateScrapedContent(text: string, expectedType: "forecast" | "
       : "echte Wetterwarninformationen (aktive Warnungen ODER die explizite Meldung dass keine Warnungen aktiv sind)";
     const messages: OpenAI.ChatCompletionMessageParam[] = [
       { role: "system", content: `Enthält der folgende Text ${typeDesc}? Oder ist es nur Website-Navigation, Menüs, Impressum, JavaScript-Code, Beaufort-Tabellen, oder sonstiger Nicht-Wetter-Inhalt? Antworte NUR mit JA oder NEIN.` },
-      { role: "user", content: text.slice(0, 1500) },
+      { role: "user", content: text.slice(0, 4000) },
     ];
     debugLogLLM("gpt-4.1-mini", `validate ${expectedType} [${label}]`, messages);
     const result = await openai.chat.completions.create({
