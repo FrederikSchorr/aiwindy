@@ -968,7 +968,7 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 
 Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
 - Beschreibe NUR Fronten (Kalt-, Warm-, Okklusionen, Konvergenzlinien) nahe dem Zielort: Typ, ungefähre Entfernung, Zugrichtung
-- WICHTIG: Zeitbezug angeben — die KNMI-Karte hat einen Analysezeitpunkt, beziehe dich darauf (z.B. "Kaltfront lag um 00 UTC ca. 200km westlich...")
+- WICHTIG: Zeitbezug angeben — der KNMI-Analysezeitpunkt wird im Context mitgegeben. Verwende relative Zeitangaben wie "vor Xh" (z.B. "Kaltfront lag vor 10h ca. 200km westlich...")
 - Falls keine Fronten nahe dem Zielort: schreibe NUR "- ✅ Keine Fronten in der Nähe von [Zielort]"
 - KEINE Beschreibung von Hoch- oder Tiefdruckgebieten, KEINE Isobaren — NUR Fronten
 - Quelle am LETZTEN Bullet anhängen (auch wenn nur 1 Bullet): [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
@@ -995,12 +995,15 @@ Schreibe genau 1-2 Bullets. JEDER Bullet MUSS mit "- " beginnen:
 
 ${SECTION_STYLE}`;
 
-const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Temperatur-Unter- und Oberwerten für die nächsten 24h.
+const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1-2 Bullets mit Temperaturen, getrennt nach heute und morgen.
 
-Format: "- 🌡️ Temperatur: [Tiefstwert]°C bis [Höchstwert]°C in den nächsten 24h"
+Format-Beispiele:
+- "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C"
+- "- 🌡️ Morgen: [Tiefstwert]°C bis [Höchstwert]°C"
 - NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
+- Falls nur 1 Tag verfügbar: nur 1 Bullet
 - Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
-- Schreibe NUR diesen einen Bullet, NICHTS ANDERES.
+- Schreibe NUR diese Bullets, NICHTS ANDERES.
 
 ${SECTION_STYLE}`;
 
@@ -1584,9 +1587,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           source: { type: "base64", media_type: "image/gif", data: knmiBase64 },
         });
       }
+      const knmiHoursAgo = Math.round((Date.now() - new Date(new Date().toISOString().slice(0, 10) + `T${knmiTime.hour}:00:00Z`).getTime()) / 3600000);
       section2UserContent.push({
         type: "text",
-        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\nKNMI-Analysezeitpunkt: ${knmiTime.label}${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
+        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\nKNMI-Analysezeitpunkt: ${knmiTime.label} (vor ${knmiHoursAgo}h)${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
       });
 
       debugLogLLM("claude-sonnet-4-6", "section2-fronten", [{ role: "user", content: "(KNMI image + location)" }], SECTION2_PROMPT);
