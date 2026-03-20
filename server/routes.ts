@@ -1013,7 +1013,7 @@ MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenst
 Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh"
 - KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
 - NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
-- SEEGANG/WELLEN/DOUGLAS: NIEMALS erwähnen. Seegang ist KEIN Thema für Wetterwarnungen. Schreibe NICHTS über Seegang, Wellen, Douglas-Skala oder Wellenhöhe. NUR Wind und Gewitter sind relevante Warnungen.
+- SEEGANG/WELLEN: Schreibe NICHTS über Seegang, Wellen oder Douglas-Skala. Die Seegangs-Warnung wird separat automatisch hinzugefügt.
 - Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
 - Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
@@ -1681,7 +1681,26 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const warningContext = warningsText.available
         ? `Zielort: ${locationShort}\n\nWARNUNGEN:\n${warningsText.text}`
         : `Zielort: ${locationShort}\n\n⚠️ Die Warnseite (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
+      // Check for Douglas >= 5 sea state warning in source text
+      let douglasWarningBullet = "";
+      if (warningsText.available) {
+        const douglasMatch = warningsText.text.match(/(?:sea|seegang|douglas|wave)[\s\S]{0,50}?(\d)\s*[-–]\s*(\d)/i)
+          || warningsText.text.match(/(?:sea|seegang|douglas)[\s\S]{0,30}?(\d)/i);
+        if (douglasMatch) {
+          const upperVal = douglasMatch[2] ? parseInt(douglasMatch[2]) : parseInt(douglasMatch[1]);
+          const lowerVal = parseInt(douglasMatch[1]);
+          if (lowerVal >= 5 || upperVal >= 5) {
+            const desc = upperVal >= 6 ? "sehr rau" : "rau";
+            douglasWarningBullet = douglasMatch[2]
+              ? `\n- ⚠️ 🌊 Seegang Douglas ${lowerVal}-${upperVal}, ${desc}`
+              : `\n- ⚠️ 🌊 Seegang Douglas ${lowerVal}, ${desc}`;
+          }
+        }
+      }
       const s6Source = `([${warningServiceLabel}](${warningServiceUrl}))`;
+      const s6SourceWithDouglas = douglasWarningBullet
+        ? `${douglasWarningBullet} ${s6Source}`
+        : s6Source;
       await streamSectionLLM(
         5,
         "6. Wetterwarnung",
@@ -1690,7 +1709,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "gpt-4.1-mini",
         "section6-warnung",
         false,
-        s6Source,
+        s6SourceWithDouglas,
       );
 
       sendSSE({ done: true });
