@@ -507,10 +507,11 @@ async function validateScrapedContent(text: string, expectedType: "forecast" | "
       { role: "system", content: `Enthält der folgende Text ${typeDesc}? Oder ist es nur Website-Navigation, Menüs, Impressum, JavaScript-Code, Beaufort-Tabellen, oder sonstiger Nicht-Wetter-Inhalt? Antworte NUR mit JA oder NEIN.` },
       { role: "user", content: text.slice(0, 1500) },
     ];
+    debugLogLLM("gpt-4.1-mini", `validate ${expectedType} [${label}]`, messages);
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages,
-      max_completion_tokens: 4,
+      max_completion_tokens: 2,
       temperature: 0,
     });
     const answer = result.choices[0]?.message?.content?.trim().toUpperCase() || "";
