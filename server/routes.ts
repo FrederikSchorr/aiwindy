@@ -1519,15 +1519,44 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         sendSSE({ content: "\n\n" });
       };
 
-      // Section 1: Druck & Luftmassen (no location context)
-      await streamSectionLLM(
-        0,
-        "1. Druck & Luftmassen",
-        SECTION1_PROMPT,
-        `METEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}`,
-        "gpt-4.1-mini",
-        "section1-druck-luftmassen",
-      );
+      // Section 1: Druck & Luftmassen (Claude with KNMI image + meteonews)
+      sendSSE({ section: sectionConfigs[0] });
+      sendSSE({ content: "## 1. Druck & Luftmassen\n\n" });
+
+      const section1UserContent: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
+      if (knmiBase64) {
+        section1UserContent.push({
+          type: "image",
+          source: { type: "base64", media_type: "image/gif", data: knmiBase64 },
+        });
+      }
+      section1UserContent.push({
+        type: "text",
+        text: `METEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}`,
+      });
+
+      debugLogLLM("claude-sonnet-4-6", "section1-druck-luftmassen", [{ role: "user", content: "(KNMI image + meteonews)" }], SECTION1_PROMPT.slice(0, 200));
+      const s1Stream = anthropic.messages.stream({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        system: SECTION1_PROMPT,
+        messages: [{ role: "user", content: section1UserContent }],
+      });
+
+      let s1Buf = "";
+      let s1Full = "";
+      let s1Timer: ReturnType<typeof setTimeout> | null = null;
+      const s1Flush = () => { if (s1Buf) { sendSSE({ content: s1Buf }); s1Buf = ""; } s1Timer = null; };
+      for await (const event of s1Stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          const text = event.delta.text;
+          if (text) { s1Buf += text; s1Full += text; if (!s1Timer) s1Timer = setTimeout(s1Flush, 30); }
+        }
+      }
+      if (s1Timer) clearTimeout(s1Timer);
+      s1Flush();
+      debugLogLLMResponse("claude-sonnet-4-6", "section1-druck-luftmassen", s1Full);
+      sendSSE({ content: "\n\n" });
 
       // Section 2: Fronten (KNMI image via Claude Sonnet 4.6)
       sendSSE({ section: sectionConfigs[1] });

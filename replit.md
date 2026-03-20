@@ -45,7 +45,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 6. **Wetterwarnung** - Scraped warning text from regional service, warning service link
 
 Each section runs as a separate LLM call with focused context:
-- Section 1 (gpt-4.1-mini): meteonews text only, no location — European overview
+- Section 1 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + meteonews text, no location — European overview
 - Section 2 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + location (no meteonews text)
 - Section 3 (gpt-4.1-mini): regional weather report + model info + location
 - Section 4 (gpt-4.1-mini): regional weather report + location
