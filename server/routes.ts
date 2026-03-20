@@ -1000,9 +1000,9 @@ const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Te
 
 Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen bis [Höchstwert]°C"
 - KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
-- NUR Temperaturwerte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
+- NUR Temperaturwerte verwenden die EXPLIZIT als Grad-Celsius-Zahlen im REGIONALEN WETTERBERICHT stehen (z.B. "15°C", "Höchstwerte um 14 Grad", "highs around 16"). KEINE Schätzungen, KEINE Ableitungen aus Wetterlage!
 - AUSSCHLIESSLICH Temperaturen — KEINE Wolken, KEIN Regen, KEIN Wind, KEINE Bewölkung, KEINE Niederschläge
-- Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
+- Falls KEINE expliziten Temperaturzahlen im Wetterbericht: "- 🌡️ Temperatur: nicht verfügbar"
 - Schreibe NUR diesen einen Bullet, NICHTS ANDERES.
 
 ${SECTION_STYLE}`;
@@ -1013,7 +1013,7 @@ MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenst
 Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh"
 - KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
 - NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
-- Seegang: NUR warnen wenn der UNTERE Wert der Douglas-Skala mindestens 5 ist (z.B. "Douglas 5-6" = ja, "Douglas 4-5" = NEIN weil unterer Wert 4). KEINE Meter, KEINE Fuß.
+- Seegang: NUR als Warnung aufnehmen wenn Douglas >= 5 (z.B. "Douglas 5-6" = ja, "Douglas 4-5" = NEIN, "Douglas 3-4" = NEIN). Bei Douglas < 5: diesen Seegangs-Bullet KOMPLETT weglassen, NICHT erwähnen. KEINE Meter, KEINE Fuß.
 - Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
 - Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
