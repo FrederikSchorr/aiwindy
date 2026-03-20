@@ -968,9 +968,10 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 
 Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
 - Beschreibe NUR Fronten (Kalt-, Warm-, Okklusionen, Konvergenzlinien) nahe dem Zielort: Typ, ungefähre Entfernung, Zugrichtung
+- WICHTIG: Zeitbezug angeben — die KNMI-Karte hat einen Analysezeitpunkt, beziehe dich darauf (z.B. "Kaltfront lag um 00 UTC ca. 200km westlich...")
 - Falls keine Fronten nahe dem Zielort: schreibe NUR "- ✅ Keine Fronten in der Nähe von [Zielort]"
 - KEINE Beschreibung von Hoch- oder Tiefdruckgebieten, KEINE Isobaren — NUR Fronten
-- Quelle am letzten Bullet: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
+- Quelle am LETZTEN Bullet anhängen (auch wenn nur 1 Bullet): [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
 KEINE Schachtelsätze.
 
 ${SECTION_STYLE}`;
@@ -994,12 +995,22 @@ Schreibe genau 1-2 Bullets. JEDER Bullet MUSS mit "- " beginnen:
 
 ${SECTION_STYLE}`;
 
+const SECTION5_PROMPT = `Du bist ein Meteorologe. Schreibe GENAU 1 Bullet mit Temperatur-Unter- und Oberwerten für die nächsten 24h.
+
+Format: "- 🌡️ Temperatur: [Tiefstwert]°C bis [Höchstwert]°C in den nächsten 24h"
+- NUR Werte aus dem REGIONALEN WETTERBERICHT verwenden, KEINE eigenen Schätzungen
+- Falls Wetterbericht nicht verfügbar: "- 🌡️ Temperatur: nicht verfügbar"
+- Schreibe NUR diesen einen Bullet, NICHTS ANDERES.
+
+${SECTION_STYLE}`;
+
 const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib die aktuellen Wetterwarnungen für den Zielort wieder.
 
 - Beginne mit dem Dienstnamen als Label, Beispiel: "[DHMZ Kroatien](WARNINGURL): Gelegentliche Böen..."
 - Der Dienstname ist ein klickbarer Markdown-Link zur Warnseite: [WARNDIENSTNAME](WARNINGURL)
 - Falls Warnungen aktiv: "[Dienstname](URL): [Warntext mit konkreten Werten und Zeitfenstern]"
-- Falls keine Warnungen: "[Dienstname](URL): Keine aktuellen Wetterwarnungen"
+- Falls keine Warnungen: "[Dienstname](URL): ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
+- Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
 
 ${SECTION_STYLE}`;
 
@@ -1575,7 +1586,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       }
       section2UserContent.push({
         type: "text",
-        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
+        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\nKNMI-Analysezeitpunkt: ${knmiTime.label}${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
       });
 
       debugLogLLM("claude-sonnet-4-6", "section2-fronten", [{ role: "user", content: "(KNMI image + location)" }], SECTION2_PROMPT);
@@ -1627,9 +1638,19 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         "section4-wolken-regen",
       );
 
-      // Section 5: Prognose (no LLM call — chart speaks for itself)
+      // Section 5: Prognose (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
       sendSSE({ content: "## 5. Prognose\n\n" });
+      const section5Context = `Zielort: ${locationShort}\nQuelle: ${service?.label || "nicht verfügbar"}, URL: ${service?.forecastUrl || "nicht verfügbar"}\n\nREGIONALER WETTERBERICHT:\n${regionalReportText}`;
+      await streamSectionLLM(
+        4,
+        "5. Prognose",
+        SECTION5_PROMPT,
+        section5Context,
+        "gpt-4.1-mini",
+        "section5-prognose",
+        true,
+      );
 
       // Section 6: Wetterwarnung
       const warningServiceLabel = service?.warningLabel || "Warnseite";
