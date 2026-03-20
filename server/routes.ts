@@ -977,7 +977,8 @@ const SECTION3_PROMPT = `Du bist ein Segelwetter-Experte. Beschreibe NUR Wind un
 Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT. JEDER Bullet MUSS mit "- " beginnen (Markdown-Bullet):
 1. MAXIMAL 2 Wind-Bullets, KURZ (max 15 Wörter). Format: "- 💨 [Zeitbezug]: [Richtung] [Stärke]kt (Böen [Wert]kt)"
 Beispiele: "- 💨 Heute Nachmittag: N 10-15kt (Böen 20kt)", "- 💨 Morgen: NW 5-8kt"
-- Windstärke in Knoten (kt), Böen in Klammern wenn vorhanden. KEIN Bft.
+- Windstärke in Knoten (kt). KEIN Bft.
+- PFLICHT: Wenn Böen/gusts im Wetterbericht erwähnt werden, MÜSSEN sie in Klammern angegeben werden! z.B. "gale force gusts 50-55kt" → "(Böen 50-55kt)". Böen NIEMALS weglassen!
 - NUR Werte aus dem REGIONALEN WETTERBERICHT, KEINE Schätzungen
 - PFLICHT: Zeitbezug in jedem Bullet (heute/morgen/nachts)
 - Regionale Windsysteme nur wenn geographisch zutreffend (Bora, Maestral, Meltemi, Föhn etc.)
@@ -1007,7 +1008,8 @@ ${SECTION_STYLE}`;
 
 const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib NUR echte, relevante Wetterwarnungen für den Zielort wieder — z.B. Starkwind (>35kt), Gewitter, Sturmflut, Hagel etc.
 
-MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]. [(Dienstname)](URL)"
+MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]"
+- Quelle NUR am LETZTEN Bullet anhängen: "...Text. [(Dienstname)](URL)"
 Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh. [(DHMZ Kroatien)](URL)"
 - NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
 - Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
