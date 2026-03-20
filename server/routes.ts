@@ -1013,7 +1013,7 @@ MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenst
 Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh"
 - KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
 - NUR echte Warnungen mit konkreten Werten (Windstärke in kt, Zeitfenster)
-- Seegang: NUR als Warnung aufnehmen wenn Douglas >= 5 (z.B. "Douglas 5-6" = ja, "Douglas 4-5" = NEIN, "Douglas 3-4" = NEIN). Bei Douglas < 5: diesen Seegangs-Bullet KOMPLETT weglassen, NICHT erwähnen. KEINE Meter, KEINE Fuß.
+- SEEGANG/WELLEN/DOUGLAS: NIEMALS erwähnen. Seegang ist KEIN Thema für Wetterwarnungen. Schreibe NICHTS über Seegang, Wellen, Douglas-Skala oder Wellenhöhe. NUR Wind und Gewitter sind relevante Warnungen.
 - Allgemeine Wetterhinweise oder Prognosen sind KEINE Warnungen — weglassen!
 - Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
 - Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
