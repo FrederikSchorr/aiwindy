@@ -968,7 +968,7 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 
 Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
 - Beschreibe die nächstgelegenen Fronten zum Zielort: Typ, ungefähre Entfernung, Zugrichtung
-- Falls keine Fronten nahe dem Zielort: beschreibe die dominierenden Druckgebilde und Isobaren
+- Falls keine Fronten nahe dem Zielort: schreibe "✅ Keine Fronten in der Nähe von [Zielort]" und beschreibe kurz die dominierenden Druckgebilde
 - Quelle am letzten Bullet: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
 KEINE Schachtelsätze.
 
