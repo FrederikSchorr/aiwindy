@@ -965,12 +965,12 @@ ANLEITUNG ZUM LESEN DER KNMI-KARTE:
 - Isobaren: dünne blaue Linien mit Druckwerten in hPa
 - Schau dir die GESAMTE Karte systematisch an, besonders die Region um den Zielort
 
-Schreibe genau 1-2 Bullets, jeweils 12-15 Wörter:
-- Beschreibe NUR Fronten (Kalt-, Warm-, Okklusionen) nahe dem Zielort: Typ, ungefähre Entfernung
+Schreibe genau 2 Bullets, jeweils 12-15 Wörter:
+- Bullet 1: Überblick der großen Fronten über Europa (z.B. "Kaltfront zieht von Nordatlantik über Skandinavien nach Südosten")
+- Bullet 2: Konkret für den Zielort — nächste Front(en): Typ, ungefähre Entfernung. Falls keine Fronten nahe: "✅ Keine Fronten in der Nähe von [Zielort]"
 - WICHTIG: Zeitbezug angeben — der KNMI-Analysezeitpunkt wird im Context mitgegeben. Verwende relative Zeitangaben wie "vor Xh" (z.B. "Kaltfront lag vor 10h ca. 200km westlich...")
-- Falls keine Fronten nahe dem Zielort: schreibe NUR "- ✅ Keine Fronten in der Nähe von [Zielort]"
 - KEINE Beschreibung von Hoch- oder Tiefdruckgebieten, KEINE Isobaren — NUR Fronten
-- Quelle am LETZTEN Bullet anhängen (auch wenn nur 1 Bullet): [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
+- Quelle am LETZTEN Bullet anhängen: [(KNMI)](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)
 KEINE Schachtelsätze.
 
 ${SECTION_STYLE}`;
