@@ -978,6 +978,7 @@ Schreibe genau 1-2 Bullets:
 - Beschreibung Bewölkung, Regen, Gewitterrisiko in den nächsten 12h
 - Basierend auf dem regionalen Wetterbericht
 - Die Quelle direkt an den letzten Bullet anhängen (KEIN separater Bullet): "...Text. [(Quelle: Dienstname)](URL)"
+- WICHTIG: Falls der regionale Wetterbericht "(NICHT VERFÜGBAR)" ist, schreibe NUR: "- Regionaler Wetterbericht nicht verfügbar". Erfinde KEINE Wetterdaten.
 
 ${SECTION_STYLE}`;
 
