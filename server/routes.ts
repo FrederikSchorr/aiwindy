@@ -471,7 +471,7 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     forecastUrl: "http://oldportal.emy.gr/emy/en/warning/gale_html",
     label: "EMY (HNMS) Griechenland",
     warningUrl: "http://oldportal.emy.gr/emy/en/warning/gale_html",
-    warningLabel: "EMY Sturmwarnungen",
+    warningLabel: "EMY (HNMS) Griechenland",
   },
   SI: {
     forecastUrl: "https://vreme.arso.gov.si/",
