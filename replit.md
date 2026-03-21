@@ -82,7 +82,7 @@ GPT-4.1-mini classifies each user message:
 - Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
 - HTML stripped via regex, fallback message if scraping fails
 - Only ONE scrape per region — forecast page is used for both forecast data AND warnings (sections 3-6)
-- Austria (AT): Uses GeoSphere JSON APIs instead of scraping — `geosphere.at/data/textforecasts` for regional text forecasts (matched to nearest Bundesland by coordinates), `warnungen.zamg.at/wsapp/api/getWarningsForCoords` for coordinate-based warnings
+- For AT: uses GeoSphere JSON APIs for both forecast and warnings (clean data, no preprocessing needed)
 - LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
 - LLM preprocessing: after validation, gpt-4.1-mini extracts only meteorological content from raw scraped text (removes navigation, menus, boilerplate). Clean text is used by all downstream section LLM calls.
 

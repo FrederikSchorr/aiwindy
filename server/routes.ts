@@ -670,42 +670,7 @@ async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchR
   }
 }
 
-async function fetchGeoSphereWarnings(lat: number, lon: number): Promise<FetchResult> {
-  const url = `https://warnungen.zamg.at/wsapp/api/getWarningsForCoords?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
-      signal: AbortSignal.timeout(8000),
-    });
-    debugLog(`GeoSphere warnings API → ${res.status}`);
-    if (!res.ok) return { text: "", available: false };
-    const data = await res.json() as { properties?: { location?: { properties?: { name?: string } }; warnings?: Array<{ type?: string; level?: number; text?: string; start?: string; end?: string }> } };
-    const warnings = data?.properties?.warnings;
-    const locationName = data?.properties?.location?.properties?.name || "";
 
-    if (!warnings || warnings.length === 0) {
-      const noWarnText = locationName
-        ? `Keine aktiven Wetterwarnungen für ${locationName}.`
-        : "Keine aktiven Wetterwarnungen.";
-      debugLogScrape("warnings [AT]", url, res.status, noWarnText);
-      return { text: noWarnText, available: true };
-    }
-
-    const warnTexts = warnings.map(w => {
-      const parts: string[] = [];
-      if (w.type) parts.push(w.type);
-      if (w.text) parts.push(w.text);
-      if (w.start && w.end) parts.push(`(${w.start} bis ${w.end})`);
-      return parts.join(": ");
-    });
-    const fullText = `Wetterwarnungen ${locationName}: ${warnTexts.join(" | ")}`;
-    debugLogScrape("warnings [AT]", url, res.status, fullText);
-    return { text: fullText, available: true };
-  } catch (e) {
-    console.error("GeoSphere warnings fetch error:", e instanceof Error ? e.message : e);
-    return { text: "", available: false };
-  }
-}
 
 async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"], _lat?: number, _lon?: number): Promise<FetchResult> {
   if (countryCode === "DK") {
@@ -766,46 +731,6 @@ async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon:
   }
 }
 
-async function tryFetchWarnings(service: typeof REGIONAL_FORECAST_SERVICES["HR"]): Promise<FetchResult> {
-  const res = await fetch(service.warningUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml",
-      "Accept-Language": "de,en;q=0.9",
-    },
-    signal: AbortSignal.timeout(8000),
-  });
-  debugLog(`Scrape warnings [${service.warningLabel}] → ${res.status}`);
-  if (!res.ok) return { text: "", available: false };
-  const html = await res.text();
-  const fullText = stripHtml(html);
-  debugLogScrape(`warnings [${service.warningLabel}]`, service.warningUrl, res.status, fullText);
-  const valid = await validateScrapedContent(fullText, "warning", service.warningLabel);
-  return { text: fullText, available: valid };
-}
-
-async function fetchRegionalWarnings(countryCode: string, lat?: number, lon?: number): Promise<FetchResult> {
-  if (countryCode === "AT" && lat !== undefined && lon !== undefined) {
-    return fetchGeoSphereWarnings(lat, lon);
-  }
-
-  const service = REGIONAL_FORECAST_SERVICES[countryCode];
-  if (!service) return { text: "", available: false };
-
-  try {
-    const first = await tryFetchWarnings(service);
-    if (first.available) return first;
-    console.warn(`Regional warnings first attempt failed for ${countryCode}, retrying in 1s...`);
-    await new Promise(r => setTimeout(r, 1000));
-    const second = await tryFetchWarnings(service);
-    if (second.available) return second;
-    console.error(`Regional warnings unavailable for ${countryCode} after 2 attempts`);
-    return { text: "", available: false };
-  } catch (e) {
-    console.error(`Regional warnings fetch error for ${countryCode}:`, e);
-    return { text: "", available: false };
-  }
-}
 
 async function preprocessWeatherText(rawText: string, serviceName: string): Promise<string> {
   if (!rawText || rawText.length < 50) return rawText;
