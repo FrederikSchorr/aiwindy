@@ -1624,6 +1624,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         }
       }
       debugLogLLMResponse("claude-sonnet-4-6", "section3-wind-welle", s3Full);
+      sendSSE({ content: "\n\n" });
 
       // Section 4: Wolken & Regen (preprocessed report)
       const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
