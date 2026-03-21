@@ -948,7 +948,8 @@ Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT. JEDER Bullet MUSS m
 Beispiele: "- 💨 Heute Nachmittag: N 10-15kt (Böen 20kt)", "- 💨 Morgen: NW 5-8kt"
 - Windstärke in Knoten (kt). KEIN Bft.
 - PFLICHT: Wenn Böen/gusts im Wetterbericht erwähnt werden, MÜSSEN sie in Klammern angegeben werden! z.B. "gale force gusts 50-55kt" → "(Böen 50-55kt)". Böen NIEMALS weglassen!
-- NUR Werte aus dem REGIONALEN WETTERBERICHT, KEINE Schätzungen
+- NUR Werte aus dem REGIONALEN WETTERBERICHT, KEINE Schätzungen, KEINE erfundenen Werte!
+- Falls der Wetterbericht KEINE Windstärke in kt enthält: schreibe "- 💨 Winddetails nicht im regionalen Bericht verfügbar — siehe Windy-Karte". Erfinde NIEMALS Windwerte!
 - PFLICHT: Zeitbezug in jedem Bullet (heute/morgen/nachts)
 - Regionale Windsysteme nur wenn geographisch zutreffend (Bora, Maestral, Meltemi, Föhn etc.)
 2. Letzter Bullet: "- 🌊 Seegang: Douglas [Zahl]-[Zahl], [Beschreibung]" — NUR wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält. KEINE Wellenhöhe in Metern. NIEMALS Seegang aus Windstärke schätzen! Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=rau (rough), 6=sehr rau. Beispiel: "- 🌊 Seegang: Douglas 3-4, leicht bis mäßig". Falls KEINE Seegangsdaten im Wetterbericht: diesen Bullet KOMPLETT weglassen.
