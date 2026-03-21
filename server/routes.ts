@@ -1608,15 +1608,22 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       sendSSE({ section: sectionConfigs[2] });
       sendSSE({ content: `## 3. Wind & Welle\n\n- ${abschnitt3Bullet1}\n` });
       const section3Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${reportText}`;
-      await streamSectionLLM(
-        2,
-        "3. Wind & Welle",
-        SECTION3_PROMPT,
-        section3Context,
-        "gpt-4.1-mini",
-        "section3-wind-welle",
-        true,
-      );
+      debugLogLLM("claude-sonnet-4-6", "section3-wind-welle", [{ role: "user", content: section3Context }], SECTION3_PROMPT);
+      const s3Stream = anthropic.messages.stream({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        temperature: 0.3,
+        system: SECTION3_PROMPT,
+        messages: [{ role: "user", content: section3Context }],
+      });
+      let s3Full = "";
+      for await (const event of s3Stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          s3Full += event.delta.text;
+          sendSSE({ content: event.delta.text });
+        }
+      }
+      debugLogLLMResponse("claude-sonnet-4-6", "section3-wind-welle", s3Full);
 
       // Section 4: Wolken & Regen (preprocessed report)
       const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
