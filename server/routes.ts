@@ -1486,13 +1486,13 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         },
         {
           id: "wind", title: "3. Wind & Welle",
-          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 2, 4) },
+          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 2, 4), marker: true },
           sourceLabel: `Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
           regionalServiceLabel: service?.label || null, regionalServiceUrl: service?.forecastUrl || null,
         },
         {
           id: "wolken", title: "4. Wolken & Regen",
-          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "clouds", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 3, 4) },
+          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "clouds", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 3, 4), marker: true },
           sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: cloudsUrl,
         },
         {

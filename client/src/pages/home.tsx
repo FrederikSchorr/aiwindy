@@ -33,6 +33,7 @@ interface SectionMapConfig {
   level?: string;
   zoom?: number;
   forecast?: boolean;
+  marker?: boolean;
 }
 
 interface SectionEvent {
@@ -55,12 +56,13 @@ interface SSEPayload {
   done?: boolean;
 }
 
-function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast }: {
-  lat: number; lon: number; overlay: string; product: string; level: string; zoom: number; forecast?: boolean;
+function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker }: {
+  lat: number; lon: number; overlay: string; product: string; level: string; zoom: number; forecast?: boolean; marker?: boolean;
 }) {
+  const markerVal = marker ? "true" : "false";
   const src = forecast
-    ? `https://embed.windy.com/embed2.html?type=forecast&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=false&message=true&pressure=true&calendar=now`
-    : `https://embed.windy.com/embed2.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&marker=false&message=true&pressure=true&calendar=now`;
+    ? `https://embed.windy.com/embed2.html?type=forecast&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=${markerVal}&message=true&pressure=true&calendar=now`
+    : `https://embed.windy.com/embed2.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&marker=${markerVal}&message=true&pressure=true&calendar=now`;
 
   return (
     <iframe
@@ -102,6 +104,7 @@ function SectionCard({ section }: { section: SectionEvent }) {
           level={mapConfig.level || "surface"}
           zoom={mapConfig.zoom || 8}
           forecast={mapConfig.forecast}
+          marker={mapConfig.marker}
         />
       )}
       {mapType === "knmi" && (
