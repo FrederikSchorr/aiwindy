@@ -725,7 +725,7 @@ Rules:
 - If text contains forecast AND warnings, include BOTH
 - Do NOT add any information not in the source text`
       },
-      { role: "user", content: rawText.slice(0, 8000) }
+      { role: "user", content: rawText.slice(0, 15000) }
     ];
     debugLogLLM("gpt-4.1-mini", `preprocess [${serviceName}]`, messages);
     const result = await openai.chat.completions.create({
