@@ -51,7 +51,7 @@ Each section runs as a separate LLM call with focused context:
 - Section 3 (Claude Sonnet 4.6): preprocessed regional weather report + model info + location
 - Section 4 (gpt-4.1-mini): preprocessed regional weather report + location
 - Section 5: No LLM call (chart only)
-- Section 6 (gpt-4.1-mini): preprocessed regional weather report (incl. warnings) + location
+- Section 6 (Claude Sonnet 4.6): preprocessed regional weather report (incl. warnings) + location
 
 ## Photo/Video Upload
 - Camera button in chat input

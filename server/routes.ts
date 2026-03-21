@@ -949,8 +949,8 @@ Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT, KEINE Schätzungen,
 - Regionale Windsysteme nur wenn geographisch zutreffend (Bora, Jugo/Scirocco, Maestral, Meltemi, Föhn, Thermik, etc.)
 - ZEITBEZUG: Verwende den konkreten Wochentag + Tageszeit statt "Heute/Nächste 12h". z.B. "Samstag Vormittag", "Sonntag Nachmittag", "Samstag Nacht".
 - WINDWERTE VEREINFACHEN: Nur EINEN Durchschnittswert in kt + maximale Böe. NICHT mehrere Zwischenwerte auflisten!
-  FALSCH: "10-20kt, lokal bis 26kt, am Velebit bis 30kt (Böen 55kt)" — zu viele Zahlen!
-  RICHTIG: "15kt (Böen 55kt)" — nur Durchschnitt + max Böe.
+  FALSCH: "Nächste 12h: 10-20kt, lokal bis 26kt, am Velebit bis 30kt (Böen 55kt)" — zu viele Zahlen!
+  RICHTIG: "Samstag Vormittag: 15kt (Böen 55kt)" — nur Durchschnitt + max Böe.
 - Beispiele: "- 💨 Samstag Vormittag: Bora (NE) 15kt (Böen 55kt)", "- 💨 Sonntag: NW 8kt"
 - PFLICHT: Wenn Böen/gusts im Wetterbericht erwähnt werden, MÜSSEN sie in Klammern angegeben werden!
 - Windstärke in Knoten (kt). KEIN Bft.
@@ -1704,16 +1704,28 @@ Rules:
       const s6SourceWithDouglas = douglasWarningBullet
         ? `${douglasWarningBullet} ${s6Source}`
         : s6Source;
-      await streamSectionLLM(
-        5,
-        "6. Wetterwarnung",
-        SECTION6_PROMPT,
-        warningContext,
-        "gpt-4.1-mini",
-        "section6-warnung",
-        false,
-        s6SourceWithDouglas,
-      );
+      sendSSE({ section: sectionConfigs[5] });
+      sendSSE({ content: `## 6. Wetterwarnung\n\n` });
+      debugLogLLM("claude-sonnet-4-6", "section6-warnung", [{ role: "user", content: warningContext }], SECTION6_PROMPT);
+      const s6Stream = anthropic.messages.stream({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        temperature: 0.3,
+        system: SECTION6_PROMPT,
+        messages: [{ role: "user", content: warningContext }],
+      });
+      let s6Full = "";
+      for await (const event of s6Stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          s6Full += event.delta.text;
+          sendSSE({ content: event.delta.text });
+        }
+      }
+      debugLogLLMResponse("claude-sonnet-4-6", "section6-warnung", s6Full);
+      if (s6SourceWithDouglas) {
+        const trimmed = s6Full.replace(/\n+$/, "");
+        sendSSE({ content: ` ${s6SourceWithDouglas}` });
+      }
 
       sendSSE({ done: true });
       res.end();
