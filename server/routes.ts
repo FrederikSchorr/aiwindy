@@ -888,11 +888,12 @@ async function geocodeLocation(locationName: string): Promise<{
     const regional = await getRegionalModelAI(lat, lon, result.display_name);
 
     let countryCode: string | undefined;
-    let cityName: string | undefined;
+    const searchName = result.display_name.split(",")[0].trim();
+    const nd = result.namedetails || {};
+    let cityName: string | undefined = nd["name:de"] || nd["name:en"] || searchName;
 
     if (isWater) {
-      const nd = result.namedetails || {};
-      const waterName = nd["name:de"] || nd["name"] || result.display_name.split(",")[0].trim();
+      const waterName = nd["name:de"] || nd["name"] || searchName;
       cityName = waterName;
       try {
         const reverseRes = await fetch(
@@ -918,7 +919,8 @@ async function geocodeLocation(locationName: string): Promise<{
             }
           };
           countryCode = reverseData.address?.country_code?.toUpperCase();
-          cityName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village || reverseData.address?.municipality || reverseData.address?.suburb || reverseData.address?.county;
+          const reverseName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village;
+          if (reverseName) cityName = reverseName;
         }
       } catch {}
     }
