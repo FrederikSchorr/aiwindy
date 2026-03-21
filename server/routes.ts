@@ -468,9 +468,9 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "Météo-France Marine",
   },
   GR: {
-    forecastUrl: "http://oldportal.emy.gr/emy/en/warning/gale_html",
+    forecastUrl: "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi",
     label: "EMY (HNMS) Griechenland",
-    warningUrl: "http://oldportal.emy.gr/emy/en/warning/gale_html",
+    warningUrl: "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi",
     warningLabel: "EMY (HNMS) Griechenland",
   },
   SI: {
@@ -678,8 +678,58 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
   return { text: fullText, available: valid };
 }
 
-async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number): Promise<FetchResult> {
+async function fetchGreekMarineForecast(lat: number, lon: number, locationName: string): Promise<FetchResult> {
+  const url = "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(10000),
+    });
+    debugLog(`Scrape EMY METAREA-3 → ${res.status}`);
+    if (!res.ok) return { text: "", available: false };
+    const html = await res.text();
+    const match = html.match(/printableArea">([\s\S]*?)<\/div>/);
+    if (!match) return { text: "", available: false };
+    const bulletinText = match[1]
+      .replace(/<br[^>]*>/gi, "\n")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&[a-z]+;/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    if (bulletinText.length < 200) return { text: "", available: false };
+    debugLog(`EMY METAREA-3 bulletin: ${bulletinText.length} chars`);
+    const extractMessages: OpenAI.ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content: `You are given a METAREA-3 marine weather bulletin with forecasts for many sea areas (NORTH ADRIATIC, SOUTH IONIO, SARONIKOS, KITHIRA SEA, etc.).
+
+Find the sea area(s) closest to the given location and extract ONLY those paragraphs. Include PART 2 (GENERAL SYNOPSIS) plus the relevant sea area forecast(s) from PART 3.
+
+If the location is coastal, pick the adjacent sea area(s). If inland Greece, pick the nearest sea area.
+Output the extracted text exactly as written, preserving all wind speeds, sea states, and weather data.`
+      },
+      { role: "user", content: `Location: ${locationName} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)\n\nBULLETIN:\n${bulletinText}` }
+    ];
+    debugLogLLM("gpt-4.1-mini", "extract-greek-sea-area", extractMessages);
+    const result = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: extractMessages,
+      max_completion_tokens: 1024,
+      temperature: 0,
+    });
+    const extracted = result.choices[0]?.message?.content?.trim() || "";
+    debugLogLLMResponse("gpt-4.1-mini", "extract-greek-sea-area", extracted);
+    if (extracted.length < 30) return { text: bulletinText, available: true };
+    return { text: extracted, available: true };
+  } catch (e) {
+    console.error("EMY METAREA-3 fetch error:", e instanceof Error ? e.message : e);
+    return { text: "", available: false };
+  }
+}
+
+async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number, locationName?: string): Promise<FetchResult> {
   if (countryCode === "AT") return fetchGeoSphereForecasts(lat, lon);
+  if (countryCode === "GR") return fetchGreekMarineForecast(lat, lon, locationName || "Greece");
 
   const service = REGIONAL_FORECAST_SERVICES[countryCode];
   if (!service) return { text: "", available: false };
@@ -1457,7 +1507,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const noResult: FetchResult = { text: "", available: false };
       const [meteonewsText, regionalReport, knmiBase64] = await Promise.all([
         fetchMeteonews(),
-        countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon) : Promise.resolve(noResult),
+        countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon, geocoded.cityName || geocoded.displayName?.split(",")[0]?.trim()) : Promise.resolve(noResult),
         fetchKnmiChartBase64(),
       ]);
 
