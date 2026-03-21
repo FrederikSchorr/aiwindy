@@ -759,7 +759,7 @@ async function preprocessWeatherText(rawText: string, serviceName: string): Prom
         content: `Extract ONLY the meteorological content from this weather service page text. Remove all website navigation, menus, headers, footers, disclaimers, and non-weather content.
 
 Keep and preserve EXACTLY:
-- Wind: directions, speeds (knots, km/h, Bft), gusts — ALL numbers must be preserved exactly
+- Wind: directions, speeds, gusts — ALL numbers must be preserved exactly
 - Sea state: Douglas scale values, wave heights, sea conditions
 - Temperature: all values in °C
 - Precipitation: rain, snow, thunderstorms
@@ -769,7 +769,8 @@ Keep and preserve EXACTLY:
 - Time references: dates, periods, "today", "tomorrow", etc.
 
 Rules:
-- Preserve ALL numeric values exactly as written
+- CONVERT all wind speeds to knots (kt): If Beaufort (Bft) scale is used, convert using: Bft 2=5kt, 3=10kt, 4=14kt, 5=19kt, 6=24kt, 7=30kt, 8=37kt, 9=44kt. Write the kt value and note the original Bft in parentheses, e.g. "NORTHEAST 19-24kt (Bft 5-6)". If km/h is used, divide by 1.852. If m/s, multiply by 1.944.
+- Preserve ALL other numeric values exactly as written
 - Keep the original language (English, German, Croatian, etc.)
 - Output clean text paragraphs, no HTML
 - If text contains forecast AND warnings, include BOTH
@@ -1005,8 +1006,8 @@ Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT, KEINE Schätzungen,
   RICHTIG: "Samstag Vormittag: 15kt (Böen 55kt)" — nur Durchschnitt + max Böe.
 - Beispiele: "- 💨 Samstag Vormittag: Bora (NE) 15kt (Böen 55kt)", "- 💨 Sonntag: NW 8kt"
 - PFLICHT: Wenn Böen/gusts im Wetterbericht erwähnt werden, MÜSSEN sie in Klammern angegeben werden!
-- Windstärke IMMER in Knoten (kt). Falls der Bericht nur Beaufort (Bft) nennt, rechne um: Bft 3=10kt, 4=14kt, 5=19kt, 6=24kt, 7=30kt, 8=37kt. Schreibe dann den kt-Wert.
-- Falls der Wetterbericht KEINE Windstärke enthält (weder kt noch Bft): schreibe "- 💨 Winddetails nicht im regionalen Bericht verfügbar — siehe Windy-Karte". Erfinde NIEMALS Windwerte!
+- Windstärke in Knoten (kt). KEIN Bft — der Bericht enthält bereits kt-Werte.
+- Falls der Wetterbericht KEINE Windstärke in kt enthält: schreibe "- 💨 Winddetails nicht im regionalen Bericht verfügbar — siehe Windy-Karte". Erfinde NIEMALS Windwerte!
 2. Letzter Bullet: "- 🌊 Seegang: Douglas [Zahl]-[Zahl], [Beschreibung]" — nur wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält, ansonsten Verweis dass Daten nicht enthalten. NIEMALS Seegang aus Windstärke schätzen! KEINE Wellenhöhe in Metern. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=rau (rough), 6=sehr rau. Beispiel: "- 🌊 Seegang: Douglas 3-4, leicht bis mäßig".
 WICHTIG: Schreibe AUSSCHLIESSLICH über Wind und Wellen. Keine weiteren Themen. JEDER Bullet beginnt mit "- ".
 
