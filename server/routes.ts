@@ -1665,7 +1665,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const reportText = regionalReport.available ? preprocessedReport : "(NICHT VERFÜGBAR)";
       sendSSE({ section: sectionConfigs[2] });
       sendSSE({ content: `## 3. Wind & Welle\n\n- ${abschnitt3Bullet1}\n` });
-      const section3Context = `Zielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${reportText}`;
+      const nowDE = new Date().toLocaleDateString("de-DE", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Berlin" });
+      const section3Context = `HEUTE IST: ${nowDE}\nZielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${reportText}`;
       debugLogLLM("claude-sonnet-4-6", "section3-wind-welle", [{ role: "user", content: section3Context }], SECTION3_PROMPT);
       const s3Stream = anthropic.messages.stream({
         model: "claude-sonnet-4-6",
@@ -1685,7 +1686,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       sendSSE({ content: "\n\n" });
 
       // Section 4: Wolken & Regen (preprocessed report)
-      const section4Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
+      const section4Context = `HEUTE IST: ${nowDE}\nZielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
       const s4Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
       await streamSectionLLM(
         3,
@@ -1718,7 +1719,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const warningServiceLabel = service?.warningLabel || service?.label || "Warnseite";
       const warningServiceUrl = service?.warningUrl || "#";
       const warningContext = regionalReport.available
-        ? `Zielort: ${locationShort}\n\nWETTERBERICHT (inkl. Warnungen):\n${reportText}`
+        ? `HEUTE IST: ${nowDE}\nZielort: ${locationShort}\n\nWETTERBERICHT (inkl. Warnungen):\n${reportText}`
         : `Zielort: ${locationShort}\n\n⚠️ Der Wetterdienst (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
       // Use LLM to extract max Douglas sea state value from preprocessed text
       let douglasWarningBullet = "";
