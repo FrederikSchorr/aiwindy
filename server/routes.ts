@@ -955,7 +955,7 @@ Schreibe Bullets basierend auf dem REGIONALEN WETTERBERICHT, KEINE Schätzungen,
 - PFLICHT: Wenn Böen/gusts im Wetterbericht erwähnt werden, MÜSSEN sie in Klammern angegeben werden!
 - Windstärke in Knoten (kt). KEIN Bft.
 - Falls der Wetterbericht KEINE Windstärke in kt enthält: schreibe "- 💨 Winddetails nicht im regionalen Bericht verfügbar — siehe Windy-Karte". Erfinde NIEMALS Windwerte!
-2. Letzter Bullet: "- 🌊 Seegang: Douglas [Zahl]-[Zahl], [Beschreibung]" — NUR wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält. KEINE Wellenhöhe in Metern. NIEMALS Seegang aus Windstärke schätzen! Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=rau (rough), 6=sehr rau. Beispiel: "- 🌊 Seegang: Douglas 3-4, leicht bis mäßig". Falls KEINE Seegangsdaten im Wetterbericht: diesen Bullet KOMPLETT weglassen.
+2. Letzter Bullet: "- 🌊 Seegang: Douglas [Zahl]-[Zahl], [Beschreibung]" — nur wenn der regionale Wetterbericht EXPLIZIT Seegangsdaten enthält, ansonsten Verweis dass Daten nicht enthalten. NIEMALS Seegang aus Windstärke schätzen! KEINE Wellenhöhe in Metern. Douglas-Skala: 1=ruhig, 2=leicht bewegt, 3=leicht (slight), 4=mäßig (moderate), 5=rau (rough), 6=sehr rau. Beispiel: "- 🌊 Seegang: Douglas 3-4, leicht bis mäßig".
 WICHTIG: Schreibe AUSSCHLIESSLICH über Wind und Wellen. Keine weiteren Themen. JEDER Bullet beginnt mit "- ".
 
 ${SECTION_STYLE}`;
