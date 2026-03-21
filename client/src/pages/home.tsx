@@ -62,7 +62,7 @@ function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker 
   const markerVal = marker ? "true" : "false";
   const src = forecast
     ? `https://embed.windy.com/embed2.html?type=forecast&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=${markerVal}&message=true&pressure=true&calendar=now`
-    : `https://embed.windy.com/embed2.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}&marker=${markerVal}&message=true&pressure=true&calendar=now`;
+    : `https://embed.windy.com/embed2.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${zoom}&overlay=${overlay}&product=${product}&level=${level}&lat=${lat}&lon=${lon}${marker ? `&detailLat=${lat}&detailLon=${lon}` : ""}&marker=${markerVal}&message=true&pressure=true&calendar=now`;
 
   return (
     <iframe
