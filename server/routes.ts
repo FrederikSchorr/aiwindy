@@ -596,23 +596,15 @@ const AT_BUNDESLAND_COORDS: Record<number, { name: string; lat: number; lon: num
 };
 
 async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchResult> {
-  const forecastUrl = "https://www.geosphere.at/data/textforecasts";
-  const warningsUrl = `https://warnungen.zamg.at/wsapp/api/getWarningsForCoords?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+  const url = "https://www.geosphere.at/data/textforecasts";
   try {
-    const [forecastRes, warningsRes] = await Promise.all([
-      fetch(forecastUrl, {
-        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
-        signal: AbortSignal.timeout(10000),
-      }),
-      fetch(warningsUrl, {
-        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
-        signal: AbortSignal.timeout(8000),
-      }).catch(() => null),
-    ]);
-
-    debugLog(`GeoSphere textforecasts API → ${forecastRes.status}`);
-    if (!forecastRes.ok) return { text: "", available: false };
-    const data = await forecastRes.json() as Array<{ stationid: number; text: string; validity_range: string[] }>;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    debugLog(`GeoSphere textforecasts API → ${res.status}`);
+    if (!res.ok) return { text: "", available: false };
+    const data = await res.json() as Array<{ stationid: number; text: string; validity_range: string[] }>;
     if (!Array.isArray(data) || data.length === 0) return { text: "", available: false };
 
     let bestId = 8009000;
@@ -637,35 +629,11 @@ async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchR
 
     if (parts.length === 0) return { text: "", available: false };
 
-    let fullText = `Wetterprognose ${bestName}: ${parts.join(" ")}`;
-
-    if (warningsRes && warningsRes.ok) {
-      try {
-        const wData = await warningsRes.json() as { properties?: { location?: { properties?: { name?: string } }; warnings?: Array<{ type?: string; level?: number; text?: string; start?: string; end?: string }> } };
-        const warnings = wData?.properties?.warnings;
-        const locationName = wData?.properties?.location?.properties?.name || "";
-        if (warnings && warnings.length > 0) {
-          const warnTexts = warnings.map(w => {
-            const wp: string[] = [];
-            if (w.type) wp.push(w.type);
-            if (w.text) wp.push(w.text);
-            if (w.start && w.end) wp.push(`(${w.start} bis ${w.end})`);
-            return wp.join(": ");
-          });
-          fullText += `\n\nWetterwarnungen ${locationName}: ${warnTexts.join(" | ")}`;
-        } else {
-          fullText += `\n\nKeine aktiven Wetterwarnungen${locationName ? ` für ${locationName}` : ""}.`;
-        }
-        debugLog(`GeoSphere warnings API → ${warningsRes.status}`);
-      } catch {
-        debugLog("GeoSphere warnings parse failed, continuing without warnings");
-      }
-    }
-
-    debugLogScrape("forecast+warnings [AT]", forecastUrl, forecastRes.status, fullText);
+    const fullText = `Wetterprognose ${bestName}: ${parts.join(" ")}`;
+    debugLogScrape("forecast [AT]", url, res.status, fullText);
     return { text: fullText, available: true };
   } catch (e) {
-    console.error("GeoSphere fetch error:", e instanceof Error ? e.message : e);
+    console.error("GeoSphere textforecasts fetch error:", e instanceof Error ? e.message : e);
     return { text: "", available: false };
   }
 }
