@@ -1033,19 +1033,6 @@ Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen b
 
 ${SECTION_STYLE}`;
 
-const SECTION6_PROMPT = `Du bist ein Meteorologe. Gib NUR echte, relevante Wetterwarnungen für den Zielort wieder — z.B. Starkwind (>35kt), Gewitter, Sturmflut, Hagel etc.
-
-MAXIMAL 2 Bullets. Format: "- ⚠️ [Warnung mit konkreten Werten und Zeitfenster]"
-Beispiel: "- ⚠️ Starkwind S 40kt (Böen 55kt) heute Nacht bis morgen Früh"
-- KEINE Quellenangabe schreiben — die Quelle wird automatisch angehängt
-- NUR echte, für Segler GEFÄHRLICHE Warnungen: Starkwind (>30kt), Sturmböen, Gewitter, Sturmflut, Hagel
-- "Leichter Regen", "vereinzelte Schauer", "Bewölkung", "kühle Temperaturen" sind KEINE Warnungen — NIEMALS erwähnen!
-- SEEGANG/WELLEN: Schreibe NICHTS über Seegang, Wellen oder Douglas-Skala. Die Seegangs-Warnung wird separat automatisch hinzugefügt.
-- Es müssen NICHT 2 Bullets sein. Nur echte Gefahren auflisten. Wenn es nur 1 gibt, schreibe nur 1.
-- Falls keine echten Warnungen: "- ✅ Keine aktuellen Wetterwarnungen für [Zielort]"
-- Verwende IMMER den Zielort-Namen aus dem Context, NICHT den API-Ortsnamen (z.B. "Wien" statt "Wien-Innere Stadt")
-
-${SECTION_STYLE}`;
 
 async function fetchKnmiChartBase64(): Promise<string | null> {
   try {
@@ -1496,14 +1483,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: cloudsUrl,
         },
         {
-          id: "prognose", title: "5. Prognose",
+          id: "prognose", title: "5. Temperatur",
           mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom, forecast: true },
           sourceLabel: `Prognose ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
-        },
-        {
-          id: "warnung", title: "6. Wetterwarnung",
-          mapType: "none", mapConfig: {},
-          sourceLabel: null, sourceUrl: null,
         },
       ];
 
@@ -1699,14 +1681,14 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         s4Source,
       );
 
-      // Section 5: Prognose (temperature bullet + chart)
+      // Section 5: Temperatur (temperature bullet + chart)
       sendSSE({ section: sectionConfigs[4] });
-      sendSSE({ content: "## 5. Prognose\n\n" });
+      sendSSE({ content: "## 5. Temperatur\n\n" });
       const section5Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
       const s5Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
       await streamSectionLLM(
         4,
-        "5. Prognose",
+        "5. Temperatur",
         SECTION5_PROMPT,
         section5Context,
         "gpt-4.1-mini",
@@ -1714,72 +1696,6 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         true,
         s5Source,
       );
-
-      // Section 6: Wetterwarnung (uses same preprocessed report)
-      const warningServiceLabel = service?.warningLabel || service?.label || "Warnseite";
-      const warningServiceUrl = service?.warningUrl || "#";
-      const warningContext = regionalReport.available
-        ? `HEUTE IST: ${nowDE}\nZielort: ${locationShort}\n\nWETTERBERICHT (inkl. Warnungen):\n${reportText}`
-        : `Zielort: ${locationShort}\n\n⚠️ Der Wetterdienst (${warningServiceLabel}) ist NICHT ABRUFBAR. Schreibe: "⚠️ ${warningServiceLabel} nicht erreichbar – bitte direkt auf der Seite prüfen."`;
-      // Use LLM to extract max Douglas sea state value from preprocessed text
-      let douglasWarningBullet = "";
-      if (regionalReport.available) {
-        try {
-          const douglasExtract = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
-            messages: [
-              {
-                role: "system",
-                content: `Extract the HIGHEST sea state (Douglas scale / Seegang) number from this marine weather text.
-Rules:
-- Look for sea state values like "sea 3-4", "Seegang 5", "Douglas 4-5", "rough sea", etc.
-- Wind speeds (knots) are NOT sea state — ignore them!
-- If a range is given (e.g. "3-4"), report the HIGHER number.
-- Reply with ONLY a single digit 0-9, nothing else.
-- If no sea state information is found, reply with "0".`
-              },
-              { role: "user", content: reportText }
-            ] as OpenAI.ChatCompletionMessageParam[],
-            max_completion_tokens: 8,
-            temperature: 0,
-          });
-          const douglasStr = douglasExtract.choices[0]?.message?.content?.trim() || "0";
-          const douglasVal = parseInt(douglasStr);
-          debugLogLLMResponse("gpt-4.1-mini", "douglas-extract", `Douglas value: ${douglasVal}`);
-          if (!isNaN(douglasVal) && douglasVal >= 5) {
-            const desc = douglasVal >= 6 ? "sehr rau" : "rau";
-            douglasWarningBullet = `\n- ⚠️ 🌊 Seegang Douglas ${douglasVal}, ${desc}`;
-          }
-        } catch (e) {
-          console.error("Douglas extraction failed:", e instanceof Error ? e.message : e);
-        }
-      }
-      const s6Source = `([${warningServiceLabel}](${warningServiceUrl}))`;
-      const s6SourceWithDouglas = douglasWarningBullet
-        ? `${douglasWarningBullet} ${s6Source}`
-        : s6Source;
-      sendSSE({ section: sectionConfigs[5] });
-      sendSSE({ content: `## 6. Wetterwarnung\n\n` });
-      debugLogLLM("claude-sonnet-4-6", "section6-warnung", [{ role: "user", content: warningContext }], SECTION6_PROMPT);
-      const s6Stream = anthropic.messages.stream({
-        model: "claude-sonnet-4-6",
-        max_tokens: 512,
-        temperature: 0.3,
-        system: SECTION6_PROMPT,
-        messages: [{ role: "user", content: warningContext }],
-      });
-      let s6Full = "";
-      for await (const event of s6Stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          s6Full += event.delta.text;
-          sendSSE({ content: event.delta.text });
-        }
-      }
-      debugLogLLMResponse("claude-sonnet-4-6", "section6-warnung", s6Full);
-      if (s6SourceWithDouglas) {
-        const trimmed = s6Full.replace(/\n+$/, "");
-        sendSSE({ content: ` ${s6SourceWithDouglas}` });
-      }
 
       sendSSE({ done: true });
       res.end();
