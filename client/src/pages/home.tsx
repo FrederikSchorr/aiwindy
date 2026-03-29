@@ -25,6 +25,14 @@ const COUNTRY_INFO: Record<string, { name: string }> = {
   CH: { name: "Schweiz" },
 };
 
+function countryFlag(code: string): string {
+  return code
+    .toUpperCase()
+    .split("")
+    .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
+    .join("");
+}
+
 interface SectionMapConfig {
   lat?: number;
   lon?: number;
@@ -642,11 +650,7 @@ export default function Home() {
                                 📍 {preview.locationName}
                                 {preview.countryCode && (
                                   <>
-                                    <img
-                                      src={`https://flagcdn.com/w20/${preview.countryCode.toLowerCase()}.png`}
-                                      alt={preview.countryCode}
-                                      className="w-4 h-3 object-cover rounded-sm inline-block"
-                                    />
+                                    <span>{countryFlag(preview.countryCode)}</span>
                                     {COUNTRY_INFO[preview.countryCode]?.name && (
                                       <span>{COUNTRY_INFO[preview.countryCode].name}</span>
                                     )}
@@ -682,13 +686,7 @@ export default function Home() {
                       <span>{loc.sailingArea || loc.cityName || loc.displayName.split(",")[0]}</span>
                       {loc.countryCode && (
                         <>
-                          <img
-                            src={`https://flagcdn.com/w20/${loc.countryCode.toLowerCase()}.png`}
-                            width={20}
-                            height={14}
-                            alt={loc.countryCode}
-                            className="inline-block rounded-[2px] shrink-0"
-                          />
+                          <span>{countryFlag(loc.countryCode)}</span>
                           {COUNTRY_INFO[loc.countryCode]?.name && (
                             <span>{COUNTRY_INFO[loc.countryCode].name}</span>
                           )}
@@ -738,14 +736,7 @@ export default function Home() {
                           {photoHint.locationName}
                           {photoHint.countryCode && (
                             <>
-                              {" "}
-                              <img
-                                src={`https://flagcdn.com/w20/${photoHint.countryCode.toLowerCase()}.png`}
-                                width={16}
-                                height={11}
-                                alt={photoHint.countryCode}
-                                className="inline-block rounded-[2px] align-baseline"
-                              />
+                              {" "}{countryFlag(photoHint.countryCode)}
                               {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
                             </>
                           )}
