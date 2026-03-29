@@ -25,11 +25,26 @@ const COUNTRY_INFO: Record<string, { name: string }> = {
   CH: { name: "Schweiz" },
 };
 
+const FLAG_SVGS: Record<string, string> = Object.fromEntries(
+  Object.entries(
+    import.meta.glob("/node_modules/flag-icons/flags/4x3/*.svg", { eager: true, query: "?url", import: "default" })
+  ).map(([path, url]) => {
+    const code = path.split("/").pop()!.replace(".svg", "").toUpperCase();
+    return [code, url as string];
+  })
+);
+
 function CountryFlag({ code, size = 20 }: { code: string; size?: number }) {
+  const src = FLAG_SVGS[code.toUpperCase()];
+  if (!src) return null;
   return (
-    <span
-      className={`fi fi-${code.toLowerCase()}`}
-      style={{ fontSize: `${size}px`, lineHeight: 1, verticalAlign: "middle" }}
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={Math.round(size * 0.75)}
+      className="inline-block rounded-[2px]"
+      style={{ verticalAlign: "middle" }}
     />
   );
 }
