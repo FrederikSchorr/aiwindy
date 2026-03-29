@@ -89,10 +89,42 @@ function buildRevierList(data: SegelreviereData): string {
   const lines: string[] = [];
   for (const [land, { reviere }] of Object.entries(data)) {
     for (const r of reviere) {
-      lines.push(`"${r.deutsch}" [${land}] — ${r.orte}`);
+      lines.push(`"${r.deutsch}" [${land}, ${r.lat.toFixed(1)}°N ${r.lon.toFixed(1)}°E] — ${r.orte}`);
     }
   }
   return lines.join("\n");
+}
+
+// ── Prompt Caching: statische System-Blöcke ───────────────────────────────
+
+const DETECT_SYSTEM_PROMPT = `Du bist ein Experte für europäische Geografie und Segelreviere.
+Ordne den genannten Ort dem passendsten Segelrevier aus der Liste zu.
+
+Wichtig: Die angegebenen Orte pro Revier sind nur Beispiele — nutze dein geografisches Wissen um auch nicht explizit gelistete Orte, Dörfer, Inseln oder Buchten dem richtigen Revier zuzuordnen.
+Die Koordinaten (°N °E) jedes Reviers helfen dir bei der geografischen Einordnung.
+Beispiel: "Weiden am See" liegt am Neusiedler See → "Neusiedler See (Österreich)", auch wenn dieser Ort nicht in der Liste steht.
+Beispiel: "Punat" liegt auf der Insel Krk im Kvarner Golf → "Adria Nord (Kroatien)".
+
+Bei allgemeinen Bezeichnungen wie "Adria" ohne weitere Angabe: wähle "Adria Mitte (Kroatien)", da die Adria für deutschsprachige Segler meist das mittlere kroatische Küstengebiet bedeutet.
+
+Antworte NUR mit dem exakten Revier-Namen in Anführungszeichen, z.B.: "Adria Mitte (Kroatien)"
+Falls kein Revier aus der Liste sinnvoll passt (z.B. Binnenstadt ohne Segelbezug): KEIN_REVIER`;
+
+let _staticSystemBlocks: Anthropic.Messages.TextBlockParam[] | null = null;
+
+function getStaticSystemBlocks(): Anthropic.Messages.TextBlockParam[] {
+  if (_staticSystemBlocks) return _staticSystemBlocks;
+  const data = loadSegelreviere();
+  const revierList = buildRevierList(data);
+  _staticSystemBlocks = [
+    { type: "text", text: DETECT_SYSTEM_PROMPT },
+    {
+      type: "text",
+      text: `Verfügbare Segelreviere:\n${revierList}`,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+  return _staticSystemBlocks;
 }
 
 // ── Core detection ─────────────────────────────────────────────────────────
@@ -101,22 +133,15 @@ export async function detectSegelrevier(
   locationName: string,
   anthropic: Anthropic,
 ): Promise<DetectedRevier | null> {
-  const data = loadSegelreviere();
-  const revierList = buildRevierList(data);
-
   const result = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6",
     max_tokens: 60,
     temperature: 0,
-    system: `Du bist ein Experte für europäische Segelreviere.
-Ordne den genannten Ort dem passendsten Segelrevier aus der Liste zu.
-Berücksichtige dabei: Ortsnamen, Gewässernamen, Regionen, Inseln und gebräuchliche Alternativnamen.
-Antworte NUR mit dem exakten Revier-Namen in Anführungszeichen, z.B.: "Adria Mitte (Kroatien)"
-Falls kein Revier aus der Liste sinnvoll passt (z.B. Binnenstadt ohne Segelbezug): KEIN_REVIER`,
+    system: getStaticSystemBlocks(),
     messages: [
       {
         role: "user",
-        content: `Ort: "${locationName}"\n\nVerfügbare Segelreviere:\n${revierList}`,
+        content: `Ort: "${locationName}"`,
       },
     ],
   });
@@ -127,6 +152,7 @@ Falls kein Revier aus der Liste sinnvoll passt (z.B. Binnenstadt ohne Segelbezug
   const nameMatch = text.match(/"([^"]+)"/);
   const matchedName = nameMatch ? nameMatch[1] : text;
 
+  const data = loadSegelreviere();
   for (const [land, { reviere }] of Object.entries(data)) {
     const revier = reviere.find((r) => r.deutsch === matchedName);
     if (revier) {
