@@ -25,12 +25,26 @@ const COUNTRY_INFO: Record<string, { name: string }> = {
   CH: { name: "Schweiz" },
 };
 
-function countryFlag(code: string): string {
-  return code
+function countryFlagUrl(code: string): string {
+  const cp = code
     .toUpperCase()
     .split("")
-    .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
-    .join("");
+    .map((c) => (0x1f1e6 + c.charCodeAt(0) - 65).toString(16))
+    .join("-");
+  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${cp}.png`;
+}
+
+function CountryFlag({ code, size = 20 }: { code: string; size?: number }) {
+  return (
+    <img
+      src={countryFlagUrl(code)}
+      alt={code}
+      width={size}
+      height={size}
+      className="inline-block"
+      style={{ verticalAlign: "middle" }}
+    />
+  );
 }
 
 interface SectionMapConfig {
@@ -650,7 +664,7 @@ export default function Home() {
                                 📍 {preview.locationName}
                                 {preview.countryCode && (
                                   <>
-                                    <span>{countryFlag(preview.countryCode)}</span>
+                                    <CountryFlag code={preview.countryCode} size={16} />
                                     {COUNTRY_INFO[preview.countryCode]?.name && (
                                       <span>{COUNTRY_INFO[preview.countryCode].name}</span>
                                     )}
@@ -686,7 +700,7 @@ export default function Home() {
                       <span>{loc.sailingArea || loc.cityName || loc.displayName.split(",")[0]}</span>
                       {loc.countryCode && (
                         <>
-                          <span>{countryFlag(loc.countryCode)}</span>
+                          <CountryFlag code={loc.countryCode} />
                           {COUNTRY_INFO[loc.countryCode]?.name && (
                             <span>{COUNTRY_INFO[loc.countryCode].name}</span>
                           )}
@@ -736,7 +750,7 @@ export default function Home() {
                           {photoHint.locationName}
                           {photoHint.countryCode && (
                             <>
-                              {" "}{countryFlag(photoHint.countryCode)}
+                              {" "}<CountryFlag code={photoHint.countryCode} size={16} />
                               {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
                             </>
                           )}
