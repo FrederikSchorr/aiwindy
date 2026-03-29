@@ -1499,6 +1499,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const geocoded = {
         lat, lon, displayName,
         countryCode,
+        cityName: locationName || sailingArea || displayName.split(",")[0].trim(),
         regionalModel,
         regionalModelLabel,
         regionalModelZoom,
