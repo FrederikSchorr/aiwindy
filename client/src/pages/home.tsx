@@ -25,29 +25,6 @@ const COUNTRY_INFO: Record<string, { name: string }> = {
   CH: { name: "Schweiz" },
 };
 
-const FLAG_SVGS: Record<string, string> = Object.fromEntries(
-  Object.entries(
-    import.meta.glob("/node_modules/flag-icons/flags/4x3/*.svg", { eager: true, query: "?url", import: "default" })
-  ).map(([path, url]) => {
-    const code = path.split("/").pop()!.replace(".svg", "").toUpperCase();
-    return [code, url as string];
-  })
-);
-
-function CountryFlag({ code, size = 20 }: { code: string; size?: number }) {
-  const src = FLAG_SVGS[code.toUpperCase()];
-  if (!src) return null;
-  return (
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={Math.round(size * 0.75)}
-      className="inline-block rounded-[2px]"
-      style={{ verticalAlign: "middle" }}
-    />
-  );
-}
 
 interface SectionMapConfig {
   lat?: number;
@@ -666,7 +643,11 @@ export default function Home() {
                                 📍 {preview.locationName}
                                 {preview.countryCode && (
                                   <>
-                                    <CountryFlag code={preview.countryCode} size={16} />
+                                    <img
+                                      src={`https://flagcdn.com/w20/${preview.countryCode.toLowerCase()}.png`}
+                                      alt={preview.countryCode}
+                                      className="w-4 h-3 object-cover rounded-sm inline-block"
+                                    />
                                     {COUNTRY_INFO[preview.countryCode]?.name && (
                                       <span>{COUNTRY_INFO[preview.countryCode].name}</span>
                                     )}
@@ -702,7 +683,13 @@ export default function Home() {
                       <span>{loc.sailingArea || loc.cityName || loc.displayName.split(",")[0]}</span>
                       {loc.countryCode && (
                         <>
-                          <CountryFlag code={loc.countryCode} />
+                          <img
+                            src={`https://flagcdn.com/w20/${loc.countryCode.toLowerCase()}.png`}
+                            width={20}
+                            height={14}
+                            alt={loc.countryCode}
+                            className="inline-block rounded-[2px] shrink-0"
+                          />
                           {COUNTRY_INFO[loc.countryCode]?.name && (
                             <span>{COUNTRY_INFO[loc.countryCode].name}</span>
                           )}
@@ -752,7 +739,14 @@ export default function Home() {
                           {photoHint.locationName}
                           {photoHint.countryCode && (
                             <>
-                              {" "}<CountryFlag code={photoHint.countryCode} size={16} />
+                              {" "}
+                              <img
+                                src={`https://flagcdn.com/w20/${photoHint.countryCode.toLowerCase()}.png`}
+                                width={16}
+                                height={11}
+                                alt={photoHint.countryCode}
+                                className="inline-block rounded-[2px] align-baseline"
+                              />
                               {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
                             </>
                           )}
