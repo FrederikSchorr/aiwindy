@@ -10,6 +10,8 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
+import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE } from "./location.js";
+import { createAnalysis } from "./analysis-store.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -353,16 +355,17 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
       { role: "system", content: MODEL_SELECTION_PROMPT },
       { role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` },
     ];
-    debugLogLLM("gpt-4.1-mini", "getRegionalModelAI", modelSelMessages);
-    const result = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: modelSelMessages as OpenAI.ChatCompletionMessageParam[],
-      max_completion_tokens: 256,
+    debugLogLLM("claude-haiku-4-5", "getRegionalModelAI", modelSelMessages);
+    const result = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 256,
       temperature: 0,
+      system: MODEL_SELECTION_PROMPT,
+      messages: [{ role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` }],
     });
 
-    const text = result.choices[0]?.message?.content?.trim() || "";
-    debugLogLLMResponse("gpt-4.1-mini", "getRegionalModelAI", text);
+    const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
+    debugLogLLMResponse("claude-haiku-4-5", "getRegionalModelAI", text);
     const jsonMatch = text.match(/\{[^}]+\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -826,15 +829,16 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
         },
         { role: "user", content: message },
     ];
-    debugLogLLM("gpt-4.1-mini", "classifyMessage", classifyMessages);
-    const result = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: classifyMessages as OpenAI.ChatCompletionMessageParam[],
-      max_completion_tokens: 64,
+    debugLogLLM("claude-haiku-4-5", "classifyMessage", classifyMessages);
+    const result = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 64,
       temperature: 0,
+      system: classifyMessages[0].content as string,
+      messages: [{ role: "user", content: message }],
     });
-    const text = result.choices[0]?.message?.content?.trim() || "";
-    debugLogLLMResponse("gpt-4.1-mini", "classifyMessage", text);
+    const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
+    debugLogLLMResponse("claude-haiku-4-5", "classifyMessage", text);
     if (text.startsWith("ANALYSE")) {
       const location = text.replace("ANALYSE", "").trim();
       return { type: "ANALYSE", location: location || undefined };
@@ -1403,22 +1407,24 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           systemPrompt = GENERAL_CHAT_PROMPT + `\n\nWICHTIG: Es ist ein Ort aktiv (${currentLocation.displayName}, ${currentLocation.lat.toFixed(2)}°N, ${currentLocation.lon.toFixed(2)}°E). Beantworte allgemeine Segelfragen mit Bezug auf diesen Ort. Antworte kurz und präzise.`;
         }
 
-        const msgs: OpenAI.ChatCompletionMessageParam[] = [
-          { role: "system", content: systemPrompt },
-          ...chatHistory,
+        const chatMessages: Anthropic.MessageParam[] = [
+          ...chatHistory.map((m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })),
           { role: "user", content: userContent },
         ];
 
-        debugLogLLM("gpt-4.1", "general chat", msgs);
-        const chatResponse = await openai.chat.completions.create({
-          model: "gpt-4.1",
-          messages: msgs,
-          max_completion_tokens: 2048,
+        debugLogLLM("claude-sonnet-4-6", "general chat", chatMessages);
+        const chatResponse = await anthropic.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 2048,
           temperature: 0.3,
-          stream: false,
+          system: systemPrompt,
+          messages: chatMessages,
         });
-        const chatText = chatResponse.choices[0]?.message?.content || "";
-        debugLogLLMResponse("gpt-4.1", "general chat", chatText);
+        const chatText = chatResponse.content[0]?.type === "text" ? chatResponse.content[0].text : "";
+        debugLogLLMResponse("claude-sonnet-4-6", "general chat", chatText);
         if (chatText) sendSSE({ content: chatText });
 
         sendSSE({ done: true });
@@ -1440,262 +1446,87 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
-      const geocoded = await geocodeLocation(classification.location);
-      if (!geocoded) {
-        sendSSE({ content: `Den Ort \"${classification.location}\" konnte ich leider nicht finden. Bitte versuche einen anderen Namen oder schreibe den Ort ausführlicher, z.B. \"Split in Kroatien\" oder \"Elba, Italien\".` });
-        sendSSE({ done: true });
-        res.end();
-        return;
+      // ── Segelrevier-Erkennung ──────────────────────────────────────────────
+      const userInput = classification.location;
+      const detected = await detectSegelrevier(userInput, anthropic);
+
+      let lat: number;
+      let lon: number;
+      let countryCode: string;
+      let country: string;
+      let sailingArea: string | null;
+      let revierType: "sea" | "lake" | null;
+      let locationName: string | null = null;
+      let displayName: string;
+      let regionalModel: string;
+      let regionalModelLabel: string;
+      let regionalModelZoom: number;
+
+      if (detected) {
+        lat = detected.revier.lat;
+        lon = detected.revier.lon;
+        countryCode = detected.countryCode;
+        country = detected.land;
+        sailingArea = detected.revier.deutsch;
+        revierType = detected.revier.typ === "meer" ? "sea" : "lake";
+        displayName = detected.revier.deutsch;
+        const regional = await getRegionalModelAI(lat, lon, displayName);
+        regionalModel = regional.model;
+        regionalModelLabel = regional.label;
+        regionalModelZoom = regional.zoom;
+      } else {
+        const fallback = await geocodeLocation(userInput);
+        if (!fallback) {
+          sendSSE({ content: `Für \"${userInput}\" konnte ich weder ein Segelrevier noch einen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. \"Split in Kroatien\" oder \"Traunsee\".` });
+          sendSSE({ done: true });
+          res.end();
+          return;
+        }
+        lat = fallback.lat;
+        lon = fallback.lon;
+        countryCode = fallback.countryCode ?? "";
+        country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
+        sailingArea = null;
+        revierType = null;
+        locationName = fallback.cityName ?? fallback.displayName.split(",")[0].trim();
+        displayName = fallback.displayName;
+        regionalModel = fallback.regionalModel;
+        regionalModelLabel = fallback.regionalModelLabel;
+        regionalModelZoom = fallback.regionalModelZoom;
       }
+
+      // Geocoded object (compatible with existing SSE/frontend shape)
+      const geocoded = {
+        lat, lon, displayName,
+        countryCode,
+        regionalModel,
+        regionalModelLabel,
+        regionalModelZoom,
+        sailingArea,
+        type: revierType,
+        country,
+        location: locationName,
+        userInput,
+      };
 
       sendSSE({ location: geocoded });
 
-      const countryCode = geocoded.countryCode || "";
-      const service = getRegionalService(countryCode);
-      const locationShort = geocoded.cityName || geocoded.displayName.split(",")[0].trim();
-      const knmiTime = getKnmiChartTime();
-
-      const windUrl = `https://www.windy.com/-wind-${geocoded.regionalModel}?${geocoded.regionalModel},${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${Math.min(geocoded.regionalModelZoom + 2, 14)}`;
-      const cloudsUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}/meteogram?${geocoded.regionalModel},clouds,${geocoded.lat.toFixed(3)},${geocoded.lon.toFixed(3)},${geocoded.regionalModelZoom}`;
-      const meteogramUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}/meteogram`;
-      const basisdatenUrl = `https://www.windy.com/${geocoded.lat.toFixed(3)}/${geocoded.lon.toFixed(3)}/${geocoded.regionalModel}`;
-
-      const sectionConfigs = [
-        {
-          id: "druck-luftmassen", title: "1. Druck & Luftmassen",
-          mapType: "windy", mapConfig: { lat: 48, lon: 5, overlay: "temp", product: "ecmwf", level: "850h", zoom: 3 },
-          sourceLabel: "Windy Temperatur 1.500m ECMWF", sourceUrl: "https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3",
-        },
-        {
-          id: "fronten", title: "2. Fronten",
-          mapType: "knmi", mapConfig: {},
-          sourceLabel: `KNMI ${knmiTime.label}`, sourceUrl: "https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten",
-        },
-        {
-          id: "wind", title: "3. Wind & Welle",
-          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 2, 4), marker: true },
-          sourceLabel: `Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
-          regionalServiceLabel: service?.label || null, regionalServiceUrl: service?.forecastUrl || null,
-        },
-        {
-          id: "wolken", title: "4. Wolken & Regen",
-          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "clouds", product: geocoded.regionalModel, level: "surface", zoom: Math.max(geocoded.regionalModelZoom - 3, 4), marker: true },
-          sourceLabel: `Meteogram ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: cloudsUrl,
-        },
-        {
-          id: "prognose", title: "5. Temperatur",
-          mapType: "windy", mapConfig: { lat: geocoded.lat, lon: geocoded.lon, overlay: "wind", product: geocoded.regionalModel, level: "surface", zoom: geocoded.regionalModelZoom, forecast: true },
-          sourceLabel: `Prognose ${locationShort} ${geocoded.regionalModelLabel} windy.com`, sourceUrl: windUrl,
-        },
-      ];
-
-      const noResult: FetchResult = { text: "", available: false };
-      const [meteonewsText, regionalReport, knmiBase64] = await Promise.all([
-        fetchMeteonews(),
-        countryCode ? fetchRegionalWeatherReport(countryCode, geocoded.lat, geocoded.lon, geocoded.cityName || geocoded.displayName?.split(",")[0]?.trim()) : Promise.resolve(noResult),
-        fetchKnmiChartBase64(),
-      ]);
-
-      let preprocessedReport = "";
-      if (regionalReport.available) {
-        preprocessedReport = await preprocessWeatherText(regionalReport.text, service?.label || countryCode || "unknown");
-      }
-
-      const bullet1Available = service
-        ? `Regionales Windmodell: ${geocoded.regionalModelLabel}, Regionaler Wetterbericht: [${service.label}](${service.forecastUrl})`
-        : `Regionales Windmodell: ${geocoded.regionalModelLabel}`;
-      const bullet1Unavailable = service
-        ? `⚠️ Regionales Windmodell: ${geocoded.regionalModelLabel} — Regionaler Wetterbericht [${service.label}](${service.forecastUrl}) momentan nicht verfügbar`
-        : `⚠️ Regionales Windmodell: ${geocoded.regionalModelLabel} — kein regionaler Wetterbericht verfügbar`;
-      const abschnitt3Bullet1 = regionalReport.available ? bullet1Available : bullet1Unavailable;
-
-      sendSSE({ analysisStart: { sections: sectionConfigs } });
-
-      const streamSectionLLM = async (
-        sectionIndex: number,
-        sectionTitle: string,
-        systemPrompt: string,
-        userContent: string | OpenAI.ChatCompletionContentPart[],
-        model: string,
-        debugLabel: string,
-        skipHeader: boolean = false,
-        sourceSuffix?: string,
-      ) => {
-        if (!skipHeader) {
-          sendSSE({ section: sectionConfigs[sectionIndex] });
-          sendSSE({ content: `## ${sectionTitle}\n\n` });
-        }
-
-        const msgs: OpenAI.ChatCompletionMessageParam[] = [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ];
-        debugLogLLM(model, debugLabel, msgs);
-
-        const stream = await openai.chat.completions.create({
-          model,
-          messages: msgs,
-          max_completion_tokens: 512,
-          temperature: 0.3,
-          stream: true,
-        });
-
-        let fullText = "";
-        if (sourceSuffix) {
-          // Collect all text first, then append source inline
-          for await (const chunk of stream) {
-            const text = chunk.choices?.[0]?.delta?.content;
-            if (text) fullText += text;
-          }
-          const trimmed = fullText.replace(/\n+$/, "");
-          sendSSE({ content: `${trimmed} ${sourceSuffix}` });
-        } else {
-          let buf = "";
-          let timer: ReturnType<typeof setTimeout> | null = null;
-          const flush = () => { if (buf) { sendSSE({ content: buf }); buf = ""; } timer = null; };
-          for await (const chunk of stream) {
-            const text = chunk.choices?.[0]?.delta?.content;
-            if (text) { buf += text; fullText += text; if (!timer) timer = setTimeout(flush, 30); }
-          }
-          if (timer) clearTimeout(timer);
-          flush();
-        }
-        debugLogLLMResponse(model, debugLabel, fullText);
-        sendSSE({ content: "\n\n" });
-      };
-
-      // Section 1: Druck & Luftmassen (Claude with KNMI image + meteonews)
-      sendSSE({ section: sectionConfigs[0] });
-      sendSSE({ content: "## 1. Druck & Luftmassen\n\n" });
-
-      const section1UserContent: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
-      if (knmiBase64) {
-        section1UserContent.push({
-          type: "image",
-          source: { type: "base64", media_type: "image/gif", data: knmiBase64 },
-        });
-      }
-      section1UserContent.push({
-        type: "text",
-        text: `METEONEWS-TEXT:\n${meteonewsText || "(nicht verfügbar)"}`,
+      // ── Analysis JSON ──────────────────────────────────────────────────────
+      const analysis = createAnalysis({
+        userInput,
+        sailingArea,
+        type: revierType,
+        country,
+        countryCode,
+        coordinates: { lat, lon },
+        ...(locationName ? { location: locationName } : {}),
       });
+      analysis.save();
 
-      debugLogLLM("claude-sonnet-4-6", "section1-druck-luftmassen", [{ role: "user", content: "(KNMI image + meteonews)" }], SECTION1_PROMPT);
-      const s1Stream = anthropic.messages.stream({
-        model: "claude-sonnet-4-6",
-        max_tokens: 512,
-        system: SECTION1_PROMPT,
-        messages: [{ role: "user", content: section1UserContent }],
-      });
-
-      let s1Buf = "";
-      let s1Full = "";
-      let s1Timer: ReturnType<typeof setTimeout> | null = null;
-      const s1Flush = () => { if (s1Buf) { sendSSE({ content: s1Buf }); s1Buf = ""; } s1Timer = null; };
-      for await (const event of s1Stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          const text = event.delta.text;
-          if (text) { s1Buf += text; s1Full += text; if (!s1Timer) s1Timer = setTimeout(s1Flush, 30); }
-        }
-      }
-      if (s1Timer) clearTimeout(s1Timer);
-      s1Flush();
-      debugLogLLMResponse("claude-sonnet-4-6", "section1-druck-luftmassen", s1Full);
-      sendSSE({ content: "\n\n" });
-
-      // Section 2: Fronten (KNMI image via Claude Sonnet 4.6)
-      sendSSE({ section: sectionConfigs[1] });
-      sendSSE({ content: "## 2. Fronten\n\n" });
-
-      const section2UserContent: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
-      if (knmiBase64) {
-        section2UserContent.push({
-          type: "image",
-          source: { type: "base64", media_type: "image/gif", data: knmiBase64 },
-        });
-      }
-      const knmiHoursAgo = Math.round((Date.now() - new Date(new Date().toISOString().slice(0, 10) + `T${knmiTime.hour}:00:00Z`).getTime()) / 3600000);
-      section2UserContent.push({
-        type: "text",
-        text: `Zielort: ${locationShort} (${geocoded.lat.toFixed(2)}°N, ${geocoded.lon.toFixed(2)}°E)\nKNMI-Analysezeitpunkt: ${knmiTime.label} (vor ${knmiHoursAgo}h)${!knmiBase64 ? "\n\n(KNMI-Frontenbild nicht verfügbar — schreibe: 'KNMI-Karte nicht verfügbar')" : ""}`,
-      });
-
-      debugLogLLM("claude-sonnet-4-6", "section2-fronten", [{ role: "user", content: "(KNMI image + location)" }], SECTION2_PROMPT);
-      const claudeStream = anthropic.messages.stream({
-        model: "claude-sonnet-4-6",
-        max_tokens: 512,
-        system: SECTION2_PROMPT,
-        messages: [{ role: "user", content: section2UserContent }],
-      });
-
-      let s2Buf = "";
-      let s2Full = "";
-      let s2Timer: ReturnType<typeof setTimeout> | null = null;
-      const s2Flush = () => { if (s2Buf) { sendSSE({ content: s2Buf }); s2Buf = ""; } s2Timer = null; };
-      for await (const event of claudeStream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          const text = event.delta.text;
-          if (text) { s2Buf += text; s2Full += text; if (!s2Timer) s2Timer = setTimeout(s2Flush, 30); }
-        }
-      }
-      if (s2Timer) clearTimeout(s2Timer);
-      s2Flush();
-      debugLogLLMResponse("claude-sonnet-4-6", "section2-fronten", s2Full);
-      sendSSE({ content: "\n\n" });
-
-      // Section 3: Wind & Welle (regional report + model info)
-      const reportText = regionalReport.available ? preprocessedReport : "(NICHT VERFÜGBAR)";
-      sendSSE({ section: sectionConfigs[2] });
-      sendSSE({ content: `## 3. Wind & Welle\n\n- ${abschnitt3Bullet1}\n` });
-      const nowDE = new Date().toLocaleDateString("de-DE", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Berlin" });
-      const section3Context = `HEUTE IST: ${nowDE}\nZielort: ${locationShort}\nQuelle: Wind ${locationShort} ${geocoded.regionalModelLabel} windy.com, URL: ${windUrl}\n\nREGIONALER WETTERBERICHT (${service?.label || "nicht verfügbar"}):\n${reportText}`;
-      debugLogLLM("claude-sonnet-4-6", "section3-wind-welle", [{ role: "user", content: section3Context }], SECTION3_PROMPT);
-      const s3Stream = anthropic.messages.stream({
-        model: "claude-sonnet-4-6",
-        max_tokens: 512,
-        temperature: 0.3,
-        system: SECTION3_PROMPT,
-        messages: [{ role: "user", content: section3Context }],
-      });
-      let s3Full = "";
-      for await (const event of s3Stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          s3Full += event.delta.text;
-          sendSSE({ content: event.delta.text });
-        }
-      }
-      debugLogLLMResponse("claude-sonnet-4-6", "section3-wind-welle", s3Full);
-      sendSSE({ content: "\n\n" });
-
-      // Section 4: Wolken & Regen (preprocessed report)
-      const section4Context = `HEUTE IST: ${nowDE}\nZielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
-      const s4Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
-      await streamSectionLLM(
-        3,
-        "4. Wolken & Regen",
-        SECTION4_PROMPT,
-        section4Context,
-        "gpt-4.1-mini",
-        "section4-wolken-regen",
-        false,
-        s4Source,
-      );
-
-      // Section 5: Temperatur (temperature bullet + chart)
-      sendSSE({ section: sectionConfigs[4] });
-      sendSSE({ content: "## 5. Temperatur\n\n" });
-      const section5Context = `Zielort: ${locationShort}\n\nREGIONALER WETTERBERICHT:\n${reportText}`;
-      const s5Source = service ? `([${service.label}](${service.forecastUrl}))` : undefined;
-      await streamSectionLLM(
-        4,
-        "5. Temperatur",
-        SECTION5_PROMPT,
-        section5Context,
-        "gpt-4.1-mini",
-        "section5-prognose",
-        true,
-        s5Source,
-      );
+      // ── Chat-Ausgabe ───────────────────────────────────────────────────────
+      const flag = countryFlag(countryCode);
+      const label = sailingArea ?? locationName ?? displayName.split(",")[0].trim();
+      sendSSE({ content: `Wetteranalyse für **${label}** ${flag}` });
 
       sendSSE({ done: true });
       res.end();

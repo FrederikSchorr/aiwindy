@@ -1,0 +1,1119 @@
+{
+  "Albanien": {
+    "reviere": [
+      {
+        "deutsch": "Adria Süd (Albanien)",
+        "typ": "meer",
+        "lat": 40.8,
+        "lon": 19.0,
+        "orte": "Durrës, Vlorë, Sarandë, Shëngjin, Himarë"
+      }
+    ]
+  },
+  "Belgien": {
+    "reviere": [
+      {
+        "deutsch": "Nordsee (Belgien)",
+        "typ": "meer",
+        "lat": 51.3,
+        "lon": 2.8,
+        "orte": "Ostende, Zeebrügge, Blankenberge, Nieuwpoort, De Panne"
+      }
+    ]
+  },
+  "Deutschland": {
+    "reviere": [
+      {
+        "deutsch": "Nordsee (Deutschland)",
+        "typ": "meer",
+        "dwd": "Deutsche Bucht / Südwestliche Nordsee",
+        "lat": 55.0,
+        "lon": 7.5,
+        "orte": "Cuxhaven, Borkum, Sylt, Helgoland, Husum"
+      },
+      {
+        "deutsch": "Ostsee West (Deutschland)",
+        "typ": "meer",
+        "dwd": "Westliche Ostsee",
+        "lat": 54.7,
+        "lon": 10.5,
+        "orte": "Kiel, Flensburg, Eckernförde, Laboe, Strande"
+      },
+      {
+        "deutsch": "Ostsee Süd",
+        "typ": "meer",
+        "dwd": "Südliche Ostsee",
+        "lat": 54.5,
+        "lon": 12.5,
+        "orte": "Rostock, Stralsund, Rügen, Greifswald, Warnemünde"
+      },
+      {
+        "deutsch": "Belte und Sund (Deutschland)",
+        "typ": "meer",
+        "dwd": "Belte und Sund",
+        "lat": 54.8,
+        "lon": 10.0,
+        "orte": "Flensburg, Kappeln, Schleswig, Glücksburg, Sonderburg"
+      },
+      {
+        "deutsch": "Chiemsee",
+        "typ": "see",
+        "lat": 47.88,
+        "lon": 12.45,
+        "orte": "Prien, Seebruck, Gstadt"
+      },
+      {
+        "deutsch": "Starnberger See",
+        "typ": "see",
+        "lat": 47.9,
+        "lon": 11.31,
+        "orte": "Starnberg, Tutzing, Berg"
+      },
+      {
+        "deutsch": "Ammersee",
+        "typ": "see",
+        "lat": 47.99,
+        "lon": 11.12,
+        "orte": "Herrsching, Dießen, Utting"
+      },
+      {
+        "deutsch": "Tegernsee",
+        "typ": "see",
+        "lat": 47.72,
+        "lon": 11.75,
+        "orte": "Tegernsee, Rottach-Egern"
+      },
+      {
+        "deutsch": "Walchensee",
+        "typ": "see",
+        "lat": 47.58,
+        "lon": 11.34,
+        "orte": "Walchensee, Urfeld"
+      },
+      {
+        "deutsch": "Müritz",
+        "typ": "see",
+        "lat": 53.43,
+        "lon": 12.69,
+        "orte": "Waren, Röbel, Rechlin"
+      },
+      {
+        "deutsch": "Schweriner See",
+        "typ": "see",
+        "lat": 53.63,
+        "lon": 11.42,
+        "orte": "Schwerin, Zippendorf"
+      },
+      {
+        "deutsch": "Steinhuder Meer",
+        "typ": "see",
+        "lat": 52.46,
+        "lon": 9.34,
+        "orte": "Steinhude, Mardorf"
+      },
+      {
+        "deutsch": "Bodensee (Deutschland)",
+        "typ": "see",
+        "lat": 47.65,
+        "lon": 9.4,
+        "orte": "Konstanz, Friedrichshafen, Lindau, Meersburg, Überlingen"
+      }
+    ]
+  },
+  "Dänemark": {
+    "reviere": [
+      {
+        "deutsch": "Kattegat (Dänemark)",
+        "typ": "meer",
+        "smhi": "Kattegat",
+        "lat": 56.2,
+        "lon": 11.0,
+        "orte": "Aarhus, Randers, Grenaa, Ebeltoft, Odder"
+      },
+      {
+        "deutsch": "Belte und Sund (Dänemark)",
+        "typ": "meer",
+        "dwd": "Belte und Sund",
+        "lat": 55.2,
+        "lon": 10.5,
+        "orte": "Odense, Svendborg, Middelfart, Kolding, Assens"
+      },
+      {
+        "deutsch": "Nordsee (Dänemark)",
+        "typ": "meer",
+        "lat": 56.5,
+        "lon": 7.5,
+        "orte": "Esbjerg, Hvide Sande, Thyborøn, Hirtshals, Hanstholm"
+      },
+      {
+        "deutsch": "Ostsee West (Dänemark)",
+        "typ": "meer",
+        "dwd": "Westliche Ostsee",
+        "lat": 55.5,
+        "lon": 12.5,
+        "orte": "Kopenhagen, Roskilde, Køge, Helsingør, Dragør"
+      },
+      {
+        "deutsch": "Bornholm",
+        "typ": "meer",
+        "lat": 55.1,
+        "lon": 14.9,
+        "orte": "Rønne, Nexø, Svaneke, Gudhjem, Allinge"
+      },
+      {
+        "deutsch": "Skagerrak (Dänemark)",
+        "typ": "meer",
+        "smhi": "Skagerrak",
+        "lat": 57.5,
+        "lon": 9.5,
+        "orte": "Skagen, Frederikshavn, Hjørring, Aalborg, Hirtshals"
+      }
+    ]
+  },
+  "Frankreich": {
+    "reviere": [
+      {
+        "deutsch": "Golfe du Lion West",
+        "typ": "meer",
+        "franzoesisch": "Frontière espagnole → Port Camargue",
+        "mf_code": "BMSCOTE-02-01",
+        "lat": 42.5,
+        "lon": 3.8,
+        "orte": "Perpignan, Sète, Montpellier, Agde, Port-Vendres"
+      },
+      {
+        "deutsch": "Golfe du Lion Ost",
+        "typ": "meer",
+        "franzoesisch": "Port Camargue → Saint Raphaël",
+        "mf_code": "BMSCOTE-02-02",
+        "lat": 43.0,
+        "lon": 5.5,
+        "orte": "Marseille, Toulon, Fréjus, Cassis, La Ciotat"
+      },
+      {
+        "deutsch": "Côte d'Azur",
+        "typ": "meer",
+        "franzoesisch": "Saint Raphaël → Menton",
+        "mf_code": "BMSCOTE-02-03",
+        "lat": 43.3,
+        "lon": 7.2,
+        "orte": "Cannes, Nizza, Monaco, Antibes, Saint-Tropez"
+      },
+      {
+        "deutsch": "Korsika",
+        "typ": "meer",
+        "franzoesisch": "Corse",
+        "mf_code": "BMSCOTE-02-04",
+        "lat": 42.0,
+        "lon": 8.5,
+        "orte": "Ajaccio, Bastia, Calvi, Porto-Vecchio, Bonifacio"
+      },
+      {
+        "deutsch": "Ärmelkanal Ost (Frankreich)",
+        "typ": "meer",
+        "franzoesisch": "Frontière belge → Baie de Somme",
+        "mf_code": "BMSCOTE-01-01",
+        "lat": 51.0,
+        "lon": 1.8,
+        "orte": "Dunkerque, Calais, Boulogne, Étaples, Berck"
+      },
+      {
+        "deutsch": "Normandie",
+        "typ": "meer",
+        "franzoesisch": "Baie de Somme → Cap de la Hague",
+        "mf_code": "BMSCOTE-01-02",
+        "lat": 49.8,
+        "lon": 0.0,
+        "orte": "Dieppe, Le Havre, Cherbourg, Honfleur, Granville"
+      },
+      {
+        "deutsch": "Bretagne",
+        "typ": "meer",
+        "franzoesisch": "Cap de la Hague → Penmarc'h",
+        "mf_code": "BMSCOTE-01-03",
+        "lat": 47.5,
+        "lon": -5.0,
+        "orte": "Brest, Lorient, Saint-Malo, Quimper, Concarneau"
+      },
+      {
+        "deutsch": "Biskaya Nord",
+        "typ": "meer",
+        "franzoesisch": "Penmarc'h → Anse de l'Aiguillon",
+        "mf_code": "BMSCOTE-01-04",
+        "lat": 46.5,
+        "lon": -3.5,
+        "orte": "Saint-Nazaire, La Rochelle, Les Sables, Noirmoutier, Pornic"
+      },
+      {
+        "deutsch": "Biskaya Süd",
+        "typ": "meer",
+        "franzoesisch": "Anse de l'Aiguillon → Frontière espagnole",
+        "mf_code": "BMSCOTE-01-05",
+        "lat": 44.0,
+        "lon": -2.5,
+        "orte": "Arcachon, Bayonne, Biarritz, Capbreton, Hendaye"
+      }
+    ]
+  },
+  "Griechenland": {
+    "reviere": [
+      {
+        "deutsch": "Ionisches Meer Nord (Griechenland)",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 38.8,
+        "lon": 20.0,
+        "orte": "Lefkada, Preveza, Korfu, Paxos, Sivota"
+      },
+      {
+        "deutsch": "Ionisches Meer Süd (Griechenland)",
+        "typ": "meer",
+        "emy_name": "South Ionio",
+        "emy_nr": 26,
+        "lat": 37.0,
+        "lon": 21.0,
+        "orte": "Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo"
+      },
+      {
+        "deutsch": "Patraikos",
+        "typ": "meer",
+        "emy_name": "Patraikos",
+        "emy_nr": 27,
+        "lat": 38.3,
+        "lon": 21.5,
+        "orte": "Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio"
+      },
+      {
+        "deutsch": "Korinthiakos",
+        "typ": "meer",
+        "emy_name": "Korinthiakos",
+        "emy_nr": 28,
+        "lat": 38.1,
+        "lon": 22.5,
+        "orte": "Korinth, Galaxidi, Itea, Nafpaktos, Loutraki"
+      },
+      {
+        "deutsch": "Kythira-See",
+        "typ": "meer",
+        "emy_name": "Kithira Sea",
+        "emy_nr": 29,
+        "lat": 36.5,
+        "lon": 22.8,
+        "orte": "Kythira, Neapolis, Gythio, Monemvasia, Elafonisos"
+      },
+      {
+        "deutsch": "Kretisches Meer West",
+        "typ": "meer",
+        "emy_name": "West Kritiko",
+        "emy_nr": 38,
+        "lat": 35.5,
+        "lon": 23.5,
+        "orte": "Chania, Rethymno, Heraklion, Kissamos, Paleochora"
+      },
+      {
+        "deutsch": "Kretisches Meer Ost",
+        "typ": "meer",
+        "emy_name": "East Kritiko",
+        "emy_nr": 39,
+        "lat": 35.2,
+        "lon": 26.0,
+        "orte": "Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos"
+      },
+      {
+        "deutsch": "Saronischer Golf",
+        "typ": "meer",
+        "emy_name": "Saronikos",
+        "emy_nr": 43,
+        "lat": 37.5,
+        "lon": 23.5,
+        "orte": "Athen/Piräus, Aegina, Poros, Hydra, Spetses"
+      },
+      {
+        "deutsch": "Ägäis Mitte",
+        "typ": "meer",
+        "emy_name": "Central Aegean",
+        "emy_nr": 46,
+        "lat": 37.5,
+        "lon": 25.0,
+        "orte": "Mykonos, Naxos, Syros, Paros, Tinos"
+      },
+      {
+        "deutsch": "Ägäis Südwest",
+        "typ": "meer",
+        "emy_name": "Southwest Aegean",
+        "emy_nr": 40,
+        "lat": 36.8,
+        "lon": 24.5,
+        "orte": "Milos, Santorini, Folegandros, Sifnos, Serifos"
+      },
+      {
+        "deutsch": "Ägäis Südost",
+        "typ": "meer",
+        "emy_name": "Southeast Aegean",
+        "emy_nr": 41,
+        "lat": 37.5,
+        "lon": 26.5,
+        "orte": "Ikaria, Samos, Chios, Patmos, Kos"
+      },
+      {
+        "deutsch": "Dodekanes",
+        "typ": "meer",
+        "emy_name": "Rodos Sea",
+        "emy_nr": 36,
+        "lat": 36.5,
+        "lon": 27.5,
+        "orte": "Rhodos, Kos, Kalymnos, Leros, Symi"
+      },
+      {
+        "deutsch": "Ägäis Nordwest",
+        "typ": "meer",
+        "emy_name": "Northwest Aegean",
+        "emy_nr": 47,
+        "lat": 39.5,
+        "lon": 24.0,
+        "orte": "Skiathos, Skopelos, Volos, Alonissos, Skyros"
+      },
+      {
+        "deutsch": "Ägäis Nordost",
+        "typ": "meer",
+        "emy_name": "Northeast Aegean",
+        "emy_nr": 48,
+        "lat": 39.5,
+        "lon": 26.0,
+        "orte": "Lesbos, Chios, Limnos, Samothraki, Thassos"
+      },
+      {
+        "deutsch": "Thrakisches Meer",
+        "typ": "meer",
+        "emy_name": "Thrakiko",
+        "emy_nr": 49,
+        "lat": 40.5,
+        "lon": 25.5,
+        "orte": "Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi"
+      },
+      {
+        "deutsch": "Thermaikos Golf",
+        "typ": "meer",
+        "emy_name": "Thermaikos",
+        "emy_nr": 51,
+        "lat": 40.2,
+        "lon": 22.8,
+        "orte": "Thessaloniki, Katerini, Halkidiki, Nea Moudania, Ierissos"
+      }
+    ]
+  },
+  "Irland": {
+    "reviere": [
+      {
+        "deutsch": "Irische See (Irland)",
+        "typ": "meer",
+        "lat": 53.2,
+        "lon": -5.5,
+        "orte": "Dublin, Dún Laoghaire, Wicklow, Arklow, Howth"
+      },
+      {
+        "deutsch": "Irland Süd",
+        "typ": "meer",
+        "lat": 51.2,
+        "lon": -9.0,
+        "orte": "Cork, Kinsale, Baltimore, Crosshaven, Bantry"
+      },
+      {
+        "deutsch": "Irland West",
+        "typ": "meer",
+        "lat": 53.5,
+        "lon": -10.5,
+        "orte": "Galway, Westport, Clifden, Killary, Kilronan"
+      },
+      {
+        "deutsch": "Irland Nord",
+        "typ": "meer",
+        "lat": 55.2,
+        "lon": -6.5,
+        "orte": "Londonderry, Portrush, Ballycastle, Carrickfergus, Bangor"
+      }
+    ]
+  },
+  "Italien": {
+    "reviere": [
+      {
+        "deutsch": "Adria Nord (Italien)",
+        "typ": "meer",
+        "italienisch": "Adriatico Settentrionale",
+        "lat": 45.2,
+        "lon": 13.0,
+        "orte": "Venedig, Triest, Rimini, Chioggia, Grado"
+      },
+      {
+        "deutsch": "Adria Mitte (Italien)",
+        "typ": "meer",
+        "italienisch": "Adriatico Centrale",
+        "lat": 43.0,
+        "lon": 14.5,
+        "orte": "Ancona, Pescara, Bari, Numana, Vieste"
+      },
+      {
+        "deutsch": "Adria Süd (Italien)",
+        "typ": "meer",
+        "italienisch": "Adriatico Meridionale",
+        "lat": 41.1798,
+        "lon": 17.2995,
+        "orte": "Brindisi, Lecce, Otranto, Taranto, Castro"
+      },
+      {
+        "deutsch": "Ligurisches Meer",
+        "typ": "meer",
+        "italienisch": "Mar Ligure",
+        "lat": 44.0,
+        "lon": 8.8,
+        "orte": "Genua, Portofino, La Spezia, Sanremo, Savona"
+      },
+      {
+        "deutsch": "Tyrrhenisches Meer Nord",
+        "typ": "meer",
+        "italienisch": "Tirreno Settentrionale",
+        "lat": 43.2,
+        "lon": 10.2,
+        "orte": "Livorno, Piombino, Elba, Viareggio, Giglio"
+      },
+      {
+        "deutsch": "Tyrrhenisches Meer Mitte",
+        "typ": "meer",
+        "italienisch": "Tirreno Centrale",
+        "lat": 41.2,
+        "lon": 12.5,
+        "orte": "Civitavecchia, Neapel, Ischia, Gaeta, Ponza"
+      },
+      {
+        "deutsch": "Tyrrhenisches Meer Süd",
+        "typ": "meer",
+        "italienisch": "Tirreno Meridionale",
+        "lat": 38.8,
+        "lon": 15.3,
+        "orte": "Reggio Calabria, Tropea, Paola, Vibo Valentia, Scalea"
+      },
+      {
+        "deutsch": "Ionisches Meer Nord (Italien)",
+        "typ": "meer",
+        "italienisch": "Ionio Settentrionale",
+        "lat": 40.0,
+        "lon": 17.5,
+        "orte": "Taranto, Gallipoli, Crotone, Otranto, Leuca"
+      },
+      {
+        "deutsch": "Sardinien",
+        "typ": "meer",
+        "italienisch": "Mar di Sardegna",
+        "lat": 40.2,
+        "lon": 8.0,
+        "orte": "Cagliari, Alghero, Olbia, Porto Cervo, La Maddalena"
+      },
+      {
+        "deutsch": "Sizilien",
+        "typ": "meer",
+        "italienisch": "Stretto di Sicilia",
+        "lat": 37.5,
+        "lon": 12.5,
+        "orte": "Palermo, Messina, Trapani, Siracusa, Agrigento"
+      },
+      {
+        "deutsch": "Gardasee",
+        "typ": "see",
+        "italienisch": "Lago di Garda",
+        "lat": 45.65,
+        "lon": 10.7,
+        "orte": "Riva del Garda, Desenzano del Garda, Malcesine, Sirmione, Bardolino, Torri del Benaco, Garda, Peschiera del Garda"
+      }
+    ]
+  },
+  "Kroatien": {
+    "reviere": [
+      {
+        "deutsch": "Adria Nord (Kroatien)",
+        "typ": "meer",
+        "kroatisch": "Sjeverni Jadran",
+        "lat": 44.6284,
+        "lon": 13.8522,
+        "orte": "Rijeka, Pula, Rovinj, Poreč, Krk"
+      },
+      {
+        "deutsch": "Adria Mitte (Kroatien)",
+        "typ": "meer",
+        "kroatisch": "Srednji Jadran",
+        "lat": 43.8227,
+        "lon": 14.9322,
+        "orte": "Zadar, Šibenik, Split, Trogir, Primošten"
+      },
+      {
+        "deutsch": "Adria Süd (Kroatien)",
+        "typ": "meer",
+        "kroatisch": "Južni Jadran",
+        "lat": 42.6702,
+        "lon": 17.1459,
+        "orte": "Hvar, Korčula, Dubrovnik, Makarska, Omiš"
+      }
+    ]
+  },
+  "Montenegro": {
+    "reviere": [
+      {
+        "deutsch": "Adria Süd (Montenegro)",
+        "typ": "meer",
+        "lat": 42.2,
+        "lon": 18.2,
+        "orte": "Kotor, Budva, Bar, Herceg Novi, Tivat"
+      }
+    ]
+  },
+  "Niederlande": {
+    "reviere": [
+      {
+        "deutsch": "Nordsee (Niederlande)",
+        "typ": "meer",
+        "lat": 52.5,
+        "lon": 3.8,
+        "orte": "Den Helder, IJmuiden, Scheveningen, Hoek van Holland, Vlissingen"
+      },
+      {
+        "deutsch": "Wattenmeer",
+        "typ": "meer",
+        "lat": 53.3,
+        "lon": 5.0,
+        "orte": "Harlingen, Vlieland, Terschelling, Ameland, Texel"
+      },
+      {
+        "deutsch": "IJsselmeer",
+        "typ": "see",
+        "lat": 52.7,
+        "lon": 5.3,
+        "orte": "Enkhuizen, Hoorn, Lelystad, Medemblik, Urk"
+      },
+      {
+        "deutsch": "Markermeer",
+        "typ": "see",
+        "lat": 52.5,
+        "lon": 5.2,
+        "orte": "Amsterdam, Volendam, Marken, Edam, Monnickendam"
+      },
+      {
+        "deutsch": "Zeeland/Deltagebiet",
+        "typ": "meer",
+        "lat": 51.5,
+        "lon": 3.5,
+        "orte": "Middelburg, Vlissingen, Zierikzee, Veere, Brouwershaven"
+      }
+    ]
+  },
+  "Norwegen": {
+    "reviere": [
+      {
+        "deutsch": "Skagerrak (Norwegen)",
+        "typ": "meer",
+        "smhi": "Skagerrak",
+        "lat": 58.5,
+        "lon": 9.0,
+        "orte": "Kristiansand, Arendal, Larvik, Tønsberg, Fredrikstad"
+      },
+      {
+        "deutsch": "Oslofjord",
+        "typ": "meer",
+        "lat": 59.3,
+        "lon": 10.5,
+        "orte": "Oslo, Drøbak, Moss, Horten, Tønsberg"
+      },
+      {
+        "deutsch": "Nordsee (Norwegen)",
+        "typ": "meer",
+        "lat": 59.5,
+        "lon": 4.0,
+        "orte": "Stavanger, Bergen, Ålesund, Kristiansund, Haugesund"
+      },
+      {
+        "deutsch": "Westnorwegen/Hardanger",
+        "typ": "meer",
+        "lat": 60.2,
+        "lon": 5.0,
+        "orte": "Bergen, Rosendal, Norheimsund, Ulvik, Lofthus"
+      }
+    ]
+  },
+  "Österreich": {
+    "reviere": [
+      {
+        "deutsch": "Neusiedler See (Österreich)",
+        "typ": "see",
+        "lat": 47.9,
+        "lon": 16.8,
+        "orte": "Rust, Podersdorf, Neusiedl, Mörbisch, Illmitz"
+      },
+      {
+        "deutsch": "Attersee",
+        "typ": "see",
+        "lat": 47.87,
+        "lon": 13.54,
+        "orte": "Attersee, Weyregg, Nußdorf, Unterach, Steinbach"
+      },
+      {
+        "deutsch": "Traunsee",
+        "typ": "see",
+        "lat": 47.87,
+        "lon": 13.79,
+        "orte": "Gmunden, Traunkirchen, Ebensee, Altmünster, Traunkirchen"
+      },
+      {
+        "deutsch": "Mondsee",
+        "typ": "see",
+        "lat": 47.84,
+        "lon": 13.38,
+        "orte": "Mondsee, Loibichl"
+      },
+      {
+        "deutsch": "Mattsee",
+        "typ": "see",
+        "lat": 47.97,
+        "lon": 13.1,
+        "orte": "Mattsee, Obertrum"
+      },
+      {
+        "deutsch": "Wallersee",
+        "typ": "see",
+        "lat": 47.94,
+        "lon": 13.24,
+        "orte": "Seekirchen, Neumarkt"
+      },
+      {
+        "deutsch": "Wolfgangsee",
+        "typ": "see",
+        "lat": 47.74,
+        "lon": 13.45,
+        "orte": "St. Wolfgang, St. Gilgen"
+      },
+      {
+        "deutsch": "Zell am See",
+        "typ": "see",
+        "lat": 47.32,
+        "lon": 12.79,
+        "orte": "Zell am See, Thumersbach"
+      },
+      {
+        "deutsch": "Achensee",
+        "typ": "see",
+        "lat": 47.51,
+        "lon": 11.71,
+        "orte": "Pertisau, Maurach"
+      },
+      {
+        "deutsch": "Bodensee (Österreich)",
+        "typ": "see",
+        "lat": 47.57,
+        "lon": 9.73,
+        "orte": "Bregenz, Hard, Lochau, Fußach, Höchst"
+      },
+      {
+        "deutsch": "Wörthersee",
+        "typ": "see",
+        "lat": 46.62,
+        "lon": 14.15,
+        "orte": "Klagenfurt, Velden, Pörtschach, Krumpendorf, Maria Wörth"
+      },
+      {
+        "deutsch": "Millstätter See",
+        "typ": "see",
+        "lat": 46.8,
+        "lon": 13.58,
+        "orte": "Millstatt, Seeboden"
+      },
+      {
+        "deutsch": "Ossiacher See",
+        "typ": "see",
+        "lat": 46.68,
+        "lon": 13.97,
+        "orte": "Ossiach, Bodensdorf, Steindorf, Annenheim, Feldkirchen"
+      },
+      {
+        "deutsch": "Faaker See",
+        "typ": "see",
+        "lat": 46.57,
+        "lon": 13.91,
+        "orte": "Faak, Egg am Faaker See"
+      },
+      {
+        "deutsch": "Weißensee",
+        "typ": "see",
+        "lat": 46.7,
+        "lon": 13.31,
+        "orte": "Techendorf, Neusach"
+      },
+      {
+        "deutsch": "Ottenstein",
+        "typ": "see",
+        "lat": 48.6,
+        "lon": 15.47,
+        "orte": "Ottenstein, Rastenfeld"
+      },
+      {
+        "deutsch": "Grundlsee",
+        "typ": "see",
+        "lat": 47.62,
+        "lon": 13.8,
+        "orte": "Grundlsee, Gössl"
+      }
+    ]
+  },
+  "Portugal": {
+    "reviere": [
+      {
+        "deutsch": "Portugal Nord",
+        "typ": "meer",
+        "portugiesisch": "Costa Norte",
+        "ipma_zone": "17 Porto",
+        "lat": 41.5,
+        "lon": -9.5,
+        "orte": "Viana do Castelo, Póvoa de Varzim, Porto, Aveiro, Figueira da Foz"
+      },
+      {
+        "deutsch": "Portugal Mitte",
+        "typ": "meer",
+        "portugiesisch": "Costa Centro",
+        "ipma_zone": "16 Finisterre",
+        "lat": 38.8,
+        "lon": -9.8,
+        "orte": "Nazaré, Lisboa, Sesimbra, Setúbal, Cascais"
+      },
+      {
+        "deutsch": "Portugal Süd",
+        "typ": "meer",
+        "portugiesisch": "Costa Sul",
+        "ipma_zone": "18 S.Vicente",
+        "lat": 36.8,
+        "lon": -8.8,
+        "orte": "Sagres, Lagos, Faro, Olhão, Portimão"
+      },
+      {
+        "deutsch": "Madeira",
+        "typ": "meer",
+        "portugiesisch": "Arq. Madeira",
+        "ipma_zone": "Madeira",
+        "lat": 32.7,
+        "lon": -17.0,
+        "orte": "Funchal, Porto Santo"
+      }
+    ]
+  },
+  "Schweden": {
+    "reviere": [
+      {
+        "deutsch": "Skagerrak (Schweden)",
+        "typ": "meer",
+        "smhi": "Skagerrak",
+        "lat": 58.0,
+        "lon": 9.5,
+        "orte": "Göteborg, Strömstad, Lysekil, Marstrand, Fjällbacka"
+      },
+      {
+        "deutsch": "Kattegat (Schweden)",
+        "typ": "meer",
+        "smhi": "Kattegat",
+        "lat": 57.0,
+        "lon": 11.7,
+        "orte": "Varberg, Falkenberg, Halmstad, Båstad, Helsingborg"
+      },
+      {
+        "deutsch": "Sund (Öresund)",
+        "typ": "meer",
+        "smhi": "The Sound",
+        "lat": 55.8,
+        "lon": 12.8,
+        "orte": "Malmö, Helsingborg, Landskrona, Trelleborg, Ystad"
+      },
+      {
+        "deutsch": "Ostsee West (Schweden)",
+        "typ": "meer",
+        "smhi": "Western Baltic",
+        "lat": 55.5,
+        "lon": 14.5,
+        "orte": "Karlskrona, Karlshamn, Ronneby, Kristianstad, Sölvesborg"
+      },
+      {
+        "deutsch": "Ostsee Süd (Schweden)",
+        "typ": "meer",
+        "smhi": "Southern Baltic",
+        "lat": 57.0,
+        "lon": 17.5,
+        "orte": "Karlshamn, Kalmar, Borgholm, Oskarshamn, Visby"
+      },
+      {
+        "deutsch": "Ostsee Mitte (Schweden)",
+        "typ": "meer",
+        "smhi": "Central Baltic",
+        "lat": 57.5,
+        "lon": 19.0,
+        "orte": "Visby, Gotland, Klintehamn, Slite"
+      },
+      {
+        "deutsch": "Ostsee Nord (Schweden)",
+        "typ": "meer",
+        "smhi": "Northern Baltic",
+        "lat": 59.0,
+        "lon": 19.5,
+        "orte": "Stockholm, Kapellskär, Norrtälje, Oxelösund, Nynäshamn"
+      },
+      {
+        "deutsch": "Schärenmeer",
+        "typ": "meer",
+        "smhi": "Archipelago Sea",
+        "lat": 59.5,
+        "lon": 20.5,
+        "orte": "Sandhamn, Vaxholm, Stavsnäs, Furusund, Arholma"
+      },
+      {
+        "deutsch": "Bottnischer Meerbusen Süd",
+        "typ": "meer",
+        "smhi": "Southern Sea of Bothnia",
+        "lat": 62.0,
+        "lon": 18.5,
+        "orte": "Sundsvall, Härnösand, Hudiksvall, Örnsköldsvik, Gävle"
+      },
+      {
+        "deutsch": "Vänern",
+        "typ": "see",
+        "smhi": "Lake Vaenern",
+        "lat": 58.9,
+        "lon": 13.5,
+        "orte": "Karlstad, Lidköping, Mariestad, Kristinehamn, Vänersborg"
+      },
+      {
+        "deutsch": "Vättern",
+        "typ": "see",
+        "lat": 58.3,
+        "lon": 14.6,
+        "orte": "Jönköping, Motala, Hjo, Vadstena, Karlsborg"
+      },
+      {
+        "deutsch": "Mälaren",
+        "typ": "see",
+        "lat": 59.5,
+        "lon": 17.1,
+        "orte": "Stockholm, Västerås, Strängnäs, Enköping, Mariefred"
+      }
+    ]
+  },
+  "Schweiz": {
+    "reviere": [
+      {
+        "deutsch": "Genfersee",
+        "typ": "see",
+        "lat": 46.45,
+        "lon": 6.55,
+        "orte": "Genf, Lausanne, Montreux, Nyon, Morges"
+      },
+      {
+        "deutsch": "Zürichsee",
+        "typ": "see",
+        "lat": 47.27,
+        "lon": 8.72,
+        "orte": "Zürich, Rapperswil, Richterswil, Stäfa, Küsnacht"
+      },
+      {
+        "deutsch": "Vierwaldstättersee",
+        "typ": "see",
+        "lat": 47.0,
+        "lon": 8.47,
+        "orte": "Luzern, Brunnen, Flüelen, Küssnacht, Weggis"
+      },
+      {
+        "deutsch": "Thunersee",
+        "typ": "see",
+        "lat": 46.68,
+        "lon": 7.72,
+        "orte": "Thun, Spiez, Interlaken, Faulensee, Hilterfingen"
+      },
+      {
+        "deutsch": "Brienzersee",
+        "typ": "see",
+        "lat": 46.73,
+        "lon": 7.98,
+        "orte": "Brienz, Iseltwald, Bönigen, Ringgenberg, Oberried"
+      },
+      {
+        "deutsch": "Neuenburgersee",
+        "typ": "see",
+        "lat": 46.9,
+        "lon": 6.85,
+        "orte": "Neuenburg, Murten, Yverdon, Estavayer, Grandson"
+      },
+      {
+        "deutsch": "Bodensee (Schweiz)",
+        "typ": "see",
+        "lat": 47.55,
+        "lon": 9.5,
+        "orte": "Kreuzlingen, Arbon, Rorschach, Romanshorn, Konstanz"
+      }
+    ]
+  },
+  "Slowenien": {
+    "reviere": [
+      {
+        "deutsch": "Adria Nord (Slowenien)",
+        "typ": "meer",
+        "slovenisch": "Obalno-kraška",
+        "lat": 45.6,
+        "lon": 13.5,
+        "orte": "Koper, Piran, Portorož, Izola, Strunjan"
+      }
+    ]
+  },
+  "Spanien": {
+    "reviere": [
+      {
+        "deutsch": "Katalonien",
+        "typ": "meer",
+        "spanisch": "Costa de Cataluña",
+        "aemet_area": "cat1",
+        "lat": 41.0,
+        "lon": 2.5,
+        "orte": "Barcelona, Tarragona, Girona, Sitges, Blanes"
+      },
+      {
+        "deutsch": "Valencia/Murcia",
+        "typ": "meer",
+        "spanisch": "Costa de Valencia y Murcia",
+        "aemet_area": "val1",
+        "lat": 39.5,
+        "lon": 0.5,
+        "orte": "Valencia, Alicante, Cartagena, Dénia, Gandia"
+      },
+      {
+        "deutsch": "Andalusien Ost/Alboran",
+        "typ": "meer",
+        "spanisch": "Costa de Andalucía Oriental y Alborán",
+        "aemet_area": "and1",
+        "lat": 36.5,
+        "lon": -3.0,
+        "orte": "Málaga, Almería, Melilla, Motril, Roquetas"
+      },
+      {
+        "deutsch": "Andalusien West/Gibraltar",
+        "typ": "meer",
+        "spanisch": "Costa de Andalucía Occidental y Ceuta",
+        "aemet_area": "and2",
+        "lat": 36.3,
+        "lon": -6.5,
+        "orte": "Gibraltar, Cádiz, Huelva, Barbate, Tarifa"
+      },
+      {
+        "deutsch": "Balearen",
+        "typ": "meer",
+        "spanisch": "Costa de Baleares",
+        "aemet_area": "bal1",
+        "lat": 39.5,
+        "lon": 2.5,
+        "orte": "Palma, Ibiza, Menorca, Alcúdia, Port Andratx"
+      },
+      {
+        "deutsch": "Galicien",
+        "typ": "meer",
+        "spanisch": "Costa de Galicia",
+        "aemet_area": "gal1",
+        "lat": 42.5,
+        "lon": -9.5,
+        "orte": "Vigo, La Coruña, Pontevedra, Marin, Vilagarcía"
+      },
+      {
+        "deutsch": "Kantabrien/Baskenland",
+        "typ": "meer",
+        "spanisch": "Costa de Asturias, País Vasco y Cantabria",
+        "aemet_area": "can1",
+        "lat": 43.8,
+        "lon": -3.5,
+        "orte": "Santander, Bilbao, San Sebastián, Castro-Urdiales, Pasaia"
+      }
+    ]
+  },
+  "Türkei": {
+    "reviere": [
+      {
+        "deutsch": "Ägäis Nord (Türkei)",
+        "typ": "meer",
+        "lat": 38.8,
+        "lon": 26.0,
+        "orte": "Çanakkale, Ayvalık, Dikili, Foça, İzmir"
+      },
+      {
+        "deutsch": "Ägäis Süd (Türkei)",
+        "typ": "meer",
+        "lat": 37.0,
+        "lon": 27.5,
+        "orte": "Kuşadası, Bodrum, Marmaris, Fethiye, Göcek"
+      },
+      {
+        "deutsch": "Türkische Riviera",
+        "typ": "meer",
+        "lat": 36.2,
+        "lon": 30.5,
+        "orte": "Kaş, Kekova, Antalya, Alanya, Side"
+      },
+      {
+        "deutsch": "Marmara",
+        "typ": "meer",
+        "lat": 40.7,
+        "lon": 28.0,
+        "orte": "İstanbul, Erdek, Bandırma, Tekirdağ, Bursa/Mudanya"
+      }
+    ]
+  },
+  "Vereinigtes Königreich": {
+    "reviere": [
+      {
+        "deutsch": "Ärmelkanal Ost (UK)",
+        "typ": "meer",
+        "lat": 51.0,
+        "lon": 1.5,
+        "orte": "Dover, Folkestone, Brighton, Eastbourne, Ramsgate"
+      },
+      {
+        "deutsch": "Ärmelkanal West (UK)",
+        "typ": "meer",
+        "lat": 50.2,
+        "lon": -4.5,
+        "orte": "Plymouth, Falmouth, Dartmouth, Weymouth, Poole"
+      },
+      {
+        "deutsch": "Irische See",
+        "typ": "meer",
+        "lat": 53.5,
+        "lon": -5.0,
+        "orte": "Liverpool, Holyhead, Douglas, Dublin, Belfast"
+      },
+      {
+        "deutsch": "Nordsee (UK)",
+        "typ": "meer",
+        "lat": 54.5,
+        "lon": 1.5,
+        "orte": "Hull, Scarborough, Newcastle, Blyth, Whitby"
+      },
+      {
+        "deutsch": "Schottland West",
+        "typ": "meer",
+        "lat": 56.5,
+        "lon": -6.0,
+        "orte": "Oban, Tobermory, Stornoway, Tarbert, Crinan"
+      },
+      {
+        "deutsch": "Schottland Ost",
+        "typ": "meer",
+        "lat": 57.5,
+        "lon": -1.5,
+        "orte": "Aberdeen, Stonehaven, Peterhead, Fraserburgh, Arbroath"
+      },
+      {
+        "deutsch": "Solent/Südengland",
+        "typ": "meer",
+        "lat": 50.5,
+        "lon": -1.5,
+        "orte": "Southampton, Cowes, Portsmouth, Yarmouth, Lymington"
+      }
+    ]
+  }
+}
