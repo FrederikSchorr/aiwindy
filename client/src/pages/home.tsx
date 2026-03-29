@@ -25,24 +25,11 @@ const COUNTRY_INFO: Record<string, { name: string }> = {
   CH: { name: "Schweiz" },
 };
 
-function countryFlagUrl(code: string): string {
-  const cp = code
-    .toUpperCase()
-    .split("")
-    .map((c) => (0x1f1e6 + c.charCodeAt(0) - 65).toString(16))
-    .join("-");
-  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${cp}.png`;
-}
-
 function CountryFlag({ code, size = 20 }: { code: string; size?: number }) {
   return (
-    <img
-      src={countryFlagUrl(code)}
-      alt={code}
-      width={size}
-      height={size}
-      className="inline-block"
-      style={{ verticalAlign: "middle" }}
+    <span
+      className={`fi fi-${code.toLowerCase()}`}
+      style={{ fontSize: `${size}px`, lineHeight: 1, verticalAlign: "middle" }}
     />
   );
 }
