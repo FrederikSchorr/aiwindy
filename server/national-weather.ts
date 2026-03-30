@@ -119,7 +119,14 @@ async function preprocessDhmzSailingArea(
       max_tokens: 600,
       messages: [{
         role: "user",
-        content: `From this Croatian maritime weather XML, extract the warning (Upozorenje) and the forecast section most relevant to the sailing area "${sailingArea ?? "Adriatic"}". Translate everything to fluent German. Remove all XML tags and extra whitespace. Return only the plain text (warning first, then forecast).\n\nSafety note: Velebit wind values are extreme gusts specific to the Northern Adriatic coastline. For Northern Adriatic sailing areas, always keep Velebit references — they are critical safety information. For Central or Southern Adriatic sailing areas, remove sentences that contain "Velebit" because those gust values do not apply there and would be dangerously misleading.\n\nXML:\n${xml}`,
+        content: `From this Croatian maritime weather XML, extract only information relevant to the sailing area "${sailingArea ?? "Adriatic"}". Translate everything to fluent German. Remove all XML tags and extra whitespace. Return only plain text (warning first, then forecast).
+
+Rules:
+- Include only the forecast section for the matching region. Remove forecast sections for other Adriatic regions entirely.
+- From the warning (Upozorenje), keep only sentences that apply to the relevant region. Remove sentences that refer only to other regions (e.g. remove "Mittel- und Südadria" references when the sailing area is Northern Adriatic, and vice versa).
+- Safety rule for Velebit: Velebit gust values are extreme gusts specific to the Northern Adriatic coastline. Always keep Velebit references for Northern Adriatic sailing areas — critical safety information. Remove any sentence containing "Velebit" for Central or Southern Adriatic sailing areas as those values are dangerously misleading there.
+
+XML:\n${xml}`,
       }],
     });
     return (msg.content[0] as { type: "text"; text: string }).text.trim() || null;
