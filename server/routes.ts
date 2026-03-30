@@ -12,6 +12,8 @@ import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
+import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-sources.js";
+import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./national-weather.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -385,59 +387,6 @@ async function getRegionalModelAI(lat: number, lon: number, displayName: string)
 }
 
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async function fetchMeteonews(): Promise<string> {
-  // Fetches only the European overview bulletin from meteonews.at
-  try {
-    const url = "https://meteonews.at/de/Allgemeine_Lage/K33/Europa";
-    const res = await fetch(url, {
-      headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
-      signal: AbortSignal.timeout(8000),
-    });
-    debugLog(`Scrape meteonews.at → ${res.status}`);
-    if (!res.ok) return "";
-    const html = await res.text();
-
-    // Target the bulletin-wrap div inside ModuleBulletinsGeneralSituation
-    const bulletinMatch = html.match(/class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i)
-      || html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-
-    if (bulletinMatch) {
-      const fullText = stripHtml(bulletinMatch[1]).trim();
-      debugLogScrape("meteonews.at", url, res.status, fullText);
-      return fullText;
-    }
-
-    // Fallback: find "Europawetter" section in plain text
-    const plainText = stripHtml(html);
-    const startIdx = plainText.indexOf("Europawetter");
-    if (startIdx >= 0) {
-      const fullText = plainText.slice(startIdx).trim();
-      debugLogScrape("meteonews.at (fallback)", url, res.status, fullText);
-      return fullText;
-    }
-
-    debugLogScrape("meteonews.at (last-resort)", url, res.status, plainText);
-    return plainText;
-  } catch (e) {
-    console.error("Meteonews fetch failed:", e);
-    return "";
-  }
-}
 
 const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: string; warningUrl: string; warningLabel: string }> = {
   HR: {
@@ -1521,6 +1470,54 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         coordinates: { lat, lon },
         ...(locationName ? { location: locationName } : {}),
       });
+
+      // ── Wetterdaten scrapen ───────────────────────────────────────────────
+      const meteonewsText = await fetchMeteonews();
+      analysis.data.weatherData.raw["general weather"] = { source: "meteonews", german: meteonewsText || null };
+      if (meteonewsText) {
+        analysis.data.sources.push(METEONEWS_URL);
+        const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
+        analysis.data.weatherData.preprocessed.europe["general weather"] = {
+          source: "meteonews", german: preprocessed || null,
+        };
+      } else {
+        analysis.data.weatherData.preprocessed.europe["general weather"] = {
+          source: "meteonews", german: null,
+        };
+      }
+      let wzSourceAdded = false;
+      const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
+      analysis.data.weatherData.preprocessed.europe["temp850hpa current"] = {
+        source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
+      };
+      if (wz850Current && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); wzSourceAdded = true; }
+      const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
+      analysis.data.weatherData.preprocessed.europe["temp850hpa forecast"] = {
+        source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
+      };
+      if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); }
+      let knmiSourceAdded = false;
+      const knmi = await fetchKnmiChart();
+      analysis.data.weatherData.preprocessed.europe["front current"] = {
+        source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
+      };
+      if (knmi && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); knmiSourceAdded = true; }
+      const knmiForecast = await fetchKnmiForecast();
+      analysis.data.weatherData.preprocessed.europe["front forecast"] = {
+        source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
+      };
+      if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
+      const national = await fetchNationalWeather(countryCode);
+      Object.assign(analysis.data.weatherData.raw, national.data);
+      if (national.sourceUrl) analysis.data.sources.push(national.sourceUrl);
+      const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic);
+      Object.assign(analysis.data.weatherData.preprocessed.national, nationalPre);
+      const localPre = await preprocessLocalWeather(
+        analysis.data.weatherData.raw,
+        { userInput: analysis.data.position.userInput, sailingArea },
+        anthropic,
+      );
+      Object.assign(analysis.data.weatherData.preprocessed.local, localPre);
       analysis.save();
 
       // ── Chat-Ausgabe ───────────────────────────────────────────────────────

@@ -16,10 +16,14 @@ export interface AnalysisPosition {
 export interface AnalysisJson {
   date: string;
   position: AnalysisPosition;
-  sources: Record<string, unknown>;
-  weatherReports: {
-    original: Record<string, unknown>;
-    preprocessed: Record<string, unknown>;
+  sources: string[];
+  weatherData: {
+    raw: Record<string, unknown>;
+    preprocessed: {
+      europe: Record<string, unknown>;
+      national: Record<string, unknown>;
+      local: Record<string, unknown>;
+    };
   };
   outputs: Record<string, unknown>;
 }
@@ -55,8 +59,11 @@ export function createAnalysis(position: AnalysisPosition): {
   const data: AnalysisJson = {
     date: now.toISOString(),
     position,
-    sources: {},
-    weatherReports: { original: {}, preprocessed: {} },
+    sources: [],
+    weatherData: {
+      raw: {},
+      preprocessed: { europe: {}, national: {}, local: {} },
+    },
     outputs: {},
   };
 
@@ -65,7 +72,12 @@ export function createAnalysis(position: AnalysisPosition): {
 
   const save = () => {
     try {
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+      const replacer = (_key: string, value: unknown) => {
+        if (_key.endsWith("Base64")) return undefined;
+        if (_key === "xml" && typeof value === "string" && value.length > 2000) return value.slice(0, 2000) + "...";
+        return value;
+      };
+      fs.writeFileSync(filePath, JSON.stringify(data, replacer, 2), "utf-8");
     } catch (e) {
       console.error("Failed to save analysis JSON:", e);
     }

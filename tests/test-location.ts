@@ -1,10 +1,10 @@
 /**
  * Segelrevier-Erkennung Testsuite
- * Ausführen: npx tsx --env-file=.env server/test-location.ts
+ * Ausführen: npx tsx --env-file=.env tests/test-location.ts
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { detectSegelrevier } from "./location.js";
+import { detectSegelrevier } from "../server/location.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
@@ -26,6 +26,7 @@ const TEST_CASES: TestCase[] = [
   { input: "Gardasee",         expected: "Gardasee" },
   { input: "Traunsee",         expected: "Traunsee" },
   { input: "Kiel",             expected: "Ostsee West (Deutschland)" },
+  { input: "Punat",            expected: "Adria Nord (Kroatien)" },
 ];
 
 async function runTests() {

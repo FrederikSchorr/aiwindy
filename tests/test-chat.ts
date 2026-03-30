@@ -1,6 +1,6 @@
 /**
  * AIWindy — Interaktiver Text-Chat (lokal, ohne UI)
- * Ausführen: npx tsx --env-file=.env server/test-chat.ts
+ * Ausführen: npx tsx --env-file=.env tests/test-chat.ts
  *
  * Testet die Segelrevier-Erkennung + JSON-Speicherung.
  * Wetteranalyse wird nicht gestartet.
@@ -8,8 +8,10 @@
 
 import readline from "readline";
 import Anthropic from "@anthropic-ai/sdk";
-import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE } from "./location.js";
-import { createAnalysis } from "./analysis-store.js";
+import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE } from "../server/location.js";
+import { createAnalysis } from "../server/analysis-store.js";
+import { fetchMeteonews, preprocessMeteonews, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, fetchKnmiChart, fetchKnmiForecast, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "../server/weather-sources.js";
+import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "../server/national-weather.js";
 
 // ── Anthropic Client ─────────────────────────────────────────────────────────
 
@@ -113,6 +115,52 @@ async function handleInput(input: string) {
     coordinates: { lat, lon },
     ...(locationName ? { location: locationName } : {}),
   });
+  // meteonews
+  const meteonewsText = await fetchMeteonews();
+  analysis.data.weatherData.raw["general weather"] = { source: "meteonews", german: meteonewsText || null };
+  if (meteonewsText) {
+    analysis.data.sources.push(METEONEWS_URL);
+    const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
+    analysis.data.weatherData.preprocessed.europe["general weather"] = { source: "meteonews", german: preprocessed || null };
+    console.log(`  ✓ meteonews (${meteonewsText.length} Zeichen)`);
+  } else {
+    analysis.data.weatherData.preprocessed.europe["general weather"] = { source: "meteonews", german: null };
+  }
+  // Wetterzentrale 850 hPa
+  let wzSourceAdded = false;
+  const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
+  analysis.data.weatherData.preprocessed.europe["temp850hpa current"] = { source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null };
+  if (wz850Current && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); wzSourceAdded = true; }
+  const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
+  analysis.data.weatherData.preprocessed.europe["temp850hpa forecast"] = { source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null };
+  if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); }
+  console.log(`  ✓ Temperatur 850hpa Karten von wetterzentrale.de geladen`);
+  // KNMI
+  let knmiSourceAdded = false;
+  const knmi = await fetchKnmiChart();
+  analysis.data.weatherData.preprocessed.europe["front current"] = { source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null };
+  if (knmi && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); knmiSourceAdded = true; }
+  const knmiForecast = await fetchKnmiForecast();
+  analysis.data.weatherData.preprocessed.europe["front forecast"] = { source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null };
+  if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
+  console.log(`  ✓ Fronten Karten von KNMI geladen`);
+
+  const national = await fetchNationalWeather(countryCode);
+  Object.assign(analysis.data.weatherData.raw, national.data);
+  if (national.sourceUrl) analysis.data.sources.push(national.sourceUrl);
+  const nationalCount = Object.keys(national.data).length;
+  if (nationalCount > 0) console.log(`  ✓ Nationale Wetterdaten (${countryCode}): ${nationalCount} Quellen`);
+
+  const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic);
+  Object.assign(analysis.data.weatherData.preprocessed.national, nationalPre);
+  const localPre = await preprocessLocalWeather(
+    analysis.data.weatherData.raw,
+    { userInput: input, sailingArea },
+    anthropic,
+  );
+  Object.assign(analysis.data.weatherData.preprocessed.local, localPre);
+  console.log(`  ✓ Preprocessing national + local`);
+
   analysis.save();
   console.log(`  → JSON: ${analysis.filePath}`);
   console.log();
@@ -121,7 +169,7 @@ async function handleInput(input: string) {
 async function main() {
   if (!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY) {
     console.error("Fehler: AI_INTEGRATIONS_ANTHROPIC_API_KEY nicht gesetzt.");
-    console.error("Starte mit: npx tsx --env-file=.env server/test-chat.ts");
+    console.error("Starte mit: npx tsx --env-file=.env tests/test-chat.ts");
     process.exit(1);
   }
 
