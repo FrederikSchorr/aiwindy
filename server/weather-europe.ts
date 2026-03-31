@@ -22,29 +22,36 @@ export function stripHtml(html: string): string {
 export const METEONEWS_URL = "https://meteonews.at/de/Allgemeine_Lage/K33/Europa";
 
 export async function fetchMeteonews(): Promise<string> {
-  try {
-    const res = await fetch(METEONEWS_URL, {
-      headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return "";
-    const html = await res.text();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(METEONEWS_URL, {
+        headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) {
+        console.warn(`Meteonews attempt ${attempt}: HTTP ${res.status}`);
+      } else {
+        const html = await res.text();
 
-    const bulletinMatch =
-      html.match(/class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i) ||
-      html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+        const bulletinMatch =
+          html.match(/class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i) ||
+          html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
 
-    if (bulletinMatch) return stripHtml(bulletinMatch[1]).trim();
+        if (bulletinMatch) return stripHtml(bulletinMatch[1]).trim();
 
-    const plainText = stripHtml(html);
-    const startIdx = plainText.indexOf("Europawetter");
-    if (startIdx >= 0) return plainText.slice(startIdx).trim();
+        const plainText = stripHtml(html);
+        const startIdx = plainText.indexOf("Europawetter");
+        if (startIdx >= 0) return plainText.slice(startIdx).trim();
 
-    return plainText;
-  } catch (e) {
-    console.error("Meteonews fetch failed:", e);
-    return "";
+        console.warn(`Meteonews attempt ${attempt}: no bulletin content found in response`);
+      }
+    } catch (e) {
+      console.warn(`Meteonews attempt ${attempt} failed:`, e instanceof Error ? e.message : e);
+    }
+    if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
   }
+  console.error("Meteonews: all 3 attempts failed");
+  return "";
 }
 
 // ── Shared time helpers ───────────────────────────────────────────────────────

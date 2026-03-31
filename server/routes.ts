@@ -12,8 +12,8 @@ import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
-import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-sources.js";
-import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./national-weather.js";
+import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-europe.js";
+import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./weather-national.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -1473,16 +1473,16 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // ── Wetterdaten scrapen ───────────────────────────────────────────────
       const meteonewsText = await fetchMeteonews();
-      analysis.data.weatherData.raw["general weather"] = { source: "meteonews", german: meteonewsText || null };
+      analysis.data.weatherData.raw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
       if (meteonewsText) {
         analysis.data.sources.push(METEONEWS_URL);
         const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
         analysis.data.weatherData.preprocessed.europe["general weather"] = {
-          source: "meteonews", german: preprocessed || null,
+          source: "meteonews", text_de: preprocessed || null,
         };
       } else {
         analysis.data.weatherData.preprocessed.europe["general weather"] = {
-          source: "meteonews", german: null,
+          source: "meteonews", text_de: null,
         };
       }
       let wzSourceAdded = false;
@@ -1507,15 +1507,16 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
       };
       if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
-      const national = await fetchNationalWeather(countryCode);
+      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingArea);
       Object.assign(analysis.data.weatherData.raw, national.data);
-      if (national.sourceUrl) analysis.data.sources.push(national.sourceUrl);
-      const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic);
+      for (const u of national.sourceUrls) analysis.data.sources.push(u);
+      const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic, countryCode);
       Object.assign(analysis.data.weatherData.preprocessed.national, nationalPre);
       const localPre = await preprocessLocalWeather(
         analysis.data.weatherData.raw,
         { userInput: analysis.data.position.userInput, sailingArea },
         anthropic,
+        countryCode,
       );
       Object.assign(analysis.data.weatherData.preprocessed.local, localPre);
       analysis.save();

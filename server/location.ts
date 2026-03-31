@@ -79,7 +79,7 @@ let _cache: SegelreviereData | null = null;
 function loadSegelreviere(): SegelreviereData {
   if (!_cache) {
     _cache = JSON.parse(
-      readFileSync(new URL("../Segelreviere.json", import.meta.url), "utf-8"),
+      readFileSync(new URL("../data/sailingareas.json", import.meta.url), "utf-8"),
     ) as SegelreviereData;
   }
   return _cache;

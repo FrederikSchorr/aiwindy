@@ -1,8 +1,6 @@
 /**
- * AIWindy — Punat + Split end-to-end test
- * Ausführen: npx tsx --env-file=.env tests/test-punat-hvar.ts
- *
- * Fetcht Europe- und Kroatien-Wetterdaten einmal, dann preprocessing für beide Orte.
+ * AIWindy — Wörthersee + Neusiedler See end-to-end test (raw data only)
+ * Ausführen: npx tsx --env-file=.env tests/test-woerthersee.ts
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -22,24 +20,24 @@ const anthropic = new Anthropic({
 
 const LOCATIONS: AnalysisPosition[] = [
   {
-    userInput: "Punat",
-    sailingArea: "Adria Nord (Kroatien)",
-    type: "sea",
-    country: "Kroatien",
-    countryCode: "HR",
-    coordinates: { lat: 44.6284, lon: 13.8522 },
+    userInput: "Attersee",
+    sailingArea: "Attersee (Österreich)",
+    type: "lake",
+    country: "Österreich",
+    countryCode: "AT",
+    coordinates: { lat: 47.87, lon: 13.54 },
   },
   {
-    userInput: "Split",
-    sailingArea: "Adria Mitte (Kroatien)",
-    type: "sea",
-    country: "Kroatien",
-    countryCode: "HR",
-    coordinates: { lat: 43.5081, lon: 16.4402 },
+    userInput: "Neusiedler See",
+    sailingArea: "Neusiedler See (Österreich)",
+    type: "lake",
+    country: "Österreich",
+    countryCode: "AT",
+    coordinates: { lat: 47.80, lon: 16.75 },
   },
 ];
 
-console.log(`\n── AIWindy Punat + Hvar Test ────────────────────────────────────\n`);
+console.log(`\n── AIWindy Attersee + Neusiedler See Test ───────────────────────\n`);
 
 // ── 1. Europe-Daten (einmalig) ────────────────────────────────────────────────
 
@@ -55,44 +53,26 @@ if (meteonewsText) {
   console.log("✗ nicht verfügbar");
 }
 
-let wzSourceAdded = false;
 process.stdout.write("2. temp850hpa current … ");
 const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
-if (wz850Current) {
-  if (!wzSourceAdded) wzSourceAdded = true;
-  console.log(`✓ ${wz850Current.imageBase64.length} Bytes`);
-} else { console.log("✗"); }
+console.log(wz850Current ? `✓ ${wz850Current.imageBase64.length} Bytes` : "✗");
 
 process.stdout.write("3. temp850hpa forecast … ");
 const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
-if (wz850Forecast) {
-  console.log(`✓ ${wz850Forecast.imageBase64.length} Bytes`);
-} else { console.log("✗"); }
+console.log(wz850Forecast ? `✓ ${wz850Forecast.imageBase64.length} Bytes` : "✗");
 
-let knmiSourceAdded = false;
 process.stdout.write("4. KNMI chart … ");
 const knmi = await fetchKnmiChart();
-if (knmi) {
-  if (!knmiSourceAdded) knmiSourceAdded = true;
-  console.log(`✓ ${knmi.imageBase64.length} Bytes`);
-} else { console.log("✗"); }
+console.log(knmi ? `✓ ${knmi.imageBase64.length} Bytes` : "✗");
 
 process.stdout.write("5. KNMI forecast … ");
 const knmiForecast = await fetchKnmiForecast();
-if (knmiForecast) {
-  console.log(`✓ ${knmiForecast.imageBase64.length} Bytes`);
-} else { console.log("✗"); }
+console.log(knmiForecast ? `✓ ${knmiForecast.imageBase64.length} Bytes` : "✗");
 
-// ── 2. Nationale Rohdaten (einmalig für HR) ───────────────────────────────────
-
-process.stdout.write("6. national weather (HR) … ");
-const national = await fetchNationalWeather("HR");
-console.log(`✓ ${Object.keys(national.data).length} Quellen`);
-
-// ── 3. Pro Ort: Preprocessing + Speichern ────────────────────────────────────
+// ── 2. Pro Ort: Nationale Rohdaten + Speichern ───────────────────────────────
 
 for (const position of LOCATIONS) {
-  console.log(`\n── ${position.userInput} (${position.sailingArea}) ${"─".repeat(30)}`);
+  console.log(`\n── ${position.userInput} (${position.sailingArea}) ${"─".repeat(25)}`);
 
   const analysis = createAnalysis(position);
 
@@ -106,40 +86,57 @@ for (const position of LOCATIONS) {
   analysis.data.weatherData.preprocessed.europe["temp850hpa forecast"] = {
     source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
   };
-  if ((wz850Current || wz850Forecast)) analysis.data.sources.push(WETTERZENTRALE_BASE_URL);
+  if (wz850Current || wz850Forecast) analysis.data.sources.push(WETTERZENTRALE_BASE_URL);
   analysis.data.weatherData.preprocessed.europe["front current"] = {
     source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
   };
   analysis.data.weatherData.preprocessed.europe["front forecast"] = {
     source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
   };
-  if ((knmi || knmiForecast)) analysis.data.sources.push(KNMI_BASE_URL);
+  if (knmi || knmiForecast) analysis.data.sources.push(KNMI_BASE_URL);
 
-  // National raw
+  // Nationale Rohdaten (pro Ort, wegen koordinatenabhängiger GeoSphere-Timeseries)
+  process.stdout.write("  national weather … ");
+  const national = await fetchNationalWeather(
+    position.countryCode,
+    position.coordinates,
+    position.sailingArea,
+  );
   Object.assign(analysis.data.weatherData.raw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
 
-  // Preprocessing national
-  process.stdout.write("  preprocessing national … ");
-  const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic);
-  Object.assign(analysis.data.weatherData.preprocessed.national, nationalPre);
-  console.log("✓");
+  const rawKeys = Object.keys(national.data);
+  console.log(`✓  ${rawKeys.join(", ")}`);
 
-  // Preprocessing local
-  process.stdout.write("  preprocessing local … ");
+  // Rohdaten-Preview
+  const flightWeather = national.data["austria flight weather"] as any;
+  if (flightWeather?.today_de) {
+    console.log(`  flight today: ${flightWeather.today_de.slice(0, 100)}…`);
+  }
+  const forecast = national.data["austria weather forecast"] as any;
+  if (forecast?.timestamps?.length) {
+    console.log(`  forecast: ${forecast.timestamps.length} Zeitpunkte, erste: ${forecast.timestamps[0]}`);
+    console.log(`    Wind[0]: ${forecast.wind_dir[0]} ${forecast.wind_speed_kt[0]} kt, Böe ${forecast.gust_kt[0]} kt, ${forecast.temp_2m_C[0]}°C`);
+  }
+  const lakeWarnings = national.data["austria neusiedlerLake warnings"] as any;
+  if (lakeWarnings?.text_de) {
+    console.log(`  LSZ: ${lakeWarnings.text_de.split("\n").slice(0, 3).join(" | ")}`);
+  }
+
+  const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic, position.countryCode);
+  Object.assign(analysis.data.weatherData.preprocessed.national, nationalPre);
+  const synopsis = (nationalPre["synopsis"] as any)?.text_de ?? null;
+  if (synopsis) console.log(`  synopsis: ${synopsis.split("\n")[0].slice(0, 80)}…`);
+
   const localPre = await preprocessLocalWeather(
     analysis.data.weatherData.raw,
     { userInput: position.userInput, sailingArea: position.sailingArea },
     anthropic,
+    position.countryCode,
   );
   Object.assign(analysis.data.weatherData.preprocessed.local, localPre);
-  const city = (localPre["temperature"] as any)?.city ?? "?";
-  const temp = (localPre["temperature"] as any)?.text_de?.split("\n")[0] ?? "";
-  console.log(`✓  city: ${city} | ${temp}`);
-
-  // sailingarea weather preview
-  const sw = localPre["sailingarea weather"] as any;
-  if (sw?.text_de) console.log(`  sailingarea: ${sw.text_de.slice(0, 120)}…`);
+  const temp = (localPre["temperature"] as any)?.text_de ?? "–";
+  console.log(`  temperature: ${temp.split("\n")[0]}`);
 
   analysis.save();
   console.log(`  → JSON: ${analysis.filePath}`);
