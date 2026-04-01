@@ -1206,23 +1206,23 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       }
       let wzSourceAdded = false;
       const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
-      analysis.data.weatherPreprocessed.europe["temp850hpa current"] = {
+      analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
         source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
       };
       if (wz850Current && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); wzSourceAdded = true; }
       const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
-      analysis.data.weatherPreprocessed.europe["temp850hpa forecast"] = {
+      analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
         source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
       };
       if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); }
       let knmiSourceAdded = false;
       const knmi = await fetchKnmiChart();
-      analysis.data.weatherPreprocessed.europe["front current"] = {
+      analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
         source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
       };
       if (knmi && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); knmiSourceAdded = true; }
       const knmiForecast = await fetchKnmiForecast();
-      analysis.data.weatherPreprocessed.europe["front forecast"] = {
+      analysis.data.weatherPreprocessed.europe["frontForecast"] = {
         source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
       };
       if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }

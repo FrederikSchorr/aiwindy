@@ -108,11 +108,11 @@ async function fetchAustriaWindCloudRain(
         url: GEOSPHERE_TIMESERIES_URL,
         ...locationRef,
         timestamps,
-        wind_speed_kt: timestamps.map((_, i) => windSpeedKt(params.u10m.data[i], params.v10m.data[i])),
-        wind_dir:      timestamps.map((_, i) => windDir(params.u10m.data[i], params.v10m.data[i])),
-        gust_kt:       timestamps.map((_, i) => windSpeedKt(params.ugust.data[i], params.vgust.data[i])),
-        cloud_cover:   timestamps.map((_, i) => Math.round(params.tcc.data[i] * 100)),
-        "rain_kgm-2":  params.rr_acc.data,
+        windSpeedKt: timestamps.map((_, i) => windSpeedKt(params.u10m.data[i], params.v10m.data[i])),
+        windDir:     timestamps.map((_, i) => windDir(params.u10m.data[i], params.v10m.data[i])),
+        gustKt:      timestamps.map((_, i) => windSpeedKt(params.ugust.data[i], params.vgust.data[i])),
+        cloudCover:  timestamps.map((_, i) => Math.round(params.tcc.data[i] * 100)),
+        rainKgm2:    params.rr_acc.data,
       },
     };
   } catch (e) {
@@ -128,8 +128,8 @@ function nullWindCloudRain(sailingAreaObj: SailingAreaObj, cityObj: CityObj): Re
       source: "GeoSphere Austria",
       url: GEOSPHERE_TIMESERIES_URL,
       ...locationRef,
-      timestamps: null, wind_speed_kt: null, wind_dir: null,
-      gust_kt: null, cloud_cover: null, "rain_kgm-2": null,
+      timestamps: null, windSpeedKt: null, windDir: null,
+      gustKt: null, cloudCover: null, rainKgm2: null,
     },
   };
 }
@@ -156,7 +156,7 @@ async function fetchAustriaTemperature(
         source: "GeoSphere Austria",
         url: GEOSPHERE_TIMESERIES_URL,
         city: locationObj,
-        temp_2m_C: params.t2m.data,
+        temp2mC: params.t2m.data,
       },
     };
   } catch (e) {
@@ -171,7 +171,7 @@ function nullTemperature(locationObj: SailingAreaObj | CityObj): Record<string, 
       source: "GeoSphere Austria",
       url: GEOSPHERE_TIMESERIES_URL,
       city: locationObj,
-      temp_2m_C: null,
+      temp2mC: null,
     },
   };
 }
@@ -236,7 +236,7 @@ export function preprocessLocalWeatherAT(rawData: Record<string, unknown>): Reco
   const url: string | null = tempData?.url ?? null;
   const city = tempData?.city ?? null;
 
-  if (!windCloudRain?.timestamps || !tempData?.temp_2m_C) {
+  if (!windCloudRain?.timestamps || !tempData?.temp2mC) {
     return { "temperature": { source: "GeoSphere Austria", url, city, text_de: null } };
   }
 
@@ -267,7 +267,7 @@ export function preprocessLocalWeatherAT(rawData: Record<string, unknown>): Reco
     const parts = day.split("-");
     const label = `${dayName} ${parts[2]}.${parts[1]}`;
     if (!byDate.has(label)) byDate.set(label, []);
-    byDate.get(label)!.push(tempData.temp_2m_C[i]);
+    byDate.get(label)!.push(tempData.temp2mC[i]);
   }
 
   const lines: string[] = [];
@@ -302,7 +302,7 @@ export async function preprocessLocalWindAT(
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["austriaWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
-  if (!forecast?.timestamps || !forecast?.wind_speed_kt) {
+  if (!forecast?.timestamps || !forecast?.windSpeedKt) {
     return { "wind": { source: "GeoSphere Austria", url, text_de: null } };
   }
 
@@ -323,9 +323,9 @@ export async function preprocessLocalWindAT(
     if (!byDate.has(label)) byDate.set(label, []);
     byDate.get(label)!.push({
       time: `${String(hour).padStart(2, "0")}:00`,
-      dir: forecast.wind_dir[i],
-      spd: Math.round(forecast.wind_speed_kt[i]),
-      gust: Math.round(forecast.gust_kt[i]),
+      dir: forecast.windDir[i],
+      spd: Math.round(forecast.windSpeedKt[i]),
+      gust: Math.round(forecast.gustKt[i]),
     });
   }
 
@@ -360,14 +360,14 @@ export async function preprocessLocalCloudRainAT(
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["austriaWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
-  if (!forecast?.timestamps || !forecast?.["rain_kgm-2"] || !forecast?.cloud_cover) {
-    return { "cloud_rain": { source: "GeoSphere Austria", url, text_de: null } };
+  if (!forecast?.timestamps || !forecast?.rainKgm2 || !forecast?.cloudCover) {
+    return { "cloudRain": { source: "GeoSphere Austria", url, text_de: null } };
   }
 
   const TZ = 2; // CEST
   const DAY_NAMES: Record<number, string> = { 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa", 0: "So" };
 
-  const rainCum: number[] = forecast["rain_kgm-2"];
+  const rainCum: number[] = forecast.rainKgm2;
   const rainDelta = rainCum.map((v: number, i: number) => Math.max(0, v - (i > 0 ? rainCum[i - 1] : 0)));
 
   type Row = { time: string; cloud: number; rain: number };
@@ -384,13 +384,13 @@ export async function preprocessLocalCloudRainAT(
     if (!byDate.has(label)) byDate.set(label, []);
     byDate.get(label)!.push({
       time: `${String(hour).padStart(2, "0")}:00`,
-      cloud: forecast.cloud_cover[i],
+      cloud: forecast.cloudCover[i],
       rain: Math.round(rainDelta[i] * 10) / 10,
     });
   }
 
   const days = Array.from(byDate.entries()).slice(0, 2);
-  if (!days.length) return { "cloud_rain": { source: "GeoSphere Austria", url, text_de: null } };
+  if (!days.length) return { "cloudRain": { source: "GeoSphere Austria", url, text_de: null } };
 
   const table = days.map(([label, rows]) => {
     const rowStr = rows.map(r => `${r.time} ${r.cloud}% ${r.rain}mm`).join("  ");
@@ -408,9 +408,9 @@ ${table}`;
       messages: [{ role: "user", content: prompt }],
     });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
-    return { "cloud_rain": { source: "GeoSphere Austria", url, text_de: text } };
+    return { "cloudRain": { source: "GeoSphere Austria", url, text_de: text } };
   } catch {
-    return { "cloud_rain": { source: "GeoSphere Austria", url, text_de: null } };
+    return { "cloudRain": { source: "GeoSphere Austria", url, text_de: null } };
   }
 }
 

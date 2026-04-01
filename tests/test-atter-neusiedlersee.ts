@@ -76,20 +76,20 @@ for (const position of LOCATIONS) {
   const analysis = createAnalysis(position);
 
   // Europe raw + preprocessed
-  analysis.data.weatherRaw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
+  analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
   if (meteonewsText) analysis.data.sources.push(METEONEWS_URL);
-  analysis.data.weatherPreprocessed.europe["general weather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
-  analysis.data.weatherPreprocessed.europe["temp850hpa current"] = {
+  analysis.data.weatherPreprocessed.europe["generalWeather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
+  analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
     source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
   };
-  analysis.data.weatherPreprocessed.europe["temp850hpa forecast"] = {
+  analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
     source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
   };
   if (wz850Current || wz850Forecast) analysis.data.sources.push(WETTERZENTRALE_BASE_URL);
-  analysis.data.weatherPreprocessed.europe["front current"] = {
+  analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
     source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
   };
-  analysis.data.weatherPreprocessed.europe["front forecast"] = {
+  analysis.data.weatherPreprocessed.europe["frontForecast"] = {
     source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
   };
   if (knmi || knmiForecast) analysis.data.sources.push(KNMI_BASE_URL);
@@ -118,11 +118,11 @@ for (const position of LOCATIONS) {
   const windCloudRain = national.data["austriaWindCloudRain"] as any;
   if (windCloudRain?.timestamps?.length) {
     console.log(`  windCloudRain: ${windCloudRain.timestamps.length} Zeitpunkte, erste: ${windCloudRain.timestamps[0]}`);
-    console.log(`    Wind[0]: ${windCloudRain.wind_dir[0]} ${windCloudRain.wind_speed_kt[0]} kt, Böe ${windCloudRain.gust_kt[0]} kt`);
+    console.log(`    Wind[0]: ${windCloudRain.windDir[0]} ${windCloudRain.windSpeedKt[0]} kt, Böe ${windCloudRain.gustKt[0]} kt`);
   }
   const tempData = national.data["austriaTemperature"] as any;
-  if (tempData?.temp_2m_C?.length) {
-    console.log(`    Temp[0]: ${tempData.temp_2m_C[0]}°C (city: ${(tempData.city as any)?.name_de ?? "?"})`);
+  if (tempData?.temp2mC?.length) {
+    console.log(`    Temp[0]: ${tempData.temp2mC[0]}°C (city: ${(tempData.city as any)?.name_de ?? "?"})`);
   }
   const lakeWarnings = national.data["austriaNeusiedlerLakeWarnings"] as any;
   if (lakeWarnings?.text_de) {

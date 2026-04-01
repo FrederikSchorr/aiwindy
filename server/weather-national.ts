@@ -89,7 +89,7 @@ export async function preprocessLocalWeather(
       sailingArea: position.sailingArea ?? null,
       text_de: warningText,
     },
-    "sailingarea forecast": {
+    "sailingareaForecast": {
       source: "DHMZ",
       url: "https://prognoza.hr/pomorci.xml",
       sailingArea: position.sailingArea ?? null,

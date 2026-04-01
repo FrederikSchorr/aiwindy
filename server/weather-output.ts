@@ -72,10 +72,10 @@ export async function generateWeatherOutput(
   const content: Anthropic.Messages.ContentBlockParam[] = [];
 
   // Europe images (for #1 Druck & #2 Fronten)
-  const wz850Current = imageBlock((europe["temp850hpa current"] as any)?.imageBase64);
-  const wz850Forecast = imageBlock((europe["temp850hpa forecast"] as any)?.imageBase64);
-  const knmiCurrent = imageBlock((europe["front current"] as any)?.imageBase64);
-  const knmiForecast = imageBlock((europe["front forecast"] as any)?.imageBase64);
+  const wz850Current = imageBlock((europe["temp850hpaCurrent"] as any)?.imageBase64);
+  const wz850Forecast = imageBlock((europe["temp850hpaForecast"] as any)?.imageBase64);
+  const knmiCurrent = imageBlock((europe["frontCurrent"] as any)?.imageBase64);
+  const knmiForecast = imageBlock((europe["frontForecast"] as any)?.imageBase64);
 
   for (const img of [wz850Current, wz850Forecast, knmiCurrent, knmiForecast]) {
     if (img) content.push(img);
@@ -124,9 +124,9 @@ Regeln pro Abschnitt:
 - KEINE Effekte (kein Regen, kein Wind) — nur Fronttyp, Position, Bewegungsrichtung
 
 #3 windWaves — Wind & Welle (Inputs: NUR weatherPreprocessed.local + Windsysteme — KEINE Europakarten, KEINE nationale Synopsis)
-- Wind: max 2 Bullets, max 40 Wörter je. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Wenn sowohl "warnings" (→ "Aktuell:") als auch "sailingarea forecast" (→ "Nächste 24h:") vorhanden sind, MÜSSEN beide als eigene Bullets erscheinen. Alle zeitlichen Nuancen aus preprocessed.local.wind VOLLSTÄNDIG übernehmen (z.B. "vormittags", "bis mittags", "ab Nachmittag"). Nationale Windsystemnamen verwenden wenn passend. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
+- Wind: max 2 Bullets, max 40 Wörter je. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Wenn sowohl "warnings" (→ "Aktuell:") als auch "sailingareaForecast" (→ "Nächste 24h:") vorhanden sind, MÜSSEN beide als eigene Bullets erscheinen. Alle zeitlichen Nuancen aus preprocessed.local.wind VOLLSTÄNDIG übernehmen (z.B. "vormittags", "bis mittags", "ab Nachmittag"). Nationale Windsystemnamen verwenden wenn passend. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
 - Falls keine Winddaten: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
-- Welle: max 1 Bullet. Zeitbezug-Prefix MUSS zur Quelle passen: Wellendaten aus "warnings" → "Aktuell:", aus "sailingarea forecast" → "Nächste 24h:". Douglas-Skala (1=ruhig…6=sehr rau), KEINE Meter. NUR wenn explizite Wellendaten vorhanden — NIEMALS schätzen. Weglassen wenn keine Daten.
+- Welle: max 1 Bullet. Zeitbezug-Prefix MUSS zur Quelle passen: Wellendaten aus "warnings" → "Aktuell:", aus "sailingareaForecast" → "Nächste 24h:". Douglas-Skala (1=ruhig…6=sehr rau), KEINE Meter. NUR wenn explizite Wellendaten vorhanden — NIEMALS schätzen. Weglassen wenn keine Daten.
 
 #4 cloudsRain — Wolken & Regen (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
 - max 2 Bullets, max 20 Wörter je: Bewölkung + Regen + Gewitterrisiko. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Bei Gewitterrisiko immer ⛈️ einfügen.
