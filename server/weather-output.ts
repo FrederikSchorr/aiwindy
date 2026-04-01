@@ -119,7 +119,7 @@ Regeln pro Abschnitt:
 
 #2 weatherFront — Fronten (gleiche Inputs wie #1)
 - GENAU 2 Bullets, max 20 Wörter je
-- Bullet 1: Aktive Front(en) — Typ, Position, Bewegung. Priorität: Kalt- und Warmfronten vor Okklusionen. Abgeschwächte Okklusionen nur nennen wenn nahe ${locationLabel} und noch wetterwirksam.
+- Bullet 1: Aktive Front(en) — Typ, Position, Bewegung. Nenne NUR Kalt- oder Warmfronten. Okklusionen WEGLASSEN — auch wenn sie nahe sind. Falls keine aktive Kalt-/Warmfront vorhanden: "Keine aktive Kalt- oder Warmfront."
 - Bullet 2: Nächste relevante Front für ${locationLabel} — Zeitpunkt
 - KEINE Effekte (kein Regen, kein Wind) — nur Fronttyp, Position, Bewegungsrichtung
 
