@@ -338,11 +338,11 @@ export function preprocessLocalWarningsNeusiedler(
   const url: string | null = (rawData["austria neusiedlerLake warnings"] as any)?.url ?? null;
   let warning: string;
   if (text?.includes("Sturmwarnung")) {
-    warning = "Sturmwarnung der LSZ Burgenland (90/sec)";
+    warning = "Aktuell: Sturmwarnung der LSZ Burgenland";
   } else if (text?.includes("Windwarnung")) {
-    warning = "Starkwindwarnung der LSZ Burgenland (40/sec)";
+    warning = "Aktuell: Starkwindwarnung der LSZ Burgenland";
   } else {
-    warning = "Keine Sturmwarnung der LSZ Burgenland";
+    warning = "Aktuell: Keine Sturmwarnung der LSZ Burgenland";
   }
   return { "warnings": { source: "LSZ Burgenland", url, text_de: warning } };
 }

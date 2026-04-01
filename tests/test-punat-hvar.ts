@@ -14,6 +14,7 @@ import {
   METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL,
 } from "../server/weather-europe.js";
 import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "../server/weather-national.js";
+import { generateWeatherOutput } from "../server/weather-output.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
@@ -97,42 +98,42 @@ for (const position of LOCATIONS) {
   const analysis = createAnalysis(position);
 
   // Europe raw + preprocessed
-  analysis.data.weatherData.raw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
+  analysis.data.weatherRaw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
   if (meteonewsText) analysis.data.sources.push(METEONEWS_URL);
-  analysis.data.weatherData.preprocessed.europe["general weather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
-  analysis.data.weatherData.preprocessed.europe["temp850hpa current"] = {
+  analysis.data.weatherPreprocessed.europe["general weather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
+  analysis.data.weatherPreprocessed.europe["temp850hpa current"] = {
     source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
   };
-  analysis.data.weatherData.preprocessed.europe["temp850hpa forecast"] = {
+  analysis.data.weatherPreprocessed.europe["temp850hpa forecast"] = {
     source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
   };
   if ((wz850Current || wz850Forecast)) analysis.data.sources.push(WETTERZENTRALE_BASE_URL);
-  analysis.data.weatherData.preprocessed.europe["front current"] = {
+  analysis.data.weatherPreprocessed.europe["front current"] = {
     source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
   };
-  analysis.data.weatherData.preprocessed.europe["front forecast"] = {
+  analysis.data.weatherPreprocessed.europe["front forecast"] = {
     source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
   };
   if ((knmi || knmiForecast)) analysis.data.sources.push(KNMI_BASE_URL);
 
   // National raw
-  Object.assign(analysis.data.weatherData.raw, national.data);
+  Object.assign(analysis.data.weatherRaw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
 
   // Preprocessing national
   process.stdout.write("  preprocessing national … ");
-  const nationalPre = await preprocessNationalWeather(analysis.data.weatherData.raw, anthropic);
-  Object.assign(analysis.data.weatherData.preprocessed.national, nationalPre);
+  const nationalPre = await preprocessNationalWeather(analysis.data.weatherRaw, anthropic, position.countryCode);
+  Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
   console.log("✓");
 
   // Preprocessing local
   process.stdout.write("  preprocessing local … ");
   const localPre = await preprocessLocalWeather(
-    analysis.data.weatherData.raw,
+    analysis.data.weatherRaw,
     { userInput: position.userInput, sailingArea: position.sailingArea },
     anthropic,
   );
-  Object.assign(analysis.data.weatherData.preprocessed.local, localPre);
+  Object.assign(analysis.data.weatherPreprocessed.local, localPre);
   const city = (localPre["temperature"] as any)?.city ?? "?";
   const temp = (localPre["temperature"] as any)?.text_de?.split("\n")[0] ?? "";
   console.log(`✓  city: ${city} | ${temp}`);
@@ -142,6 +143,15 @@ for (const position of LOCATIONS) {
   if (sw?.text_de) console.log(`  sailingarea: ${sw.text_de.slice(0, 120)}…`);
 
   analysis.save();
+
+  process.stdout.write("  weather output … ");
+  const weatherOutput = await generateWeatherOutput(analysis.data, anthropic);
+  Object.assign(analysis.data.weatherOutput, weatherOutput);
+  analysis.save();
+  console.log("✓");
+  const wo = weatherOutput as any;
+  if (wo.windWaves?.text) console.log(`  windWaves: ${wo.windWaves.text.split("\n")[0]}`);
+
   console.log(`  → JSON: ${analysis.filePath}`);
 }
 

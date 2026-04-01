@@ -6,7 +6,7 @@ import {
   preprocessLocalWindAT,
   preprocessLocalCloudRainAT,
   preprocessLocalWarningsNeusiedler,
-} from "./weather-austria.js";
+} from "./weather-national-austria.js";
 import {
   fetchCroatiaWeather,
   preprocessDhmzSynopsis,
@@ -14,7 +14,7 @@ import {
   extractDhmzSailingAreaForecast,
   preprocessDhmzLocalTemperature,
   DHMZ_SOURCE_URL,
-} from "./weather-croatia.js";
+} from "./weather-national-croatia.js";
 
 export async function fetchNationalWeather(
   countryCode: string,

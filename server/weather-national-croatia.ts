@@ -56,10 +56,35 @@ function isNorthAdriaticSailingArea(sailingArea: string | null): boolean {
   return NORTH_ADRIATIC_KEYWORDS.some(k => sailingArea.toLowerCase().includes(k));
 }
 
+function utcToCroatiaLocal(dateStr: string, timeStr: string): string {
+  // dateStr: "01.04.2026", timeStr: "06:00" or "06" — both accepted
+  const [d, mo, y] = dateStr.split(".");
+  const hh = timeStr.slice(0, 2);
+  const utcDate = new Date(`${y}-${mo}-${d}T${hh}:00:00Z`);
+  const fmt = new Intl.DateTimeFormat("de-AT", {
+    timeZone: "Europe/Zagreb",
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+  const parts = fmt.formatToParts(utcDate);
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "";
+  const localTime = `${get("day")}.${get("month")}.${get("year")}, ${get("hour")}:${get("minute")}`;
+  // MESZ = UTC+2 (Apr–Oct), MEZ = UTC+1 (Nov–Mar)
+  const month = utcDate.getUTCMonth() + 1;
+  const tz = month >= 4 && month <= 10 ? "MESZ" : "MEZ";
+  return `${localTime} ${tz}`;
+}
+
+function extractDhmzReportTimestamp(xml: string): string | null {
+  const m = xml.match(/dan\s+(\d{2}\.\d{2}\.\d{4})\s+u\s+(\d{2}:\d{2})/);
+  return m ? utcToCroatiaLocal(m[1], m[2]) : null;
+}
+
 export async function extractDhmzWarning(xml: string, sailingArea: string | null, anthropic: Anthropic): Promise<string | null> {
   const match = xml.match(/<Upozorenje>([\s\S]*?)<\/Upozorenje>/);
   if (!match) return null;
   const croatianText = match[1].trim();
+  const timestamp = extractDhmzReportTimestamp(xml);
   const isNorth = isNorthAdriaticSailingArea(sailingArea);
   try {
     const msg = await anthropic.messages.create({
@@ -81,24 +106,41 @@ Return only the filtered German text, no labels, no XML.
 Croatian text:\n${croatianText}`,
       }],
     });
-    return (msg.content[0] as { type: "text"; text: string }).text.trim() || null;
+    const text = (msg.content[0] as { type: "text"; text: string }).text.trim();
+    if (!text) return null;
+    return timestamp ? `Aktuell (${timestamp}): ${text}` : text;
   } catch (e) {
     console.error("extractDhmzWarning error:", e instanceof Error ? e.message : e);
     return null;
   }
 }
 
+function extractDhmzForecastValidity(xml: string): string | null {
+  // <Prognoza_zaglavlje>Vremenska prognoza za sljedeća 24 sata, vrijedi do: 02.04.2026 u 06 sati</Prognoza_zaglavlje>
+  const m = xml.match(/vrijedi do:\s*(\d{2}\.\d{2}\.\d{4})\s+u\s+(\d{2})/);
+  return m ? `Nächste 24h (bis ${utcToCroatiaLocal(m[1], m[2])})` : null;
+}
+
 export async function extractDhmzSailingAreaForecast(xml: string, sailingArea: string | null, anthropic: Anthropic): Promise<string | null> {
+  const isNorth = isNorthAdriaticSailingArea(sailingArea);
+  const validity = extractDhmzForecastValidity(xml);
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 400,
       messages: [{
         role: "user",
-        content: `From this Croatian maritime weather XML, extract only the forecast section most relevant to the sailing area "${sailingArea ?? "Adriatic"}". Translate to fluent German. Remove XML tags and extra whitespace. Return only the forecast text, no warnings.\n\nXML:\n${xml}`,
+        content: `From this Croatian maritime weather XML, extract only the forecast section most relevant to the sailing area "${sailingArea ?? "Adriatic"}". Translate to fluent German. Remove XML tags, headers and extra whitespace. Return only the forecast text, no warnings, no headings.
+${isNorth
+  ? "This is a NORTHERN Adriatic sailing area: keep all Velebit references."
+  : "This is NOT a Northern Adriatic sailing area: REMOVE sentences that apply only to the northern Adriatic (e.g. Velebit, Rijeka, sjevernom Jadranu) that don't apply here. Keep info relevant to this area."}
+
+XML:\n${xml}`,
       }],
     });
-    return (msg.content[0] as { type: "text"; text: string }).text.trim() || null;
+    const text = (msg.content[0] as { type: "text"; text: string }).text.trim();
+    if (!text) return null;
+    return validity ? `${validity}: ${text}` : text;
   } catch (e) {
     console.error("extractDhmzSailingAreaForecast error:", e instanceof Error ? e.message : e);
     return null;

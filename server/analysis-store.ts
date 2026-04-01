@@ -17,15 +17,13 @@ export interface AnalysisJson {
   date: string;
   position: AnalysisPosition;
   sources: string[];
-  weatherData: {
-    raw: Record<string, unknown>;
-    preprocessed: {
-      europe: Record<string, unknown>;
-      national: Record<string, unknown>;
-      local: Record<string, unknown>;
-    };
+  weatherRaw: Record<string, unknown>;
+  weatherPreprocessed: {
+    europe: Record<string, unknown>;
+    national: Record<string, unknown>;
+    local: Record<string, unknown>;
   };
-  outputs: Record<string, unknown>;
+  weatherOutput: Record<string, unknown>;
 }
 
 // ── Directory setup ────────────────────────────────────────────────────────
@@ -60,11 +58,9 @@ export function createAnalysis(position: AnalysisPosition): {
     date: now.toISOString(),
     position,
     sources: [],
-    weatherData: {
-      raw: {},
-      preprocessed: { europe: {}, national: {}, local: {} },
-    },
-    outputs: {},
+    weatherRaw: {},
+    weatherPreprocessed: { europe: {}, national: {}, local: {} },
+    weatherOutput: {},
   };
 
   ensureDir();
