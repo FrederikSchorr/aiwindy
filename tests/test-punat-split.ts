@@ -83,9 +83,9 @@ for (const position of LOCATIONS) {
   const analysis = createAnalysis(position);
 
   // Europe raw + preprocessed
-  analysis.data.weatherRaw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
+  analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
   if (meteonewsText) analysis.data.sources.push(METEONEWS_URL);
-  analysis.data.weatherPreprocessed.europe["general weather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
+  analysis.data.weatherPreprocessed.europe["generalWeather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
   analysis.data.weatherPreprocessed.europe["temp850hpa current"] = {
     source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
   };
@@ -104,7 +104,7 @@ for (const position of LOCATIONS) {
   // Nationale Rohdaten pro Ort (sailingArea-abhängig)
   process.stdout.write("  national weather … ");
   const posCoords = position.sailingArea?.coordinates ?? position.city?.coordinates ?? { lat: 0, lon: 0 };
-  const national = await fetchNationalWeather(position.countryCode, posCoords, position.sailingArea?.name_de ?? null);
+  const national = await fetchNationalWeather(position.countryCode, posCoords, position.sailingArea?.name_de ?? null, position.sailingArea, position.city);
   Object.assign(analysis.data.weatherRaw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
   console.log(`✓  ${Object.keys(national.data).join(", ")}`);

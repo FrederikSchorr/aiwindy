@@ -75,7 +75,7 @@ export function createAnalysis(position: AnalysisPosition): {
     try {
       const replacer = (_key: string, value: unknown) => {
         if (_key.endsWith("Base64")) return undefined;
-        if (_key === "austria weather forecast" && value && typeof value === "object") {
+        if (_key === "austriaWindCloudRain" && value && typeof value === "object") {
           const obj = { ...(value as Record<string, unknown>) };
           for (const [k, v] of Object.entries(obj)) {
             if (Array.isArray(v) && v.length > 20) obj[k] = v.filter((_, i) => i % 3 === 0);

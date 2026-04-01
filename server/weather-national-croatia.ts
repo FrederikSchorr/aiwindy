@@ -5,11 +5,11 @@ import Anthropic from "@anthropic-ai/sdk";
 export const DHMZ_SOURCE_URL = "https://meteo.hr/prognoze.php?section=prognoze_specp&param=jadran&el=jadran_n";
 
 const HR_ENDPOINTS_SAILING: Record<string, string> = {
-  "croatia adria forecast":  "https://prognoza.hr/jadran_h.xml",
-  "croatia adria regional":  "https://prognoza.hr/pomorci.xml",
+  "croatiaAdriaForecast":  "https://prognoza.hr/jadran_h.xml",
+  "croatiaAdriaRegional":  "https://prognoza.hr/pomorci.xml",
 };
 const HR_ENDPOINTS_ALWAYS: Record<string, string> = {
-  "croatia city forecast":   "https://prognoza.hr/sedam/hrvatska/7d_meteogrami.xml",
+  "croatiaCityForecast":   "https://prognoza.hr/sedam/hrvatska/7d_meteogrami.xml",
 };
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────

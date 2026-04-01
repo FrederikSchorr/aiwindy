@@ -78,7 +78,7 @@ export async function generateWeatherOutput(
   }
 
   // Text context
-  const generalWeather = (europe["general weather"] as any)?.text_de ?? null;
+  const generalWeather = (europe["generalWeather"] as any)?.text_de ?? null;
   const nationalSynopsis = (national["synopsis"] as any)?.text_de ?? null;
 
   content.push({

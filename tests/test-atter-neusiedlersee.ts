@@ -101,6 +101,8 @@ for (const position of LOCATIONS) {
     position.countryCode,
     coords,
     position.sailingArea?.name_de ?? null,
+    position.sailingArea,
+    position.city,
   );
   Object.assign(analysis.data.weatherRaw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
@@ -109,16 +111,20 @@ for (const position of LOCATIONS) {
   console.log(`✓  ${rawKeys.join(", ")}`);
 
   // Rohdaten-Preview
-  const flightWeather = national.data["austria flight weather"] as any;
+  const flightWeather = national.data["austriaFlightWeather"] as any;
   if (flightWeather?.today_de) {
     console.log(`  flight today: ${flightWeather.today_de.slice(0, 100)}…`);
   }
-  const forecast = national.data["austria weather forecast"] as any;
-  if (forecast?.timestamps?.length) {
-    console.log(`  forecast: ${forecast.timestamps.length} Zeitpunkte, erste: ${forecast.timestamps[0]}`);
-    console.log(`    Wind[0]: ${forecast.wind_dir[0]} ${forecast.wind_speed_kt[0]} kt, Böe ${forecast.gust_kt[0]} kt, ${forecast.temp_2m_C[0]}°C`);
+  const windCloudRain = national.data["austriaWindCloudRain"] as any;
+  if (windCloudRain?.timestamps?.length) {
+    console.log(`  windCloudRain: ${windCloudRain.timestamps.length} Zeitpunkte, erste: ${windCloudRain.timestamps[0]}`);
+    console.log(`    Wind[0]: ${windCloudRain.wind_dir[0]} ${windCloudRain.wind_speed_kt[0]} kt, Böe ${windCloudRain.gust_kt[0]} kt`);
   }
-  const lakeWarnings = national.data["austria neusiedlerLake warnings"] as any;
+  const tempData = national.data["austriaTemperature"] as any;
+  if (tempData?.temp_2m_C?.length) {
+    console.log(`    Temp[0]: ${tempData.temp_2m_C[0]}°C (city: ${(tempData.city as any)?.name_de ?? "?"})`);
+  }
+  const lakeWarnings = national.data["austriaNeusiedlerLakeWarnings"] as any;
   if (lakeWarnings?.text_de) {
     console.log(`  LSZ: ${lakeWarnings.text_de.split("\n").slice(0, 3).join(" | ")}`);
   }

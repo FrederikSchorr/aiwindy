@@ -16,14 +16,19 @@ import {
   DHMZ_SOURCE_URL,
 } from "./weather-national-croatia.js";
 
+type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
+type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
+
 export async function fetchNationalWeather(
   countryCode: string,
   coordinates?: { lat: number; lon: number },
-  sailingArea?: string | null,
+  sailingAreaName?: string | null,
+  sailingAreaObj?: SailingAreaObj,
+  cityObj?: CityObj,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
   switch (countryCode) {
-    case "HR": return { data: await fetchCroatiaWeather(sailingArea), sourceUrls: [DHMZ_SOURCE_URL] };
-    case "AT": return fetchAustriaWeather(coordinates, sailingArea);
+    case "HR": return { data: await fetchCroatiaWeather(sailingAreaName), sourceUrls: [DHMZ_SOURCE_URL] };
+    case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);
     default:   return { data: {}, sourceUrls: [] };
   }
 }
@@ -35,7 +40,7 @@ export async function preprocessNationalWeather(
 ): Promise<Record<string, unknown>> {
   if (countryCode === "AT") return preprocessNationalWeatherAT(rawData);
   if (countryCode !== "HR") return {};
-  const adriaXml = (rawData["croatia adria forecast"] as any)?.xml as string | null;
+  const adriaXml = (rawData["croatiaAdriaForecast"] as any)?.xml as string | null;
   return {
     "synopsis": {
       source: "DHMZ",
@@ -60,8 +65,8 @@ export async function preprocessLocalWeather(
     };
   }
 
-  const regionalXml = (rawData["croatia adria regional"] as any)?.xml as string | null;
-  const forecastXml = (rawData["croatia city forecast"] as any)?.xml as string | null;
+  const regionalXml = (rawData["croatiaAdriaRegional"] as any)?.xml as string | null;
+  const forecastXml = (rawData["croatiaCityForecast"] as any)?.xml as string | null;
 
   const warningText = regionalXml
     ? await extractDhmzWarning(regionalXml, position.sailingArea, anthropic)

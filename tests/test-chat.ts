@@ -115,14 +115,14 @@ async function handleInput(input: string) {
   });
   // meteonews
   const meteonewsText = await fetchMeteonews();
-  analysis.data.weatherRaw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
+  analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
   if (meteonewsText) {
     analysis.data.sources.push(METEONEWS_URL);
     const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
-    analysis.data.weatherPreprocessed.europe["general weather"] = { source: "meteonews", text_de: preprocessed || null };
+    analysis.data.weatherPreprocessed.europe["generalWeather"] = { source: "meteonews", text_de: preprocessed || null };
     console.log(`  ✓ meteonews (${meteonewsText.length} Zeichen)`);
   } else {
-    analysis.data.weatherPreprocessed.europe["general weather"] = { source: "meteonews", text_de: null };
+    analysis.data.weatherPreprocessed.europe["generalWeather"] = { source: "meteonews", text_de: null };
   }
   // Wetterzentrale 850 hPa
   let wzSourceAdded = false;
@@ -143,7 +143,7 @@ async function handleInput(input: string) {
   if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
   console.log(`  ✓ Fronten Karten von KNMI geladen`);
 
-  const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null);
+  const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null, sailingAreaObj, cityObj);
   Object.assign(analysis.data.weatherRaw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
   const nationalCount = Object.keys(national.data).length;

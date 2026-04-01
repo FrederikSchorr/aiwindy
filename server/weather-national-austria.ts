@@ -7,18 +7,26 @@ export const GEOSPHERE_TIMESERIES_URL = "https://dataset.api.hub.geosphere.at/v1
 export const GEOSPHERE_SOURCE_URL = "https://www.geosphere.at/de/karten/wetterprognose/";
 export const LSZ_BURGENLAND_URL = "https://www.lsz-b.at/fuer-buergerinnen/sturmwarnung-webcams/";
 
+type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
+type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
+
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
 export async function fetchAustriaWeather(
-  coordinates?: { lat: number; lon: number },
-  sailingArea?: string | null,
+  sailingAreaObj?: SailingAreaObj,
+  cityObj?: CityObj,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
-  const [flightWeather, weatherForecast, lakeWarnings] = await Promise.all([
+  const windCoords = sailingAreaObj?.coordinates ?? cityObj?.coordinates ?? { lat: 47.8, lon: 13.0 };
+  const tempCoords = cityObj?.coordinates ?? sailingAreaObj?.coordinates ?? { lat: 47.8, lon: 13.0 };
+  const isNeusiedler = sailingAreaObj?.name_de?.toLowerCase().includes("neusiedler") ?? false;
+
+  const [flightWeather, windCloudRain, temperature, lakeWarnings] = await Promise.all([
     fetchAustriaFlightWeather(),
-    fetchAustriaWeatherForecast(coordinates),
-    fetchNeusiedlerLakeWarnings(sailingArea),
+    fetchAustriaWindCloudRain(windCoords, sailingAreaObj, cityObj),
+    fetchAustriaTemperature(tempCoords, cityObj ?? sailingAreaObj),
+    fetchNeusiedlerLakeWarnings(isNeusiedler),
   ]);
-  const data: Record<string, unknown> = { ...flightWeather, ...weatherForecast, ...lakeWarnings };
+  const data: Record<string, unknown> = { ...flightWeather, ...windCloudRain, ...temperature, ...lakeWarnings };
   const sourceUrls = [AUSTROCONTROL_URL, GEOSPHERE_SOURCE_URL];
   if (Object.keys(lakeWarnings).length > 0) sourceUrls.push(LSZ_BURGENLAND_URL);
   return { data, sourceUrls };
@@ -51,7 +59,7 @@ async function fetchAustriaFlightWeather(): Promise<Record<string, unknown>> {
 
     const trunc = (s: string) => s.length > 1000 ? s.slice(0, 1000) + "..." : s;
     return {
-      "austria flight weather": {
+      "austriaFlightWeather": {
         source: "Austrocontrol",
         url: AUSTROCONTROL_URL,
         today_de:    blocks[1] ? trunc(blocks[1].trim()) : null,
@@ -65,18 +73,19 @@ async function fetchAustriaFlightWeather(): Promise<Record<string, unknown>> {
   }
 }
 
-async function fetchAustriaWeatherForecast(
-  coordinates?: { lat: number; lon: number },
+async function fetchAustriaWindCloudRain(
+  coords: { lat: number; lon: number },
+  sailingAreaObj: SailingAreaObj,
+  cityObj: CityObj,
 ): Promise<Record<string, unknown>> {
-  const lat = coordinates?.lat ?? 47.8;
-  const lon = coordinates?.lon ?? 13.0;
-  const url = `${GEOSPHERE_TIMESERIES_URL}?parameters=t2m,u10m,v10m,ugust,vgust,tcc,rr_acc&lat_lon=${lat},${lon}`;
+  const { lat, lon } = coords;
+  const url = `${GEOSPHERE_TIMESERIES_URL}?parameters=u10m,v10m,ugust,vgust,tcc,rr_acc&lat_lon=${lat},${lon}`;
   try {
     const res = await fetch(url, {
       headers: { "Accept": "application/json" },
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) { console.error(`GeoSphere timeseries fetch failed (${res.status})`); return nullForecast(lat, lon); }
+    if (!res.ok) { console.error(`GeoSphere windCloudRain fetch failed (${res.status})`); return nullWindCloudRain(sailingAreaObj, cityObj); }
     const data = await res.json() as {
       timestamps: string[];
       features: Array<{ properties: { parameters: Record<string, { data: number[] }> } }>;
@@ -92,13 +101,13 @@ async function fetchAustriaWeatherForecast(
     const windSpeedKt = (u: number, v: number) =>
       Math.round(Math.sqrt(u * u + v * v) * 1.94384 * 10) / 10;
 
+    const locationRef = sailingAreaObj ? { sailingArea: sailingAreaObj } : { city: cityObj };
     return {
-      "austria weather forecast": {
+      "austriaWindCloudRain": {
         source: "GeoSphere Austria",
         url: GEOSPHERE_TIMESERIES_URL,
-        coordinates: { lat, lon },
+        ...locationRef,
         timestamps,
-        temp_2m_C:     params.t2m.data,
         wind_speed_kt: timestamps.map((_, i) => windSpeedKt(params.u10m.data[i], params.v10m.data[i])),
         wind_dir:      timestamps.map((_, i) => windDir(params.u10m.data[i], params.v10m.data[i])),
         gust_kt:       timestamps.map((_, i) => windSpeedKt(params.ugust.data[i], params.vgust.data[i])),
@@ -107,25 +116,68 @@ async function fetchAustriaWeatherForecast(
       },
     };
   } catch (e) {
-    console.error("fetchAustriaWeatherForecast error:", e instanceof Error ? e.message : e);
-    return nullForecast(lat, lon);
+    console.error("fetchAustriaWindCloudRain error:", e instanceof Error ? e.message : e);
+    return nullWindCloudRain(sailingAreaObj, cityObj);
   }
 }
 
-function nullForecast(lat: number, lon: number): Record<string, unknown> {
+function nullWindCloudRain(sailingAreaObj: SailingAreaObj, cityObj: CityObj): Record<string, unknown> {
+  const locationRef = sailingAreaObj ? { sailingArea: sailingAreaObj } : { city: cityObj };
   return {
-    "austria weather forecast": {
+    "austriaWindCloudRain": {
       source: "GeoSphere Austria",
       url: GEOSPHERE_TIMESERIES_URL,
-      coordinates: { lat, lon },
-      timestamps: null, temp_2m_C: null, wind_speed_kt: null,
-      wind_dir: null, gust_kt: null, cloud_cover: null, "rain_kgm-2": null,
+      ...locationRef,
+      timestamps: null, wind_speed_kt: null, wind_dir: null,
+      gust_kt: null, cloud_cover: null, "rain_kgm-2": null,
     },
   };
 }
 
-async function fetchNeusiedlerLakeWarnings(sailingArea?: string | null): Promise<Record<string, unknown>> {
-  if (!sailingArea?.toLowerCase().includes("neusiedler")) return {};
+async function fetchAustriaTemperature(
+  coords: { lat: number; lon: number },
+  locationObj: SailingAreaObj | CityObj,
+): Promise<Record<string, unknown>> {
+  const { lat, lon } = coords;
+  const url = `${GEOSPHERE_TIMESERIES_URL}?parameters=t2m&lat_lon=${lat},${lon}`;
+  try {
+    const res = await fetch(url, {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) { console.error(`GeoSphere temperature fetch failed (${res.status})`); return nullTemperature(locationObj); }
+    const data = await res.json() as {
+      timestamps: string[];
+      features: Array<{ properties: { parameters: Record<string, { data: number[] }> } }>;
+    };
+    const params = data.features[0].properties.parameters;
+    return {
+      "austriaTemperature": {
+        source: "GeoSphere Austria",
+        url: GEOSPHERE_TIMESERIES_URL,
+        city: locationObj,
+        temp_2m_C: params.t2m.data,
+      },
+    };
+  } catch (e) {
+    console.error("fetchAustriaTemperature error:", e instanceof Error ? e.message : e);
+    return nullTemperature(locationObj);
+  }
+}
+
+function nullTemperature(locationObj: SailingAreaObj | CityObj): Record<string, unknown> {
+  return {
+    "austriaTemperature": {
+      source: "GeoSphere Austria",
+      url: GEOSPHERE_TIMESERIES_URL,
+      city: locationObj,
+      temp_2m_C: null,
+    },
+  };
+}
+
+async function fetchNeusiedlerLakeWarnings(isNeusiedler: boolean): Promise<Record<string, unknown>> {
+  if (!isNeusiedler) return {};
   try {
     const res = await fetch(LSZ_BURGENLAND_URL, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -137,7 +189,7 @@ async function fetchNeusiedlerLakeWarnings(sailingArea?: string | null): Promise
     if (!matches.length) return {};
     const text_de = matches.map(m => `${m[1]}: ${m[2]}`).join("\n");
     return {
-      "austria neusiedlerLake warnings": {
+      "austriaNeusiedlerLakeWarnings": {
         source: "LSZ Burgenland",
         url: LSZ_BURGENLAND_URL,
         text_de,
@@ -152,7 +204,7 @@ async function fetchNeusiedlerLakeWarnings(sailingArea?: string | null): Promise
 // ── Preprocessing ─────────────────────────────────────────────────────────────
 
 export function preprocessNationalWeatherAT(rawData: Record<string, unknown>): Record<string, unknown> {
-  const flight = rawData["austria flight weather"] as any;
+  const flight = rawData["austriaFlightWeather"] as any;
   const url: string | null = flight?.url ?? null;
 
   const parts: string[] = [];
@@ -179,23 +231,26 @@ function extractWetterlage(block: string | null | undefined): string | null {
 }
 
 export function preprocessLocalWeatherAT(rawData: Record<string, unknown>): Record<string, unknown> {
-  const forecast = rawData["austria weather forecast"] as any;
-  if (!forecast?.timestamps || !forecast?.temp_2m_C) {
-    return { "temperature": { source: "GeoSphere Austria", url: forecast?.url ?? null, text_de: null } };
+  const windCloudRain = rawData["austriaWindCloudRain"] as any;
+  const tempData = rawData["austriaTemperature"] as any;
+  const url: string | null = tempData?.url ?? null;
+
+  if (!windCloudRain?.timestamps || !tempData?.temp_2m_C) {
+    return { "temperature": { source: "GeoSphere Austria", url, text_de: null } };
   }
 
   const TZ = 2; // CEST = UTC+2
   const DAY_NAMES: Record<number, string> = { 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa", 0: "So" };
 
   const byDate = new Map<string, number[]>();
-  for (let i = 0; i < forecast.timestamps.length; i++) {
-    const local = new Date(new Date(forecast.timestamps[i]).getTime() + TZ * 3600000);
+  for (let i = 0; i < windCloudRain.timestamps.length; i++) {
+    const local = new Date(new Date(windCloudRain.timestamps[i]).getTime() + TZ * 3600000);
     const day = local.toISOString().slice(0, 10);
     const dayName = DAY_NAMES[local.getUTCDay()];
     const parts = day.split("-");
     const label = `${dayName} ${parts[2]}.${parts[1]}`;
     if (!byDate.has(label)) byDate.set(label, []);
-    byDate.get(label)!.push(forecast.temp_2m_C[i]);
+    byDate.get(label)!.push(tempData.temp_2m_C[i]);
   }
 
   const lines = Array.from(byDate.entries())
@@ -205,7 +260,7 @@ export function preprocessLocalWeatherAT(rawData: Record<string, unknown>): Reco
   return {
     "temperature": {
       source: "GeoSphere Austria",
-      url: forecast.url ?? null,
+      url,
       text_de: lines.join("\n"),
     },
   };
@@ -215,7 +270,7 @@ export async function preprocessLocalWindAT(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["austria weather forecast"] as any;
+  const forecast = rawData["austriaWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   if (!forecast?.timestamps || !forecast?.wind_speed_kt) {
     return { "wind": { source: "GeoSphere Austria", url, text_de: null } };
@@ -273,7 +328,7 @@ export async function preprocessLocalCloudRainAT(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["austria weather forecast"] as any;
+  const forecast = rawData["austriaWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   if (!forecast?.timestamps || !forecast?.["rain_kgm-2"] || !forecast?.cloud_cover) {
     return { "cloud_rain": { source: "GeoSphere Austria", url, text_de: null } };
@@ -334,8 +389,8 @@ export function preprocessLocalWarningsNeusiedler(
   sailingArea: string | null,
 ): Record<string, unknown> {
   if (!sailingArea?.toLowerCase().includes("neusiedler")) return {};
-  const text = (rawData["austria neusiedlerLake warnings"] as any)?.text_de as string | null;
-  const url: string | null = (rawData["austria neusiedlerLake warnings"] as any)?.url ?? null;
+  const text = (rawData["austriaNeusiedlerLakeWarnings"] as any)?.text_de as string | null;
+  const url: string | null = (rawData["austriaNeusiedlerLakeWarnings"] as any)?.url ?? null;
   let warning: string;
   if (text?.includes("Sturmwarnung")) {
     warning = "Aktuell: Sturmwarnung der LSZ Burgenland";

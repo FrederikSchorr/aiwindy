@@ -1192,15 +1192,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // ── Wetterdaten scrapen ───────────────────────────────────────────────
       const meteonewsText = await fetchMeteonews();
-      analysis.data.weatherRaw["general weather"] = { source: "meteonews", text_de: meteonewsText || null };
+      analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
       if (meteonewsText) {
         analysis.data.sources.push(METEONEWS_URL);
         const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
-        analysis.data.weatherPreprocessed.europe["general weather"] = {
+        analysis.data.weatherPreprocessed.europe["generalWeather"] = {
           source: "meteonews", text_de: preprocessed || null,
         };
       } else {
-        analysis.data.weatherPreprocessed.europe["general weather"] = {
+        analysis.data.weatherPreprocessed.europe["generalWeather"] = {
           source: "meteonews", text_de: null,
         };
       }
@@ -1226,7 +1226,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
       };
       if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
-      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null);
+      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null, sailingAreaObj, cityObj);
       Object.assign(analysis.data.weatherRaw, national.data);
       for (const u of national.sourceUrls) analysis.data.sources.push(u);
       const nationalPre = await preprocessNationalWeather(analysis.data.weatherRaw, anthropic, countryCode);
