@@ -111,15 +111,15 @@ Erstelle genau 5 Abschnitte als JSON. Jeder Abschnitt enthält einen "text"-Schl
 
 Regeln pro Abschnitt:
 
-#1 airPressureMasses — Druck & Luftmassen (Inputs: Bilder + Meteonews + nationale Synopsis)
+#1 airPressureMasses — Druck & Luftmassen (Inputs: Bilder + Meteonews + nationale Synopsis, KEINE lokalen Daten)
 - GENAU 2 Bullets, max 20 Wörter je
-- Bullet 1: Dominante Drucksysteme über Europa + räumliche Anordnung + Strömungsrichtung
+- Bullet 1: Dominante Drucksysteme über Europa + Richtung ihrer Bewegung
 - Bullet 2: Großräumige Luftmassen (kalt/warm, feucht/trocken, Luftmassengrenze, Gradienten)
-- KEINE Windstärken, KEINE Temperaturen in Grad, KEINE Niederschlagserwähnung
+- KEINE Windströmungen/stärken, KEINE Temperaturen in Grad, KEINE Niederschlagserwähnung
 
 #2 weatherFront — Fronten (gleiche Inputs wie #1)
 - GENAU 2 Bullets, max 20 Wörter je
-- Bullet 1: Aktive Front(en) — Typ, Position, Bewegung
+- Bullet 1: Aktive Front(en) — Typ, Position, Bewegung. Priorität: Kalt- und Warmfronten vor Okklusionen. Abgeschwächte Okklusionen nur nennen wenn nahe ${locationLabel} und noch wetterwirksam.
 - Bullet 2: Nächste relevante Front für ${locationLabel} — Zeitpunkt
 - KEINE Effekte (kein Regen, kein Wind) — nur Fronttyp, Position, Bewegungsrichtung
 
