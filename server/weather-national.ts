@@ -47,7 +47,7 @@ export async function preprocessNationalWeather(
 
 export async function preprocessLocalWeather(
   rawData: Record<string, unknown>,
-  position: { userInput: string; sailingArea: string | null },
+  position: { userInput: string; city: string; sailingArea: string | null },
   anthropic: Anthropic,
   countryCode?: string,
 ): Promise<Record<string, unknown>> {
@@ -72,7 +72,7 @@ export async function preprocessLocalWeather(
     : null;
 
   const localResult = forecastXml
-    ? await preprocessDhmzLocalTemperature(forecastXml, position.userInput, position.sailingArea, anthropic)
+    ? await preprocessDhmzLocalTemperature(forecastXml, position.city, position.sailingArea, anthropic)
     : null;
 
   return {

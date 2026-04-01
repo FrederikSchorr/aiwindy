@@ -4,7 +4,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { detectSegelrevier } from "../server/location.js";
+import { detectLocation } from "../server/location.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
@@ -38,17 +38,17 @@ async function runTests() {
   for (const tc of TEST_CASES) {
     process.stdout.write(`  "${tc.input}" → `);
 
-    const result = await detectSegelrevier(tc.input, anthropic);
-    const got = result?.revier.deutsch ?? null;
+    const result = await detectLocation(tc.input, anthropic);
+    const got = result?.kind === "revier" ? result.revier.deutsch : null;
     const expectedLabel = tc.expected ?? "kein Segelrevier";
     const gotLabel = got ?? "kein Segelrevier";
 
     if (got === tc.expected) {
-      console.log(`✓  ${gotLabel}`);
+      console.log(`✓  ${gotLabel}${result ? `  (city: ${result.city})` : ""}`);
       passed++;
     } else {
-      console.log(`✗  erwartet: "${expectedLabel}"  →  AI: "${gotLabel}"`);
-      if (result) {
+      console.log(`✗  erwartet: "${expectedLabel}"  →  AI: "${gotLabel}"${result ? `  (city: ${result.city})` : ""}`);
+      if (result?.kind === "revier") {
         console.log(`       Land: ${result.land} [${result.countryCode}]  Koordinaten: ${result.revier.lat}, ${result.revier.lon}`);
       }
       failed++;

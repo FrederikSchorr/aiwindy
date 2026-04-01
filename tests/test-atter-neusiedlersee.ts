@@ -22,19 +22,17 @@ const anthropic = new Anthropic({
 const LOCATIONS: AnalysisPosition[] = [
   {
     userInput: "Attersee",
-    sailingArea: "Attersee (Österreich)",
-    type: "lake",
     country: "Österreich",
     countryCode: "AT",
-    coordinates: { lat: 47.87, lon: 13.54 },
+    sailingArea: { name_de: "Attersee (Österreich)", type: "lake", coordinates: { lat: 47.87, lon: 13.54 } },
+    city: { name_de: "Attersee", coordinates: { lat: 47.87, lon: 13.54 } },
   },
   {
     userInput: "Neusiedler See",
-    sailingArea: "Neusiedler See (Österreich)",
-    type: "lake",
     country: "Österreich",
     countryCode: "AT",
-    coordinates: { lat: 47.80, lon: 16.75 },
+    sailingArea: { name_de: "Neusiedler See (Österreich)", type: "lake", coordinates: { lat: 47.80, lon: 16.75 } },
+    city: { name_de: "Neusiedlersee", coordinates: { lat: 47.80, lon: 16.75 } },
   },
 ];
 
@@ -73,7 +71,7 @@ console.log(knmiForecast ? `✓ ${knmiForecast.imageBase64.length} Bytes` : "✗
 // ── 2. Pro Ort: Nationale Rohdaten + Speichern ───────────────────────────────
 
 for (const position of LOCATIONS) {
-  console.log(`\n── ${position.userInput} (${position.sailingArea}) ${"─".repeat(25)}`);
+  console.log(`\n── ${position.userInput} (${position.sailingArea?.name_de ?? "kein Revier"}) ${"─".repeat(25)}`);
 
   const analysis = createAnalysis(position);
 
@@ -98,10 +96,11 @@ for (const position of LOCATIONS) {
 
   // Nationale Rohdaten (pro Ort, wegen koordinatenabhängiger GeoSphere-Timeseries)
   process.stdout.write("  national weather … ");
+  const coords = position.sailingArea?.coordinates ?? position.city?.coordinates ?? { lat: 0, lon: 0 };
   const national = await fetchNationalWeather(
     position.countryCode,
-    position.coordinates,
-    position.sailingArea,
+    coords,
+    position.sailingArea?.name_de ?? null,
   );
   Object.assign(analysis.data.weatherRaw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
@@ -131,7 +130,7 @@ for (const position of LOCATIONS) {
 
   const localPre = await preprocessLocalWeather(
     analysis.data.weatherRaw,
-    { userInput: position.userInput, sailingArea: position.sailingArea },
+    { userInput: position.userInput, city: position.city?.name_de ?? position.userInput, sailingArea: position.sailingArea?.name_de ?? null },
     anthropic,
     position.countryCode,
   );

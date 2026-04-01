@@ -22,27 +22,24 @@ const anthropic = new Anthropic({
 const LOCATIONS: AnalysisPosition[] = [
   {
     userInput: "Punat",
-    sailingArea: "Adria Nord (Kroatien)",
-    type: "sea",
     country: "Kroatien",
     countryCode: "HR",
-    coordinates: { lat: 44.6284, lon: 13.8522 },
+    sailingArea: { name_de: "Adria Nord (Kroatien)", type: "sea", coordinates: { lat: 44.6284, lon: 13.8522 } },
+    city: { name_de: "Punat", coordinates: { lat: 45.024, lon: 14.652 } },
   },
   {
     userInput: "Split",
-    sailingArea: "Adria Mitte (Kroatien)",
-    type: "sea",
     country: "Kroatien",
     countryCode: "HR",
-    coordinates: { lat: 43.5081, lon: 16.4402 },
+    sailingArea: { name_de: "Adria Mitte (Kroatien)", type: "sea", coordinates: { lat: 43.5081, lon: 16.4402 } },
+    city: { name_de: "Split", coordinates: { lat: 43.508, lon: 16.440 } },
   },
   {
     userInput: "Zagreb",
-    sailingArea: null,
-    type: null,
     country: "Kroatien",
     countryCode: "HR",
-    coordinates: { lat: 45.8150, lon: 15.9819 },
+    sailingArea: null,
+    city: { name_de: "Zagreb", coordinates: { lat: 45.8150, lon: 15.9819 } },
   },
 ];
 
@@ -81,7 +78,7 @@ console.log(knmiForecast ? `✓ ${knmiForecast.imageBase64.length} Bytes` : "✗
 // ── 2. Pro Ort: Nationale Rohdaten + Preprocessing + Speichern ───────────────
 
 for (const position of LOCATIONS) {
-  console.log(`\n── ${position.userInput} (${position.sailingArea ?? "kein Revier"}) ${"─".repeat(25)}`);
+  console.log(`\n── ${position.userInput} (${position.sailingArea?.name_de ?? "kein Revier"}) ${"─".repeat(25)}`);
 
   const analysis = createAnalysis(position);
 
@@ -106,7 +103,8 @@ for (const position of LOCATIONS) {
 
   // Nationale Rohdaten pro Ort (sailingArea-abhängig)
   process.stdout.write("  national weather … ");
-  const national = await fetchNationalWeather(position.countryCode, position.coordinates, position.sailingArea);
+  const posCoords = position.sailingArea?.coordinates ?? position.city?.coordinates ?? { lat: 0, lon: 0 };
+  const national = await fetchNationalWeather(position.countryCode, posCoords, position.sailingArea?.name_de ?? null);
   Object.assign(analysis.data.weatherRaw, national.data);
   for (const u of national.sourceUrls) analysis.data.sources.push(u);
   console.log(`✓  ${Object.keys(national.data).join(", ")}`);
@@ -121,7 +119,7 @@ for (const position of LOCATIONS) {
   process.stdout.write("  preprocessing local … ");
   const localPre = await preprocessLocalWeather(
     analysis.data.weatherRaw,
-    { userInput: position.userInput, sailingArea: position.sailingArea },
+    { userInput: position.userInput, city: position.city?.name_de ?? position.userInput, sailingArea: position.sailingArea?.name_de ?? null },
     anthropic,
     position.countryCode,
   );

@@ -10,7 +10,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
-import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE, getRegionalModelAI, classifyMessage, geocodeLocation } from "./location.js";
+import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getRegionalModelAI, classifyMessage, geocodeLocation } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
 import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-europe.js";
 import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./weather-national.js";
@@ -1118,66 +1118,61 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
-      // ── Segelrevier-Erkennung ──────────────────────────────────────────────
+      // ── Ortserkennung ─────────────────────────────────────────────────────
       const userInput = classification.location;
-      const detected = await detectSegelrevier(userInput, anthropic);
+      const detected = await detectLocation(userInput, anthropic);
 
-      let lat: number;
-      let lon: number;
-      let countryCode: string;
-      let country: string;
-      let sailingArea: string | null;
-      let revierType: "sea" | "lake" | null;
-      let locationName: string | null = null;
-      let displayName: string;
-      let regionalModel: string;
-      let regionalModelLabel: string;
-      let regionalModelZoom: number;
-
-      if (detected) {
-        lat = detected.revier.lat;
-        lon = detected.revier.lon;
-        countryCode = detected.countryCode;
-        country = detected.land;
-        sailingArea = detected.revier.deutsch;
-        revierType = detected.revier.typ === "meer" ? "sea" : "lake";
-        displayName = detected.revier.deutsch;
-        const regional = await getRegionalModelAI(lat, lon, displayName, anthropic);
-        regionalModel = regional.model;
-        regionalModelLabel = regional.label;
-        regionalModelZoom = regional.zoom;
-      } else {
-        const fallback = await geocodeLocation(userInput, anthropic);
-        if (!fallback) {
-          sendSSE({ content: `Für \"${userInput}\" konnte ich weder ein Segelrevier noch einen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. \"Split in Kroatien\" oder \"Traunsee\".` });
-          sendSSE({ done: true });
-          res.end();
-          return;
-        }
-        lat = fallback.lat;
-        lon = fallback.lon;
-        countryCode = fallback.countryCode ?? "";
-        country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
-        sailingArea = null;
-        revierType = null;
-        locationName = fallback.cityName ?? fallback.displayName.split(",")[0].trim();
-        displayName = fallback.displayName;
-        regionalModel = fallback.regionalModel;
-        regionalModelLabel = fallback.regionalModelLabel;
-        regionalModelZoom = fallback.regionalModelZoom;
+      if (detected === null) {
+        sendSSE({ content: `Für „${userInput}" konnte ich keinen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. „Split in Kroatien" oder „Traunsee".` });
+        sendSSE({ done: true });
+        res.end();
+        return;
       }
 
-      // Geocoded object (compatible with existing SSE/frontend shape)
+      // Always geocode the city via Nominatim for city.coordinates + countryCode
+      const cityNameFromSonnet = detected.city;
+      const geocodedCity = await geocodeLocation(cityNameFromSonnet, anthropic);
+
+      // Build sailingArea + city objects
+      const sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] =
+        detected.kind === "revier"
+          ? {
+              name_de: detected.revier.deutsch,
+              type: detected.revier.typ === "meer" ? "sea" : "lake",
+              coordinates: { lat: detected.revier.lat, lon: detected.revier.lon },
+            }
+          : null;
+
+      const cityObj: import("./analysis-store.js").AnalysisPosition["city"] = geocodedCity
+        ? { name_de: geocodedCity.cityName ?? cityNameFromSonnet, coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon } }
+        : { name_de: cityNameFromSonnet, coordinates: { lat: 0, lon: 0 } };
+
+      // Coordinates for weather fetching: sailingArea (canonical) else city
+      const coords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
+      const lat = coords.lat;
+      const lon = coords.lon;
+
+      const countryCode = geocodedCity?.countryCode
+        ?? (detected.kind === "revier" ? detected.countryCode : "")
+        ?? "";
+      const country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
+
+      const displayName = geocodedCity?.displayName ?? cityNameFromSonnet;
+      const regional = geocodedCity
+        ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom }
+        : await getRegionalModelAI(lat, lon, cityNameFromSonnet, anthropic);
+
+      // SSE location object (frontend-compatible)
       const geocoded = {
         lat, lon, displayName,
         countryCode,
-        regionalModel,
-        regionalModelLabel,
-        regionalModelZoom,
-        sailingArea,
-        type: revierType,
+        regionalModel: regional.model,
+        regionalModelLabel: regional.label,
+        regionalModelZoom: regional.zoom,
+        sailingArea: sailingAreaObj?.name_de ?? null,
+        type: sailingAreaObj?.type ?? null,
         country,
-        location: locationName,
+        location: cityObj.name_de,
         userInput,
       };
 
@@ -1186,12 +1181,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       // ── Analysis JSON ──────────────────────────────────────────────────────
       const analysis = createAnalysis({
         userInput,
-        sailingArea,
-        type: revierType,
         country,
         countryCode,
-        coordinates: { lat, lon },
-        ...(locationName ? { location: locationName } : {}),
+        sailingArea: sailingAreaObj,
+        city: cityObj,
       });
 
       // ── Wetterdaten scrapen ───────────────────────────────────────────────
@@ -1230,14 +1223,14 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
       };
       if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
-      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingArea);
+      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null);
       Object.assign(analysis.data.weatherRaw, national.data);
       for (const u of national.sourceUrls) analysis.data.sources.push(u);
       const nationalPre = await preprocessNationalWeather(analysis.data.weatherRaw, anthropic, countryCode);
       Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
       const localPre = await preprocessLocalWeather(
         analysis.data.weatherRaw,
-        { userInput: analysis.data.position.userInput, sailingArea },
+        { userInput: analysis.data.position.userInput, city: cityObj.name_de, sailingArea: sailingAreaObj?.name_de ?? null },
         anthropic,
         countryCode,
       );
@@ -1251,7 +1244,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // ── Chat-Ausgabe ───────────────────────────────────────────────────────
       const flag = countryFlag(countryCode);
-      const label = sailingArea ?? locationName ?? displayName.split(",")[0].trim();
+      const label = sailingAreaObj?.name_de ?? cityObj.name_de ?? displayName.split(",")[0].trim();
       sendSSE({ content: `Wetteranalyse für **${label}** ${flag}` });
 
       sendSSE({ done: true });

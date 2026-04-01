@@ -61,7 +61,7 @@ export async function generateWeatherOutput(
   const local = weatherPreprocessed.local as Record<string, any>;
 
   const windsystems = getWindsystemsForCountry(position.country);
-  const locationLabel = position.sailingArea ?? position.location ?? position.userInput;
+  const locationLabel = position.sailingArea?.name_de ?? position.city?.name_de ?? position.userInput;
 
   // ── Build message content ─────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ export async function generateWeatherOutput(
 === KONTEXT ===
 Ort/Segelrevier: ${locationLabel}
 Land: ${position.country}
-${position.sailingArea ? `Segelrevier: ${position.sailingArea}` : `Ort: ${position.location ?? position.userInput}`}
+${position.sailingArea ? `Segelrevier: ${position.sailingArea.name_de}` : `Ort: ${position.city?.name_de ?? position.userInput}`}
 
 === EUROPÄISCHE WETTERLAGE (Meteonews) ===
 ${generalWeather ?? "(nicht verfügbar)"}

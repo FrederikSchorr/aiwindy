@@ -155,14 +155,14 @@ XML:\n${xml}`,
 
 export async function preprocessDhmzLocalTemperature(
   xml: string,
-  userInput: string,
+  locationHint: string,
   sailingArea: string | null,
   anthropic: Anthropic,
 ): Promise<{ city: string; text_de: string } | null> {
   const cityNames = Array.from(xml.matchAll(/ime="([^"]+)"/g)).map(m => m[1]);
   if (!cityNames.length) return null;
 
-  const normalizedInput = userInput.trim().replace(/\s+/g, "_");
+  const normalizedInput = locationHint.trim().replace(/\s+/g, "_");
   let matchedCity: string | undefined =
     cityNames.find(c => c.toLowerCase() === normalizedInput.toLowerCase()) ??
     cityNames.find(c => c.toLowerCase().startsWith(normalizedInput.toLowerCase()));
@@ -174,7 +174,7 @@ export async function preprocessDhmzLocalTemperature(
         max_tokens: 50,
         messages: [{
           role: "user",
-          content: `From this list of Croatian cities, return the single city name that best matches "${userInput}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. Prefer exact name matches over geographic proximity. Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
+          content: `From this list of Croatian cities, return the single city name that best matches "${locationHint}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. Prefer exact name matches over geographic proximity. Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
         }],
       });
       const llmResult = (msg.content[0] as { type: "text"; text: string }).text.trim();

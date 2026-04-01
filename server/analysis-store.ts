@@ -5,12 +5,17 @@ import path from "path";
 
 export interface AnalysisPosition {
   userInput: string;
-  sailingArea: string | null;
-  type: "sea" | "lake" | null;
   country: string;
   countryCode: string;
-  coordinates: { lat: number; lon: number };
-  location?: string; // Nominatim city name when no sailing area found
+  sailingArea: {
+    name_de: string;                          // e.g. "Adria Mitte (Kroatien)"
+    type: "sea" | "lake";
+    coordinates: { lat: number; lon: number }; // from sailingareas.json
+  } | null;
+  city: {
+    name_de: string;                          // e.g. "Split"
+    coordinates: { lat: number; lon: number }; // from Nominatim
+  } | null;
 }
 
 export interface AnalysisJson {

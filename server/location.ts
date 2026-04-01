@@ -12,11 +12,23 @@ export interface SegelRevier {
   [key: string]: unknown;
 }
 
-export interface DetectedRevier {
+export interface RevierResult {
+  kind: "revier";
   revier: SegelRevier;
   land: string;
   countryCode: string;
+  city: string;
 }
+
+export interface CityOnlyResult {
+  kind: "city";
+  city: string;
+}
+
+export type DetectLocationResult = RevierResult | CityOnlyResult | null;
+
+/** @deprecated use DetectLocationResult */
+export type DetectedRevier = RevierResult;
 
 /** Shared geocode result — compatible with the existing geocodeLocation() shape */
 export interface GeocodedLocation {
@@ -98,17 +110,24 @@ function buildRevierList(data: SegelreviereData): string {
 // ── Prompt Caching: statische System-Blöcke ───────────────────────────────
 
 const DETECT_SYSTEM_PROMPT = `Du bist ein Experte für europäische Geografie und Segelreviere.
-Ordne den genannten Ort dem passendsten Segelrevier aus der Liste zu.
 
-Wichtig: Die angegebenen Orte pro Revier sind nur Beispiele — nutze dein geografisches Wissen um auch nicht explizit gelistete Orte, Dörfer, Inseln oder Buchten dem richtigen Revier zuzuordnen.
-Die Koordinaten (°N °E) jedes Reviers helfen dir bei der geografischen Einordnung.
-Beispiel: "Weiden am See" liegt am Neusiedler See → "Neusiedler See (Österreich)", auch wenn dieser Ort nicht in der Liste steht.
-Beispiel: "Punat" liegt auf der Insel Krk im Kvarner Golf → "Adria Nord (Kroatien)".
+Gegeben einen Ort (Stadt, Hafen, Bucht, Resort, Campingplatz, See, allgemeine Bezeichnung):
+1. Ordne ihn dem passendsten Segelrevier aus der Liste zu (wenn sinnvoll).
+2. Nenne die nächstgelegene bedeutsame Stadt oder den repräsentativen Ort.
 
-Bei allgemeinen Bezeichnungen wie "Adria" ohne weitere Angabe: wähle "Adria Mitte (Kroatien)", da die Adria für deutschsprachige Segler meist das mittlere kroatische Küstengebiet bedeutet.
+Wichtig:
+- Die angegebenen Orte pro Revier sind nur Beispiele — nutze dein geografisches Wissen auch für nicht explizit gelistete Orte.
+- Die Koordinaten (°N °E) jedes Reviers helfen bei der geografischen Einordnung.
+- Für Resorts, Campingplätze, Buchten: gib die nächste echte Stadt an (z.B. "Seepark Weiden" → city: "Weiden am See").
+- Für Segelrevier-Namen ohne Stadtbezug: gib die wichtigste Hafenstadt an (z.B. "Nordadria" → city: "Trieste").
+- Bei allgemeinen Bezeichnungen wie "Adria": sailingArea: "Adria Mitte (Kroatien)", city: "Split".
+- Falls kein Revier passt (Binnenstadt, Inland): sailingArea: null.
+- Falls der Input komplett unverständlich ist: city: null.
 
-Antworte NUR mit dem exakten Revier-Namen in Anführungszeichen, z.B.: "Adria Mitte (Kroatien)"
-Falls kein Revier aus der Liste sinnvoll passt (z.B. Binnenstadt ohne Segelbezug): KEIN_REVIER`;
+Antworte NUR mit einem JSON-Objekt, z.B.:
+{"sailingArea": "Adria Mitte (Kroatien)", "city": "Split"}
+{"sailingArea": null, "city": "Zagreb"}
+{"sailingArea": null, "city": null}`;
 
 let _staticSystemBlocks: Anthropic.Messages.TextBlockParam[] | null = null;
 
@@ -129,41 +148,52 @@ function getStaticSystemBlocks(): Anthropic.Messages.TextBlockParam[] {
 
 // ── Core detection ─────────────────────────────────────────────────────────
 
-export async function detectSegelrevier(
+export async function detectLocation(
   locationName: string,
   anthropic: Anthropic,
-): Promise<DetectedRevier | null> {
+): Promise<DetectLocationResult> {
   const result = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 60,
+    max_tokens: 100,
     temperature: 0,
     system: getStaticSystemBlocks(),
-    messages: [
-      {
-        role: "user",
-        content: `Ort: "${locationName}"`,
-      },
-    ],
+    messages: [{ role: "user", content: `Ort: "${locationName}"` }],
   });
 
   const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
-  if (!text || text === "KEIN_REVIER") return null;
+  let parsed: { sailingArea: string | null; city: string | null } | null = null;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+  } catch {
+    console.error("detectLocation: JSON parse failed for response:", text);
+    return null;
+  }
 
-  const nameMatch = text.match(/"([^"]+)"/);
-  const matchedName = nameMatch ? nameMatch[1] : text;
+  const city = parsed?.city?.trim() || null;
+  if (!city) return null; // unrecognisable input — caller will ask user again
+
+  const sailingAreaName = typeof parsed?.sailingArea === "string" ? parsed.sailingArea.trim() : null;
+  if (!sailingAreaName) return { kind: "city", city };
 
   const data = loadSegelreviere();
   for (const [land, { reviere }] of Object.entries(data)) {
-    const revier = reviere.find((r) => r.deutsch === matchedName);
+    const revier = reviere.find((r) => r.deutsch === sailingAreaName);
     if (revier) {
-      return {
-        revier,
-        land,
-        countryCode: LAND_TO_COUNTRY_CODE[land] ?? "",
-      };
+      return { kind: "revier", revier, land, countryCode: LAND_TO_COUNTRY_CODE[land] ?? "", city };
     }
   }
-  return null;
+  console.warn(`detectLocation: unknown sailingArea "${sailingAreaName}", returning city-only`);
+  return { kind: "city", city };
+}
+
+/** @deprecated use detectLocation */
+export async function detectSegelrevier(
+  locationName: string,
+  anthropic: Anthropic,
+): Promise<RevierResult | null> {
+  const result = await detectLocation(locationName, anthropic);
+  return result?.kind === "revier" ? result : null;
 }
 
 // ── Flag helper ────────────────────────────────────────────────────────────
