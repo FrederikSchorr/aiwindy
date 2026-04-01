@@ -65,6 +65,8 @@ export async function preprocessLocalWeather(
     };
   }
 
+  if (countryCode !== "HR") return {};
+
   const regionalXml = (rawData["croatiaAdriaRegional"] as any)?.xml as string | null;
   const forecastXml = (rawData["croatiaCityForecast"] as any)?.xml as string | null;
 

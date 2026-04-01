@@ -201,17 +201,40 @@ export async function preprocessDhmzLocalTemperature(
     "Cetvrtak": "Do", "Petak": "Fr", "Subota": "Sa", "Nedjelja": "So",
   };
 
+  // Local hour at city (HR = Europe/Zagreb)
+  const tz = "Europe/Zagreb";
+  const localHour = parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(new Date())) % 24;
+  const todayStr = new Intl.DateTimeFormat("sv-SE", { timeZone: tz }).format(new Date()); // "YYYY-MM-DD"
+  const todayParts = todayStr.split("-");
+  const DOW: Record<number, string> = { 0: "So", 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa" };
+  const todayDow = new Date(`${todayStr}T12:00:00Z`).getUTCDay();
+  const todayLabel = `${DOW[todayDow]} ${todayParts[2]}.${todayParts[1]}`;
+
   const byDate = new Map<string, number[]>();
-  for (const [, datum, dtj, , temp] of dayEntries) {
+  const hasDaytime = new Set<string>();
+  for (const [, datum, dtj, sat, temp] of dayEntries) {
     const shortDay = dayNames[dtj] ?? dtj;
     const parts = datum.replace(/\.$/, "").split(".");
     const label = `${shortDay} ${parts[0]}.${parts[1]}`;
     if (!byDate.has(label)) byDate.set(label, []);
     byDate.get(label)!.push(Number(temp));
+    if (Number(sat) >= 6 && Number(sat) <= 18) hasDaytime.add(label);
   }
 
-  const lines = Array.from(byDate.entries())
-    .slice(0, 3)
-    .map(([day, temps]) => `${day}: ${Math.min(...temps)}–${Math.max(...temps)}°C`);
+  const lines: string[] = [];
+  for (const [day, temps] of Array.from(byDate)) {
+    if (day === todayLabel) {
+      if (localHour >= 13) continue;
+      if (localHour >= 5) {
+        lines.push(`${day}: max ${Math.round(Math.max(...temps))}°C`);
+      } else {
+        lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
+      }
+    } else {
+      if (!hasDaytime.has(day)) continue;
+      lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
+    }
+    if (lines.length >= 3) break;
+  }
   return { city: matchedCity, text_de: lines.join("\n") };
 }

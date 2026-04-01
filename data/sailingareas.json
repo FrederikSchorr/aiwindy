@@ -857,7 +857,7 @@
         "smhi": "Northern Baltic",
         "lat": 59.0,
         "lon": 19.5,
-        "orte": "Stockholm, Kapellskär, Norrtälje, Oxelösund, Nynäshamn"
+        "orte": "Kapellskär, Norrtälje, Oxelösund, Nynäshamn"
       },
       {
         "deutsch": "Schärenmeer",
@@ -865,7 +865,7 @@
         "smhi": "Archipelago Sea",
         "lat": 59.5,
         "lon": 20.5,
-        "orte": "Sandhamn, Vaxholm, Stavsnäs, Furusund, Arholma"
+        "orte": "Stockholm, Sandhamn, Vaxholm, Stavsnäs, Furusund, Arholma"
       },
       {
         "deutsch": "Bottnischer Meerbusen Süd",

@@ -234,13 +234,30 @@ export function preprocessLocalWeatherAT(rawData: Record<string, unknown>): Reco
   const windCloudRain = rawData["austriaWindCloudRain"] as any;
   const tempData = rawData["austriaTemperature"] as any;
   const url: string | null = tempData?.url ?? null;
+  const city = tempData?.city ?? null;
 
   if (!windCloudRain?.timestamps || !tempData?.temp_2m_C) {
-    return { "temperature": { source: "GeoSphere Austria", url, text_de: null } };
+    return { "temperature": { source: "GeoSphere Austria", url, city, text_de: null } };
   }
 
   const TZ = 2; // CEST = UTC+2
   const DAY_NAMES: Record<number, string> = { 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa", 0: "So" };
+
+  // Local hour at city (AT = Europe/Vienna)
+  const tz = "Europe/Vienna";
+  const localHour = parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(new Date())) % 24;
+  const todayStr = new Intl.DateTimeFormat("sv-SE", { timeZone: tz }).format(new Date()); // "YYYY-MM-DD"
+  const todayParts = todayStr.split("-");
+  const todayDow = new Date(`${todayStr}T12:00:00Z`).getUTCDay();
+  const todayLabel = `${DAY_NAMES[todayDow]} ${todayParts[2]}.${todayParts[1]}`;
+
+  // Allowed: today, tomorrow, übermorgen (max 3 calendar days)
+  const allowedLabels = new Set<string>();
+  for (let offset = 0; offset <= 2; offset++) {
+    const d = new Date(new Date(`${todayStr}T12:00:00Z`).getTime() + offset * 86400000);
+    const dp = d.toISOString().slice(0, 10).split("-");
+    allowedLabels.add(`${DAY_NAMES[d.getUTCDay()]} ${dp[2]}.${dp[1]}`);
+  }
 
   const byDate = new Map<string, number[]>();
   for (let i = 0; i < windCloudRain.timestamps.length; i++) {
@@ -253,14 +270,27 @@ export function preprocessLocalWeatherAT(rawData: Record<string, unknown>): Reco
     byDate.get(label)!.push(tempData.temp_2m_C[i]);
   }
 
-  const lines = Array.from(byDate.entries())
-    .slice(0, 3)
-    .map(([day, temps]) => `${day}: ${Math.min(...temps)}–${Math.max(...temps)}°C`);
+  const lines: string[] = [];
+  for (const [day, temps] of Array.from(byDate)) {
+    if (!allowedLabels.has(day)) continue;
+    if (day === todayLabel) {
+      if (localHour >= 13) continue;
+      if (localHour >= 5) {
+        lines.push(`${day}: max ${Math.round(Math.max(...temps))}°C`);
+      } else {
+        lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
+      }
+    } else {
+      lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
+    }
+    if (lines.length >= 3) break;
+  }
 
   return {
     "temperature": {
       source: "GeoSphere Austria",
       url,
+      city,
       text_de: lines.join("\n"),
     },
   };
