@@ -32,7 +32,7 @@ const LOCATIONS: AnalysisPosition[] = [
     country: "Österreich",
     countryCode: "AT",
     sailingArea: { name_de: "Neusiedler See (Österreich)", type: "lake", coordinates: { lat: 47.80, lon: 16.75 } },
-    city: { name_de: "Neusiedlersee", coordinates: { lat: 47.80, lon: 16.75 } },
+    city: { name_de: "Neusiedl am See", coordinates: { lat: 47.95, lon: 16.84 } },
   },
 ];
 
