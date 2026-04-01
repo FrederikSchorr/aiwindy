@@ -397,14 +397,18 @@ function isWaterFeature(cls: string, type: string): boolean {
 export async function geocodeLocation(
   locationName: string,
   anthropic: Anthropic,
+  hintCoords?: { lat: number; lon: number },
 ): Promise<{
   lat: number; lon: number; displayName: string;
   regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
   countryCode?: string; cityName?: string;
 } | null> {
   try {
+    const viewbox = hintCoords
+      ? `&viewbox=${hintCoords.lon - 0.5},${hintCoords.lat + 0.5},${hintCoords.lon + 0.5},${hintCoords.lat - 0.5}&bounded=0`
+      : "";
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&accept-language=en`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&accept-language=en${viewbox}`,
       { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
     );
     if (!response.ok) return null;

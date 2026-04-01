@@ -1131,7 +1131,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // Always geocode the city via Nominatim for city.coordinates + countryCode
       const cityNameFromSonnet = detected.city;
-      const geocodedCity = await geocodeLocation(cityNameFromSonnet, anthropic);
+      const hintCoords = detected.kind === "revier"
+        ? { lat: detected.revier.lat, lon: detected.revier.lon }
+        : undefined;
+      const geocodedCity = await geocodeLocation(cityNameFromSonnet, anthropic, hintCoords);
 
       // Build sailingArea + city objects
       const sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] =
