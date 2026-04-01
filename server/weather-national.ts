@@ -22,7 +22,7 @@ export async function fetchNationalWeather(
   sailingArea?: string | null,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
   switch (countryCode) {
-    case "HR": return { data: await fetchCroatiaWeather(), sourceUrls: [DHMZ_SOURCE_URL] };
+    case "HR": return { data: await fetchCroatiaWeather(sailingArea), sourceUrls: [DHMZ_SOURCE_URL] };
     case "AT": return fetchAustriaWeather(coordinates, sailingArea);
     default:   return { data: {}, sourceUrls: [] };
   }

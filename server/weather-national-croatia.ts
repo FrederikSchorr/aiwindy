@@ -4,17 +4,23 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const DHMZ_SOURCE_URL = "https://meteo.hr/prognoze.php?section=prognoze_specp&param=jadran&el=jadran_n";
 
-const HR_ENDPOINTS: Record<string, string> = {
+const HR_ENDPOINTS_SAILING: Record<string, string> = {
   "croatia adria forecast":  "https://prognoza.hr/jadran_h.xml",
   "croatia adria regional":  "https://prognoza.hr/pomorci.xml",
+};
+const HR_ENDPOINTS_ALWAYS: Record<string, string> = {
   "croatia city forecast":   "https://prognoza.hr/sedam/hrvatska/7d_meteogrami.xml",
 };
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-export async function fetchCroatiaWeather(): Promise<Record<string, unknown>> {
+export async function fetchCroatiaWeather(sailingArea?: string | null): Promise<Record<string, unknown>> {
+  const endpoints = {
+    ...(sailingArea ? HR_ENDPOINTS_SAILING : {}),
+    ...HR_ENDPOINTS_ALWAYS,
+  };
   const result: Record<string, unknown> = {};
-  for (const [key, url] of Object.entries(HR_ENDPOINTS)) {
+  for (const [key, url] of Object.entries(endpoints)) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
       result[key] = { source: "DHMZ", url, xml: res.ok ? await res.text() : null };
