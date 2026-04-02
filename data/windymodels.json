@@ -1,0 +1,22 @@
+{
+  "AL": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 6 },
+  "BE": { "model": "aromeHd", "label": "AROME-HD 1.3km", "zoom": 8 },
+  "DE": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "DK": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "FR": { "model": "aromeHd", "label": "AROME-HD 1.3km", "zoom": 8 },
+  "GR": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "IE": { "model": "ukv", "label": "UKV 2km", "zoom": 7 },
+  "IT": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "HR": { "model": "czeAladin", "label": "ALADIN 2.3km", "zoom": 8 },
+  "ME": { "model": "czeAladin", "label": "ALADIN 2.3km", "zoom": 8 },
+  "NL": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "NO": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "AT": { "model": "czeAladin", "label": "ALADIN 2.3km", "zoom": 8 },
+  "PT": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "SE": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "CH": { "model": "aromeHd", "label": "AROME-HD 1.3km", "zoom": 8 },
+  "SI": { "model": "czeAladin", "label": "ALADIN 2.3km", "zoom": 8 },
+  "ES": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "TR": { "model": "iconEu", "label": "ICON-EU 7km", "zoom": 7 },
+  "GB": { "model": "ukv", "label": "UKV 2km", "zoom": 7 }
+}

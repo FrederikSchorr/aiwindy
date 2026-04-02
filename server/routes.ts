@@ -10,7 +10,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
-import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getRegionalModelAI, classifyMessage, geocodeLocation } from "./location.js";
+import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getModelForCountry, classifyMessage, geocodeLocation } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
 
 import sailingAreasData from "../data/sailingareas.json" with { type: "json" };
@@ -666,7 +666,7 @@ export async function registerRoutes(
     const { location } = parsed.data;
 
     try {
-      const geocoded = await geocodeLocation(location, anthropic);
+      const geocoded = await geocodeLocation(location);
       if (!geocoded) {
         return res.status(404).json({ error: "Location not found." });
       }
@@ -830,7 +830,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         sendSSE({ status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E` });
         metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
 
-        const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`, anthropic);
+        const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
         if (geocoded) {
           sendSSE({ location: geocoded });
           exifLocationName = geocoded.cityName || geocoded.displayName.split(",")[0].trim();
@@ -1072,14 +1072,12 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
-      // Always geocode the city via Nominatim for city.coordinates + countryCode
       const cityNameFromSonnet = detected.city;
       const hintCoords = detected.kind === "revier"
         ? { lat: detected.revier.lat, lon: detected.revier.lon }
         : undefined;
-      const geocodedCity = await geocodeLocation(cityNameFromSonnet, anthropic, hintCoords);
+      const geocodedCity = await geocodeLocation(cityNameFromSonnet, hintCoords);
 
-      // Build sailingArea + city objects
       const sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] =
         detected.kind === "revier"
           ? {
@@ -1093,7 +1091,6 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         ? { name_de: geocodedCity.cityName ?? cityNameFromSonnet, coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon } }
         : { name_de: cityNameFromSonnet, coordinates: { lat: 0, lon: 0 } };
 
-      // Coordinates for weather fetching: sailingArea (canonical) else city
       const coords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
       const lat = coords.lat;
       const lon = coords.lon;
@@ -1104,9 +1101,13 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
 
       const displayName = geocodedCity?.displayName ?? cityNameFromSonnet;
-      const regional = geocodedCity
-        ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom }
-        : await getRegionalModelAI(lat, lon, cityNameFromSonnet, anthropic);
+      const revierModel = detected.kind === "revier" && detected.revier.model
+        ? { model: detected.revier.model as string, label: detected.revier.label as string, zoom: detected.revier.zoom as number }
+        : null;
+      const countryModel = countryCode ? getModelForCountry(countryCode) : null;
+      const regional = revierModel
+        ?? countryModel
+        ?? (geocodedCity ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom } : { model: "iconEu", label: "ICON-EU 7km", zoom: 6 });
 
       // SSE location object (frontend-compatible)
       const geocoded = {

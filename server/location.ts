@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
+import windyModelsJson from "../data/windymodels.json" with { type: "json" };
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -183,15 +184,6 @@ export async function detectLocation(
   return { kind: "city", city };
 }
 
-/** @deprecated use detectLocation */
-export async function detectSegelrevier(
-  locationName: string,
-  anthropic: Anthropic,
-): Promise<RevierResult | null> {
-  const result = await detectLocation(locationName, anthropic);
-  return result?.kind === "revier" ? result : null;
-}
-
 // ── Flag helper ────────────────────────────────────────────────────────────
 
 export function countryFlag(countryCode: string): string {
@@ -216,115 +208,10 @@ function getRegionalModelFallback(lat: number, lon: number): { model: string; la
   return { model: "gfs", label: "GFS 22km", zoom: 5 };
 }
 
-const MODEL_SELECTION_PROMPT = `Du bist ein Meteorologie-Experte. Wähle das BESTE hochauflösende Windmodell für den gegebenen Ort auf Windy.com.
+const windyModels = windyModelsJson as Record<string, { model: string; label: string; zoom: number }>;
 
-## Wichtige Regel
-Der Ort muss mindestens ~300km vom Rand der Modell-Domain entfernt liegen, damit man auf der Windy-Karte das heranziehende Wetter aus allen Richtungen sieht. Liegt ein Ort zu nahe am Domain-Rand, nimm das nächstbeste Modell mit größerer Abdeckung.
-
-## Verfügbare Modelle (Windy product parameter)
-
-| Parameter | Modell | Auflösung | Aktualisierung |
-|-----------|--------|-----------|----------------|
-| aromeHd | AROME-HD (Météo-France) | 1.3 km | 4×/Tag, +48h |
-| czeAladin | ALADIN (CHMI Tschechien) | 2.3 km | 4×/Tag, +72h |
-| ukv | UKV (Met Office) | 2 km | 4×/Tag, +48h |
-| iconEu | ICON-EU (DWD) | 7 km | 4×/Tag, +120h |
-| gfs | GFS (NOAA) | 22 km | 4×/Tag, +240h |
-
-## Modell-Domains (Kerngebiete mit ≥300km Puffer zum Domain-Rand)
-
-### aromeHd — 1.3 km (höchste Priorität wo verfügbar)
-Kerngebiet: Frankreich (komplett), Belgien, Luxemburg, Westdeutschland (Rheinland, Ruhrgebiet, Hessen, Saarland), Schweiz, Nordspanien (Pyrenäen, Katalonien, Baskenland), Korsika
-Grenzfälle (eher NICHT aromeHd): München, Stuttgart, Norditalien, Niederlande-Nord, Südengland, Zentralspanien
-NICHT verwenden: Österreich, Ostdeutschland, Tschechien, Adria, UK nördlich London, Skandinavien, Portugal, Süditalien
-
-### czeAladin — 2.3 km
-Kerngebiet: Österreich, Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Bosnien, Zentralpolen (Warschau, Krakau), Rumänien-West, Bayern, Sachsen, Norditalien-Ost (Venetien, Friaul, Triest)
-Grenzfälle (eher NICHT czeAladin): Berlin, Bulgarien-Süd, Norditalien-West (Gardasee, Lombardei), Südliche Ostsee, Norddeutschland
-NICHT verwenden: Griechenland, Türkei, Skandinavien, Westfrankreich, Süditalien südlich Rom, UK, nördl. Ostsee, Baltikum nördlich Vilnius
-
-### ukv — 2 km
-Kerngebiet: England (Mitte und Nord), Wales, Schottland-Süd, Irland-Ost, Irische See
-Grenzfälle (eher NICHT ukv): Südengland (Ärmelkanal), Schottland-Nord, Irland-West, Nordsee-Mitte
-NICHT verwenden: Kontinentaleuropa, Island, Norwegen, Färöer
-
-### iconEu — 7 km (Europa-Fallback)
-Kerngebiet: Ganz Europa inkl. Skandinavien, Ostsee, Nordsee, Griechenland, Ägäis, Ionische Inseln, Spanien, Portugal, Island, Türkei-West, Mittelmeer komplett, Nordafrika-Küste
-Verwende iconEu immer wenn kein hochauflösendes Modell den Ort mit 300km Puffer abdeckt.
-
-### gfs — 22 km (Global-Fallback)
-Außerhalb Europas, oder wenn iconEu nicht verfügbar.
-
-## Entscheidungslogik
-
-Prüfe in dieser Reihenfolge (erste Übereinstimmung gewinnt):
-1. Liegt der Ort im Kerngebiet von aromeHd? → aromeHd
-2. Liegt der Ort im Kerngebiet von czeAladin? → czeAladin
-3. Liegt der Ort im Kerngebiet von ukv? → ukv
-4. Liegt der Ort in Europa? → iconEu
-5. Sonst → gfs
-
-### Sonderfälle bei Überlappung und Grenzgebieten
-- Bayern (München, Augsburg): czeAladin — liegt zentral in ALADIN, aber am Ostrand von AROME-HD
-- Schweiz: aromeHd — liegt zentral in der AROME-HD-Domain
-- Baden-Württemberg (Stuttgart, Freiburg): aromeHd — noch ausreichend Puffer
-- Norditalien-West (Gardasee, Lombardei): iconEu — Grenzfall bei beiden hochauflösenden Modellen
-- Norditalien-Ost (Venetien, Friaul, Triest): czeAladin
-- Berlin, Brandenburg: iconEu — am Rand von sowohl AROME-HD als auch ALADIN
-- Niederlande: iconEu — am Nordrand von AROME-HD
-- Nordsee, Deutsche Bucht: iconEu
-- Ostsee (Gotland, Stockholm, Helsinki): iconEu
-- Südengland, Ärmelkanal: Im Zweifel iconEu — Grenzfall für ukv und aromeHd
-- Levkada, Ionische Inseln, Peloponnes: iconEu
-- Dubrovnik: czeAladin — noch im Kern, aber knapp; im Zweifel iconEu
-
-## Zoom-Level
-
-| Situation | Zoom |
-|-----------|------|
-| Hochauflösende Modelle — Küste, See, Insel | 8–9 |
-| Hochauflösende Modelle — Binnenland, Stadt | 7–8 |
-| iconEu — regional | 6–7 |
-| gfs — großräumig | 5–6 |
-
-## Antwortformat
-
-Antworte NUR mit einem JSON-Objekt, KEINE weiteren Erklärungen:
-{"model": "...", "label": "...", "zoom": 8}
-
-Wobei "label" der angezeigte Modellname ist, z.B. "AROME-HD 1.3km", "ALADIN 2.3km", "ICON-EU 7km".`;
-
-export async function getRegionalModelAI(
-  lat: number,
-  lon: number,
-  displayName: string,
-  anthropic: Anthropic,
-): Promise<{ model: string; label: string; zoom: number }> {
-  try {
-    const result = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 256,
-      temperature: 0,
-      system: MODEL_SELECTION_PROMPT,
-      messages: [{ role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` }],
-    });
-    const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
-    const jsonMatch = text.match(/\{[^}]+\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validModels = ["czeAladin", "aromeHd", "ukv", "iconEu", "gfs"];
-      if (parsed.model && validModels.includes(parsed.model) && parsed.label) {
-        return {
-          model: parsed.model,
-          label: parsed.label,
-          zoom: Math.min(Math.max(parsed.zoom || 7, 4), 10),
-        };
-      }
-    }
-  } catch (e) {
-    console.error("AI model selection failed:", e instanceof Error ? e.message : e);
-  }
-  return getRegionalModelFallback(lat, lon);
+export function getModelForCountry(countryCode: string): { model: string; label: string; zoom: number } | null {
+  return windyModels[countryCode] ?? null;
 }
 
 // ── Message classification ─────────────────────────────────────────────────
@@ -404,20 +291,8 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
 
 // ── Nominatim geocoding ────────────────────────────────────────────────────
 
-const WATER_CLASSES = new Set(["water", "waterway"]);
-const WATER_NATURAL_TYPES = new Set(["water", "lake", "wetland", "bay", "strait", "sea"]);
-const WATER_PLACE_TYPES = new Set(["sea", "ocean"]);
-
-function isWaterFeature(cls: string, type: string): boolean {
-  if (WATER_CLASSES.has(cls)) return true;
-  if (cls === "natural" && WATER_NATURAL_TYPES.has(type)) return true;
-  if (cls === "place" && WATER_PLACE_TYPES.has(type)) return true;
-  return false;
-}
-
 export async function geocodeLocation(
   locationName: string,
-  anthropic: Anthropic,
   hintCoords?: { lat: number; lon: number },
 ): Promise<{
   lat: number; lon: number; displayName: string;
@@ -429,7 +304,7 @@ export async function geocodeLocation(
       ? `&viewbox=${hintCoords.lon - 0.5},${hintCoords.lat + 0.5},${hintCoords.lon + 0.5},${hintCoords.lat - 0.5}&bounded=0`
       : "";
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&accept-language=de,en${viewbox}`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&addressdetails=1&accept-language=de,en${viewbox}`,
       { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
     );
     if (!response.ok) return null;
@@ -438,54 +313,21 @@ export async function geocodeLocation(
       lat: string; lon: string; display_name: string;
       class: string; type: string;
       namedetails?: Record<string, string>;
+      address?: { country_code?: string; city?: string; town?: string; village?: string };
     }>;
     if (!results.length) return null;
 
     const result = results[0];
     const lat = parseFloat(result.lat);
     const lon = parseFloat(result.lon);
-    const resultClass = result.class || "";
-    const resultType = result.type || "";
-    const isWater = isWaterFeature(resultClass, resultType);
-
-    const regional = await getRegionalModelAI(lat, lon, result.display_name, anthropic);
-
-    let countryCode: string | undefined;
-    const searchName = result.display_name.split(",")[0].trim();
     const nd = result.namedetails || {};
-    let cityName: string | undefined = nd["name:de"] || nd["name:en"] || searchName;
+    const searchName = result.display_name.split(",")[0].trim();
 
-    if (isWater) {
-      cityName = nd["name:de"] || nd["name"] || searchName;
-      try {
-        const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=4&addressdetails=1&accept-language=de,en`,
-          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-        );
-        if (reverseRes.ok) {
-          const rev = await reverseRes.json() as { address?: { country_code?: string } };
-          countryCode = rev.address?.country_code?.toUpperCase();
-        }
-      } catch {}
-    } else {
-      try {
-        const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1&accept-language=de,en`,
-          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-        );
-        if (reverseRes.ok) {
-          const reverseData = await reverseRes.json() as {
-            class?: string; address?: {
-              country_code?: string; city?: string; town?: string;
-              village?: string; suburb?: string; municipality?: string; county?: string;
-            }
-          };
-          countryCode = reverseData.address?.country_code?.toUpperCase();
-          const reverseName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village;
-          if (reverseName) cityName = reverseName;
-        }
-      } catch {}
-    }
+    const countryCode = result.address?.country_code?.toUpperCase();
+    const cityName = nd["name:de"] || nd["name"] || searchName;
+
+    const countryModel = countryCode ? getModelForCountry(countryCode) : null;
+    const regional = countryModel ?? getRegionalModelFallback(lat, lon);
 
     return {
       lat, lon,

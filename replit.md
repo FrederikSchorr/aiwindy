@@ -6,7 +6,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
 - **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, regional weather scraping, and OpenAI streaming chat
-- **AI**: Anthropic Claude Sonnet 4.6 for fronts analysis (Vision with KNMI chart), OpenAI GPT-4.1 for chat/photos, GPT-4.1-mini for section analysis/message classification/regional model selection, Gemini 2.5 Flash for video analysis
+- **AI**: Anthropic Claude Sonnet 4.6 for fronts analysis (Vision with KNMI chart), OpenAI GPT-4.1 for chat/photos, GPT-4.1-mini for section analysis/message classification, Gemini 2.5 Flash for video analysis
 - **No database required** - stateless app
 
 ## Key Files
@@ -26,7 +26,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
    - **UNCLEAR**: Ambiguous message → asks user to specify a location
 3. For ANALYSE mode:
    - Detects location via Claude Sonnet (sailingArea + city objects)
-   - Geocodes via Nominatim, selects regional model via AI
+   - Geocodes via Nominatim, selects regional wind model from sailingareas.json (per revier) or windymodels.json (per country)
    - SSE sequence: `{ location }` → `{ weatherEurope }` → `{ weatherOutput }` → `{ done }`
    - Frontend progressively renders sections as SSE events arrive
 
@@ -83,13 +83,12 @@ GPT-4.1-mini classifies each user message:
 - LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
 - LLM preprocessing: after validation, gpt-4.1-mini extracts only meteorological content from raw scraped text (removes navigation, menus, boilerplate). Clean text is used by all downstream section LLM calls.
 
-## Regional Model Selection (AI-based)
-GPT-4.1-mini selects the best Windy.com wind model based on 300km domain-edge rule:
-- aromeHd (1.3km): France, Belgium, Luxembourg, W-Germany, Switzerland, N-Spain, Corsica
-- czeAladin (2.3km): Austria, Czechia, Slovakia, Hungary, Croatia, Slovenia, Serbia, Bosnia, C-Poland, W-Romania, Bavaria, Saxony, NE-Italy
-- ukv (2km): England (mid+north), Wales, S-Scotland, E-Ireland
-- iconEu (7km): Europe fallback (Scandinavia, Baltics, Greece, Iberia, Netherlands, Berlin, N-Italy-West, etc.)
-- gfs (22km): Outside Europe
+## Regional Model Selection (JSON-based, no LLM)
+Windy wind model is selected via static JSON lookup — no LLM call needed:
+- **sailingareas.json**: Each of 133 sailing areas has `model`, `label`, `zoom` fields (highest priority)
+- **windymodels.json**: Country-level defaults for all 20 countries (fallback when no sailing area detected)
+- **getRegionalModelFallback()**: Coordinate-based fallback for unknown countries (aromeHd/czeAladin/ukv/iconEu/gfs)
+Models: aromeHd (1.3km), czeAladin (2.3km), ukv (2km), iconEu (7km), gfs (22km)
 
 ## Custom Domain
 - Domain: aiwindy.schorr.wien
