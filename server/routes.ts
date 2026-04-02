@@ -18,142 +18,21 @@ import { generateWeatherOutput } from "./weather-output.js";
 
 const execFileAsync = promisify(execFile);
 
-const DEBUG_LOG_PATH = path.join(process.cwd(), "debug.log");
-if (process.env.DEBUG === "1") {
-  try {
-    fs.writeFileSync(DEBUG_LOG_PATH, `── Debug Log gestartet: ${new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" })} ──\n\n`);
-  } catch {}
-}
+function debugLog(_s: string, _d?: string): void {}
+function debugLogRequestSeparator(_l: string): void {}
+function debugLogLLM(_m: string, _c: string, _msgs: unknown[], _si?: string): void {}
+function debugLogLLMResponse(_m: string, _c: string, _r: string): void {}
+function debugLogScrape(_s: string, _u: string, _st: number, _t: string): void {}
 
-function debugLog(summary: string, fullDetail?: string): void {
-  if (process.env.DEBUG !== "1") return;
-  console.log(`[DEBUG] ${summary}`);
-  const timestamp = new Date().toLocaleString("de-DE", {
-    timeZone: "Europe/Berlin",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  const fileContent = fullDetail
-    ? `[${timestamp}] ${summary}\n${fullDetail}\n`
-    : `[${timestamp}] ${summary}\n`;
-  try {
-    fs.appendFileSync(DEBUG_LOG_PATH, fileContent);
-  } catch {}
-}
-
-function debugLogRequestSeparator(label: string): void {
-  if (process.env.DEBUG !== "1") return;
-  const timestamp = new Date().toLocaleString("de-DE", {
-    timeZone: "Europe/Berlin",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  const separator = `\n${"=".repeat(80)}\n  REQUEST: ${label}\n  Zeit: ${timestamp}\n${"=".repeat(80)}\n`;
-  console.log(`[DEBUG] ── New Request: ${label}`);
-  try {
-    fs.appendFileSync(DEBUG_LOG_PATH, separator);
-  } catch {}
-}
-
-function formatLLMMessages(messages: unknown[]): string {
-  const lines: string[] = [];
-  for (const msg of messages) {
-    if (!msg || typeof msg !== "object") continue;
-    const m = msg as Record<string, unknown>;
-    const role = String(m.role || "unknown").toUpperCase();
-    lines.push(`─── ${role} ───`);
-    if (typeof m.content === "string") {
-      lines.push(m.content);
-    } else if (Array.isArray(m.content)) {
-      for (const part of m.content) {
-        if (!part || typeof part !== "object") continue;
-        const p = part as Record<string, unknown>;
-        if (p.type === "text" && typeof p.text === "string") {
-          lines.push(p.text);
-        } else if (p.type === "image_url") {
-          const imgUrl = (p.image_url as Record<string, unknown>)?.url;
-          if (typeof imgUrl === "string" && imgUrl.startsWith("data:")) {
-            lines.push(`[BASE64_IMAGE ~${Math.round(imgUrl.length / 1024)}KB]`);
-          } else {
-            lines.push(`[IMAGE: ${imgUrl}]`);
-          }
-        } else if (p.text && typeof p.text === "string") {
-          lines.push(p.text);
-        } else if (p.inlineData) {
-          const d = p.inlineData as Record<string, unknown>;
-          const dataLen = typeof d.data === "string" ? d.data.length : 0;
-          lines.push(`[INLINE_DATA ${d.mimeType || "unknown"} ~${Math.round(dataLen / 1024)}KB]`);
-        }
-      }
-    }
-    if (Array.isArray(m.parts)) {
-      for (const part of m.parts) {
-        if (!part || typeof part !== "object") continue;
-        const p = part as Record<string, unknown>;
-        if (typeof p.text === "string") {
-          lines.push(p.text);
-        } else if (p.inlineData) {
-          const d = p.inlineData as Record<string, unknown>;
-          const dataLen = typeof d.data === "string" ? d.data.length : 0;
-          lines.push(`[INLINE_DATA ${d.mimeType || "unknown"} ~${Math.round(dataLen / 1024)}KB]`);
-        }
-      }
-    }
-    lines.push("");
-  }
-  return lines.join("\n");
-}
-
-function debugLogLLM(model: string, context: string, messages: unknown[], systemInstruction?: string): void {
-  if (process.env.DEBUG !== "1") return;
-  const msgCount = messages.length;
-  const summary = `LLM [${model} / ${context}] ${msgCount} messages`;
-  console.log(`[DEBUG] ${summary}`);
-  let detail = `── LLM Call: ${model} / ${context} ──\n`;
-  if (systemInstruction) {
-    detail += `─── SYSTEM INSTRUCTION ───\n${systemInstruction}\n\n`;
-  }
-  detail += formatLLMMessages(messages);
-  detail += `${"─".repeat(40)}\n`;
-  const timestamp = new Date().toLocaleString("de-DE", {
-    timeZone: "Europe/Berlin",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  try {
-    fs.appendFileSync(DEBUG_LOG_PATH, `[${timestamp}] ${summary}\n${detail}\n`);
-  } catch {}
-}
-
-function debugLogLLMResponse(model: string, context: string, response: string): void {
-  if (process.env.DEBUG !== "1") return;
-  const preview = response.length > 200 ? response.slice(0, 200) + "..." : response;
-  console.log(`[DEBUG] LLM Response [${model} / ${context}] ${response.length} chars: ${preview.replace(/\n/g, " ")}`);
-  const timestamp = new Date().toLocaleString("de-DE", {
-    timeZone: "Europe/Berlin",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  const detail = `── LLM Response: ${model} / ${context} (${response.length} chars) ──\n${response}\n${"─".repeat(40)}\n`;
-  try {
-    fs.appendFileSync(DEBUG_LOG_PATH, `[${timestamp}] ${detail}\n`);
-  } catch {}
-}
-
-function debugLogScrape(source: string, url: string, status: number, text: string): void {
-  if (process.env.DEBUG !== "1") return;
-  const summary = `Scrape ${source} → ${status}, ${text.length} chars`;
-  console.log(`[DEBUG] ${summary}`);
-  const timestamp = new Date().toLocaleString("de-DE", {
-    timeZone: "Europe/Berlin",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  const detail = `── Scrape: ${source} ──\nURL: ${url}\nHTTP Status: ${status}\nText (${text.length} chars):\n${text}\n${"─".repeat(40)}\n`;
-  try {
-    fs.appendFileSync(DEBUG_LOG_PATH, `[${timestamp}] ${summary}\n${detail}\n`);
-  } catch {}
-}
+const COUNTRY_TIMEZONE: Record<string, string> = {
+  HR: "Europe/Zagreb", DE: "Europe/Berlin", AT: "Europe/Vienna",
+  IT: "Europe/Rome", FR: "Europe/Paris", GR: "Europe/Athens",
+  SI: "Europe/Ljubljana", ME: "Europe/Podgorica", GB: "Europe/London",
+  NL: "Europe/Amsterdam", ES: "Europe/Madrid", PT: "Europe/Lisbon",
+  TR: "Europe/Istanbul", DK: "Europe/Copenhagen", SE: "Europe/Stockholm",
+  NO: "Europe/Oslo", PL: "Europe/Warsaw", CH: "Europe/Zurich",
+  AL: "Europe/Tirane", BE: "Europe/Brussels", IE: "Europe/Dublin",
+};
 
 async function extractVideoThumbnail(filePath: string): Promise<string | null> {
   try {
@@ -1170,6 +1049,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         lat, lon, displayName,
         countryCode,
         cityName: cityObj.name_de || sailingAreaObj?.name_de || displayName.split(",")[0].trim(),
+        cityLat: cityObj.coordinates.lat,
+        cityLon: cityObj.coordinates.lon,
         regionalModel: regional.model,
         regionalModelLabel: regional.label,
         regionalModelZoom: regional.zoom,
@@ -1227,6 +1108,24 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
       };
       if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
+
+      const knmiUtcHour = Math.floor(new Date().getUTCHours() / 6) * 6;
+      const knmiUtcDate = new Date();
+      knmiUtcDate.setUTCHours(knmiUtcHour, 0, 0, 0);
+      const tz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
+      const frontCurrentLocalTime = new Intl.DateTimeFormat("de-DE", {
+        hour: "2-digit", minute: "2-digit", timeZone: tz,
+      }).format(knmiUtcDate);
+
+      sendSSE({
+        weatherEurope: {
+          frontCurrentBase64: knmi?.imageBase64 ?? null,
+          frontCurrentUrl: knmi?.url ?? null,
+          frontCurrentLocalTime,
+        },
+      });
+      analysis.save();
+
       const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null, sailingAreaObj, cityObj);
       Object.assign(analysis.data.weatherRaw, national.data);
       for (const u of national.sourceUrls) analysis.data.sources.push(u);

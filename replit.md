@@ -10,26 +10,25 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - **No database required** - stateless app
 
 ## Key Files
-- `client/src/pages/home.tsx` - Single-column chat UI with SectionCard event-driven inline maps
+- `client/src/pages/home.tsx` - Single-column chat UI with AnalysisView progressive rendering from JSON pipeline
 - `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, upload)
-- `shared/schema.ts` - Zod schemas and TypeScript types
+- `shared/schema.ts` - Zod schemas, TypeScript types, WeatherEuropeSSE/WeatherOutputData interfaces
+- `server/weather-europe.ts` - European weather data fetching (meteonews, Wetterzentrale, KNMI)
+- `server/weather-output.ts` - AI-generated weather output (5 sections via Claude/GPT)
+- `server/analysis-store.ts` - Analysis JSON persistence
+- `server/location.ts` - Location detection (sailingArea + city via Claude Sonnet)
 
 ## How It Works
 1. User sends a message in the chat
 2. Backend classifies message via GPT-4.1-mini into:
    - **CHAT**: General meteorology question or follow-up → direct GPT-4.1 answer (with weather context if location active)
-   - **ANALYSE**: Location detected → 6-section Segelwetteranalyse with per-section SSE events + inline maps
+   - **ANALYSE**: Location detected → 5-section weather analysis via JSON pipeline
    - **UNCLEAR**: Ambiguous message → asks user to specify a location
 3. For ANALYSE mode:
+   - Detects location via Claude Sonnet (sailingArea + city objects)
    - Geocodes via Nominatim, selects regional model via AI
-   - Scrapes meteonews.at for European weather overview
-   - Scrapes ONE regional weather page per country (forecast page, which typically includes warnings)
-   - For AT: uses GeoSphere JSON APIs for both forecast and warnings (clean data, no preprocessing needed)
-   - LLM-preprocesses scraped text to extract only meteorological content (removes navigation HTML, menus, boilerplate)
-   - Fetches KNMI fronts chart as base64 for Vision analysis
-   - Emits per-section SSE events `{ section: { id, title, mapType, mapConfig, sourceLabel, sourceUrl } }` when each section starts in the AI stream
-   - Runs 5 separate LLM calls (one per section, section 5 has no LLM call) with focused prompts and only relevant context
-   - Streams 6-section analysis text with inline maps driven by section events
+   - SSE sequence: `{ location }` → `{ weatherEurope }` → `{ weatherOutput }` → `{ done }`
+   - Frontend progressively renders sections as SSE events arrive
 
 ## Chat Layout
 - Single column: full width on mobile, max-w-2xl centered on desktop
@@ -37,21 +36,19 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - AI responses: left-aligned, no bubble/border (more space for content)
 - No status messages during processing, only bounce cursor during streaming
 
-## 6-Section Segelwetteranalyse (per-section SSE events + inline maps)
-1. **Luftmassen** - Windy 850hPa ECMWF map (Greenwich center), meteonews.at source
-2. **Fronten** - KNMI fronts analysis chart (proxied image), KNMI source with UTC time
-3. **Wind & Welle** - Windy regional wind model map, regional weather service link
-4. **Wolken & Regen** - Windy clouds overlay map
-5. **Prognose** - Windy meteogram (forecast type embed)
-6. **Wetterwarnung** - Warning text from preprocessed regional report, warning service link
+## 5-Section Segelwetteranalyse (progressive rendering from JSON pipeline)
+1. **Druck & Luftmassen** - Windy 850hPa ECMWF map (Greenwich center, no marker), ECMWF via Windy source
+2. **Fronten** - KNMI fronts analysis chart (base64 from weatherEurope SSE), KNMI source with local time
+3. **Wind & Welle** - Windy regional wind model map (sailingArea coords, marker), model label via Windy source
+4. **Wolken & Regen** - Windy clouds overlay map (sailingArea coords, marker), model label via Windy source
+5. **Temperatur** - Windy forecast meteogram (city coords, marker), model label via Windy source
 
-Each section runs as a separate LLM call with focused context:
-- Section 1 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + meteonews text, no location — European overview
-- Section 2 (Claude Sonnet 4.6 Vision): KNMI fronts chart image + location (no meteonews text)
-- Section 3 (Claude Sonnet 4.6): preprocessed regional weather report + model info + location
-- Section 4 (gpt-4.1-mini): preprocessed regional weather report + location
-- Section 5: No LLM call (chart only)
-- Section 6 (Claude Sonnet 4.6): preprocessed regional weather report (incl. warnings) + location
+Progressive rendering phases:
+- Phase 1 (location SSE): Header + Section 1 (Windy ECMWF) shown immediately
+- Phase 2 (weatherEurope SSE): Sections 2-5 (KNMI chart + Windy iframes) shown
+- Phase 3 (weatherOutput SSE): Bullet text fills in for all 5 sections
+
+Backend generates weatherOutput via weather-output.ts (5 separate LLM calls per section)
 
 ## Photo/Video Upload
 - Camera button in chat input
@@ -65,7 +62,7 @@ Each section runs as a separate LLM call with focused context:
 - Video: shows still frame thumbnail with "▶ Video" overlay, recording location + date below, "ja" location hint button (same as photo)
 
 ## API
-- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ section }` (per-section), `{ content }`, `{ done: true }`
+- `POST /api/chat` - Body: `{ message, history, currentLocation }` - Streams SSE: `{ location }`, `{ weatherEurope }`, `{ weatherOutput }`, `{ content }`, `{ done: true }`
 - `POST /api/upload` - Multipart form: `photo` (file) + optional `currentLocation` (JSON string) - Streams SSE
 - `POST /api/geocode` - Body: `{ location }` - Returns geocoded result with regional model
 - `GET /api/knmi-chart` - Proxies the latest KNMI weather analysis chart (image/gif)

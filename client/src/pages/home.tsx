@@ -2,56 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Sailboat, Camera, MapPin, Image } from "lucide-react";
-import type { ChatMessage, GeocodeResult } from "@shared/schema";
+import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 
-const COUNTRY_INFO: Record<string, { name: string }> = {
-  HR: { name: "Kroatien" },
-  DE: { name: "Deutschland" },
-  AT: { name: "Österreich" },
-  IT: { name: "Italien" },
-  FR: { name: "Frankreich" },
-  GR: { name: "Griechenland" },
-  SI: { name: "Slowenien" },
-  ME: { name: "Montenegro" },
-  GB: { name: "Großbritannien" },
-  NL: { name: "Niederlande" },
-  ES: { name: "Spanien" },
-  PT: { name: "Portugal" },
-  TR: { name: "Türkei" },
-  DK: { name: "Dänemark" },
-  SE: { name: "Schweden" },
-  NO: { name: "Norwegen" },
-  PL: { name: "Polen" },
-  CH: { name: "Schweiz" },
-};
-
-
-interface SectionMapConfig {
-  lat?: number;
-  lon?: number;
-  overlay?: string;
-  product?: string;
-  level?: string;
-  zoom?: number;
-  forecast?: boolean;
-  marker?: boolean;
-}
-
-interface SectionEvent {
-  id: string;
-  title: string;
-  mapType: string;
-  mapConfig: SectionMapConfig;
-  sourceLabel: string | null;
-  sourceUrl: string | null;
-  regionalServiceLabel?: string | null;
-  regionalServiceUrl?: string | null;
-}
+const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
 
 interface SSEPayload {
   location?: GeocodeResult;
-  analysisStart?: { sections: SectionEvent[] };
-  section?: SectionEvent;
+  weatherEurope?: WeatherEuropeSSE;
+  weatherOutput?: WeatherOutputData;
   content?: string;
   error?: string;
   done?: boolean;
@@ -87,39 +45,6 @@ function SourceLink({ label, url }: { label: string; url: string }) {
     >
       Quelle: {label} ↗
     </a>
-  );
-}
-
-function SectionCard({ section }: { section: SectionEvent }) {
-  const { mapType, mapConfig, sourceLabel, sourceUrl } = section;
-
-  return (
-    <div className="my-3" data-testid={`section-card-${section.id}`}>
-
-      {mapType === "windy" && mapConfig.lat != null && mapConfig.lon != null && (
-        <WindyEmbed
-          lat={mapConfig.lat}
-          lon={mapConfig.lon}
-          overlay={mapConfig.overlay || "wind"}
-          product={mapConfig.product || "ecmwf"}
-          level={mapConfig.level || "surface"}
-          zoom={mapConfig.zoom || 8}
-          forecast={mapConfig.forecast}
-          marker={mapConfig.marker}
-        />
-      )}
-      {mapType === "knmi" && (
-        <img
-          src="/api/knmi-chart"
-          alt="KNMI Fronten-Analyse"
-          className="w-full rounded-lg bg-white"
-          data-testid="img-knmi-chart"
-        />
-      )}
-      {sourceLabel && sourceUrl && (
-        <SourceLink label={sourceLabel} url={sourceUrl} />
-      )}
-    </div>
   );
 }
 
@@ -206,51 +131,132 @@ function MarkdownContent({ content }: { content: string }) {
   return <div className="text-[15px] leading-snug" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function AnalysisContent({ content, sections, isStreaming, isLast }: {
-  content: string;
-  sections: SectionEvent[];
+function BounceLoader() {
+  return (
+    <span className="inline-flex items-center gap-0.5 ml-1 mt-2 align-baseline" data-testid="bounce-loader">
+      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+    </span>
+  );
+}
+
+function SectionTitle({ num, title }: { num: number; title: string }) {
+  return (
+    <h2 className="text-base font-bold mt-4 mb-1" data-testid={`section-title-${num}`}>
+      {num}. {title}
+    </h2>
+  );
+}
+
+function CountryFlag({ countryCode }: { countryCode: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/w20/${countryCode.toLowerCase()}.png`}
+      width={20}
+      height={14}
+      alt={countryCode}
+      className="inline-block rounded-[2px] shrink-0"
+    />
+  );
+}
+
+function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming }: {
+  location: GeocodeResult;
+  weatherEurope: WeatherEuropeSSE | null;
+  weatherOutput: WeatherOutputData | null;
   isStreaming: boolean;
-  isLast: boolean;
 }) {
-  const sectionRegex = /^##\s*(\d)[.):\s]/m;
-  const parts = content.split(sectionRegex);
-
-  const textBlocks: { num: number; heading: string; body: string }[] = [];
-  const preamble = parts[0] || "";
-
-  for (let i = 1; i < parts.length; i += 2) {
-    const num = parseInt(parts[i], 10);
-    const rawText = parts[i + 1] || "";
-    const firstNewline = rawText.indexOf("\n");
-    const titleLine = firstNewline >= 0 ? rawText.slice(0, firstNewline) : rawText;
-    const body = firstNewline >= 0 ? rawText.slice(firstNewline) : "";
-    textBlocks.push({ num, heading: `## ${num}.${titleLine}`, body });
-  }
-
-  const sectionMap = new Map<string, SectionEvent>();
-  const sectionOrder = ["druck-luftmassen", "fronten", "wind", "wolken", "prognose", "warnung"];
-  sections.forEach(s => sectionMap.set(s.id, s));
+  const saLat = location.lat;
+  const saLon = location.lon;
+  const cityLat = location.cityLat ?? location.lat;
+  const cityLon = location.cityLon ?? location.lon;
+  const model = location.regionalModel;
+  const modelLabel = location.regionalModelLabel;
+  const zoom = location.regionalModelZoom;
 
   return (
-    <div>
-      {preamble.trim() && <MarkdownContent content={preamble} />}
-      {textBlocks.map((block) => {
-        const sectionId = sectionOrder[block.num - 1];
-        const sectionEvt = sectionId ? sectionMap.get(sectionId) : undefined;
-        return (
-          <div key={block.num} data-testid={`analysis-section-${block.num}`}>
-            <MarkdownContent content={block.heading} />
-            {sectionEvt && <SectionCard section={sectionEvt} />}
-            {block.body.trim() && <MarkdownContent content={block.body} />}
+    <div data-testid="analysis-view">
+      <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground/80" data-testid="analysis-header">
+        {location.sailingArea ? (
+          <>
+            <span>Wetteranalyse für</span>
+            <span>{location.sailingArea} ({location.cityName})</span>
+          </>
+        ) : (
+          <>
+            <span>Kein Segelrevier erkannt. Wetteranalyse für</span>
+            <span>{location.cityName}</span>
+          </>
+        )}
+        {location.countryCode && <CountryFlag countryCode={location.countryCode} />}
+      </div>
+
+      <SectionTitle num={1} title="Druck & Luftmassen" />
+      <div className="my-3" data-testid="section-card-1">
+        <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="850h" zoom={4} />
+        <SourceLink label="ECMWF via Windy" url="https://www.windy.com" />
+      </div>
+      {weatherOutput?.airPressureMasses?.text && (
+        <MarkdownContent content={weatherOutput.airPressureMasses.text} />
+      )}
+
+      {!weatherEurope && isStreaming && <BounceLoader />}
+
+      {weatherEurope && (
+        <>
+          <SectionTitle num={2} title="Fronten" />
+          <div className="my-3" data-testid="section-card-2">
+            {weatherEurope.frontCurrentBase64 ? (
+              <img
+                src={`data:image/gif;base64,${weatherEurope.frontCurrentBase64}`}
+                alt="KNMI Fronten-Analyse"
+                className="w-full rounded-lg bg-white"
+                data-testid="img-knmi-chart"
+              />
+            ) : (
+              <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center">
+                <span className="text-muted-foreground text-sm">KNMI Karte nicht verfügbar</span>
+              </div>
+            )}
+            <SourceLink
+              label={`KNMI Analyse ${weatherEurope.frontCurrentLocalTime}`}
+              url={weatherEurope.frontCurrentUrl || KNMI_SOURCE_URL}
+            />
           </div>
-        );
-      })}
-      {isStreaming && isLast && (
-        <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-        </span>
+          {weatherOutput?.weatherFront?.text && (
+            <MarkdownContent content={weatherOutput.weatherFront.text} />
+          )}
+
+          <SectionTitle num={3} title="Wind & Welle" />
+          <div className="my-3" data-testid="section-card-3">
+            <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={zoom} marker />
+            <SourceLink label={`${modelLabel} via Windy`} url="https://www.windy.com" />
+          </div>
+          {weatherOutput?.windWaves?.text && (
+            <MarkdownContent content={weatherOutput.windWaves.text} />
+          )}
+
+          <SectionTitle num={4} title="Wolken & Regen" />
+          <div className="my-3" data-testid="section-card-4">
+            <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={zoom} marker />
+            <SourceLink label={`${modelLabel} via Windy`} url="https://www.windy.com" />
+          </div>
+          {weatherOutput?.cloudsRain?.text && (
+            <MarkdownContent content={weatherOutput.cloudsRain.text} />
+          )}
+
+          <SectionTitle num={5} title="Temperatur" />
+          <div className="my-3" data-testid="section-card-5">
+            <WindyEmbed lat={cityLat} lon={cityLon} overlay="temp" product={model} level="surface" zoom={zoom} forecast marker />
+            <SourceLink label={`${modelLabel} via Windy`} url="https://www.windy.com" />
+          </div>
+          {weatherOutput?.temperature?.text && (
+            <MarkdownContent content={weatherOutput.temperature.text} />
+          )}
+
+          {!weatherOutput && isStreaming && <BounceLoader />}
+        </>
       )}
     </div>
   );
@@ -266,13 +272,14 @@ export default function Home() {
   ]);
   const [input, setInput] = useState("");
   const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
-  const [messageSections, setMessageSections] = useState<Record<string, SectionEvent[]>>({});
   const [isStreaming, setIsStreaming] = useState(false);
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
   const hasUploadedRef = useRef(false);
   const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null; isVideo?: boolean }>>({});
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
+  const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
+  const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -299,41 +306,21 @@ export default function Home() {
     xhr.setRequestHeader("Content-Type", "application/json");
 
     let chatStreamContent = "";
-    let pendingAnalyseContent = "";
-    let analyseRafId: number | null = null;
-    const flushAnalyseContent = () => {
-      analyseRafId = null;
-      if (!pendingAnalyseContent) return;
-      const captured = pendingAnalyseContent;
-      pendingAnalyseContent = "";
-      setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + captured } : m));
-    };
 
     const getChatStreamEl = () => document.getElementById(`stream-${assistantId}`);
 
     const handleEvent = (data: SSEPayload) => {
       if (data.location) {
+        isAnalyse = true;
         setActiveLocation(data.location);
         setMessageLocations(prev => ({ ...prev, [assistantId]: data.location! }));
         lastAnalysisLocationRef.current = data.location!.displayName.split(",")[0].trim();
       }
-      if (data.analysisStart?.sections) {
-        const sections = data.analysisStart.sections;
-        setMessageSections(prev => ({ ...prev, [assistantId]: sections }));
-        isAnalyse = true;
-        if (chatStreamContent) {
-          setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: chatStreamContent } : m));
-        }
+      if (data.weatherEurope) {
+        setMessageWeatherEurope(prev => ({ ...prev, [assistantId]: data.weatherEurope! }));
       }
-      if (data.section) {
-        const sectionEvt = data.section;
-        setMessageSections(prev => {
-          const existing = prev[assistantId] || [];
-          if (!existing.find(s => s.id === sectionEvt.id)) {
-            return { ...prev, [assistantId]: [...existing, sectionEvt] };
-          }
-          return prev;
-        });
+      if (data.weatherOutput) {
+        setMessageWeatherOutput(prev => ({ ...prev, [assistantId]: data.weatherOutput! }));
       }
       if (data.error) {
         setMessages((prev) =>
@@ -354,16 +341,11 @@ export default function Home() {
         if (line.startsWith("data: ")) {
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.content) {
+            if (data.content && !isAnalyse) {
               chatStreamContent += data.content;
-              if (isAnalyse) {
-                pendingAnalyseContent += data.content;
-                if (!analyseRafId) analyseRafId = requestAnimationFrame(flushAnalyseContent);
-              } else {
-                const el = getChatStreamEl();
-                if (el) el.textContent = chatStreamContent;
-              }
-            } else {
+              const el = getChatStreamEl();
+              if (el) el.textContent = chatStreamContent;
+            } else if (!data.content) {
               handleEvent(data);
             }
           } catch {}
@@ -375,23 +357,13 @@ export default function Home() {
     xhr.onloadend = () => {
       lineBuffer += "\n";
       processChunk();
-      if (analyseRafId) { cancelAnimationFrame(analyseRafId); analyseRafId = null; }
-      if (isAnalyse) {
-        flushAnalyseContent();
-      } else {
+      if (!isAnalyse) {
         setMessages((prev) => {
           const msg = prev.find(m => m.id === assistantId);
           if (msg && !chatStreamContent) return prev.filter(m => m.id !== assistantId);
           return prev.map((m) => m.id === assistantId ? { ...m, content: chatStreamContent } : m);
         });
       }
-      setMessages((prev) => {
-        const msg = prev.find(m => m.id === assistantId);
-        if (isAnalyse && msg && !msg.content) {
-          return prev.filter(m => m.id !== assistantId);
-        }
-        return prev;
-      });
       if (isAnalyse && !uploadHintShownRef.current && !hasUploadedRef.current) {
         uploadHintShownRef.current = true;
         setUploadHintAfterMsgId(assistantId);
@@ -594,9 +566,11 @@ export default function Home() {
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
           {messages.map((msg) => {
             const isUser = msg.role === "user";
-            const msgSections = messageSections[msg.id] || [];
+            const loc = messageLocations[msg.id];
+            const we = messageWeatherEurope[msg.id];
+            const wo = messageWeatherOutput[msg.id];
+            const isAnalysis = !!loc;
             const isLast = msg.id === messages[messages.length - 1]?.id;
-            const hasAnalysis = msgSections.length > 0;
             const showUploadHint = msg.id === uploadHintAfterMsgId;
 
             if (isUser) {
@@ -622,7 +596,7 @@ export default function Home() {
                               />
                             ) : (
                               <div className="rounded-2xl rounded-br-md w-48 h-32 bg-muted flex items-center justify-center">
-                                <span className="text-muted-foreground text-sm">📹 Lade…</span>
+                                <span className="text-muted-foreground text-sm">Lade...</span>
                               </div>
                             )}
                             <div className="absolute top-2 left-2 bg-black/60 rounded-md px-2 py-0.5 flex items-center gap-1">
@@ -640,18 +614,9 @@ export default function Home() {
                           <div className="flex flex-col items-end gap-0.5 mt-1">
                             {preview.locationName && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                📍 {preview.locationName}
+                                <MapPin className="w-3 h-3" /> {preview.locationName}
                                 {preview.countryCode && (
-                                  <>
-                                    <img
-                                      src={`https://flagcdn.com/w20/${preview.countryCode.toLowerCase()}.png`}
-                                      alt={preview.countryCode}
-                                      className="w-4 h-3 object-cover rounded-sm inline-block"
-                                    />
-                                    {COUNTRY_INFO[preview.countryCode]?.name && (
-                                      <span>{COUNTRY_INFO[preview.countryCode].name}</span>
-                                    )}
-                                  </>
+                                  <CountryFlag countryCode={preview.countryCode} />
                                 )}
                               </span>
                             )}
@@ -673,38 +638,15 @@ export default function Home() {
               );
             }
 
-            if (hasAnalysis) {
-              const loc = messageLocations[msg.id];
+            if (isAnalysis) {
               return (
                 <div key={msg.id} data-testid={`message-${msg.id}`} data-message-id={msg.id}>
-                  {loc && (
-                    <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground/80">
-                      <span>Wetteranalyse für</span>
-                      <span>{loc.sailingArea || loc.cityName || loc.displayName.split(",")[0]}</span>
-                      {loc.countryCode && (
-                        <>
-                          <img
-                            src={`https://flagcdn.com/w20/${loc.countryCode.toLowerCase()}.png`}
-                            width={20}
-                            height={14}
-                            alt={loc.countryCode}
-                            className="inline-block rounded-[2px] shrink-0"
-                          />
-                          {COUNTRY_INFO[loc.countryCode]?.name && (
-                            <span>{COUNTRY_INFO[loc.countryCode].name}</span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="w-full">
-                    <AnalysisContent
-                      content={msg.content}
-                      sections={msgSections}
-                      isStreaming={isStreaming}
-                      isLast={isLast}
-                    />
-                  </div>
+                  <AnalysisView
+                    location={loc}
+                    weatherEurope={we || null}
+                    weatherOutput={wo || null}
+                    isStreaming={isStreaming && isLast}
+                  />
                   {showUploadHint && !isStreaming && (
                     <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-upload-hint">
                       <Camera className="w-4 h-4 shrink-0" />
@@ -722,36 +664,23 @@ export default function Home() {
                 {isCurrentlyStreaming
                   ? <div id={`stream-${msg.id}`} className="text-[15px] leading-relaxed whitespace-pre-wrap text-foreground" />
                   : msg.content ? <MarkdownContent content={msg.content} /> : null}
-                {isCurrentlyStreaming && (
-                  <span className="inline-flex items-center gap-0.5 ml-1 align-baseline">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </span>
-                )}
+                {isCurrentlyStreaming && <BounceLoader />}
                 {photoHint && !isStreaming && (
                   <div className="mt-3 text-[14px]" data-testid="text-photo-location-hint">
                     <div className="flex items-center gap-2 flex-wrap text-muted-foreground italic">
                       <MapPin className="w-4 h-4 shrink-0" />
                       <span>
-                        Möchtest Du für{" "}
+                        Wetteranalyse für{" "}
                         <strong className="not-italic text-foreground/80">
                           {photoHint.locationName}
                           {photoHint.countryCode && (
                             <>
                               {" "}
-                              <img
-                                src={`https://flagcdn.com/w20/${photoHint.countryCode.toLowerCase()}.png`}
-                                width={16}
-                                height={11}
-                                alt={photoHint.countryCode}
-                                className="inline-block rounded-[2px] align-baseline"
-                              />
-                              {" "}{COUNTRY_INFO[photoHint.countryCode]?.name}
+                              <CountryFlag countryCode={photoHint.countryCode} />
                             </>
                           )}
                         </strong>
-                        {" "}eine Wetteranalyse durchführen?
+                        {" "}durchführen?
                       </span>
                       <Button
                         size="sm"
@@ -759,7 +688,7 @@ export default function Home() {
                         disabled={isStreaming}
                         onClick={() => {
                           if (isStreaming) return;
-                          const loc = photoHint.locationName + (photoHint.countryCode && COUNTRY_INFO[photoHint.countryCode] ? `, ${COUNTRY_INFO[photoHint.countryCode].name}` : "");
+                          const loc = photoHint.locationName;
                           setPhotoLocationHints(prev => {
                             const next = { ...prev };
                             delete next[msg.id];

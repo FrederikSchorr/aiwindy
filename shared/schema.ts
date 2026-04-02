@@ -32,8 +32,32 @@ export interface GeocodeResult {
   regionalModelZoom: number;
   countryCode?: string;
   cityName?: string;
-  warningUrl?: string;
-  warningLabel?: string;
+  cityLat?: number;
+  cityLon?: number;
+  sailingArea?: string | null;
+  type?: "sea" | "lake" | null;
+  country?: string;
+  location?: string;
+  userInput?: string;
+}
+
+export interface WeatherEuropeSSE {
+  frontCurrentBase64: string | null;
+  frontCurrentUrl: string | null;
+  frontCurrentLocalTime: string;
+}
+
+export interface WeatherOutputSection {
+  source: string;
+  text: string | null;
+}
+
+export interface WeatherOutputData {
+  airPressureMasses: WeatherOutputSection;
+  weatherFront: WeatherOutputSection;
+  windWaves: WeatherOutputSection;
+  cloudsRain: WeatherOutputSection;
+  temperature: WeatherOutputSection;
 }
 
 export interface ChatMessage {
