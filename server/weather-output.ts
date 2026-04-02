@@ -1,20 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "fs";
+import windSystemsJson from "../data/windsystems.json" with { type: "json" };
 import type { AnalysisJson } from "./analysis-store.js";
 
 // ── Wind systems ──────────────────────────────────────────────────────────────
 
 type WindSystem = { country: string; winds: Record<string, unknown>[] };
 
-let _windsystems: WindSystem[] | null = null;
-
 function loadWindsystems(): WindSystem[] {
-  if (!_windsystems) {
-    _windsystems = JSON.parse(
-      readFileSync(new URL("../data/windsystems.json", import.meta.url), "utf-8"),
-    ) as WindSystem[];
-  }
-  return _windsystems;
+  return windSystemsJson as unknown as WindSystem[];
 }
 
 function getWindsystemsForCountry(country: string): string {

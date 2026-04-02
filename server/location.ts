@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "fs";
+import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -86,15 +86,8 @@ export const COUNTRY_CODE_TO_FLAG: Record<string, string> = {
 
 type SegelreviereData = Record<string, { reviere: SegelRevier[] }>;
 
-let _cache: SegelreviereData | null = null;
-
 function loadSegelreviere(): SegelreviereData {
-  if (!_cache) {
-    _cache = JSON.parse(
-      readFileSync(new URL("../data/sailingareas.json", import.meta.url), "utf-8"),
-    ) as SegelreviereData;
-  }
-  return _cache;
+  return sailingAreasJson as unknown as SegelreviereData;
 }
 
 function buildRevierList(data: SegelreviereData): string {
