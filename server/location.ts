@@ -429,7 +429,7 @@ export async function geocodeLocation(
       ? `&viewbox=${hintCoords.lon - 0.5},${hintCoords.lat + 0.5},${hintCoords.lon + 0.5},${hintCoords.lat - 0.5}&bounded=0`
       : "";
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&accept-language=en${viewbox}`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&accept-language=de,en${viewbox}`,
       { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
     );
     if (!response.ok) return null;
@@ -459,7 +459,7 @@ export async function geocodeLocation(
       cityName = nd["name:de"] || nd["name"] || searchName;
       try {
         const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=4&addressdetails=1&accept-language=en`,
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=4&addressdetails=1&accept-language=de,en`,
           { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
         );
         if (reverseRes.ok) {
@@ -470,7 +470,7 @@ export async function geocodeLocation(
     } else {
       try {
         const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1&accept-language=en`,
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1&accept-language=de,en`,
           { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
         );
         if (reverseRes.ok) {
