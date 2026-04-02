@@ -540,7 +540,7 @@ const GENERAL_CHAT_PROMPT = `Du bist ein erfahrener Meteorologe und Segelexperte
 
 THEMENEINSCHRÄNKUNG:
 Du beantwortest AUSSCHLIESSLICH Fragen zu: Segeln, Wetter, Meteorologie, Windsysteme, Marine, Segelreviere, Geographie (Küsten, Meere, Seen, Inseln).
-Bei allen anderen Fragen antworte: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden."
+Bei allen anderen Fragen antworte: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden. Oder lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse."
 
 SEGELREVIERE die du kennst:
 ${SAILING_AREAS_SUMMARY}
@@ -996,7 +996,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const classification = await classifyMessage(message, hasActiveLocation, anthropic);
 
       if (classification.type === "OFFTOPIC") {
-        sendSSE({ content: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden." });
+        sendSSE({ content: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden. Oder lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse." });
         sendSSE({ done: true });
         res.end();
         return;
