@@ -10,6 +10,9 @@ export interface SegelRevier {
   lat: number;
   lon: number;
   orte: string;
+  model: string;
+  label: string;
+  zoom: number;
   [key: string]: unknown;
 }
 

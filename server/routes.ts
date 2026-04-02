@@ -1101,13 +1101,19 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
 
       const displayName = geocodedCity?.displayName ?? cityNameFromSonnet;
-      const revierModel = detected.kind === "revier" && detected.revier.model
-        ? { model: detected.revier.model as string, label: detected.revier.label as string, zoom: detected.revier.zoom as number }
+      const revierModel = detected.kind === "revier"
+        ? { model: detected.revier.model, label: detected.revier.label, zoom: detected.revier.zoom }
         : null;
       const countryModel = countryCode ? getModelForCountry(countryCode) : null;
       const regional = revierModel
         ?? countryModel
-        ?? (geocodedCity ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom } : { model: "iconEu", label: "ICON-EU 7km", zoom: 6 });
+        ?? (geocodedCity ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom } : null);
+      if (!regional) {
+        sendSSE({ content: `Für „${userInput}" konnte kein Wettermodell bestimmt werden. Bitte versuche einen konkreteren Ortsnamen.` });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
 
       // SSE location object (frontend-compatible)
       const geocoded = {
