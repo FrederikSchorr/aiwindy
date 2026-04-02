@@ -1114,6 +1114,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       knmiUtcDate.setUTCHours(knmiUtcHour, 0, 0, 0);
       const tz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
       const frontCurrentLocalTime = new Intl.DateTimeFormat("de-DE", {
+        day: "2-digit", month: "2-digit", year: "numeric",
         hour: "2-digit", minute: "2-digit", timeZone: tz,
       }).format(knmiUtcDate);
 
@@ -1143,7 +1144,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const weatherOutput = await generateWeatherOutput(analysis.data, anthropic);
       Object.assign(analysis.data.weatherOutput, weatherOutput);
       analysis.save();
-      sendSSE({ weatherOutput });
+      sendSSE({ weatherOutput, sources: analysis.data.sources });
 
       // ── Chat-Ausgabe ───────────────────────────────────────────────────────
       const flag = countryFlag(countryCode);

@@ -10,6 +10,7 @@ interface SSEPayload {
   location?: GeocodeResult;
   weatherEurope?: WeatherEuropeSSE;
   weatherOutput?: WeatherOutputData;
+  sources?: string[];
   content?: string;
   error?: string;
   done?: boolean;
@@ -161,10 +162,11 @@ function CountryFlag({ countryCode }: { countryCode: string }) {
   );
 }
 
-function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, hasError }: {
+function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStreaming, hasError }: {
   location: GeocodeResult;
   weatherEurope: WeatherEuropeSSE | null;
   weatherOutput: WeatherOutputData | null;
+  sources: string[] | null;
   isStreaming: boolean;
   hasError?: boolean;
 }) {
@@ -183,13 +185,11 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, has
           <span className="text-destructive">Weder Segelrevier noch Ort erkannt. Bitte versuche es mit einem konkreteren Ortsnamen.</span>
         ) : location.sailingArea ? (
           <>
-            <span>Wetteranalyse für</span>
-            <span>{location.sailingArea} ({location.cityName})</span>
+            <span>Wetteranalyse für {location.cityName}, {location.sailingArea}</span>
           </>
         ) : (
           <>
-            <span>Kein Segelrevier erkannt. Wetteranalyse für</span>
-            <span>{location.cityName}</span>
+            <span>Kein Segelrevier erkannt. Wetteranalyse für {location.cityName}</span>
           </>
         )}
         {location.countryCode && <CountryFlag countryCode={location.countryCode} />}
@@ -199,7 +199,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, has
       <>
       <SectionTitle num={1} title="Druck & Luftmassen" />
       <div className="my-3" data-testid="section-card-1">
-        <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="850h" zoom={4} />
+        <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="surface" zoom={4} />
         <SourceLink label="ECMWF via Windy" url="https://www.windy.com" />
       </div>
       {weatherOutput?.airPressureMasses?.text && (
@@ -267,6 +267,26 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, has
           )}
 
           {!weatherOutput && isStreaming && <BounceLoader />}
+
+          {weatherOutput && sources && sources.length > 0 && (
+            <>
+              <SectionTitle num={6} title="Quellen" />
+              <ul className="mt-1 mb-2 space-y-0.5" data-testid="section-sources">
+                {sources.map((url, i) => (
+                  <li key={i} className="text-sm">
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors underline"
+                    >
+                      {url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
       </>
@@ -293,6 +313,7 @@ export default function Home() {
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
+  const [messageSources, setMessageSources] = useState<Record<string, string[]>>({});
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, boolean>>({});
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
@@ -335,6 +356,9 @@ export default function Home() {
       }
       if (data.weatherOutput) {
         setMessageWeatherOutput(prev => ({ ...prev, [assistantId]: data.weatherOutput! }));
+      }
+      if (data.sources) {
+        setMessageSources(prev => ({ ...prev, [assistantId]: data.sources! }));
       }
       if (data.error) {
         if (isAnalyse) {
@@ -587,6 +611,7 @@ export default function Home() {
             const loc = messageLocations[msg.id];
             const we = messageWeatherEurope[msg.id];
             const wo = messageWeatherOutput[msg.id];
+            const srcs = messageSources[msg.id] ?? null;
             const hasAnalysisError = analysisErrors[msg.id] ?? false;
             const isAnalysis = !!loc;
             const isLast = msg.id === messages[messages.length - 1]?.id;
@@ -664,6 +689,7 @@ export default function Home() {
                     location={loc}
                     weatherEurope={we || null}
                     weatherOutput={wo || null}
+                    sources={srcs}
                     isStreaming={isStreaming && isLast}
                     hasError={hasAnalysisError}
                   />
