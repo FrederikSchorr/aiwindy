@@ -90,11 +90,11 @@ export async function fetchKnmiChart(): Promise<{ url: string; imageBase64: stri
   const dayStr = new Date().getUTCDate().toString().padStart(2, "0");
   const fallbackUrl = `${KNMI_BASE_URL}/AL${dayStr}00_large.gif`;
   try {
-    let res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    let res = await fetch(url, { signal: AbortSignal.timeout(10000), cache: "no-store" });
     let usedUrl = url;
     if (!res.ok) {
       console.warn(`KNMI chart not found (${res.status}): ${url} → trying fallback`);
-      res = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000) });
+      res = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000), cache: "no-store" });
       usedUrl = fallbackUrl;
       if (!res.ok) {
         console.error(`KNMI chart fallback also failed (${res.status}): ${fallbackUrl}`);
@@ -121,7 +121,7 @@ export function buildKnmiForecastUrl(): string {
 export async function fetchKnmiForecast(): Promise<{ url: string; imageBase64: string } | null> {
   const url = buildKnmiForecastUrl();
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000), cache: "no-store" });
     if (!res.ok) {
       console.error(`KNMI forecast not found (${res.status}): ${url}`);
       return null;
@@ -156,7 +156,7 @@ export function buildWetterzentraleForecastUrl(): string {
 
 export async function fetchWetterzentraleChart(url: string): Promise<{ url: string; imageBase64: string } | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000), cache: "no-store" });
     if (!res.ok) {
       console.error(`Wetterzentrale chart not found (${res.status}): ${url}`);
       return null;

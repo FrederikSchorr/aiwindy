@@ -637,10 +637,10 @@ async function fetchKnmiChartBase64(): Promise<string | null> {
     const dayStr = utcDay.toString().padStart(2, "0");
     const chartUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
 
-    let chartRes = await fetch(chartUrl, { signal: AbortSignal.timeout(10000) });
+    let chartRes = await fetch(chartUrl, { signal: AbortSignal.timeout(10000), cache: "no-store" });
     if (!chartRes.ok) {
       const fallbackUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}00_large.gif`;
-      chartRes = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000) });
+      chartRes = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000), cache: "no-store" });
       if (!chartRes.ok) return null;
     }
     const buffer = Buffer.from(await chartRes.arrayBuffer());
@@ -692,21 +692,21 @@ export async function registerRoutes(
       const dayStr = utcDay.toString().padStart(2, "0");
       const chartUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
 
-      const chartRes = await fetch(chartUrl);
+      const chartRes = await fetch(chartUrl, { cache: "no-store" });
       if (!chartRes.ok) {
         const fallbackUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}00_large.gif`;
-        const fallbackRes = await fetch(fallbackUrl);
+        const fallbackRes = await fetch(fallbackUrl, { cache: "no-store" });
         if (!fallbackRes.ok) {
           return res.status(502).json({ error: "KNMI chart unavailable" });
         }
         res.setHeader("Content-Type", "image/gif");
-        res.setHeader("Cache-Control", "public, max-age=1800");
+        res.setHeader("Cache-Control", "no-cache, max-age=600");
         const buffer = Buffer.from(await fallbackRes.arrayBuffer());
         return res.send(buffer);
       }
 
       res.setHeader("Content-Type", "image/gif");
-      res.setHeader("Cache-Control", "public, max-age=1800");
+      res.setHeader("Cache-Control", "no-cache, max-age=600");
       const buffer = Buffer.from(await chartRes.arrayBuffer());
       return res.send(buffer);
     } catch {
