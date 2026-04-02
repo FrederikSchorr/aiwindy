@@ -708,7 +708,9 @@ export default function Home() {
                         disabled={isStreaming}
                         onClick={() => {
                           if (isStreaming) return;
-                          const loc = photoHint.locationName;
+                          const locText = photoHint.countryCode
+                            ? `${photoHint.locationName}, ${photoHint.countryCode}`
+                            : photoHint.locationName;
                           setPhotoLocationHints(prev => {
                             const next = { ...prev };
                             delete next[msg.id];
@@ -716,9 +718,9 @@ export default function Home() {
                           });
                           setMessages((prev) => [
                             ...prev,
-                            { id: `user-${Date.now()}`, role: "user" as const, content: loc },
+                            { id: `user-${Date.now()}`, role: "user" as const, content: locText },
                           ]);
-                          sendMessage(loc);
+                          sendMessage(locText);
                         }}
                       >
                         ja
