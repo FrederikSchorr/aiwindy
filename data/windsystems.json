@@ -1,0 +1,411 @@
+[
+  {
+    "country": "Kroatien",
+    "winds": [
+      {
+        "name": "Bura",
+        "alternativeNames": "Bora",
+        "importance": "primary",
+        "description": "Kalter, trockener Fallwind aus dem Nordosten, der von den Dinarischen Alpen auf die Adria hinabstürzt. Sehr stark und böig, kann bis zu 108 kn erreichen. Besonders heftig bei Senj, Split und Dubrovnik. Tritt vor allem im Winter auf.",
+        "location": "Gesamte kroatische Adriaküste, besonders Senj, Split, Dubrovnik",
+        "season": "Ganzjährig, häufiger Winter, Frühling"
+      },
+      {
+        "name": "Jugo",
+        "alternativeNames": "Scirocco, Sirocco",
+        "importance": "primary",
+        "description": "Warmer, feuchter Südwind aus Nordafrika und dem Mittelmeer. Bringt bewölktes, schwüles Wetter und oft anhaltenden Regen. Kann tagelang anhalten und gilt als psychisch belastend.",
+        "location": "Gesamte Adria",
+        "season": "Ganzjährig, häufiger Herbst, Winter"
+      },
+      {
+        "name": "Maestral",
+        "alternativeNames": "Mistral",
+        "importance": "primary",
+        "description": "Angenehmer Nordwest- bis Westwind, der tagsüber vom Meer auf das Land weht. Typisch im Sommer, kühlt die Küste ab. Bei Seglern und Surfern sehr beliebt.",
+        "location": "Gesamte kroatische Küste, besonders Mittel- und Süddalmatien",
+        "season": "Ganzjährig, häufiger Sommer"
+      },
+      {
+        "name": "Tramontana",
+        "importance": "secondary",
+        "description": "Kalter, trockener Nordwind, der über die Berge kommt. Ähnlich wie die Bura, jedoch meist weniger heftig. Tritt vor allem im nördlichen Adriabereich auf.",
+        "location": "Nördliche Adria, Istrien, Kvarner Bucht",
+        "season": "Herbst, Winter"
+      },
+      {
+        "name": "Lebić",
+        "alternativeNames": "Libeccio",
+        "importance": "secondary",
+        "description": "Südwestwind, der Regen und unruhige See mit sich bringt. Häufig im Herbst und Winter.",
+        "location": "Gesamte Adria, besonders Mittel- und Süddalmatien",
+        "season": "Herbst, Winter"
+      },
+      {
+        "name": "Nevera",
+        "importance": "secondary",
+        "description": "Plötzlicher, heftiger Gewittersturm aus dem Westen oder Nordwesten. Kein regelmäßiger Wind, sondern ein unvorhersehbares Wetterphänomen. Gefährlich für Seefahrer.",
+        "location": "Gesamte Adria",
+        "season": "Sommer, Herbst"
+      },
+      {
+        "name": "Burin",
+        "importance": "local",
+        "description": "Schwacher nächtlicher Landwind, der nachts vom Land aufs Meer weht. Das Gegenstück zum tagsüber wehenden Maestral.",
+        "location": "Gesamte Küste, besonders in windstillen Sommernächten",
+        "season": "Sommer"
+      },
+      {
+        "name": "Garbin",
+        "alternativeNames": "Garbino",
+        "importance": "local",
+        "description": "Lokale dalmatinische Bezeichnung für den Südwestwind. Ähnlich dem Lebić, bringt feuchtes, unbeständiges Wetter.",
+        "location": "Dalmatien",
+        "season": "Herbst, Winter"
+      }
+    ]
+  },
+  {
+    "country": "Österreich",
+    "winds": [
+      {
+        "name": "Föhn",
+        "alternativeNames": "Südföhn, Nordföhn",
+        "importance": "primary",
+        "description": "Warmer, trockener Fallwind, der von den Alpen ins Vorland strömt. Bekannt für extreme Klarsicht, Waldbrandgefahr und gesundheitliche Beschwerden wie Kopfschmerzen. Südföhn betrifft die Nordseite der Alpen, Nordföhn die Südseite.",
+        "location": "Innsbruck, Salzburg, Vorarlberg, gesamter Alpenraum",
+        "season": "Ganzjährig, häufiger Frühling, Herbst"
+      },
+      {
+        "name": "Böhmischer Wind",
+        "importance": "secondary",
+        "description": "Kalter Nordwind aus Böhmen, der über das Waldviertel und Mühlviertel zieht. Bringt empfindliche Kälte und ist in der Region kulturell fest verankert.",
+        "location": "Waldviertel, Mühlviertel, Oberösterreich",
+        "season": "Herbst, Winter"
+      },
+      {
+        "name": "Pannonischer Wind",
+        "importance": "secondary",
+        "description": "Warmer, trockener Ostwind aus der Pannonischen Tiefebene. Im Sommer heiß und trocken, begünstigt den Weinbau im Burgenland und der Oststeiermark.",
+        "location": "Burgenland, Neusiedler See, Oststeiermark, Niederösterreich",
+        "season": "Sommer"
+      },
+      {
+        "name": "Talwind",
+        "alternativeNames": "Talaufwind",
+        "importance": "secondary",
+        "description": "Thermischer Wind, der tagsüber vom Tal bergauf weht, ausgelöst durch Sonneneinstrahlung. Das Gegenstück ist der nächtliche Bergwind. Typisch für alle größeren Alpentäler.",
+        "location": "Gesamter Alpenraum",
+        "season": "Ganzjährig, häufiger Sommer"
+      },
+      {
+        "name": "Bergwind",
+        "alternativeNames": "Talabwind",
+        "importance": "local",
+        "description": "Nächtlicher Kaltluftabfluss vom Berg ins Tal. Entsteht durch nächtliche Abkühlung der Hänge. Das Gegenstück zum Talwind.",
+        "location": "Gesamter Alpenraum",
+        "season": "Ganzjährig"
+      },
+      {
+        "name": "Karawankenföhn",
+        "alternativeNames": "Gailtaler Wind",
+        "importance": "local",
+        "description": "Lokaler Föhn in Kärnten, der über die Karawanken zieht. Bringt warme, trockene Luft ins Klagenfurter Becken und das Gailtal.",
+        "location": "Kärnten, Klagenfurter Becken, Gailtal",
+        "season": "Frühling, Herbst"
+      },
+      {
+        "name": "Scirocco",
+        "alternativeNames": "Jugo, Sirocco",
+        "importance": "secondary",
+        "description": "Warmer, feuchter Südwind aus Nordafrika und dem Mittelmeer, der über Italien und die Alpen nach Österreich zieht. Bringt oft Saharastaub, trübe Luft und milde Temperaturen. Besonders spürbar in Kärnten und der Steiermark.",
+        "location": "Kärnten, Steiermark, Burgenland, Südösterreich",
+        "season": "Frühling, Herbst"
+      }
+    ]
+  },
+  {
+    "country": "Griechenland",
+    "winds": [
+      {
+        "name": "Meltemi",
+        "alternativeNames": "Etesien, Etesia",
+        "importance": "primary",
+        "description": "Der vorherrschende Sommerwind der Ägäis. Trockener, kühler Nordwind, der von einem Balkanhoch in Richtung eines Hitzetiefs über Kleinasien strömt. Bringt stets heiteres Wetter und außergewöhnliche Sichtweite. Durchschnittlich 11–21 kn, kann aber tagelang mit 28–40 kn wehen. Für Segler und Windsurfer attraktiv, aber auch gefährlich – besonders in Meerengen und im Lee der Inseln.",
+        "location": "Gesamte Ägäis, Kykladen, Dodekanes, Kreta",
+        "season": "Sommer, häufiger Juli, August"
+      },
+      {
+        "name": "Maïstrali",
+        "alternativeNames": "Maestro",
+        "importance": "secondary",
+        "description": "Dem Meltemi ähnlicher Nordwestwind, der vor allem die Ionischen Inseln und die Westküste Griechenlands beeinflusst. Etwas sanfter als der Meltemi, angenehm kühl und trocken.",
+        "location": "Ionische Inseln, Westgriechenland",
+        "season": "Sommer"
+      },
+      {
+        "name": "Sirocco",
+        "alternativeNames": "Notos, Scirocco",
+        "importance": "secondary",
+        "description": "Warmer, feuchter Südwind aus der Sahara, der Staub und trübe Luft mitbringt. Kann von April bis Oktober auftreten, am häufigsten im April/Mai und September/Oktober. Gefährlich für Segler, da die meisten Häfen auf Nordwinde ausgerichtet sind.",
+        "location": "Gesamtes Griechenland, besonders Südgriechenland, Kreta",
+        "season": "Frühling, Herbst"
+      },
+      {
+        "name": "Boreas",
+        "importance": "secondary",
+        "description": "Kalter Nordwind der Antike, heute noch als lokaler Begriff für starke Nordwinde in Gebrauch. Schon in der griechischen Mythologie gefürchtet – laut Überlieferung ließ er 400 persische Schiffe sinken und rettete Athen.",
+        "location": "Nordgriechenland, Ägäis",
+        "season": "Winter, Herbst"
+      },
+      {
+        "name": "Kaikias",
+        "importance": "local",
+        "description": "Lokaler Name für den Nordostwind, der den Meltemi ankündigt oder begleitet. Wird von Fischern und Einheimischen als Wetterhinweis verwendet – wer hört, der Kaikias werde stärker, kann sich auf einen kräftigen Meltemi-Tag einstellen.",
+        "location": "Ägäis, besonders Hydra und südliche Inseln",
+        "season": "Sommer"
+      },
+      {
+        "name": "Kareklados",
+        "alternativeNames": "Trapezados, Kabanados",
+        "importance": "local",
+        "description": "Volkstümliche Bezeichnungen auf den Kykladen für den Meltemi nach seiner Stärke: Kareklados (stuhlumwerfend), Trapezados (tischumwerfend) und Kabanados (glockenläutend). Kein eigener Wind, sondern eine lokale Intensitätsskala.",
+        "location": "Kykladen",
+        "season": "Sommer"
+      }
+    ]
+  },
+  {
+    "country": "Italien",
+    "winds": [
+      {
+        "name": "Maestrale",
+        "alternativeNames": "Mistral, Maestro",
+        "importance": "primary",
+        "description": "Starker, böiger Nordwestwind – der vorherrschende Wind Sardiniens und der Westküste Italiens. Kalt, trocken und oft tagelang anhaltend. Kann mit bis zu 47 kn wehen und macht die Bocche di Bonifacio zu einer der gefährlichsten Meerengen im Mittelmeer.",
+        "location": "Sardinien, Westküste, Ligurisches Meer, Tyrrhenisches Meer",
+        "season": "Ganzjährig, häufiger Herbst, Winter"
+      },
+      {
+        "name": "Tramontana",
+        "alternativeNames": "Tramontana Scura",
+        "importance": "primary",
+        "description": "Kalter, trockener Nordwind, der von jenseits der Alpen und des Apennins zur Küste strömt. Besonders häufig in Ligurien. Tritt meist böig und kurzfristig auf. Die Tramontana Scura (dunkle Tramontana) bringt Regen und Schlechtwetter.",
+        "location": "Ligurien, Nordwest-Italien, Tyrrhenisches Meer",
+        "season": "Winter, Herbst"
+      },
+      {
+        "name": "Scirocco",
+        "alternativeNames": "Sirocco",
+        "importance": "primary",
+        "description": "Warmer, feuchter Südostwind aus der Sahara. Bringt Staub, trübe Luft und hohe Luftfeuchtigkeit. Kann im Sommer auf dem Meer unerträglich heiß werden. In Kroatien und Griechenland als Jugo bzw. Notos bekannt.",
+        "location": "Gesamtes Italien, besonders Sizilien, Süditalien, Sardinien",
+        "season": "Frühling, Herbst"
+      },
+      {
+        "name": "Libeccio",
+        "alternativeNames": "Lebić, Garbino",
+        "importance": "secondary",
+        "description": "Südwestwind, der heftige Stürme und chaotische Kreuzwellen erzeugt. Schwer vorhersehbar – kommt oft plötzlich aus dem Nichts. Entsteht häufig im Zusammenhang mit einem Scirocco-Tief und geht einer Kaltfront voraus.",
+        "location": "Westküste, Sardinien, Tyrrhenisches Meer, Ligurisches Meer",
+        "season": "Herbst, Winter"
+      },
+      {
+        "name": "Grecale",
+        "alternativeNames": "Greco",
+        "importance": "secondary",
+        "description": "Kalter, unbeständiger Nordostwind, der meist schönes aber kühles Wetter bringt. Auf Sardinien in der Inselmitte auch als Wind von den Bergen bekannt. Häufiger im Winter, aber ganzjährig möglich.",
+        "location": "Adria, Sardinien, Süditalien",
+        "season": "Winter, Herbst"
+      },
+      {
+        "name": "Levante",
+        "importance": "secondary",
+        "description": "Warmer, beständiger Ostwind – gilt als gutmütiger und angenehmer Wind. Kann sich aber stark einwehen und unerwartet kräftig werden.",
+        "location": "Gesamte Küste, besonders Süditalien, Sizilien",
+        "season": "Ganzjährig"
+      },
+      {
+        "name": "Ponente",
+        "importance": "local",
+        "description": "Westwind, grundsätzlich kräftig aber gutmütig. Kann gelegentlich ungemütlich werden. Teil der traditionellen italienischen Windrose.",
+        "location": "Westküste, Sardinien",
+        "season": "Ganzjährig"
+      },
+      {
+        "name": "Mezzogiorno",
+        "importance": "local",
+        "description": "Heißer, schwüler Südwind – der Name bedeutet wörtlich Mittag. Weht selten, dann aber heiß und unangenehm. Teil der traditionellen Windrose Sardiniens.",
+        "location": "Sardinien, Süditalien",
+        "season": "Sommer"
+      }
+    ]
+  },
+  {
+    "country": "Frankreich",
+    "winds": [
+      {
+        "name": "Mistral",
+        "alternativeNames": "Maestrale, Mistrau",
+        "importance": "primary",
+        "description": "Kalter, trockener Fallwind aus Norden bis Nordwesten, der durch das Rhônetal zwischen Alpen und Zentralmassiv kanalisiert wird. Kann tagelang mit bis zu 54 kn wehen und Orkanstärke erreichen. Bringt wolkenlosen Himmel und extreme Sichtweite, erhöht aber die Waldbrandgefahr erheblich. Gilt als eine der Geißeln der Provence.",
+        "location": "Rhônetal, Provence, Languedoc östlich von Montpellier, Côte d'Azur, Golf von Lion",
+        "season": "Ganzjährig, häufiger Winter, Frühling"
+      },
+      {
+        "name": "Tramontane",
+        "alternativeNames": "Tramontana, Tramuntana",
+        "importance": "primary",
+        "description": "Starker, kalter, trockener Nordwestwind, der zwischen den Pyrenäen und dem Zentralmassiv kanalisiert wird – das westliche Pendant zum Mistral. Bringt klares Wetter, aber eisige Temperaturen und starke Böen. Im Sommer kühlt er die Region angenehm ab.",
+        "location": "Languedoc, Roussillon, Katalonien, Golf von Lion",
+        "season": "Ganzjährig, häufiger Winter, Frühling"
+      },
+      {
+        "name": "Marin",
+        "importance": "secondary",
+        "description": "Warmer, feuchter Südostwind aus dem Mittelmeer, der ganzjährig an der südfranzösischen Küste weht. Bringt steigende Temperaturen, sinkenden Luftdruck und starken Salzgeruch. Im Herbst besonders stark und böig, führt über Land oft zu starken Niederschlägen.",
+        "location": "Südfranzösische Küste, Golf von Lion, Languedoc",
+        "season": "Ganzjährig, häufiger Frühling, Herbst"
+      },
+      {
+        "name": "Scirocco",
+        "alternativeNames": "Sirocco",
+        "importance": "secondary",
+        "description": "Heißer, feuchter Südwind aus der Sahara, der Staub und trübe Luft mitbringt. Kann bisweilen unerträglich heiß werden. Bringt den Duft von Sand und verspricht Regen.",
+        "location": "Südfrankreich, Mittelmeerküste, Korsika",
+        "season": "Frühling, Herbst"
+      },
+      {
+        "name": "Galerne",
+        "importance": "secondary",
+        "description": "Wilder, stürmischer Atlantikwind aus Nordwesten, der die Westküste Frankreichs mit Stürmen und hohem Wellengang trifft. Typisch für die Bretagne und die Atlantikküste.",
+        "location": "Bretagne, Atlantikküste, Westfrankreich",
+        "season": "Herbst, Winter"
+      },
+      {
+        "name": "Mistral Noir",
+        "importance": "local",
+        "description": "Variante des Mistrals, die Wolken und Regen statt klaren Himmel bringt. Entsteht wenn das Azorenhoch ungewöhnlich feuchte Luft aus Nordwesten anzieht. Weniger bekannt, aber für Segler besonders tückisch.",
+        "location": "Provence, Rhônetal",
+        "season": "Ganzjährig"
+      },
+      {
+        "name": "Föhn",
+        "alternativeNames": "Foehn",
+        "importance": "local",
+        "description": "Warmer, trockener Fallwind auf der Leeseite der Alpen, der in den französischen Alpentälern auftritt. Bringt plötzliche Temperaturanstiege und Schneeschmelze.",
+        "location": "Französische Alpen, Savoyen, Dauphiné",
+        "season": "Frühling, Herbst"
+      }
+    ]
+  },
+  {
+    "country": "Spanien",
+    "winds": [
+      {
+        "name": "Tramuntana",
+        "alternativeNames": "Tramontana, Tramontane",
+        "importance": "primary",
+        "description": "Kalter, trockener Nordwind, der über die Pyrenäen auf die Mittelmeerküste trifft. Auf den Balearen besonders gefürchtet – die Serra de Tramuntana auf Mallorca hat ihren Namen von diesem Wind. In der katalanischen Kultur gilt jemand als \"von der Tramuntana berührt\", der sich seltsam verhält. Salvador Dalí trug diesen Beinamen in seiner Heimat Empordà.",
+        "location": "Katalonien, Balearen, Mallorca, Menorca, Nordostküste",
+        "season": "Ganzjährig, häufiger Winter, Frühling"
+      },
+      {
+        "name": "Levante",
+        "alternativeNames": "Llevant",
+        "importance": "primary",
+        "description": "Warmer, feuchter Ostwind aus dem Mittelmeer, der in der Straße von Gibraltar durch den Düseneffekt stark beschleunigt wird. Kann Häfen in Algeciras, Tarifa und Ceuta unpassierbar machen. Macht Tarifa zu einem der besten Windsurfrevier der Welt. Hinterlässt auf dem Felsen von Gibraltar die berühmten \"Bärte des Ostens\".",
+        "location": "Straße von Gibraltar, Andalusien, Südostküste, Murcia",
+        "season": "Ganzjährig, häufiger Mai bis Oktober"
+      },
+      {
+        "name": "Poniente",
+        "alternativeNames": "Vendavel",
+        "importance": "primary",
+        "description": "Westwind vom Atlantik – das Gegenstück zum Levante. An der Südküste meist mild und kühlend, erhitzt er sich aber über dem kastillischen Hochland und erreicht die Mittelmeerküste als trockener, heißer Föhnwind. Bringt nach einem Levante klares, trockenes Wetter und ausgezeichnete Sicht auf die afrikanische Küste.",
+        "location": "Straße von Gibraltar, Südküste, Westküste",
+        "season": "Ganzjährig"
+      },
+      {
+        "name": "Cierzo",
+        "alternativeNames": "Cencio, Zarzagán",
+        "importance": "secondary",
+        "description": "Kalter, trockener Nordwestwind, der durch das Ebrotal kanalisiert wird. In Aragón ein alltägliches Phänomen. Kann sehr stark und böig werden und gilt als einer der unangenehmsten Binnenwinde Spaniens.",
+        "location": "Ebrotal, Aragón, Zaragoza",
+        "season": "Herbst, Winter, Frühling"
+      },
+      {
+        "name": "Leveche",
+        "alternativeNames": "Jaloque, Garbí, Sirocco",
+        "importance": "secondary",
+        "description": "Heißer, trockener Wüstenwind aus der Sahara, der über das Atlasgebirge weht und sich dabei noch weiter erhitzt. Bringt extreme Temperaturen und Saharastaub an die Südostküste. Die spanische Variante des Scirocco.",
+        "location": "Murcia, Alicante, Südostspanien",
+        "season": "Frühling, Sommer"
+      },
+      {
+        "name": "Galerna",
+        "importance": "secondary",
+        "description": "Plötzlicher, heftiger Atlantiksturm aus Nordwesten, der die Nordküste Spaniens trifft. Gefürchtet bei baskischen und kantabrischen Fischern wegen seiner Schnelligkeit und Unvorhersehbarkeit. Das spanische Äquivalent zur französischen Galerne.",
+        "location": "Baskenland, Kantabrien, Galicien, Nordküste",
+        "season": "Herbst, Winter"
+      },
+      {
+        "name": "Ábrego",
+        "importance": "local",
+        "description": "Warmer, feuchter Südwestwind aus dem Atlantik. Kündigt anhaltende Regenphasen im Herbst und Winter an. Wichtig für die Landwirtschaft in Kastilien, Extremadura und Andalusien – entscheidend für Weizen, Oliven und Weinreben.",
+        "location": "Kastilien, Extremadura, Andalusien",
+        "season": "Herbst, Winter"
+      }
+    ]
+  },
+  {
+    "country": "Türkei",
+    "winds": [
+      {
+        "name": "Meltemi",
+        "alternativeNames": "Etesien, Etezyen",
+        "importance": "primary",
+        "description": "Dominanter Nordwestwind der Ägäis, der die türkische Westküste im Sommer prägt. An der türkischen Küste meist moderater als in der griechischen Ägäis (7–16 kn), bietet aber zuverlässige Segelbedingungen. Bringt klare Luft und gute Sicht.",
+        "location": "Ägäische Küste, Bodrum, Marmaris, Çeşme",
+        "season": "Sommer, häufiger Juli, August"
+      },
+      {
+        "name": "Poyraz",
+        "alternativeNames": "Poiras",
+        "importance": "primary",
+        "description": "Kalter, trockener Nordostwind – der türkische Name leitet sich vom griechischen Windgott Boreas ab. Bestimmt das Sommerklima am Bosporus und Schwarzen Meer. Sorgt für angenehme Abkühlung in der Sommerhitze, kann aber stürmisch werden. Am Bosporus wehte er historisch gegen die Strömung und erschwerte so die Einfahrt ins Schwarze Meer.",
+        "location": "Bosporus, Marmarameer, Schwarzes Meer, Istanbul",
+        "season": "Ganzjährig, häufiger Sommer"
+      },
+      {
+        "name": "Lodos",
+        "alternativeNames": "Notus",
+        "importance": "primary",
+        "description": "Warmer, feuchter Südwestwind – das Gegenstück zum Poyraz. Bringt milde, aber stürmische Luftmassen mit heftigen Böen und Regen. Der türkische Name leitet sich vom griechischen Notos (Südwind) ab. Gefährlich für Segler, da er ruhige Ankerbuchten plötzlich unruhig machen kann.",
+        "location": "Marmarameer, Istanbul, Bosporus, gesamte Westküste",
+        "season": "Frühling, Herbst"
+      },
+      {
+        "name": "Imbat",
+        "importance": "secondary",
+        "description": "Thermischer Seebriese-Wind an der ägäischen Küste, der tagsüber vom Meer ins Land weht. Typisch für die Buchten und Fjorde der türkischen Westküste. Schwächer als der Meltemi, aber angenehm kühlend in den Sommermonaten.",
+        "location": "Ägäische Küste, Izmir, Golf von Gökova",
+        "season": "Sommer"
+      },
+      {
+        "name": "Gerence",
+        "importance": "secondary",
+        "description": "Starker lokaler Nordostwind in der Region um Çeşme und den Golf von Izmir. So kräftig, dass selbst Einheimische Respekt vor ihm haben. Entsteht durch topografische Kanalisierungseffekte der umliegenden Hügel.",
+        "location": "Çeşme, Golf von Izmir, Ägäische Westküste",
+        "season": "Herbst, Winter, Frühling"
+      },
+      {
+        "name": "Karayel",
+        "importance": "local",
+        "description": "Kalter Nordwestwind, der vor allem im Winter die nordwestliche Türkei und Istanbul beeinflusst. Bringt kalte kontinentale Luftmassen aus Europa und kann Schneefälle verursachen.",
+        "location": "Istanbul, Nordwesttürkei, Thrakien",
+        "season": "Winter, Herbst"
+      }
+    ]
+  }
+]

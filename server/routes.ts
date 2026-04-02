@@ -10,8 +10,11 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
-import { detectSegelrevier, countryFlag, LAND_TO_COUNTRY_CODE } from "./location.js";
+import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getRegionalModelAI, classifyMessage, geocodeLocation } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
+import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-europe.js";
+import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./weather-national.js";
+import { generateWeatherOutput } from "./weather-output.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -255,189 +258,6 @@ const gemini = new GoogleGenAI({
   },
 });
 
-function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
-  if (lat >= 42 && lat <= 51 && lon >= -5 && lon <= 8) {
-    return { model: "aromeHd", label: "AROME-HD 1.3km", zoom: 8 };
-  }
-  if (lat >= 46 && lat <= 52 && lon >= 10 && lon <= 22) {
-    return { model: "czeAladin", label: "ALADIN 2.3km", zoom: 7 };
-  }
-  if (lat >= 51 && lat <= 58 && lon >= -8 && lon <= 0) {
-    return { model: "ukv", label: "UKV 2km", zoom: 7 };
-  }
-  if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45) {
-    return { model: "iconEu", label: "ICON-EU 7km", zoom: 6 };
-  }
-  return { model: "gfs", label: "GFS 22km", zoom: 5 };
-}
-
-const MODEL_SELECTION_PROMPT = `Du bist ein Meteorologie-Experte. Wähle das BESTE hochauflösende Windmodell für den gegebenen Ort auf Windy.com.
-
-## Wichtige Regel
-Der Ort muss mindestens ~300km vom Rand der Modell-Domain entfernt liegen, damit man auf der Windy-Karte das heranziehende Wetter aus allen Richtungen sieht. Liegt ein Ort zu nahe am Domain-Rand, nimm das nächstbeste Modell mit größerer Abdeckung.
-
-## Verfügbare Modelle (Windy product parameter)
-
-| Parameter | Modell | Auflösung | Aktualisierung |
-|-----------|--------|-----------|----------------|
-| aromeHd | AROME-HD (Météo-France) | 1.3 km | 4×/Tag, +48h |
-| czeAladin | ALADIN (CHMI Tschechien) | 2.3 km | 4×/Tag, +72h |
-| ukv | UKV (Met Office) | 2 km | 4×/Tag, +48h |
-| iconEu | ICON-EU (DWD) | 7 km | 4×/Tag, +120h |
-| gfs | GFS (NOAA) | 22 km | 4×/Tag, +240h |
-
-## Modell-Domains (Kerngebiete mit ≥300km Puffer zum Domain-Rand)
-
-### aromeHd — 1.3 km (höchste Priorität wo verfügbar)
-Kerngebiet: Frankreich (komplett), Belgien, Luxemburg, Westdeutschland (Rheinland, Ruhrgebiet, Hessen, Saarland), Schweiz, Nordspanien (Pyrenäen, Katalonien, Baskenland), Korsika
-Grenzfälle (eher NICHT aromeHd): München, Stuttgart, Norditalien, Niederlande-Nord, Südengland, Zentralspanien
-NICHT verwenden: Österreich, Ostdeutschland, Tschechien, Adria, UK nördlich London, Skandinavien, Portugal, Süditalien
-
-### czeAladin — 2.3 km
-Kerngebiet: Österreich, Tschechien, Slowakei, Ungarn, Kroatien, Slowenien, Serbien, Bosnien, Zentralpolen (Warschau, Krakau), Rumänien-West, Bayern, Sachsen, Norditalien-Ost (Venetien, Friaul, Triest)
-Grenzfälle (eher NICHT czeAladin): Berlin, Bulgarien-Süd, Norditalien-West (Gardasee, Lombardei), Südliche Ostsee, Norddeutschland
-NICHT verwenden: Griechenland, Türkei, Skandinavien, Westfrankreich, Süditalien südlich Rom, UK, nördl. Ostsee, Baltikum nördlich Vilnius
-
-### ukv — 2 km
-Kerngebiet: England (Mitte und Nord), Wales, Schottland-Süd, Irland-Ost, Irische See
-Grenzfälle (eher NICHT ukv): Südengland (Ärmelkanal), Schottland-Nord, Irland-West, Nordsee-Mitte
-NICHT verwenden: Kontinentaleuropa, Island, Norwegen, Färöer
-
-### iconEu — 7 km (Europa-Fallback)
-Kerngebiet: Ganz Europa inkl. Skandinavien, Ostsee, Nordsee, Griechenland, Ägäis, Ionische Inseln, Spanien, Portugal, Island, Türkei-West, Mittelmeer komplett, Nordafrika-Küste
-Verwende iconEu immer wenn kein hochauflösendes Modell den Ort mit 300km Puffer abdeckt.
-
-### gfs — 22 km (Global-Fallback)
-Außerhalb Europas, oder wenn iconEu nicht verfügbar.
-
-## Entscheidungslogik
-
-Prüfe in dieser Reihenfolge (erste Übereinstimmung gewinnt):
-1. Liegt der Ort im Kerngebiet von aromeHd? → aromeHd
-2. Liegt der Ort im Kerngebiet von czeAladin? → czeAladin
-3. Liegt der Ort im Kerngebiet von ukv? → ukv
-4. Liegt der Ort in Europa? → iconEu
-5. Sonst → gfs
-
-### Sonderfälle bei Überlappung und Grenzgebieten
-- Bayern (München, Augsburg): czeAladin — liegt zentral in ALADIN, aber am Ostrand von AROME-HD
-- Schweiz: aromeHd — liegt zentral in der AROME-HD-Domain
-- Baden-Württemberg (Stuttgart, Freiburg): aromeHd — noch ausreichend Puffer
-- Norditalien-West (Gardasee, Lombardei): iconEu — Grenzfall bei beiden hochauflösenden Modellen
-- Norditalien-Ost (Venetien, Friaul, Triest): czeAladin
-- Berlin, Brandenburg: iconEu — am Rand von sowohl AROME-HD als auch ALADIN
-- Niederlande: iconEu — am Nordrand von AROME-HD
-- Nordsee, Deutsche Bucht: iconEu
-- Ostsee (Gotland, Stockholm, Helsinki): iconEu
-- Südengland, Ärmelkanal: Im Zweifel iconEu — Grenzfall für ukv und aromeHd
-- Levkada, Ionische Inseln, Peloponnes: iconEu
-- Dubrovnik: czeAladin — noch im Kern, aber knapp; im Zweifel iconEu
-
-## Zoom-Level
-
-| Situation | Zoom |
-|-----------|------|
-| Hochauflösende Modelle — Küste, See, Insel | 8–9 |
-| Hochauflösende Modelle — Binnenland, Stadt | 7–8 |
-| iconEu — regional | 6–7 |
-| gfs — großräumig | 5–6 |
-
-## Antwortformat
-
-Antworte NUR mit einem JSON-Objekt, KEINE weiteren Erklärungen:
-{"model": "...", "label": "...", "zoom": 8}
-
-Wobei "label" der angezeigte Modellname ist, z.B. "AROME-HD 1.3km", "ALADIN 2.3km", "ICON-EU 7km".`;
-
-async function getRegionalModelAI(lat: number, lon: number, displayName: string): Promise<{ model: string; label: string; zoom: number }> {
-  try {
-    const modelSelMessages = [
-      { role: "system", content: MODEL_SELECTION_PROMPT },
-      { role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` },
-    ];
-    debugLogLLM("claude-haiku-4-5", "getRegionalModelAI", modelSelMessages);
-    const result = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 256,
-      temperature: 0,
-      system: MODEL_SELECTION_PROMPT,
-      messages: [{ role: "user", content: `Ort: ${displayName}\nKoordinaten: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E\n\nWähle das beste Windmodell.` }],
-    });
-
-    const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
-    debugLogLLMResponse("claude-haiku-4-5", "getRegionalModelAI", text);
-    const jsonMatch = text.match(/\{[^}]+\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validModels = ["czeAladin", "aromeHd", "ukv", "iconEu", "gfs"];
-      if (parsed.model && validModels.includes(parsed.model) && parsed.label) {
-        return {
-          model: parsed.model,
-          label: parsed.label,
-          zoom: Math.min(Math.max(parsed.zoom || 7, 4), 10),
-        };
-      }
-    }
-  } catch (e) {
-    console.error("AI model selection failed:", e instanceof Error ? e.message : e);
-  }
-  return getRegionalModelFallback(lat, lon);
-}
-
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async function fetchMeteonews(): Promise<string> {
-  // Fetches only the European overview bulletin from meteonews.at
-  try {
-    const url = "https://meteonews.at/de/Allgemeine_Lage/K33/Europa";
-    const res = await fetch(url, {
-      headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
-      signal: AbortSignal.timeout(8000),
-    });
-    debugLog(`Scrape meteonews.at → ${res.status}`);
-    if (!res.ok) return "";
-    const html = await res.text();
-
-    // Target the bulletin-wrap div inside ModuleBulletinsGeneralSituation
-    const bulletinMatch = html.match(/class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i)
-      || html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-
-    if (bulletinMatch) {
-      const fullText = stripHtml(bulletinMatch[1]).trim();
-      debugLogScrape("meteonews.at", url, res.status, fullText);
-      return fullText;
-    }
-
-    // Fallback: find "Europawetter" section in plain text
-    const plainText = stripHtml(html);
-    const startIdx = plainText.indexOf("Europawetter");
-    if (startIdx >= 0) {
-      const fullText = plainText.slice(startIdx).trim();
-      debugLogScrape("meteonews.at (fallback)", url, res.status, fullText);
-      return fullText;
-    }
-
-    debugLogScrape("meteonews.at (last-resort)", url, res.status, plainText);
-    return plainText;
-  } catch (e) {
-    console.error("Meteonews fetch failed:", e);
-    return "";
-  }
-}
 
 const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: string; warningUrl: string; warningLabel: string }> = {
   HR: {
@@ -798,154 +618,6 @@ Rules:
   }
 }
 
-async function classifyMessage(message: string, hasActiveLocation: boolean): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR"; location?: string }> {
-  try {
-    const classifyMessages = [
-      {
-        role: "system",
-        content: `Klassifiziere die Benutzernachricht in eine von drei Kategorien:
-
-ANALYSE <Ortsname> — wenn der Benutzer nach Wetterlage/Segelbedingungen an einem konkreten Ort fragt, oder einfach nur einen Ortsnamen/See/Insel/Hafen/Küste eingibt. Beispiele:
-- "Punat" → ANALYSE Punat
-- "Wie ist das Wetter in Split?" → ANALYSE Split
-- "Segeln am Gardasee" → ANALYSE Gardasee
-- "Rovinj, Kroatien" → ANALYSE Rovinj, Kroatien
-- "Wetterlage Elba" → ANALYSE Elba
-
-CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht erfordert${hasActiveLocation ? ", ODER eine Rückfrage zu einer laufenden Analyse stellt" : ""}. Beispiele:
-- "Was sind Cumulonimbus-Wolken?" → CHAT
-- "Wie entsteht die Bora?" → CHAT
-- "Erkläre die Douglas-Skala" → CHAT
-${hasActiveLocation ? '- "Wird der Wind stärker?" → CHAT (Rückfrage bei aktivem Ort)\n- "Wie sieht es morgen aus?" → CHAT (Rückfrage bei aktivem Ort)' : '- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)\n- "Wie sieht es morgen aus?" → UNCLEAR (kein aktiver Ort)'}
-
-UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist, die Nachricht mehrdeutig ist${!hasActiveLocation ? ", oder eine ortsbezogene Frage ohne konkreten Ort gestellt wird" : ""}. Beispiele:
-- "Wetter" → UNCLEAR
-- "Wie ist es dort?" → UNCLEAR${!hasActiveLocation ? '\n- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)' : ""}
-- "Segeln" → UNCLEAR
-
-${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN Ort aktiv."}
-
-Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`,
-        },
-        { role: "user", content: message },
-    ];
-    debugLogLLM("claude-haiku-4-5", "classifyMessage", classifyMessages);
-    const result = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 64,
-      temperature: 0,
-      system: classifyMessages[0].content as string,
-      messages: [{ role: "user", content: message }],
-    });
-    const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
-    debugLogLLMResponse("claude-haiku-4-5", "classifyMessage", text);
-    if (text.startsWith("ANALYSE")) {
-      const location = text.replace("ANALYSE", "").trim();
-      return { type: "ANALYSE", location: location || undefined };
-    }
-    if (text === "UNCLEAR") {
-      return { type: "UNCLEAR" };
-    }
-    return { type: "CHAT" };
-  } catch (e) {
-    console.error("Message classification failed:", e instanceof Error ? e.message : e);
-    return { type: "CHAT" };
-  }
-}
-
-const WATER_CLASSES = new Set(["water", "waterway"]);
-const WATER_NATURAL_TYPES = new Set(["water", "lake", "wetland", "bay", "strait", "sea"]);
-const WATER_PLACE_TYPES = new Set(["sea", "ocean"]);
-
-function isWaterFeature(cls: string, type: string): boolean {
-  if (WATER_CLASSES.has(cls)) return true;
-  if (cls === "natural" && WATER_NATURAL_TYPES.has(type)) return true;
-  if (cls === "place" && WATER_PLACE_TYPES.has(type)) return true;
-  return false;
-}
-
-async function geocodeLocation(locationName: string): Promise<{
-  lat: number; lon: number; displayName: string;
-  regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
-  countryCode?: string; cityName?: string;
-} | null> {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&accept-language=en`,
-      { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-    );
-    if (!response.ok) return null;
-
-    const results = await response.json() as Array<{
-      lat: string; lon: string; display_name: string;
-      class: string; type: string;
-      namedetails?: Record<string, string>;
-    }>;
-    if (!results.length) return null;
-
-    const result = results[0];
-    const lat = parseFloat(result.lat);
-    const lon = parseFloat(result.lon);
-    const resultClass = result.class || "";
-    const resultType = result.type || "";
-    const isWater = isWaterFeature(resultClass, resultType);
-
-    const regional = await getRegionalModelAI(lat, lon, result.display_name);
-
-    let countryCode: string | undefined;
-    const searchName = result.display_name.split(",")[0].trim();
-    const nd = result.namedetails || {};
-    let cityName: string | undefined = nd["name:de"] || nd["name:en"] || searchName;
-
-    if (isWater) {
-      const waterName = nd["name:de"] || nd["name"] || searchName;
-      cityName = waterName;
-      try {
-        const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=4&addressdetails=1&accept-language=en`,
-          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-        );
-        if (reverseRes.ok) {
-          const rev = await reverseRes.json() as { address?: { country_code?: string } };
-          countryCode = rev.address?.country_code?.toUpperCase();
-        }
-      } catch {}
-    } else {
-      try {
-        const reverseRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1&accept-language=en`,
-          { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
-        );
-        if (reverseRes.ok) {
-          const reverseData = await reverseRes.json() as {
-            class?: string; address?: {
-              country_code?: string; city?: string; town?: string;
-              village?: string; suburb?: string; municipality?: string; county?: string;
-            }
-          };
-          countryCode = reverseData.address?.country_code?.toUpperCase();
-          const reverseName = reverseData.address?.city || reverseData.address?.town || reverseData.address?.village;
-          if (reverseName) cityName = reverseName;
-        }
-      } catch {}
-    }
-
-    debugLog(`geocodeLocation: countryCode=${countryCode}, cityName=${cityName}, isWater=${isWater}`, `countryCode=${countryCode}\ncityName=${cityName}\nisWater=${isWater}`);
-    debugLog(`geocodeLocation: model=${regional.model} (${regional.label})`);
-
-    return {
-      lat, lon,
-      displayName: result.display_name,
-      regionalModel: regional.model,
-      regionalModelLabel: regional.label,
-      regionalModelZoom: regional.zoom,
-      countryCode,
-      cityName,
-    };
-  } catch {
-    return null;
-  }
-}
 
 function getKnmiChartTime(): { hour: string; label: string } {
   const now = new Date();
@@ -1076,7 +748,7 @@ export async function registerRoutes(
     const { location } = parsed.data;
 
     try {
-      const geocoded = await geocodeLocation(location);
+      const geocoded = await geocodeLocation(location, anthropic);
       if (!geocoded) {
         return res.status(404).json({ error: "Location not found." });
       }
@@ -1230,7 +902,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         sendSSE({ status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E` });
         metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
 
-        const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
+        const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`, anthropic);
         if (geocoded) {
           sendSSE({ location: geocoded });
           exifLocationName = geocoded.cityName || geocoded.displayName.split(",")[0].trim();
@@ -1393,7 +1065,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
     try {
       const hasActiveLocation = !!currentLocation;
-      const classification = await classifyMessage(message, hasActiveLocation);
+      const classification = await classifyMessage(message, hasActiveLocation, anthropic);
 
       if (classification.type === "CHAT") {
         const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
@@ -1446,67 +1118,65 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
-      // ── Segelrevier-Erkennung ──────────────────────────────────────────────
+      // ── Ortserkennung ─────────────────────────────────────────────────────
       const userInput = classification.location;
-      const detected = await detectSegelrevier(userInput, anthropic);
+      const detected = await detectLocation(userInput, anthropic);
 
-      let lat: number;
-      let lon: number;
-      let countryCode: string;
-      let country: string;
-      let sailingArea: string | null;
-      let revierType: "sea" | "lake" | null;
-      let locationName: string | null = null;
-      let displayName: string;
-      let regionalModel: string;
-      let regionalModelLabel: string;
-      let regionalModelZoom: number;
-
-      if (detected) {
-        lat = detected.revier.lat;
-        lon = detected.revier.lon;
-        countryCode = detected.countryCode;
-        country = detected.land;
-        sailingArea = detected.revier.deutsch;
-        revierType = detected.revier.typ === "meer" ? "sea" : "lake";
-        displayName = detected.revier.deutsch;
-        const regional = await getRegionalModelAI(lat, lon, displayName);
-        regionalModel = regional.model;
-        regionalModelLabel = regional.label;
-        regionalModelZoom = regional.zoom;
-      } else {
-        const fallback = await geocodeLocation(userInput);
-        if (!fallback) {
-          sendSSE({ content: `Für \"${userInput}\" konnte ich weder ein Segelrevier noch einen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. \"Split in Kroatien\" oder \"Traunsee\".` });
-          sendSSE({ done: true });
-          res.end();
-          return;
-        }
-        lat = fallback.lat;
-        lon = fallback.lon;
-        countryCode = fallback.countryCode ?? "";
-        country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
-        sailingArea = null;
-        revierType = null;
-        locationName = fallback.cityName ?? fallback.displayName.split(",")[0].trim();
-        displayName = fallback.displayName;
-        regionalModel = fallback.regionalModel;
-        regionalModelLabel = fallback.regionalModelLabel;
-        regionalModelZoom = fallback.regionalModelZoom;
+      if (detected === null) {
+        sendSSE({ content: `Für „${userInput}" konnte ich keinen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. „Split in Kroatien" oder „Traunsee".` });
+        sendSSE({ done: true });
+        res.end();
+        return;
       }
 
-      // Geocoded object (compatible with existing SSE/frontend shape)
+      // Always geocode the city via Nominatim for city.coordinates + countryCode
+      const cityNameFromSonnet = detected.city;
+      const hintCoords = detected.kind === "revier"
+        ? { lat: detected.revier.lat, lon: detected.revier.lon }
+        : undefined;
+      const geocodedCity = await geocodeLocation(cityNameFromSonnet, anthropic, hintCoords);
+
+      // Build sailingArea + city objects
+      const sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] =
+        detected.kind === "revier"
+          ? {
+              name_de: detected.revier.deutsch,
+              type: detected.revier.typ === "meer" ? "sea" : "lake",
+              coordinates: { lat: detected.revier.lat, lon: detected.revier.lon },
+            }
+          : null;
+
+      const cityObj: import("./analysis-store.js").AnalysisPosition["city"] = geocodedCity
+        ? { name_de: geocodedCity.cityName ?? cityNameFromSonnet, coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon } }
+        : { name_de: cityNameFromSonnet, coordinates: { lat: 0, lon: 0 } };
+
+      // Coordinates for weather fetching: sailingArea (canonical) else city
+      const coords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
+      const lat = coords.lat;
+      const lon = coords.lon;
+
+      const countryCode = geocodedCity?.countryCode
+        ?? (detected.kind === "revier" ? detected.countryCode : "")
+        ?? "";
+      const country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
+
+      const displayName = geocodedCity?.displayName ?? cityNameFromSonnet;
+      const regional = geocodedCity
+        ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom }
+        : await getRegionalModelAI(lat, lon, cityNameFromSonnet, anthropic);
+
+      // SSE location object (frontend-compatible)
       const geocoded = {
         lat, lon, displayName,
         countryCode,
-        cityName: locationName || sailingArea || displayName.split(",")[0].trim(),
-        regionalModel,
-        regionalModelLabel,
-        regionalModelZoom,
-        sailingArea,
-        type: revierType,
+        cityName: cityObj.name_de || sailingAreaObj?.name_de || displayName.split(",")[0].trim(),
+        regionalModel: regional.model,
+        regionalModelLabel: regional.label,
+        regionalModelZoom: regional.zoom,
+        sailingArea: sailingAreaObj?.name_de ?? null,
+        type: sailingAreaObj?.type ?? null,
         country,
-        location: locationName,
+        location: cityObj.name_de,
         userInput,
       };
 
@@ -1515,18 +1185,70 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       // ── Analysis JSON ──────────────────────────────────────────────────────
       const analysis = createAnalysis({
         userInput,
-        sailingArea,
-        type: revierType,
         country,
         countryCode,
-        coordinates: { lat, lon },
-        ...(locationName ? { location: locationName } : {}),
+        sailingArea: sailingAreaObj,
+        city: cityObj,
       });
+
+      // ── Wetterdaten scrapen ───────────────────────────────────────────────
+      const meteonewsText = await fetchMeteonews();
+      analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
+      if (meteonewsText) {
+        analysis.data.sources.push(METEONEWS_URL);
+        const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
+        analysis.data.weatherPreprocessed.europe["generalWeather"] = {
+          source: "meteonews", text_de: preprocessed || null,
+        };
+      } else {
+        analysis.data.weatherPreprocessed.europe["generalWeather"] = {
+          source: "meteonews", text_de: null,
+        };
+      }
+      let wzSourceAdded = false;
+      const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
+      analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
+        source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
+      };
+      if (wz850Current && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); wzSourceAdded = true; }
+      const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
+      analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
+        source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
+      };
+      if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); }
+      let knmiSourceAdded = false;
+      const knmi = await fetchKnmiChart();
+      analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
+        source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
+      };
+      if (knmi && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); knmiSourceAdded = true; }
+      const knmiForecast = await fetchKnmiForecast();
+      analysis.data.weatherPreprocessed.europe["frontForecast"] = {
+        source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
+      };
+      if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
+      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null, sailingAreaObj, cityObj);
+      Object.assign(analysis.data.weatherRaw, national.data);
+      for (const u of national.sourceUrls) analysis.data.sources.push(u);
+      const nationalPre = await preprocessNationalWeather(analysis.data.weatherRaw, anthropic, countryCode);
+      Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
+      const localPre = await preprocessLocalWeather(
+        analysis.data.weatherRaw,
+        { userInput: analysis.data.position.userInput, city: cityObj.name_de, sailingArea: sailingAreaObj?.name_de ?? null },
+        anthropic,
+        countryCode,
+      );
+      Object.assign(analysis.data.weatherPreprocessed.local, localPre);
       analysis.save();
+
+      const weatherOutput = await generateWeatherOutput(analysis.data, anthropic);
+      Object.assign(analysis.data.weatherOutput, weatherOutput);
+      analysis.save();
+      sendSSE({ weatherOutput });
 
       // ── Chat-Ausgabe ───────────────────────────────────────────────────────
       const flag = countryFlag(countryCode);
-      const label = sailingArea ?? locationName ?? displayName.split(",")[0].trim();
+      const label = sailingAreaObj?.name_de ?? cityObj.name_de ?? displayName.split(",")[0].trim();
       sendSSE({ content: `Wetteranalyse für **${label}** ${flag}` });
 
       sendSSE({ done: true });

@@ -5,23 +5,30 @@ import path from "path";
 
 export interface AnalysisPosition {
   userInput: string;
-  sailingArea: string | null;
-  type: "sea" | "lake" | null;
   country: string;
   countryCode: string;
-  coordinates: { lat: number; lon: number };
-  location?: string; // Nominatim city name when no sailing area found
+  sailingArea: {
+    name_de: string;                          // e.g. "Adria Mitte (Kroatien)"
+    type: "sea" | "lake";
+    coordinates: { lat: number; lon: number }; // from sailingareas.json
+  } | null;
+  city: {
+    name_de: string;                          // e.g. "Split"
+    coordinates: { lat: number; lon: number }; // from Nominatim
+  } | null;
 }
 
 export interface AnalysisJson {
   date: string;
   position: AnalysisPosition;
-  sources: Record<string, unknown>;
-  weatherReports: {
-    original: Record<string, unknown>;
-    preprocessed: Record<string, unknown>;
+  sources: string[];
+  weatherRaw: Record<string, unknown>;
+  weatherPreprocessed: {
+    europe: Record<string, unknown>;
+    national: Record<string, unknown>;
+    local: Record<string, unknown>;
   };
-  outputs: Record<string, unknown>;
+  weatherOutput: Record<string, unknown>;
 }
 
 // ── Directory setup ────────────────────────────────────────────────────────
@@ -55,9 +62,10 @@ export function createAnalysis(position: AnalysisPosition): {
   const data: AnalysisJson = {
     date: now.toISOString(),
     position,
-    sources: {},
-    weatherReports: { original: {}, preprocessed: {} },
-    outputs: {},
+    sources: [],
+    weatherRaw: {},
+    weatherPreprocessed: { europe: {}, national: {}, local: {} },
+    weatherOutput: {},
   };
 
   ensureDir();
@@ -65,7 +73,19 @@ export function createAnalysis(position: AnalysisPosition): {
 
   const save = () => {
     try {
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+      const replacer = (_key: string, value: unknown) => {
+        if (_key.endsWith("Base64")) return undefined;
+        if (_key === "austriaWindCloudRain" && value && typeof value === "object") {
+          const obj = { ...(value as Record<string, unknown>) };
+          for (const [k, v] of Object.entries(obj)) {
+            if (Array.isArray(v) && v.length > 20) obj[k] = v.filter((_, i) => i % 3 === 0);
+          }
+          return obj;
+        }
+        if (_key === "xml" && typeof value === "string" && value.length > 2000) return value.slice(0, 2000) + "...";
+        return value;
+      };
+      fs.writeFileSync(filePath, JSON.stringify(data, replacer, 2), "utf-8");
     } catch (e) {
       console.error("Failed to save analysis JSON:", e);
     }

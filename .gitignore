@@ -7,3 +7,4 @@ vite.config.ts.*
 debug.log
 .env
 analyses/
+attached_assets/
