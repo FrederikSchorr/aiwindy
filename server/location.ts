@@ -118,6 +118,7 @@ Gegeben einen Ort (Stadt, Hafen, Bucht, Resort, Campingplatz, See, allgemeine Be
 Wichtig:
 - Die angegebenen Orte pro Revier sind nur Beispiele — nutze dein geografisches Wissen auch für nicht explizit gelistete Orte.
 - Die Koordinaten (°N °E) jedes Reviers helfen bei der geografischen Einordnung.
+- Wenn der Input selbst eine echte Stadt, ein Hafen oder ein bekannter Ort ist (z.B. "Punat", "Biograd", "Vodice", "Fažana"): gib GENAU diesen Ort als city zurück, NICHT eine größere Nachbarstadt.
 - Für Resorts, Campingplätze, Buchten: gib die nächste echte Stadt an (z.B. "Seepark Weiden" → city: "Weiden am See").
 - Für Segelrevier-Namen ohne Stadtbezug: gib die wichtigste Hafenstadt an (z.B. "Nordadria" → city: "Trieste").
 - Bei allgemeinen Bezeichnungen wie "Adria": sailingArea: "Adria Mitte (Kroatien)", city: "Split".
