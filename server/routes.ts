@@ -13,8 +13,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getRegionalModelAI, classifyMessage, geocodeLocation } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
 
-const sailingAreasData = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data/sailingareas.json"), "utf-8"));
-const windSystemsData = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data/windsystems.json"), "utf-8"));
+const sailingAreasData = JSON.parse(fs.readFileSync(new URL("../data/sailingareas.json", import.meta.url), "utf-8"));
+const windSystemsData = JSON.parse(fs.readFileSync(new URL("../data/windsystems.json", import.meta.url), "utf-8"));
 
 function buildSailingAreasSummary(): string {
   const lines: string[] = [];
