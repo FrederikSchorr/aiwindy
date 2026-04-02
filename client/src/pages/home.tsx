@@ -199,7 +199,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
       <>
       <SectionTitle num={1} title="Druck & Luftmassen" />
       <div className="my-3" data-testid="section-card-1">
-        <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="surface" zoom={4} />
+        <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="850h" zoom={4} />
         <SourceLink label="ECMWF via Windy" url={`https://www.windy.com/-Temperature-temp?temp,51.500,0.000,4`} />
       </div>
       {weatherOutput?.airPressureMasses?.text && (
