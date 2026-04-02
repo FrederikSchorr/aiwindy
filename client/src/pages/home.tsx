@@ -195,6 +195,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, has
         {location.countryCode && <CountryFlag countryCode={location.countryCode} />}
       </div>
 
+      {(location.sailingArea || location.cityName) && (
+      <>
       <SectionTitle num={1} title="Druck & Luftmassen" />
       <div className="my-3" data-testid="section-card-1">
         <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="850h" zoom={4} />
@@ -266,6 +268,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, has
 
           {!weatherOutput && isStreaming && <BounceLoader />}
         </>
+      )}
+      </>
       )}
     </div>
   );
