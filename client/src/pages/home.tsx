@@ -200,7 +200,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
       <SectionTitle num={1} title="Druck & Luftmassen" />
       <div className="my-3" data-testid="section-card-1">
         <WindyEmbed lat={51.5} lon={0} overlay="temp" product="ecmwf" level="surface" zoom={4} />
-        <SourceLink label="ECMWF via Windy" url="https://www.windy.com" />
+        <SourceLink label="ECMWF via Windy" url={`https://www.windy.com/-Temperature-temp?temp,51.500,0.000,4`} />
       </div>
       {weatherOutput?.airPressureMasses?.text && (
         <MarkdownContent content={weatherOutput.airPressureMasses.text} />
@@ -242,7 +242,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
           <SectionTitle num={3} title="Wind & Welle" />
           <div className="my-3" data-testid="section-card-3">
             <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={zoom} marker />
-            <SourceLink label={`${modelLabel} via Windy`} url="https://www.windy.com" />
+            <SourceLink label={`${modelLabel} via Windy`} url={`https://www.windy.com/-Wind-wind?wind,${saLat.toFixed(3)},${saLon.toFixed(3)},${zoom}`} />
           </div>
           {weatherOutput?.windWaves?.text && (
             <MarkdownContent content={weatherOutput.windWaves.text} />
@@ -251,7 +251,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
           <SectionTitle num={4} title="Wolken & Regen" />
           <div className="my-3" data-testid="section-card-4">
             <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={zoom} marker />
-            <SourceLink label={`${modelLabel} via Windy`} url="https://www.windy.com" />
+            <SourceLink label={`${modelLabel} via Windy`} url={`https://www.windy.com/-Clouds-clouds?clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${zoom}`} />
           </div>
           {weatherOutput?.cloudsRain?.text && (
             <MarkdownContent content={weatherOutput.cloudsRain.text} />
@@ -260,7 +260,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
           <SectionTitle num={5} title="Temperatur" />
           <div className="my-3" data-testid="section-card-5">
             <WindyEmbed lat={cityLat} lon={cityLon} overlay="temp" product={model} level="surface" zoom={zoom} forecast marker />
-            <SourceLink label={`${modelLabel} via Windy`} url="https://www.windy.com" />
+            <SourceLink label={`${modelLabel} via Windy`} url={`https://www.windy.com/-Temperature-temp?temp,${cityLat.toFixed(3)},${cityLon.toFixed(3)},${zoom}`} />
           </div>
           {weatherOutput?.temperature?.text && (
             <MarkdownContent content={weatherOutput.temperature.text} />
