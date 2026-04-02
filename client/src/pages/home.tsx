@@ -161,11 +161,12 @@ function CountryFlag({ countryCode }: { countryCode: string }) {
   );
 }
 
-function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming }: {
+function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming, hasError }: {
   location: GeocodeResult;
   weatherEurope: WeatherEuropeSSE | null;
   weatherOutput: WeatherOutputData | null;
   isStreaming: boolean;
+  hasError?: boolean;
 }) {
   const saLat = location.lat;
   const saLon = location.lon;
@@ -178,7 +179,9 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming }: {
   return (
     <div data-testid="analysis-view">
       <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground/80" data-testid="analysis-header">
-        {location.sailingArea ? (
+        {!location.sailingArea && !location.cityName ? (
+          <span className="text-destructive">Weder Segelrevier noch Ort erkannt. Bitte versuche es mit einem konkreteren Ortsnamen.</span>
+        ) : location.sailingArea ? (
           <>
             <span>Wetteranalyse für</span>
             <span>{location.sailingArea} ({location.cityName})</span>
@@ -201,7 +204,13 @@ function AnalysisView({ location, weatherEurope, weatherOutput, isStreaming }: {
         <MarkdownContent content={weatherOutput.airPressureMasses.text} />
       )}
 
-      {!weatherEurope && isStreaming && <BounceLoader />}
+      {hasError && !weatherEurope && (
+        <p className="text-sm text-destructive mt-3" data-testid="text-analysis-error">
+          Fehler bei der Datenabfrage. Die Analyse konnte nicht vollständig geladen werden.
+        </p>
+      )}
+
+      {!weatherEurope && isStreaming && !hasError && <BounceLoader />}
 
       {weatherEurope && (
         <>
@@ -280,6 +289,7 @@ export default function Home() {
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
+  const [analysisErrors, setAnalysisErrors] = useState<Record<string, boolean>>({});
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -323,11 +333,15 @@ export default function Home() {
         setMessageWeatherOutput(prev => ({ ...prev, [assistantId]: data.weatherOutput! }));
       }
       if (data.error) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Verarbeitung. Bitte versuche es erneut." } : m
-          )
-        );
+        if (isAnalyse) {
+          setAnalysisErrors(prev => ({ ...prev, [assistantId]: true }));
+        } else {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId && !m.content ? { ...m, content: "Fehler bei der Verarbeitung. Bitte versuche es erneut." } : m
+            )
+          );
+        }
       }
     };
 
@@ -569,6 +583,7 @@ export default function Home() {
             const loc = messageLocations[msg.id];
             const we = messageWeatherEurope[msg.id];
             const wo = messageWeatherOutput[msg.id];
+            const hasAnalysisError = analysisErrors[msg.id] ?? false;
             const isAnalysis = !!loc;
             const isLast = msg.id === messages[messages.length - 1]?.id;
             const showUploadHint = msg.id === uploadHintAfterMsgId;
@@ -646,6 +661,7 @@ export default function Home() {
                     weatherEurope={we || null}
                     weatherOutput={wo || null}
                     isStreaming={isStreaming && isLast}
+                    hasError={hasAnalysisError}
                   />
                   {showUploadHint && !isStreaming && (
                     <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-upload-hint">
