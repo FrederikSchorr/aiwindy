@@ -340,8 +340,13 @@ export async function classifyMessage(
   message: string,
   hasActiveLocation: boolean,
   anthropic: Anthropic,
+  activeLocationName?: string,
 ): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR" | "OFFTOPIC"; location?: string }> {
   try {
+    const activeLocInfo = hasActiveLocation && activeLocationName
+      ? `Es ist bereits ein Ort aktiv: "${activeLocationName}".`
+      : "Es ist KEIN Ort aktiv.";
+
     const result = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 64,
@@ -350,27 +355,29 @@ export async function classifyMessage(
 
 ANALYSE <Ortsname> — NUR wenn:
 (a) der Benutzer NUR einen Ortsnamen/See/Insel/Hafen/Küste eingibt (ohne sonstige Frage), ODER
-(b) der Benutzer explizit nach Wetter/Analyse/Segelbedingungen an einem Ort fragt ("Wetter für...", "Analyse...", "Wie ist das Segelwetter in...").
+(b) der Benutzer explizit nach einer NEUEN Wetter-Analyse/Segelwetterbericht für einen Ort fragt ("Wetter für...", "Analyse...", "Wie ist das Segelwetter in...").
 Beispiele:
 - "Punat" → ANALYSE Punat
 - "Gardasee" → ANALYSE Gardasee
 - "Wetter in Split" → ANALYSE Split
 - "Analyse Rovinj" → ANALYSE Rovinj
 - "Segelwetter Elba" → ANALYSE Elba
-NICHT ANALYSE wenn der Ort nur im Kontext einer Wissensfrage erwähnt wird:
+NICHT ANALYSE wenn:
+- der Ort nur im Kontext einer Wissensfrage/Rückfrage erwähnt wird
+- der Benutzer eine konkrete Detailfrage zum aktiven Ort stellt (Temperatur, Wind, Wellen, etc.)${hasActiveLocation ? `\n- "wieviel grad derzeit in ${activeLocationName}?" → CHAT (Rückfrage zum aktiven Ort)\n- "wie stark ist der Wind in ${activeLocationName}?" → CHAT (Rückfrage zum aktiven Ort)\n- "regnet es in ${activeLocationName}?" → CHAT (Rückfrage zum aktiven Ort)` : ""}
 - "Wieviele Einwohner hat Neusiedl?" → OFFTOPIC
 - "Liegt Illmitz südlich von Triest?" → CHAT (Geographie)
 - "Wie tief ist der Gardasee?" → CHAT (Geographie/Marine)
 - "Was für Winde gibt es in Kroatien?" → CHAT (Windsysteme)
 
-CHAT — wenn der Benutzer eine Frage zu Wetter, Meteorologie, Segeln, Windsystemen, Marine, Geographie, Segelrevieren stellt${hasActiveLocation ? ", ODER eine Rückfrage zu einer laufenden Analyse stellt" : ""}. Beispiele:
+CHAT — wenn der Benutzer eine Frage zu Wetter, Meteorologie, Segeln, Windsystemen, Marine, Geographie, Segelrevieren stellt${hasActiveLocation ? ", ODER eine Rückfrage/Detailfrage zum aktiven Ort oder zur laufenden Analyse stellt (z.B. Temperatur, Wind, Regen, Prognose)" : ""}. Beispiele:
 - "Was sind Cumulonimbus-Wolken?" → CHAT
 - "Wie entsteht die Bora?" → CHAT
 - "Erkläre die Douglas-Skala" → CHAT
 - "Welche Segelreviere gibt es in Griechenland?" → CHAT
 - "Wie tief ist der Gardasee?" → CHAT
 - "Liegt Split nördlich von Dubrovnik?" → CHAT
-${hasActiveLocation ? '- "Wird der Wind stärker?" → CHAT (Rückfrage bei aktivem Ort)\n- "Wie sieht es morgen aus?" → CHAT (Rückfrage bei aktivem Ort)\n- "Erkläre mir die Analyse" → CHAT (Rückfrage zur Analyse)' : '- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)\n- "Wie sieht es morgen aus?" → UNCLEAR (kein aktiver Ort)'}
+${hasActiveLocation ? `- "Wird der Wind stärker?" → CHAT (Rückfrage bei aktivem Ort)\n- "Wie sieht es morgen aus?" → CHAT (Rückfrage bei aktivem Ort)\n- "Erkläre mir die Analyse" → CHAT (Rückfrage zur Analyse)\n- "wieviel grad in ${activeLocationName}?" → CHAT (Detailfrage zum aktiven Ort)\n- "wie ist die Wellenhöhe?" → CHAT (Detailfrage zum aktiven Ort)` : '- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)\n- "Wie sieht es morgen aus?" → UNCLEAR (kein aktiver Ort)'}
 
 OFFTOPIC — wenn die Frage NICHTS mit Segeln, Wetter, Meteorologie, Marine, Geographie zu tun hat. Beispiele:
 - "Schreibe mir ein Gedicht" → OFFTOPIC
@@ -383,7 +390,7 @@ UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist${!hasActiveLocation ? ", 
 - "Wetter" → UNCLEAR
 - "Wie ist es dort?" → UNCLEAR${!hasActiveLocation ? '\n- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)' : ""}
 
-${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN Ort aktiv."}
+${activeLocInfo}
 
 Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`,
       messages: [{ role: "user", content: message }],

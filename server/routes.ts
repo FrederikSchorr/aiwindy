@@ -993,7 +993,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
     try {
       const hasActiveLocation = !!currentLocation;
-      const classification = await classifyMessage(message, hasActiveLocation, anthropic);
+      const activeLocationName = currentLocation?.displayName?.split(",")[0]?.trim() || lastAnalysisContext?.location;
+      const classification = await classifyMessage(message, hasActiveLocation, anthropic, activeLocationName);
 
       if (classification.type === "OFFTOPIC") {
         sendSSE({ content: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden. Oder lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse." });
