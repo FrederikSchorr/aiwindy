@@ -271,8 +271,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
           {weatherOutput && sources && sources.length > 0 && (
             <>
               <SectionTitle num={6} title="Quellen" />
-              <ul className="mt-1 mb-2 space-y-0.5" data-testid="section-sources">
-                {sources.map((url, i) => (
+              <ul className="mt-1 mb-2 space-y-0.5 list-disc list-inside" data-testid="section-sources">
+                {[...sources].reverse().map((url, i) => (
                   <li key={i} className="text-sm">
                     <a
                       href={url}
