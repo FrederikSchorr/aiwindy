@@ -40,6 +40,7 @@ const SAILING_AREAS_SUMMARY = buildSailingAreasSummary();
 const WIND_SYSTEMS_SUMMARY = buildWindSystemsSummary();
 
 let lastAnalysisContext: { location: string; date: string; sections: Record<string, string> } | null = null;
+let lastAnalysisFilePath: string | null = null;
 import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-europe.js";
 import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./weather-national.js";
 import { generateWeatherOutput } from "./weather-output.js";
@@ -750,6 +751,16 @@ WENN JA: Beginne sofort mit dem ersten Abschnitt — KEIN einleitender Satz, KEI
 
 STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
+  app.get("/api/analysis-json", (_req, res) => {
+    if (!lastAnalysisFilePath || !fs.existsSync(lastAnalysisFilePath)) {
+      return res.status(404).json({ error: "Keine Analyse verfügbar" });
+    }
+    const filename = path.basename(lastAnalysisFilePath);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", "application/json");
+    fs.createReadStream(lastAnalysisFilePath).pipe(res);
+  });
+
   app.post("/api/upload", upload.single("photo"), async (req, res) => {
     debugLogRequestSeparator(`POST /api/upload — ${req.file?.originalname || "no file"}`);
     if (!req.file) {
@@ -1199,6 +1210,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       sendSSE({ weatherOutput, sources: analysis.data.sources });
 
       const analysisLabel = sailingAreaObj?.name_de ?? cityObj.name_de ?? displayName.split(",")[0].trim();
+      lastAnalysisFilePath = analysis.filePath;
       lastAnalysisContext = {
         location: analysisLabel,
         date: new Date().toLocaleString("de-AT", { timeZone: COUNTRY_TIMEZONE[countryCode] || "Europe/Vienna" }),

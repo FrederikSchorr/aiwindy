@@ -290,6 +290,16 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
                   </li>
                 ))}
               </ul>
+              <p className="text-xs text-muted-foreground mt-3" data-testid="analysis-footer">
+                Alle Wetter Details{" "}
+                <a
+                  href="/api/analysis-json"
+                  download
+                  className="underline hover:text-primary transition-colors"
+                  data-testid="link-download-analysis"
+                >hier</a>
+                . &copy; 2026 Frederik Schorr
+              </p>
             </>
           )}
         </>
