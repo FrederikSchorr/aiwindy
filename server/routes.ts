@@ -12,6 +12,34 @@ import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getRegionalModelAI, classifyMessage, geocodeLocation } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
+
+const sailingAreasData = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data/sailingareas.json"), "utf-8"));
+const windSystemsData = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data/windsystems.json"), "utf-8"));
+
+function buildSailingAreasSummary(): string {
+  const lines: string[] = [];
+  for (const [country, data] of Object.entries(sailingAreasData) as [string, any][]) {
+    const reviere = (data.reviere || []).map((r: any) => r.deutsch).join(", ");
+    if (reviere) lines.push(`${country}: ${reviere}`);
+  }
+  return lines.join("\n");
+}
+
+function buildWindSystemsSummary(): string {
+  const lines: string[] = [];
+  for (const entry of windSystemsData as any[]) {
+    const wlist = entry.winds.map((w: any) =>
+      `${w.name}${w.alternativeNames ? ` (${w.alternativeNames})` : ""}: ${w.description.split(".")[0]}`
+    ).join("; ");
+    lines.push(`${entry.country}: ${wlist}`);
+  }
+  return lines.join("\n");
+}
+
+const SAILING_AREAS_SUMMARY = buildSailingAreasSummary();
+const WIND_SYSTEMS_SUMMARY = buildWindSystemsSummary();
+
+let lastAnalysisContext: { location: string; date: string; sections: Record<string, string> } | null = null;
 import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-europe.js";
 import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./weather-national.js";
 import { generateWeatherOutput } from "./weather-output.js";
@@ -507,7 +535,17 @@ function getKnmiChartTime(): { hour: string; label: string } {
   return { hour, label: `${day}.${month}. ${hour}:00 UTC` };
 }
 
-const GENERAL_CHAT_PROMPT = `Du bist ein erfahrener Meteorologe und Segelexperte. Du beantwortest allgemeine Fragen zu Wetter, Meteorologie, Wolken, Wind, Segeln und verwandten Themen.
+const GENERAL_CHAT_PROMPT = `Du bist ein erfahrener Meteorologe und Segelexperte. Du beantwortest Fragen zu Wetter, Meteorologie, Segeln, Windsystemen, Marine, Segelrevieren und Geographie.
+
+THEMENEINSCHRÄNKUNG:
+Du beantwortest AUSSCHLIESSLICH Fragen zu: Segeln, Wetter, Meteorologie, Windsysteme, Marine, Segelreviere, Geographie (Küsten, Meere, Seen, Inseln).
+Bei allen anderen Fragen antworte: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden."
+
+SEGELREVIERE die du kennst:
+${SAILING_AREAS_SUMMARY}
+
+WINDSYSTEME die du kennst:
+${WIND_SYSTEMS_SUMMARY}
 
 STIL:
 - Deutsch, sachlich-professionell
@@ -946,6 +984,13 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const hasActiveLocation = !!currentLocation;
       const classification = await classifyMessage(message, hasActiveLocation, anthropic);
 
+      if (classification.type === "OFFTOPIC") {
+        sendSSE({ content: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden." });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
+
       if (classification.type === "CHAT") {
         const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
           role: m.role as "user" | "assistant",
@@ -955,7 +1000,14 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         let userContent = message;
         let systemPrompt = GENERAL_CHAT_PROMPT;
         if (currentLocation) {
-          systemPrompt = GENERAL_CHAT_PROMPT + `\n\nWICHTIG: Es ist ein Ort aktiv (${currentLocation.displayName}, ${currentLocation.lat.toFixed(2)}°N, ${currentLocation.lon.toFixed(2)}°E). Beantworte allgemeine Segelfragen mit Bezug auf diesen Ort. Antworte kurz und präzise.`;
+          systemPrompt += `\n\nWICHTIG: Es ist ein Ort aktiv (${currentLocation.displayName}, ${currentLocation.lat.toFixed(2)}°N, ${currentLocation.lon.toFixed(2)}°E). Beantworte allgemeine Segelfragen mit Bezug auf diesen Ort. Antworte kurz und präzise.`;
+        }
+        if (lastAnalysisContext) {
+          systemPrompt += `\n\nLETZTE WETTERANALYSE (${lastAnalysisContext.date}, ${lastAnalysisContext.location}):\n`;
+          for (const [section, text] of Object.entries(lastAnalysisContext.sections)) {
+            systemPrompt += `${section}: ${text}\n`;
+          }
+          systemPrompt += `\nDer Benutzer kann Rückfragen zu dieser Analyse stellen. Erkläre die Ergebnisse verständlich.`;
         }
 
         const chatMessages: Anthropic.MessageParam[] = [
@@ -1146,10 +1198,19 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       analysis.save();
       sendSSE({ weatherOutput, sources: analysis.data.sources });
 
+      const analysisLabel = sailingAreaObj?.name_de ?? cityObj.name_de ?? displayName.split(",")[0].trim();
+      lastAnalysisContext = {
+        location: analysisLabel,
+        date: new Date().toLocaleString("de-AT", { timeZone: COUNTRY_TIMEZONE[countryCode] || "Europe/Vienna" }),
+        sections: {},
+      };
+      for (const [key, value] of Object.entries(weatherOutput)) {
+        if (typeof value === "string") lastAnalysisContext.sections[key] = value;
+      }
+
       // ── Chat-Ausgabe ───────────────────────────────────────────────────────
       const flag = countryFlag(countryCode);
-      const label = sailingAreaObj?.name_de ?? cityObj.name_de ?? displayName.split(",")[0].trim();
-      sendSSE({ content: `Wetteranalyse für **${label}** ${flag}` });
+      sendSSE({ content: `Wetteranalyse für **${analysisLabel}** ${flag}` });
 
       sendSSE({ done: true });
       res.end();

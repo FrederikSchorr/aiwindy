@@ -340,31 +340,48 @@ export async function classifyMessage(
   message: string,
   hasActiveLocation: boolean,
   anthropic: Anthropic,
-): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR"; location?: string }> {
+): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR" | "OFFTOPIC"; location?: string }> {
   try {
     const result = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 64,
       temperature: 0,
-      system: `Klassifiziere die Benutzernachricht in eine von drei Kategorien:
+      system: `Klassifiziere die Benutzernachricht in eine von vier Kategorien:
 
-ANALYSE <Ortsname> — wenn der Benutzer nach Wetterlage/Segelbedingungen an einem konkreten Ort fragt, oder einfach nur einen Ortsnamen/See/Insel/Hafen/Küste eingibt. Beispiele:
+ANALYSE <Ortsname> — NUR wenn:
+(a) der Benutzer NUR einen Ortsnamen/See/Insel/Hafen/Küste eingibt (ohne sonstige Frage), ODER
+(b) der Benutzer explizit nach Wetter/Analyse/Segelbedingungen an einem Ort fragt ("Wetter für...", "Analyse...", "Wie ist das Segelwetter in...").
+Beispiele:
 - "Punat" → ANALYSE Punat
-- "Wie ist das Wetter in Split?" → ANALYSE Split
-- "Segeln am Gardasee" → ANALYSE Gardasee
-- "Rovinj, Kroatien" → ANALYSE Rovinj, Kroatien
-- "Wetterlage Elba" → ANALYSE Elba
+- "Gardasee" → ANALYSE Gardasee
+- "Wetter in Split" → ANALYSE Split
+- "Analyse Rovinj" → ANALYSE Rovinj
+- "Segelwetter Elba" → ANALYSE Elba
+NICHT ANALYSE wenn der Ort nur im Kontext einer Wissensfrage erwähnt wird:
+- "Wieviele Einwohner hat Neusiedl?" → OFFTOPIC
+- "Liegt Illmitz südlich von Triest?" → CHAT (Geographie)
+- "Wie tief ist der Gardasee?" → CHAT (Geographie/Marine)
+- "Was für Winde gibt es in Kroatien?" → CHAT (Windsysteme)
 
-CHAT — wenn der Benutzer eine allgemeine Frage zu Wetter, Meteorologie, Wolken, Segeln stellt, die KEINEN konkreten Wetterbericht erfordert${hasActiveLocation ? ", ODER eine Rückfrage zu einer laufenden Analyse stellt" : ""}. Beispiele:
+CHAT — wenn der Benutzer eine Frage zu Wetter, Meteorologie, Segeln, Windsystemen, Marine, Geographie, Segelrevieren stellt${hasActiveLocation ? ", ODER eine Rückfrage zu einer laufenden Analyse stellt" : ""}. Beispiele:
 - "Was sind Cumulonimbus-Wolken?" → CHAT
 - "Wie entsteht die Bora?" → CHAT
 - "Erkläre die Douglas-Skala" → CHAT
-${hasActiveLocation ? '- "Wird der Wind stärker?" → CHAT (Rückfrage bei aktivem Ort)\n- "Wie sieht es morgen aus?" → CHAT (Rückfrage bei aktivem Ort)' : '- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)\n- "Wie sieht es morgen aus?" → UNCLEAR (kein aktiver Ort)'}
+- "Welche Segelreviere gibt es in Griechenland?" → CHAT
+- "Wie tief ist der Gardasee?" → CHAT
+- "Liegt Split nördlich von Dubrovnik?" → CHAT
+${hasActiveLocation ? '- "Wird der Wind stärker?" → CHAT (Rückfrage bei aktivem Ort)\n- "Wie sieht es morgen aus?" → CHAT (Rückfrage bei aktivem Ort)\n- "Erkläre mir die Analyse" → CHAT (Rückfrage zur Analyse)' : '- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)\n- "Wie sieht es morgen aus?" → UNCLEAR (kein aktiver Ort)'}
 
-UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist, die Nachricht mehrdeutig ist${!hasActiveLocation ? ", oder eine ortsbezogene Frage ohne konkreten Ort gestellt wird" : ""}. Beispiele:
+OFFTOPIC — wenn die Frage NICHTS mit Segeln, Wetter, Meteorologie, Marine, Geographie zu tun hat. Beispiele:
+- "Schreibe mir ein Gedicht" → OFFTOPIC
+- "Was ist die Hauptstadt von Frankreich?" → OFFTOPIC
+- "Wieviele Einwohner hat Neusiedl?" → OFFTOPIC
+- "Wie koche ich Pasta?" → OFFTOPIC
+- "Erkläre mir Quantenphysik" → OFFTOPIC
+
+UNCLEAR — wenn nicht klar ist ob ein Ort gemeint ist${!hasActiveLocation ? ", oder eine ortsbezogene Frage ohne konkreten Ort gestellt wird" : ""}. Beispiele:
 - "Wetter" → UNCLEAR
 - "Wie ist es dort?" → UNCLEAR${!hasActiveLocation ? '\n- "Wird der Wind stärker?" → UNCLEAR (kein aktiver Ort)' : ""}
-- "Segeln" → UNCLEAR
 
 ${hasActiveLocation ? "Es ist bereits ein Ort aktiv im System." : "Es ist KEIN Ort aktiv."}
 
@@ -377,6 +394,7 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
       return { type: "ANALYSE", location: location || undefined };
     }
     if (text === "UNCLEAR") return { type: "UNCLEAR" };
+    if (text === "OFFTOPIC") return { type: "OFFTOPIC" };
     return { type: "CHAT" };
   } catch (e) {
     console.error("Message classification failed:", e instanceof Error ? e.message : e);
