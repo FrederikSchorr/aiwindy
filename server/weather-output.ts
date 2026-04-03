@@ -65,14 +65,23 @@ export async function generateWeatherOutput(
   const content: Anthropic.Messages.ContentBlockParam[] = [];
 
   // Europe images (for #1 Druck & #2 Fronten)
-  const wz850Current = imageBlock((europe["temp850hpaCurrent"] as any)?.imageBase64);
-  const wz850Forecast = imageBlock((europe["temp850hpaForecast"] as any)?.imageBase64);
-  const knmiCurrent = imageBlock((europe["frontCurrent"] as any)?.imageBase64);
-  const knmiForecast = imageBlock((europe["frontForecast"] as any)?.imageBase64);
+  const wz850CurrentEntry = europe["temp850hpaCurrent"] as any;
+  const wz850ForecastEntry = europe["temp850hpaForecast"] as any;
+  const knmiCurrentEntry = europe["frontCurrent"] as any;
+  const knmiForecastEntry = europe["frontForecast"] as any;
 
-  for (const img of [wz850Current, wz850Forecast, knmiCurrent, knmiForecast]) {
-    if (img) content.push(img);
-  }
+  const wz850Current = imageBlock(wz850CurrentEntry?.imageBase64);
+  const wz850Forecast = imageBlock(wz850ForecastEntry?.imageBase64);
+  const knmiCurrent = imageBlock(knmiCurrentEntry?.imageBase64);
+  const knmiForecast = imageBlock(knmiForecastEntry?.imageBase64);
+
+  const imageLabels: string[] = [];
+  if (wz850Current) { imageLabels.push(`Bild 1: 850hPa-Temperaturkarte — ${wz850CurrentEntry?.timestamp ?? "Aktuell"}`); content.push(wz850Current); }
+  if (wz850Forecast) { imageLabels.push(`Bild 2: 850hPa-Temperaturkarte — ${wz850ForecastEntry?.timestamp ?? "Forecast"}`); content.push(wz850Forecast); }
+  if (knmiCurrent) { imageLabels.push(`Bild 3: KNMI Frontenkarte — ${knmiCurrentEntry?.timestamp ?? "Aktuell"}`); content.push(knmiCurrent); }
+  if (knmiForecast) { imageLabels.push(`Bild 4: KNMI Frontenkarte — ${knmiForecastEntry?.timestamp ?? "Forecast"}`); content.push(knmiForecast); }
+
+  const imageLabelsText = imageLabels.length > 0 ? `\n=== BILDER-ZUORDNUNG ===\n${imageLabels.join("\n")}\n` : "";
 
   // Text context
   const generalWeather = (europe["generalWeather"] as any)?.text_de ?? null;
@@ -86,7 +95,7 @@ Ort/Segelrevier: ${locationLabel}
 Land: ${position.country}
 ${position.sailingArea ? `Segelrevier: ${position.sailingArea.name_de}` : `Ort: ${position.city?.name_de ?? position.userInput}`}
 Heute: ${todayLabel}
-
+${imageLabelsText}
 === EUROPÄISCHE WETTERLAGE (Meteonews) ===
 ${generalWeather ?? "(nicht verfügbar)"}
 
