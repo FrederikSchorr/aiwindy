@@ -5,7 +5,7 @@ import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 export const HNMS_GALE_URL = "http://newportal.hnms.gr/emy/en/warning/gale_html";
-export const HNMS_SOURCE_URL = "https://hnms.gr/emy/en/navigation/Naftilia";
+export const HNMS_SOURCE_URL = "http://newportal.hnms.gr/emy/en/warning/gale_html";
 export const OPENSKIRON_BASE_URL = "https://openskiron.org/gribs_wrf_4km/";
 export const OPENSKIRON_SOURCE_URL = "https://openskiron.org/";
 
@@ -85,6 +85,7 @@ async function fetchGreeceWindCloudRain(
     sailingArea: sailingAreaObj,
     timestamps: null, windSpeedKt: null, windDir: null, gustKt: null,
     rainMm: null, cape: null, cloudCover: null, waterTempC: null,
+    waveHeightM: null, wavePeriodS: null, waveDir: null, swellHeightM: null,
   };
   const nullTemperature = {
     source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
@@ -154,6 +155,10 @@ async function fetchGreeceWindCloudRain(
             cape: parsed.cape,
             cloudCover: parsed.cloudCover,
             waterTempC: parsed.waterTempC,
+            waveHeightM: parsed.waveHeightM,
+            wavePeriodS: parsed.wavePeriodS,
+            waveDir: parsed.waveDir,
+            swellHeightM: parsed.swellHeightM,
           },
           temperature: {
             source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
@@ -193,10 +198,10 @@ export async function fetchGreeceWeather(
   }
 
   const sourceUrls = [
-    `[EMY Griechenland](${HNMS_SOURCE_URL})`,
+    `Griechenland Wetterlage und Warnungen von [EMY](${HNMS_SOURCE_URL})`,
   ];
   if (openskiron) {
-    sourceUrls.push(`[OpenSkiron WRF 4km](${OPENSKIRON_SOURCE_URL})`);
+    sourceUrls.push(`Wind, Welle, Wolken, Gewitter von [OpenSkiron](${OPENSKIRON_SOURCE_URL})`);
   }
 
   return { data, sourceUrls };
@@ -349,7 +354,7 @@ export async function preprocessGreeceLocalWind(
   }
 
   const TZ = "Europe/Athens";
-  type Row = { time: string; dir: string; spd: number; gust: number };
+  type Row = { time: string; dir: string; spd: number; gust: number; waveH: number | null; waveP: number | null; waveD: string | null; swellH: number | null };
   const byDate = new Map<string, Row[]>();
 
   for (let i = 0; i < forecast.timestamps.length; i++) {
@@ -361,20 +366,37 @@ export async function preprocessGreeceLocalWind(
       dir: forecast.windDir[i],
       spd: Math.round(forecast.windSpeedKt[i]),
       gust: Math.round(forecast.gustKt[i]),
+      waveH: forecast.waveHeightM?.[i] ?? null,
+      waveP: forecast.wavePeriodS?.[i] ?? null,
+      waveD: forecast.waveDir?.[i] ?? null,
+      swellH: forecast.swellHeightM?.[i] ?? null,
     });
   }
 
   const days = Array.from(byDate.entries()).slice(0, 2);
   if (!days.length) return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
 
+  const hasWaves = days.some(([, rows]) => rows.some(r => r.waveH !== null));
   const table = days
     .map(([label, rows]) => {
-      const rowStr = rows.map(r => `${r.time} ${r.dir} ${r.spd}kt Böe ${r.gust}kt`).join("  ");
+      const rowStr = rows.map(r => {
+        let line = `${r.time} ${r.dir} ${r.spd}kt Böe ${r.gust}kt`;
+        if (hasWaves && r.waveH !== null) {
+          line += ` | Welle ${r.waveH}m`;
+          if (r.waveP !== null) line += ` ${r.waveP}s`;
+          if (r.waveD) line += ` aus ${r.waveD}`;
+          if (r.swellH !== null && r.swellH > 0.1) line += ` (Dünung ${r.swellH}m)`;
+        }
+        return line;
+      }).join("  ");
       return `${label}:\n${rowStr}`;
     })
     .join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Format: "Di 31.03: ...\nMi 01.04: ..."
+  const waveInstruction = hasWaves
+    ? " Beschreibe auch Wellenhöhe, Periode und ggf. Dünung."
+    : "";
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Wind- und Wellenverlauf für jeden Tag in je einem deutschen Satz (max. 30 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf.${waveInstruction} Format: "Di 31.03: ...\nMi 01.04: ..."
 
 ${table}`;
 

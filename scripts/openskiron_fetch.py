@@ -205,6 +205,39 @@ def extract_data(
     # Sea surface temperature — not present in OpenSkiron WRF GRIB1
     water_temp_c: list = [None] * n
 
+    # Wave data from WAM model (separate dataset in GRIB, uses open_datasets)
+    wave_height_m: list = [None] * n
+    wave_period_s: list = [None] * n
+    wave_dir: list = [None] * n
+    swell_height_m: list = [None] * n
+    try:
+        all_ds = cfgrib.open_datasets(str(grb2_path), errors="ignore")
+        for wds in all_ds:
+            if "swh" in wds.data_vars:
+                wpt = sel(wds, wind_lat, wind_lon)
+                def wave_vals(var):
+                    if var not in wpt.data_vars:
+                        return None
+                    vals = [float(v) for v in wpt[var].values]
+                    if all(v != v for v in vals):  # all NaN
+                        return None
+                    return vals
+                swh = wave_vals("swh")
+                if swh:
+                    wave_height_m = [round(v, 2) if v == v else None for v in swh]
+                mpww = wave_vals("mpww")
+                if mpww:
+                    wave_period_s = [round(v, 1) if v == v else None for v in mpww]
+                mdww = wave_vals("mdww")
+                if mdww:
+                    wave_dir = [wind_direction_str(-math.sin(math.radians(v)), -math.cos(math.radians(v))) if v == v else None for v in mdww]
+                sw = wave_vals("swell")
+                if sw:
+                    swell_height_m = [round(v, 2) if v == v else None for v in sw]
+                break
+    except Exception as e:
+        print(f"[grib] wave extraction: {e}", file=sys.stderr)
+
     # 2m air temperature at city coordinates (K → °C)
     t2m_vals = get_values(open_param(11, "heightAboveGround", 2), city_lat, city_lon)
     if t2m_vals is not None:
@@ -221,6 +254,10 @@ def extract_data(
         "cape": cape,
         "cloudCover": cloud_cover,
         "waterTempC": water_temp_c,
+        "waveHeightM": wave_height_m,
+        "wavePeriodS": wave_period_s,
+        "waveDir": wave_dir,
+        "swellHeightM": swell_height_m,
         "temp2mC": temp2m_c,
     }
 
