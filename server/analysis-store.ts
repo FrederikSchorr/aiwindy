@@ -51,11 +51,16 @@ function ensureDir() {
 // ── Filename ───────────────────────────────────────────────────────────────
 
 function buildFilename(userInput: string, date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  const timePart = `${pad(date.getHours())}h${pad(date.getMinutes())}m${pad(date.getSeconds())}s`;
+  const fmt = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Vienna",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  }).format(date);
+  const [datePart, timePart] = fmt.split(" ");
+  const [hh, mm, ss] = timePart.split(":");
   const safeName = userInput.replace(/[\\/:*?"<>|]/g, "").trim().slice(0, 50);
-  return `${datePart} ${timePart} ${safeName}.json`;
+  return `${datePart} ${hh}h${mm}m${ss}s ${safeName}.json`;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
