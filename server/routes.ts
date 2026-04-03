@@ -1397,9 +1397,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const lon = coords.lon;
 
       const countryCode =
-        geocodedCity?.countryCode ??
-        (detected.kind === "revier" ? detected.countryCode : "") ??
-        "";
+        (detected.kind === "revier" ? detected.countryCode : null)
+        ?? geocodedCity?.countryCode
+        ?? "";
       const country =
         Object.entries(LAND_TO_COUNTRY_CODE).find(
           ([, v]) => v === countryCode,

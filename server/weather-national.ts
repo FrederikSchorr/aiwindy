@@ -33,8 +33,18 @@ function getGreekEmyName(sailingAreaNameDe: string | null): string | null {
   return found?.emy_name ?? null;
 }
 
-type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
-type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
+type SailingAreaObj =
+  | {
+      name_de: string;
+      type: "sea" | "lake";
+      coordinates: { lat: number; lon: number };
+    }
+  | null
+  | undefined;
+type CityObj =
+  | { name_de: string; coordinates: { lat: number; lon: number } }
+  | null
+  | undefined;
 
 export async function fetchNationalWeather(
   countryCode: string,
@@ -43,12 +53,25 @@ export async function fetchNationalWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
   country?: string,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironDownload?: { domain: string; timestamp: string } }> {
+): Promise<{
+  data: Record<string, unknown>;
+  sourceUrls: string[];
+  openskironDownload?: { domain: string; timestamp: string };
+}> {
   switch (countryCode) {
-    case "HR": return fetchCroatiaWeather(sailingAreaName);
-    case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);
-    case "GR": return fetchGreeceWeather(sailingAreaObj, cityObj);
-    default:   return { data: {}, sourceUrls: [`Keine lokalen Wetterdaten für ${country || countryCode} angebunden.`] };
+    case "HR":
+      return fetchCroatiaWeather(sailingAreaName);
+    case "AT":
+      return fetchAustriaWeather(sailingAreaObj, cityObj);
+    case "GR":
+      return fetchGreeceWeather(sailingAreaObj, cityObj);
+    default:
+      return {
+        data: {},
+        sourceUrls: [
+          `Keine lokalen Wetterdaten für ${country || countryCode} angebunden`,
+        ],
+      };
   }
 }
 
@@ -63,12 +86,16 @@ export async function preprocessNationalWeather(
     return await preprocessGreeceNationalSynopsis(text, anthropic);
   }
   if (countryCode !== "HR") return {};
-  const adriaXml = (rawData["croatiaAdriaForecast"] as any)?.xml as string | null;
+  const adriaXml = (rawData["croatiaAdriaForecast"] as any)?.xml as
+    | string
+    | null;
   return {
-    "synopsis": {
+    synopsis: {
       source: "DHMZ",
       url: "https://prognoza.hr/jadran_h.xml",
-      text_de: adriaXml ? await preprocessDhmzSynopsis(adriaXml, anthropic) : null,
+      text_de: adriaXml
+        ? await preprocessDhmzSynopsis(adriaXml, anthropic)
+        : null,
     },
   };
 }
@@ -82,8 +109,8 @@ export async function preprocessLocalWeather(
   if (countryCode === "AT") {
     return {
       ...preprocessLocalWarningsNeusiedler(rawData, position.sailingArea),
-      ...await preprocessLocalWindAT(rawData, anthropic),
-      ...await preprocessLocalCloudRainAT(rawData, anthropic),
+      ...(await preprocessLocalWindAT(rawData, anthropic)),
+      ...(await preprocessLocalCloudRainAT(rawData, anthropic)),
       ...preprocessLocalWeatherAT(rawData),
     };
   }
@@ -92,10 +119,10 @@ export async function preprocessLocalWeather(
     const text = (rawData["greeceGaleWarning"] as any)?.text as string | null;
     const emyName = getGreekEmyName(position.sailingArea);
     return {
-      ...await extractGreeceWarning(text, emyName, anthropic),
-      ...await preprocessGreeceLocalWind(rawData, anthropic),
-      ...await preprocessGreeceLocalWave(rawData, anthropic),
-      ...await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic),
+      ...(await extractGreeceWarning(text, emyName, anthropic)),
+      ...(await preprocessGreeceLocalWind(rawData, anthropic)),
+      ...(await preprocessGreeceLocalWave(rawData, anthropic)),
+      ...(await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic)),
       ...preprocessGreeceLocalTemperature(rawData),
       ...preprocessGreeceLocalWaterTemp(rawData),
     };
@@ -103,35 +130,48 @@ export async function preprocessLocalWeather(
 
   if (countryCode !== "HR") return {};
 
-  const regionalXml = (rawData["croatiaAdriaRegional"] as any)?.xml as string | null;
-  const forecastXml = (rawData["croatiaCityForecast"] as any)?.xml as string | null;
+  const regionalXml = (rawData["croatiaAdriaRegional"] as any)?.xml as
+    | string
+    | null;
+  const forecastXml = (rawData["croatiaCityForecast"] as any)?.xml as
+    | string
+    | null;
 
   const warningText = regionalXml
     ? await extractDhmzWarning(regionalXml, position.sailingArea, anthropic)
     : null;
 
   const forecastText = regionalXml
-    ? await extractDhmzSailingAreaForecast(regionalXml, position.sailingArea, anthropic)
+    ? await extractDhmzSailingAreaForecast(
+        regionalXml,
+        position.sailingArea,
+        anthropic,
+      )
     : null;
 
   const localResult = forecastXml
-    ? await preprocessDhmzLocalTemperature(forecastXml, position.city, position.sailingArea, anthropic)
+    ? await preprocessDhmzLocalTemperature(
+        forecastXml,
+        position.city,
+        position.sailingArea,
+        anthropic,
+      )
     : null;
 
   return {
-    "warnings": {
+    warnings: {
       source: "DHMZ",
       url: "https://prognoza.hr/pomorci.xml",
       sailingArea: position.sailingArea ?? null,
       text_de: warningText,
     },
-    "sailingareaForecast": {
+    sailingareaForecast: {
       source: "DHMZ",
       url: "https://prognoza.hr/pomorci.xml",
       sailingArea: position.sailingArea ?? null,
       text_de: forecastText,
     },
-    "temperature": {
+    temperature: {
       source: "DHMZ",
       url: "https://prognoza.hr/sedam/hrvatska/7d_meteogrami.xml",
       city: localResult?.city ?? null,
