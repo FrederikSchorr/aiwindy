@@ -279,9 +279,13 @@ export async function preprocessGreeceNationalSynopsis(
   const headerDate = parseHnmsTimestamp(headerLine);
   const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
 
-  const synopsisMatch = text.match(/GENERAL SYNOPSIS[\s\S]*?(?=\nPART 3|\nFORECAST|\n[A-Z ]{4,}\n)/i);
-  if (!synopsisMatch) return nullResult;
-  const synopsisRaw = synopsisMatch[0].trim();
+  const cleanText = text.replace(/\r\r/g, "\n").replace(/\r/g, "\n");
+  const synStart = cleanText.search(/GENERAL SYNOPSIS/i);
+  if (synStart < 0) return nullResult;
+  const afterSyn = cleanText.slice(synStart);
+  const areaMatch = afterSyn.search(/\n\s*(KITHIRA|NORTHEAST|NORTHWEST|SOUTHEAST|SOUTHWEST|NORTH AEGEAN|SOUTH AEGEAN|EAST AEGEAN|WEST AEGEAN|SARONIC|TAURUS|IONIO|CRETAN|KRITIKO|DODECANESE|THRACIAN|THERMAIKOS|KARPATHOS|KASOS|CYCLADES|SPORADES|MIRTOO|EVVOIKOS)/i);
+  const synopsisRaw = (areaMatch >= 0 ? afterSyn.slice(0, areaMatch) : afterSyn.split("\n\n")[0]).trim();
+  if (!synopsisRaw) return nullResult;
 
   try {
     const msg = await anthropic.messages.create({
@@ -289,7 +293,7 @@ export async function preprocessGreeceNationalSynopsis(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Übersetze diesen englischen Seewetter-Synopsetext ins Deutsche. Behalte alle Druckwerte (hPa) und Positionen bei. Antworte nur mit der Übersetzung, ohne Erklärungen.\n\n${synopsisRaw}`,
+        content: `Übersetze diesen englischen Seewetter-Synopsetext ins Deutsche. Behalte alle Druckwerte (hPa) und Positionen bei. Schreibe in normaler Groß-/Kleinschreibung (NICHT alles in Großbuchstaben). Antworte nur mit der Übersetzung, ohne Erklärungen.\n\n${synopsisRaw}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
