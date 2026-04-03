@@ -139,7 +139,9 @@ async function fetchGreeceWindCloudRain(
         return;
       }
       try {
-        const parsed = JSON.parse(stdout);
+        const jsonStart = stdout.indexOf('{');
+        if (jsonStart < 0) throw new Error("No JSON object in stdout");
+        const parsed = JSON.parse(stdout.slice(jsonStart));
         resolve({
           windCloudRain: {
             source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
