@@ -93,7 +93,7 @@ export async function preprocessLocalWeather(
     return {
       ...await extractGreeceWarning(text, emyName, anthropic),
       ...await preprocessGreeceLocalWind(rawData, anthropic),
-      ...preprocessGreeceLocalWave(rawData),
+      ...await preprocessGreeceLocalWave(rawData, anthropic),
       ...await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic),
       ...preprocessGreeceLocalTemperature(rawData),
       ...preprocessGreeceLocalWaterTemp(rawData),

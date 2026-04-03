@@ -416,9 +416,10 @@ function toDouglasScale(heightM: number): string {
   return DOUGLAS_SCALE[DOUGLAS_SCALE.length - 1].label;
 }
 
-export function preprocessGreeceLocalWave(
+export async function preprocessGreeceLocalWave(
   rawData: Record<string, unknown>,
-): Record<string, unknown> {
+  anthropic: Anthropic,
+): Promise<Record<string, unknown>> {
   const forecast = rawData["greeceWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   const src = "OpenSkiron WAM";
@@ -455,26 +456,32 @@ export function preprocessGreeceLocalWave(
   const days = Array.from(byDate.entries()).slice(0, 3);
   if (!days.length) return { wave: { source: src, url, text_de: null } };
 
-  const lines = days.map(([label, rows]) => {
-    const maxH = Math.max(...rows.map(r => r.waveH));
-    const minH = Math.min(...rows.map(r => r.waveH));
-    const avgH = rows.reduce((s, r) => s + r.waveH, 0) / rows.length;
-    const douglas = toDouglasScale(avgH);
-    const maxSwell = Math.max(...rows.map(r => r.swellH ?? 0));
-    const dirs = rows.map(r => r.waveD).filter(Boolean);
-    const mainDir = dirs.length > 0 ? dirs[Math.floor(dirs.length / 2)] : null;
-    const avgPeriod = rows.filter(r => r.waveP !== null).length > 0
-      ? (rows.reduce((s, r) => s + (r.waveP ?? 0), 0) / rows.filter(r => r.waveP !== null).length).toFixed(1)
-      : null;
+  const table = days.map(([label, rows]) => {
+    const rowStr = rows.map(r => {
+      let line = `${String(r.hour).padStart(2, "0")}:00 Welle ${r.waveH.toFixed(1)}m=${toDouglasScale(r.waveH)}`;
+      if (r.waveD) line += ` aus ${r.waveD}`;
+      if (r.waveP !== null) line += ` Periode ${r.waveP.toFixed(1)}s`;
+      if (r.swellH !== null && r.swellH > 0.1) line += ` Dünung ${r.swellH.toFixed(1)}m=${toDouglasScale(r.swellH)}`;
+      return line;
+    }).join("  ");
+    return `${label}:\n${rowStr}`;
+  }).join("\n\n");
 
-    let line = `${label}: See ${douglas}`;
-    if (mainDir) line += ` aus ${mainDir}`;
-    if (avgPeriod) line += `, Periode ${avgPeriod}s`;
-    if (maxSwell > 0.1) line += `, Dünung ${toDouglasScale(maxSwell)}`;
-    return line;
-  });
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Seegangsverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Verwende NUR Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne Wellenrichtung und ggf. Dünung. Format: "Di 31.03: ...\nMi 01.04: ...\nDo 02.04: ..."
 
-  return { wave: { source: src, url, text_de: lines.join("\n") } };
+${table}`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const text = (msg.content[0] as any)?.text?.trim() ?? null;
+    return { wave: { source: src, url, text_de: text } };
+  } catch {
+    return { wave: { source: src, url, text_de: null } };
+  }
 }
 
 export async function preprocessGreeceLocalCloudRainThunderstorm(
