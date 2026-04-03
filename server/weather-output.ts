@@ -122,7 +122,7 @@ Regeln pro Abschnitt:
 - Welle: genau 1 Bullet (falls Daten vorhanden, sonst weglassen). Quelle: preprocessed.local.wave (OpenSkiron WAM — Douglas-Skala, bereits als Fließtext aufbereitet) ODER preprocessed.local.warnings/sailingareaForecast. Text aus local.wave 1:1 übernehmen, NICHT umformulieren. Douglas-Skala (1=ruhig…6=sehr rau), KEINE Meter. NUR wenn explizite Wellendaten vorhanden — NIEMALS schätzen.
 
 #4 cloudsRain — Wolken & Regen (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
-- max 2 Bullets, max 20 Wörter je: Bewölkung + Regen + Gewitterrisiko. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Bei Gewitterrisiko immer ⛈️ einfügen.
+- max 2 Bullets, max 20 Wörter je: Bewölkung + Regen + Gewitterrisiko. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Bei Gewitterrisiko immer ⛈️ einfügen. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.
 - Falls keine Daten: "Wetterprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #5 temperature — Temperatur (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
