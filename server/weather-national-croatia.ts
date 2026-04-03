@@ -33,7 +33,7 @@ export async function fetchCroatiaWeather(sailingArea?: string | null): Promise<
   const sourceUrls = [
     `Kroatien Seewetter von [DHMZ](${DHMZ_SOURCE_URL}) Jadran API`,
     `Wind, Seegang, Wolken, Regen, Sicht von [DHMZ](https://meteo.hr/prognoze.php?section=prognoze_specp&param=pomorci) Pomorci API`,
-    `Temperatur von [DHMZ](https://meteo.hr/index.php)`,
+    `Temperatur von [DHMZ](https://meteo.hr/index.php) Meteogrami API`,
   ];
   return { data, sourceUrls };
 }
