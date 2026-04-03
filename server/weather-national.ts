@@ -19,6 +19,10 @@ import {
   fetchGreeceWeather,
   preprocessGreeceNationalSynopsis,
   extractGreeceWarning,
+  preprocessGreeceLocalWind,
+  preprocessGreeceLocalCloudRainThunderstorm,
+  preprocessGreeceLocalTemperature,
+  preprocessGreeceLocalWaterTemp,
 } from "./weather-national-greece.js";
 
 function getGreekEmyName(sailingAreaNameDe: string | null): string | null {
@@ -41,7 +45,7 @@ export async function fetchNationalWeather(
   switch (countryCode) {
     case "HR": return fetchCroatiaWeather(sailingAreaName);
     case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);
-    case "GR": return fetchGreeceWeather();
+    case "GR": return fetchGreeceWeather(sailingAreaObj, cityObj);
     default:   return { data: {}, sourceUrls: [] };
   }
 }
@@ -85,7 +89,13 @@ export async function preprocessLocalWeather(
   if (countryCode === "GR") {
     const text = (rawData["greeceGaleWarning"] as any)?.text as string | null;
     const emyName = getGreekEmyName(position.sailingArea);
-    return await extractGreeceWarning(text, emyName, anthropic);
+    return {
+      ...await extractGreeceWarning(text, emyName, anthropic),
+      ...await preprocessGreeceLocalWind(rawData, anthropic),
+      ...await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic),
+      ...preprocessGreeceLocalTemperature(rawData),
+      ...preprocessGreeceLocalWaterTemp(rawData),
+    };
   }
 
   if (countryCode !== "HR") return {};

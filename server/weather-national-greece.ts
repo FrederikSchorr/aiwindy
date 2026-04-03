@@ -1,9 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { spawn } from "child_process";
+import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 export const HNMS_GALE_URL = "http://newportal.hnms.gr/emy/en/warning/gale_html";
 export const HNMS_SOURCE_URL = "https://hnms.gr/emy/en/navigation/Naftilia";
+export const OPENSKIRON_BASE_URL = "https://openskiron.org/gribs_wrf_4km/";
+export const OPENSKIRON_SOURCE_URL = "https://openskiron.org/";
 
 // All HNMS area headings that act as block separators (superset of our sailingareas)
 const HNMS_AREA_HEADINGS = new Set([
@@ -26,9 +30,16 @@ const MONTHS: Record<string, number> = {
   JULY: 6, AUGUST: 7, SEPTEMBER: 8, OCTOBER: 9, NOVEMBER: 10, DECEMBER: 11,
 };
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+const DAY_NAMES: Record<number, string> = {
+  0: "So", 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa",
+};
 
-export async function fetchGreeceWeather(): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
+type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
+type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
+
+// ── HNMS Fetch ────────────────────────────────────────────────────────────────
+
+async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
   try {
     const res = await fetch(HNMS_GALE_URL, {
       headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" },
@@ -36,7 +47,7 @@ export async function fetchGreeceWeather(): Promise<{ data: Record<string, unkno
     });
     if (!res.ok) {
       console.error(`HNMS gale fetch failed (${res.status})`);
-      return { data: { "greeceGaleWarning": { source: "HNMS", url: HNMS_GALE_URL, text: null } }, sourceUrls: [] };
+      return { source: "HNMS", url: HNMS_GALE_URL, text: null };
     }
     const html = await res.text();
     const clean = html
@@ -50,23 +61,147 @@ export async function fetchGreeceWeather(): Promise<{ data: Record<string, unkno
 
     const idx = clean.indexOf("GALE WARNING");
     const text = idx >= 0 ? clean.slice(idx).trim() : null;
-
-    return {
-      data: { "greeceGaleWarning": { source: "HNMS", url: HNMS_GALE_URL, text } },
-      sourceUrls: [HNMS_SOURCE_URL],
-    };
+    return { source: "HNMS", url: HNMS_GALE_URL, text };
   } catch (e) {
-    console.error("fetchGreeceWeather error:", e instanceof Error ? e.message : e);
-    return { data: { "greeceGaleWarning": { source: "HNMS", url: HNMS_GALE_URL, text: null } }, sourceUrls: [] };
+    console.error("fetchHnmsGaleWarning error:", e instanceof Error ? e.message : e);
+    return { source: "HNMS", url: HNMS_GALE_URL, text: null };
   }
+}
+
+// ── OpenSkiron Fetch ──────────────────────────────────────────────────────────
+
+function getOpenskironDomain(sailingAreaNameDe: string): string | null {
+  const reviere = (sailingAreasJson as any)["Griechenland"]?.reviere ?? [];
+  const found = reviere.find((r: any) => r.deutsch === sailingAreaNameDe);
+  return found?.openskiron_domain ?? null;
+}
+
+async function fetchGreeceWindCloudRain(
+  sailingAreaObj: NonNullable<SailingAreaObj>,
+  cityObj: CityObj,
+): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown> }> {
+  const nullWindCloudRain = {
+    source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
+    sailingArea: sailingAreaObj,
+    timestamps: null, windSpeedKt: null, windDir: null, gustKt: null,
+    rainMm: null, cape: null, cloudCover: null, waterTempC: null,
+  };
+  const nullTemperature = {
+    source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
+    city: cityObj ?? null,
+    timestamps: null, temp2mC: null,
+  };
+  const nullResult = { windCloudRain: nullWindCloudRain, temperature: nullTemperature };
+
+  const domain = getOpenskironDomain(sailingAreaObj.name_de);
+  if (!domain) {
+    console.error(`No openskiron_domain for: ${sailingAreaObj.name_de}`);
+    return nullResult;
+  }
+
+  const windLat = sailingAreaObj.coordinates.lat;
+  const windLon = sailingAreaObj.coordinates.lon;
+  const cityLat = cityObj?.coordinates.lat ?? windLat;
+  const cityLon = cityObj?.coordinates.lon ?? windLon;
+
+  return new Promise((resolve) => {
+    const args = [
+      "scripts/openskiron_fetch.py",
+      domain,
+      String(windLat), String(windLon),
+      String(cityLat), String(cityLon),
+    ];
+    const proc = spawn("python", args, {
+      env: { ...process.env, ECCODES_LOG_LEVEL: "0" },
+    });
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => {
+      proc.kill("SIGTERM");
+      console.error("openskiron_fetch timed out after 60s");
+    }, 60000);
+
+    proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    proc.on("close", (code: number | null) => {
+      clearTimeout(timer);
+      const stderrClean = stderr
+        .split("\n")
+        .filter(l => !l.includes("missingValue") && !l.includes("Ignoring index file")
+          && !l.includes("FutureWarning") && !l.includes("xarray_store")
+          && !l.includes("RequestsDependencyWarning") && !l.includes("warnings.warn("))
+        .join("\n")
+        .trim();
+      if (stderrClean) console.error("openskiron_fetch:", stderrClean);
+      if (code !== 0 || !stdout.trim()) {
+        console.error(`openskiron_fetch exited with code ${code}`);
+        resolve(nullResult);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(stdout);
+        resolve({
+          windCloudRain: {
+            source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
+            sailingArea: sailingAreaObj,
+            timestamps: parsed.timestamps,
+            windSpeedKt: parsed.windSpeedKt,
+            windDir: parsed.windDir,
+            gustKt: parsed.gustKt,
+            rainMm: parsed.rainMm,
+            cape: parsed.cape,
+            cloudCover: parsed.cloudCover,
+            waterTempC: parsed.waterTempC,
+          },
+          temperature: {
+            source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
+            city: cityObj ?? null,
+            timestamps: parsed.timestamps,
+            temp2mC: parsed.temp2mC,
+          },
+        });
+      } catch (e) {
+        console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);
+        resolve(nullResult);
+      }
+    });
+    proc.on("error", (e: Error) => {
+      clearTimeout(timer);
+      console.error("openskiron_fetch spawn error:", e.message);
+      resolve(nullResult);
+    });
+  });
+}
+
+// ── Main Fetch ────────────────────────────────────────────────────────────────
+
+export async function fetchGreeceWeather(
+  sailingAreaObj?: SailingAreaObj,
+  cityObj?: CityObj,
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
+  const [hnms, openskiron] = await Promise.all([
+    fetchHnmsGaleWarning(),
+    sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj) : null,
+  ]);
+
+  const data: Record<string, unknown> = { greeceGaleWarning: hnms };
+  if (openskiron) {
+    data["greeceWindCloudRain"] = openskiron.windCloudRain;
+    data["greeceTemperature"] = openskiron.temperature;
+  }
+
+  const sourceUrls = [
+    `[EMY Griechenland](${HNMS_SOURCE_URL})`,
+  ];
+  if (openskiron) {
+    sourceUrls.push(`[OpenSkiron WRF 4km](${OPENSKIRON_SOURCE_URL})`);
+  }
+
+  return { data, sourceUrls };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Parse bulletin header timestamp like "03 APRIL 2026/0400 UTC"
- * and return a Date in UTC.
- */
 function parseHnmsTimestamp(line: string): Date | null {
   const m = line.match(/(\d{1,2})\s+([A-Z]+)\s+(\d{4})\/(\d{2})(\d{2})\s+UTC/i);
   if (!m) return null;
@@ -84,21 +219,27 @@ function formatAthenTime(date: Date): string {
   }).format(date) + " Ortszeit";
 }
 
-/**
- * Determine if a line is an HNMS area heading (all-caps, matches known headings or
- * starts with a known heading prefix).
- */
 function isAreaHeading(line: string): boolean {
   const upper = line.trim().toUpperCase();
   if (HNMS_AREA_HEADINGS.has(upper)) return true;
-  // Some headings appear with sub-qualifiers on the same line — check prefix
   for (const h of Array.from(HNMS_AREA_HEADINGS)) {
     if (upper.startsWith(h)) return true;
   }
   return false;
 }
 
-// ── Preprocessing ─────────────────────────────────────────────────────────────
+/** Convert UTC timestamp string to local label + hour using Intl (DST-aware). */
+function toLocalDateHour(utcTs: string, tz: string): { label: string; hour: number } {
+  const d = new Date(utcTs);
+  const datePart = new Intl.DateTimeFormat("sv-SE", { timeZone: tz }).format(d);
+  const hour = parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(d)) % 24;
+  const parts = datePart.split("-");
+  const dow = new Date(`${datePart}T12:00:00Z`).getUTCDay();
+  const label = `${DAY_NAMES[dow]} ${parts[2]}.${parts[1]}`;
+  return { label, hour };
+}
+
+// ── HNMS Preprocessing ────────────────────────────────────────────────────────
 
 export async function preprocessGreeceNationalSynopsis(
   text: string | null,
@@ -107,13 +248,11 @@ export async function preprocessGreeceNationalSynopsis(
   const nullResult = { "synopsis": { source: "HNMS", url: HNMS_GALE_URL, text_de: null } };
   if (!text) return nullResult;
 
-  // Extract header timestamp (line 3: "WARNING NR 258 - FRIDAY 03 APRIL 2026/0400 UTC")
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const headerLine = lines.find(l => /WARNING NR.*UTC/i.test(l)) ?? "";
   const headerDate = parseHnmsTimestamp(headerLine);
   const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
 
-  // Extract GENERAL SYNOPSIS block
   const synopsisMatch = text.match(/GENERAL SYNOPSIS[\s\S]*?(?=\nPART 3|\nFORECAST|\n[A-Z ]{4,}\n)/i);
   if (!synopsisMatch) return nullResult;
   const synopsisRaw = synopsisMatch[0].trim();
@@ -150,13 +289,11 @@ export async function extractGreeceWarning(
   };
   if (!text || !emyName) return nullResult;
 
-  // Extract header timestamp
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const headerLine = lines.find(l => /WARNING NR.*UTC/i.test(l)) ?? "";
   const headerDate = parseHnmsTimestamp(headerLine);
   const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
 
-  // Find lines matching emyName (case-insensitive)
   const target = emyName.toUpperCase();
   const matchedBlocks: string[] = [];
 
@@ -164,7 +301,6 @@ export async function extractGreeceWarning(
   while (i < lines.length) {
     const upper = lines[i].toUpperCase();
     if (upper === target || upper.startsWith(target)) {
-      // Collect this block until next area heading
       const block: string[] = [lines[i]];
       i++;
       while (i < lines.length && !isAreaHeading(lines[i])) {
@@ -196,4 +332,205 @@ export async function extractGreeceWarning(
     console.error("extractGreeceWarning error:", e instanceof Error ? e.message : e);
     return nullResult;
   }
+}
+
+// ── OpenSkiron Preprocessing ──────────────────────────────────────────────────
+
+export async function preprocessGreeceLocalWind(
+  rawData: Record<string, unknown>,
+  anthropic: Anthropic,
+): Promise<Record<string, unknown>> {
+  const forecast = rawData["greeceWindCloudRain"] as any;
+  const url: string | null = forecast?.url ?? null;
+  if (!forecast?.timestamps || !forecast?.windSpeedKt) {
+    return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  }
+
+  const TZ = "Europe/Athens";
+  type Row = { time: string; dir: string; spd: number; gust: number };
+  const byDate = new Map<string, Row[]>();
+
+  for (let i = 0; i < forecast.timestamps.length; i++) {
+    const { label, hour } = toLocalDateHour(forecast.timestamps[i], TZ);
+    if (hour < 6 || hour > 20) continue;
+    if (!byDate.has(label)) byDate.set(label, []);
+    byDate.get(label)!.push({
+      time: `${String(hour).padStart(2, "0")}:00`,
+      dir: forecast.windDir[i],
+      spd: Math.round(forecast.windSpeedKt[i]),
+      gust: Math.round(forecast.gustKt[i]),
+    });
+  }
+
+  const days = Array.from(byDate.entries()).slice(0, 2);
+  if (!days.length) return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+
+  const table = days
+    .map(([label, rows]) => {
+      const rowStr = rows.map(r => `${r.time} ${r.dir} ${r.spd}kt Böe ${r.gust}kt`).join("  ");
+      return `${label}:\n${rowStr}`;
+    })
+    .join("\n\n");
+
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Format: "Di 31.03: ...\nMi 01.04: ..."
+
+${table}`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const text = (msg.content[0] as any)?.text?.trim() ?? null;
+    return { wind: { source: "OpenSkiron WRF 4km", url, text_de: text } };
+  } catch {
+    return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  }
+}
+
+export async function preprocessGreeceLocalCloudRainThunderstorm(
+  rawData: Record<string, unknown>,
+  anthropic: Anthropic,
+): Promise<Record<string, unknown>> {
+  const forecast = rawData["greeceWindCloudRain"] as any;
+  const url: string | null = forecast?.url ?? null;
+  if (!forecast?.timestamps || !forecast?.rainMm || !forecast?.cloudCover) {
+    return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  }
+
+  const TZ = "Europe/Athens";
+  // rainMm in OpenSkiron is already delta (per-hour), not cumulative — use as-is
+  const rainMm: number[] = forecast.rainMm;
+  const cape: number[] = forecast.cape ?? new Array(forecast.timestamps.length).fill(0);
+
+  type Row = { time: string; cloud: number; rain: number; cape: number };
+  const byDate = new Map<string, Row[]>();
+
+  for (let i = 0; i < forecast.timestamps.length; i++) {
+    const { label, hour } = toLocalDateHour(forecast.timestamps[i], TZ);
+    if (hour < 6 || hour > 20) continue;
+    if (!byDate.has(label)) byDate.set(label, []);
+    byDate.get(label)!.push({
+      time: `${String(hour).padStart(2, "0")}:00`,
+      cloud: forecast.cloudCover[i],
+      rain: Math.round(rainMm[i] * 10) / 10,
+      cape: Math.round(cape[i]),
+    });
+  }
+
+  const days = Array.from(byDate.entries()).slice(0, 2);
+  if (!days.length) return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+
+  const hasThunderstorm = days.some(([, rows]) => rows.some(r => r.cape >= 1000));
+
+  const table = days
+    .map(([label, rows]) => {
+      const rowStr = rows.map(r => `${r.time} ${r.cloud}% ${r.rain}mm CAPE=${r.cape}`).join("  ");
+      return `${label}:\n${rowStr}`;
+    })
+    .join("\n\n");
+
+  const thunderNote = hasThunderstorm
+    ? " Bei CAPE ≥ 1000 J/kg Gewitterrisiko erwähnen (⛈️)."
+    : "";
+
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe Bewölkung, Niederschlag und Gewitterrisiko für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Bewölkungsgrad und ob/wann es regnet.${thunderNote} Format: "Di 31.03: ...\nMi 01.04: ..."
+
+${table}`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const text = (msg.content[0] as any)?.text?.trim() ?? null;
+    return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: text } };
+  } catch {
+    return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  }
+}
+
+export function preprocessGreeceLocalTemperature(
+  rawData: Record<string, unknown>,
+): Record<string, unknown> {
+  const tempData = rawData["greeceTemperature"] as any;
+  const url: string | null = tempData?.url ?? null;
+  const city = tempData?.city ?? null;
+  const nullResult = { temperature: { source: "OpenSkiron WRF 4km", url, city, text_de: null } };
+
+  if (!tempData?.timestamps || !tempData?.temp2mC) return nullResult;
+
+  const TZ = "Europe/Athens";
+  const todayStr = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ }).format(new Date());
+  const todayParts = todayStr.split("-");
+  const todayDow = new Date(`${todayStr}T12:00:00Z`).getUTCDay();
+  const todayLabel = `${DAY_NAMES[todayDow]} ${todayParts[2]}.${todayParts[1]}`;
+
+  const localHour = parseInt(new Intl.DateTimeFormat("en-US", {
+    hour: "numeric", hour12: false, timeZone: TZ,
+  }).format(new Date())) % 24;
+
+  const allowedLabels = new Set<string>();
+  for (let offset = 0; offset <= 2; offset++) {
+    const d = new Date(new Date(`${todayStr}T12:00:00Z`).getTime() + offset * 86400000);
+    const dp = d.toISOString().slice(0, 10).split("-");
+    allowedLabels.add(`${DAY_NAMES[d.getUTCDay()]} ${dp[2]}.${dp[1]}`);
+  }
+
+  const byDate = new Map<string, number[]>();
+  for (let i = 0; i < tempData.timestamps.length; i++) {
+    const { label } = toLocalDateHour(tempData.timestamps[i], TZ);
+    if (!byDate.has(label)) byDate.set(label, []);
+    byDate.get(label)!.push(tempData.temp2mC[i]);
+  }
+
+  const lines: string[] = [];
+  for (const [day, temps] of Array.from(byDate)) {
+    if (!allowedLabels.has(day)) continue;
+    if (day === todayLabel) {
+      if (localHour >= 13) continue;
+      if (localHour >= 5) {
+        lines.push(`${day}: max ${Math.round(Math.max(...temps))}°C`);
+      } else {
+        lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
+      }
+    } else {
+      lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
+    }
+    if (lines.length >= 3) break;
+  }
+
+  return {
+    temperature: {
+      source: "OpenSkiron WRF 4km",
+      url,
+      city,
+      text_de: lines.length ? lines.join("\n") : null,
+    },
+  };
+}
+
+export function preprocessGreeceLocalWaterTemp(
+  rawData: Record<string, unknown>,
+): Record<string, unknown> {
+  const forecast = rawData["greeceWindCloudRain"] as any;
+  const url: string | null = forecast?.url ?? null;
+  const nullResult = { waterTemp: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+
+  const waterTempC: (number | null)[] | null = forecast?.waterTempC ?? null;
+  if (!waterTempC) return nullResult;
+
+  const valid = waterTempC.filter((v): v is number => v !== null && !isNaN(v));
+  if (!valid.length) return nullResult;
+
+  const avg = Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+  return {
+    waterTemp: {
+      source: "OpenSkiron WRF 4km",
+      url,
+      text_de: `Wassertemperatur: ${avg}°C`,
+    },
+  };
 }

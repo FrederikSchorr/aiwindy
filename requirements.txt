@@ -1,0 +1,4 @@
+cfgrib
+xarray
+eccodes
+requests

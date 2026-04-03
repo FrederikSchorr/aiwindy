@@ -295,7 +295,8 @@
         "lat": 38.8,
         "lon": 20,
         "orte": "Lefkada, Preveza, Korfu, Paxos, Sivota",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Ionian_Islands_4km"
       },
       {
         "deutsch": "Ionisches Meer Süd (Griechenland)",
@@ -305,7 +306,8 @@
         "lat": 37,
         "lon": 21,
         "orte": "Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Ionian_Islands_4km"
       },
       {
         "deutsch": "Patraikos",
@@ -315,7 +317,8 @@
         "lat": 38.3,
         "lon": 21.5,
         "orte": "Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Ionian_Islands_4km"
       },
       {
         "deutsch": "Korinthiakos",
@@ -325,7 +328,8 @@
         "lat": 38.1,
         "lon": 22.5,
         "orte": "Korinth, Galaxidi, Itea, Nafpaktos, Loutraki",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Ionian_Islands_4km"
       },
       {
         "deutsch": "Kythira-See",
@@ -335,7 +339,8 @@
         "lat": 36.5,
         "lon": 22.8,
         "orte": "Kythira, Neapolis, Gythio, Monemvasia, Elafonisos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Ionian_Islands_4km"
       },
       {
         "deutsch": "Kretisches Meer West",
@@ -345,7 +350,8 @@
         "lat": 35.5,
         "lon": 23.5,
         "orte": "Chania, Rethymno, Heraklion, Kissamos, Paleochora",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SW_4km"
       },
       {
         "deutsch": "Kretisches Meer Ost",
@@ -355,7 +361,8 @@
         "lat": 35.2,
         "lon": 26,
         "orte": "Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SW_4km"
       },
       {
         "deutsch": "Saronischer Golf",
@@ -365,7 +372,8 @@
         "lat": 37.5,
         "lon": 23.5,
         "orte": "Athen/Piräus, Aegina, Poros, Hydra, Spetses",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SW_4km"
       },
       {
         "deutsch": "Ägäis Mitte",
@@ -375,7 +383,8 @@
         "lat": 37.5,
         "lon": 25,
         "orte": "Mykonos, Naxos, Syros, Paros, Tinos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SW_4km"
       },
       {
         "deutsch": "Ägäis Südwest",
@@ -385,7 +394,8 @@
         "lat": 36.8,
         "lon": 24.5,
         "orte": "Milos, Santorini, Folegandros, Sifnos, Serifos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SW_4km"
       },
       {
         "deutsch": "Ägäis Südost",
@@ -395,7 +405,8 @@
         "lat": 37.5,
         "lon": 26.5,
         "orte": "Ikaria, Samos, Chios, Patmos, Kos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SW_4km"
       },
       {
         "deutsch": "Dodekanes",
@@ -405,7 +416,8 @@
         "lat": 36.5,
         "lon": 27.5,
         "orte": "Rhodos, Kos, Kalymnos, Leros, Symi",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_SE_4km"
       },
       {
         "deutsch": "Ägäis Nordwest",
@@ -415,7 +427,8 @@
         "lat": 39.5,
         "lon": 24,
         "orte": "Skiathos, Skopelos, Volos, Alonissos, Skyros",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_NW_4km"
       },
       {
         "deutsch": "Ägäis Nordost",
@@ -425,7 +438,8 @@
         "lat": 39.5,
         "lon": 26,
         "orte": "Lesbos, Chios, Limnos, Samothraki, Thassos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_NW_4km"
       },
       {
         "deutsch": "Thrakisches Meer",
@@ -435,7 +449,8 @@
         "lat": 40.5,
         "lon": 25.5,
         "orte": "Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_NW_4km"
       },
       {
         "deutsch": "Thermaikos Golf",
@@ -445,7 +460,8 @@
         "lat": 40.2,
         "lon": 22.8,
         "orte": "Thessaloniki, Katerini, Halkidiki, Nea Moudania, Ierissos",
-        "windyModel": "iconEu"
+        "windyModel": "iconEu",
+        "openskiron_domain": "Aegean_NW_4km"
       }
     ]
   },
