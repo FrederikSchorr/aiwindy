@@ -270,7 +270,7 @@ export async function preprocessGreeceNationalSynopsis(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Aus dieser Seewetter-Warnung: Extrahiere NUR den Abschnitt "GENERAL SYNOPSIS" (großräumige Wetterlage mit Druckgebieten und Positionen). IGNORIERE alle gebietsspezifischen Warnungen (z.B. KITHIRA SEA, SOUTHWEST KRITIKO etc.). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Behalte alle Druckwerte (hPa) und UTC-Zeitangaben bei. Antworte nur mit der Übersetzung, ohne Erklärungen.
+        content: `Aus dieser Seewetter-Warnung: Extrahiere NUR den Abschnitt "GENERAL SYNOPSIS" (großräumige Wetterlage mit Druckgebieten und Positionen). IGNORIERE alle gebietsspezifischen Warnungen (z.B. KITHIRA SEA, SOUTHWEST KRITIKO etc.). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Behalte alle Druckwerte (hPa) bei. UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen (z.B. "03/21 UTC" → "04.04. 00:00 Ortszeit"). Antworte nur mit der Übersetzung, ohne Erklärungen.
 
 ${text}`,
       }],
@@ -315,7 +315,7 @@ export async function extractGreeceWarning(
         content: `Analysiere diese englische Seewetter-Warnung und beantworte für das Seegebiet "${emyName}":
 
 1. Ist "${emyName}" in der Warnung betroffen? (Prüfe die einzelnen Gebiets-Abschnitte NACH der "GENERAL SYNOPSIS")
-2. Falls ja: Extrahiere NUR den Warnungstext für "${emyName}" (Windrichtung, Windstärke, Gültigkeitsdauer). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort-Skala in Knoten umrechnen (z.B. 7 Bft = 28-33 kn, 8 Bft = 34-40 kn).
+2. Falls ja: Extrahiere NUR den Warnungstext für "${emyName}" (Windrichtung, Windstärke, Gültigkeitsdauer). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort-Skala in Knoten umrechnen (z.B. 7 Bft = 28-33 kn, 8 Bft = 34-40 kn). UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen (z.B. "03/22 UTC" → "01:00 Ortszeit").
 3. Falls nein: Antworte mit genau "NONE"
 
 IGNORIERE die "GENERAL SYNOPSIS" — extrahiere nur gebietsspezifische Warnungen. Antworte NUR mit der deutschen Übersetzung oder "NONE".
