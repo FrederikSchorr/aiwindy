@@ -84,6 +84,7 @@ export function createAnalysis(position: AnalysisPosition): {
         if (_key.endsWith("Base64")) return undefined;
         if ((_key === "austriaWindCloudRain" || _key === "greeceWindWaveCloudRain") && value && typeof value === "object") {
           const obj = { ...(value as Record<string, unknown>) };
+          delete obj["cape"];
           for (const [k, v] of Object.entries(obj)) {
             if (Array.isArray(v) && v.length > 20) obj[k] = v.filter((_, i) => i % 3 === 0);
           }
