@@ -51,7 +51,7 @@ export async function fetchAustriaWeather(
     ...lakeWarnings,
   };
   const sourceUrls = [
-    `[Flugwetter](${AUSTROCONTROL_URL}) von Austrocontrol`,
+    `Österreich Wetterlage von [Austrocontrol](${AUSTROCONTROL_URL})`,
     `Wind, Wolken, Regen, Temperatur von [Geosphere Austria](${GEOSPHERE_SOURCE_URL}) NWP API`,
   ];
   if (Object.keys(lakeWarnings).length > 0) {
