@@ -42,12 +42,13 @@ export async function fetchNationalWeather(
   sailingAreaName?: string | null,
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
+  country?: string,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironDownload?: { domain: string; timestamp: string } }> {
   switch (countryCode) {
     case "HR": return fetchCroatiaWeather(sailingAreaName);
     case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);
     case "GR": return fetchGreeceWeather(sailingAreaObj, cityObj);
-    default:   return { data: {}, sourceUrls: [] };
+    default:   return { data: {}, sourceUrls: [`Keine lokalen Wetterdaten für ${country || countryCode} angebunden.`] };
   }
 }
 

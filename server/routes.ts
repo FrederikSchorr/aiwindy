@@ -720,6 +720,10 @@ ${SAILING_AREAS_SUMMARY}
 WINDSYSTEME die du kennst:
 ${WIND_SYSTEMS_SUMMARY}
 
+LOKALE WETTERDATEN:
+Für folgende Länder sind lokale Wetterdienst-Daten angebunden: Österreich (GeoSphere Austria), Kroatien (DHMZ), Griechenland (EMY + OpenSkiron).
+Für alle anderen europäischen Länder werden Windy-Karten und Europa-Übersichten (Meteonews, KNMI, Wetterzentrale) verwendet, aber keine nationalen Wetterdienst-Daten.
+
 STIL:
 - Deutsch, sachlich-professionell
 - Bullet-Points wo sinnvoll
@@ -1545,6 +1549,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         sailingAreaObj?.name_de ?? null,
         sailingAreaObj,
         cityObj,
+        country,
       );
       Object.assign(analysis.data.weatherRaw, national.data);
       for (const u of national.sourceUrls)
