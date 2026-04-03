@@ -270,7 +270,7 @@ export async function preprocessGreeceNationalSynopsis(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Aus dieser Seewetter-Warnung: Extrahiere NUR den Abschnitt "GENERAL SYNOPSIS" (großräumige Wetterlage mit Druckgebieten und Positionen). IGNORIERE alle gebietsspezifischen Warnungen (z.B. KITHIRA SEA, SOUTHWEST KRITIKO etc.). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Behalte alle Druckwerte (hPa) bei. UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen (z.B. "03/21 UTC" → "04.04. 00:00 Ortszeit"). Antworte nur mit der Übersetzung, ohne Erklärungen.
+        content: `Aus dieser Seewetter-Warnung: Extrahiere NUR den Abschnitt "GENERAL SYNOPSIS" (großräumige Wetterlage mit Druckgebieten und Positionen). IGNORIERE alle gebietsspezifischen Warnungen (z.B. KITHIRA SEA, SOUTHWEST KRITIKO etc.). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Behalte alle Druckwerte (hPa) bei. Datumsformat DD-MM-YY/HH bedeutet Tag-Monat-Jahr um HH:00 UTC. UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen (z.B. "GENERAL SYNOPSIS 03-04-26/09 UTC" → "Großräumige Wetterlage 03.04. 12:00 Ortszeit", "03/21 UTC" bei Tag 03 → "03.04. 00:00 Ortszeit"). Antworte nur mit der Übersetzung, ohne Erklärungen.
 
 ${text}`,
       }],
