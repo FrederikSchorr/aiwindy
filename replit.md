@@ -13,7 +13,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - `client/src/pages/home.tsx` - Single-column chat UI with AnalysisView progressive rendering from JSON pipeline
 - `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, upload)
 - `shared/schema.ts` - Zod schemas, TypeScript types, WeatherEuropeSSE/WeatherOutputData interfaces
-- `server/weather-europe.ts` - European weather data fetching (meteonews, Wetterzentrale, KNMI)
+- `server/weather-europe.ts` - European weather data fetching (meteonews, Wetterzentrale, KNMI), time helpers (currentRunDate, nextForecastTarget)
 - `server/weather-output.ts` - AI-generated weather output (5 sections via Claude/GPT)
 - `server/analysis-store.ts` - Analysis JSON persistence
 - `server/location.ts` - Location detection (sailingArea + city via Claude Sonnet)
@@ -21,7 +21,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 ## How It Works
 1. User sends a message in the chat
 2. Backend classifies message via GPT-4.1-mini into:
-   - **CHAT**: General meteorology question or follow-up → direct GPT-4.1 answer (with weather context if location active)
+   - **CHAT**: General meteorology question or follow-up → direct GPT-4.1 answer (with weather context if location active, plus full last analysis context: meta, sections, preprocessed weather data)
    - **ANALYSE**: Location detected → 5-section weather analysis via JSON pipeline
    - **UNCLEAR**: Ambiguous message → asks user to specify a location
 3. For ANALYSE mode:
@@ -70,7 +70,7 @@ Backend generates weatherOutput via weather-output.ts (5 separate LLM calls per 
 ## Message Classification (AI-based)
 GPT-4.1-mini classifies each user message:
 - **ANALYSE <location>**: Location-specific weather query → full 6-section analysis
-- **CHAT**: General meteorology/sailing question or follow-up → direct conversational answer (with weather context if location active)
+- **CHAT**: General meteorology/sailing question or follow-up → direct conversational answer (with weather context if location active). Includes full last analysis context: meta info (location, model, coordinates), 5 section texts, and preprocessed weather data (up to 6000 chars) for follow-up questions.
 - **UNCLEAR**: Ambiguous query → asks user to specify location
 
 ## Regional Weather Scraping
