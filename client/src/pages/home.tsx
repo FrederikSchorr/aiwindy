@@ -836,7 +836,7 @@ export default function Home() {
             />
             <input
               type="file"
-              accept="image/*,video/*"
+              accept="image/*"
               capture="environment"
               ref={captureInputRef}
               onChange={onFileChange}
@@ -850,7 +850,7 @@ export default function Home() {
               onClick={() => captureInputRef.current?.click()}
               disabled={isStreaming}
               data-testid="button-capture"
-              title="Foto/Video aufnehmen"
+              title="Foto aufnehmen"
               className="shrink-0"
             >
               <Camera className="w-4 h-4" />
