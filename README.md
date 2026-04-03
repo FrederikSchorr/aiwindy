@@ -1,6 +1,14 @@
 # AIWindy — AI-Powered Sailing Weather Advisor
 
-An AI-powered sailing weather analysis app that combines European synoptic data, national weather services, and high-resolution regional models to generate structured sailing forecasts.
+An AI-powered sailing weather analysis app for European waters. Each analysis presents 5 interactive [Windy](https://www.windy.com) maps paired with AI-generated explanations — zooming in from the continental scale down to the local sailing area:
+
+1. **Druck & Luftmassen** — Europe-wide 850hPa pressure and air mass map (ECMWF)
+2. **Fronten** — KNMI weather fronts analysis chart with AI interpretation
+3. **Wind & Welle** — Regional high-resolution wind model map (1–7 km) with forecast bullets
+4. **Wolken & Regen** — Cloud and precipitation overlay with thunderstorm risk
+5. **Temperatur** — Local meteogram with temperature summary
+
+The app combines data from European synoptic services (Meteonews, Wetterzentrale, KNMI), national weather APIs (GeoSphere Austria, DHMZ Croatia, EMY/OpenSkiron Greece), and multiple AI models to generate concise, sailor-relevant analysis. Users can also upload photos or videos for meteorological AI analysis.
 
 ---
 
