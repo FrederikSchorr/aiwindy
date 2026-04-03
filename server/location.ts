@@ -138,6 +138,7 @@ Wichtig:
 - Bei allgemeinen Bezeichnungen wie "Adria": sailingArea: "Adria Mitte (Kroatien)", city: "Split".
 - Falls kein Revier passt (Binnenstadt, Inland): sailingArea: null.
 - Falls der Input komplett unverständlich ist: city: null.
+- Ortsnamen IMMER in lateinischer Schrift angeben, auch für griechische, türkische etc. Orte (z.B. "Skiathos" statt "Σκιάθος", "Istanbul" statt "İstanbul").
 
 Antworte NUR mit einem JSON-Objekt, z.B.:
 {"sailingArea": "Adria Mitte (Kroatien)", "city": "Split"}
