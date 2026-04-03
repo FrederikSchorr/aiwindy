@@ -108,7 +108,8 @@ Regeln pro Abschnitt:
 - GENAU 2 Bullets, max 20 Wörter je
 - Bullet 1: Dominante Drucksysteme über Europa + Richtung ihrer Bewegung
 - Bullet 2: Großräumige Luftmassen (kalt/warm, feucht/trocken, Luftmassengrenze, Gradienten)
-- KEINE Windströmungen/stärken, KEINE Temperaturen in Grad, KEINE Niederschlagserwähnung
+- KEINE Windströmungen/stärken, KEINE Niederschlagserwähnung
+- STRIKT VERBOTEN: Temperaturangaben in °C oder Grad — NIEMALS Temperaturwerte in diesem Abschnitt
 
 #2 weatherFront — Fronten (gleiche Inputs wie #1)
 - GENAU 2 Bullets, max 20 Wörter je
