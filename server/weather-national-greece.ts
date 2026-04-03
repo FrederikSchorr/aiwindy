@@ -195,7 +195,7 @@ export async function fetchGreeceWeather(
 
   const data: Record<string, unknown> = { greeceGaleWarning: hnms };
   if (openskiron) {
-    data["greeceWindCloudRain"] = openskiron.windCloudRain;
+    data["greeceWindWaveCloudRain"] = openskiron.windCloudRain;
     data["greeceTemperature"] = openskiron.temperature;
   }
 
@@ -349,7 +349,7 @@ export async function preprocessGreeceLocalWind(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["greeceWindCloudRain"] as any;
+  const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   if (!forecast?.timestamps || !forecast?.windSpeedKt) {
     return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
@@ -422,7 +422,7 @@ export async function preprocessGreeceLocalWave(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["greeceWindCloudRain"] as any;
+  const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   const src = "OpenSkiron WAM";
   if (!forecast?.timestamps || !forecast?.waveHeightM) {
@@ -490,7 +490,7 @@ export async function preprocessGreeceLocalCloudRainThunderstorm(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["greeceWindCloudRain"] as any;
+  const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   if (!forecast?.timestamps || !forecast?.rainMm || !forecast?.cloudCover) {
     return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
@@ -612,7 +612,7 @@ export function preprocessGreeceLocalTemperature(
 export function preprocessGreeceLocalWaterTemp(
   rawData: Record<string, unknown>,
 ): Record<string, unknown> {
-  const forecast = rawData["greeceWindCloudRain"] as any;
+  const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
   const nullResult = { waterTemp: { source: "OpenSkiron WRF 4km", url, text_de: null } };
 
