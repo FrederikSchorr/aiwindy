@@ -309,7 +309,7 @@ export async function extractGreeceWarning(
         content: `Analysiere diese englische Seewetter-Warnung und beantworte für das Seegebiet "${emyName}":
 
 1. Ist "${emyName}" in der Warnung betroffen? (Prüfe die einzelnen Gebiets-Abschnitte NACH der "GENERAL SYNOPSIS")
-2. Falls ja: Extrahiere NUR den Warnungstext für "${emyName}" (Windrichtung, Windstärke, Gültigkeitsdauer). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort-Skala in Knoten umrechnen (z.B. 7 Bft = 28-33 kn, 8 Bft = 34-40 kn). UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen, immer mit Datum (z.B. "03/22 UTC" → "04.04. 01:00 Ortszeit").
+2. Falls ja: Extrahiere NUR den Warnungstext für "${emyName}" (Windrichtung, Windstärke, Gültigkeitsdauer). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort in Knoten umrechnen und NUR Knoten angeben, KEINE Beaufort-Werte (z.B. 7 Bft → "28-33 kn", 7 or 8 → "28-40 kn"). UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen, immer mit Datum, KEIN UTC anzeigen (z.B. "03/22 UTC" → "04.04. 01:00 Ortszeit").
 3. Falls nein: Antworte mit genau "NONE"
 
 IGNORIERE die "GENERAL SYNOPSIS" — extrahiere nur gebietsspezifische Warnungen. Antworte NUR mit der deutschen Übersetzung oder "NONE".
