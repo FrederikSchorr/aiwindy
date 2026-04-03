@@ -162,7 +162,8 @@ def extract_data(
     def to_iso(t) -> str:
         dt = datetime.utcfromtimestamp(int(t) / 1_000_000_000).replace(tzinfo=timezone.utc)
         local = dt.astimezone(tz_athens)
-        return local.strftime("%Y-%m-%dT%H:%M:%S+%02d:00" % (local.utcoffset().total_seconds() // 3600))
+        offset_h = int(local.utcoffset().total_seconds() // 3600)
+        return local.strftime("%Y-%m-%dT%H:%M:%S") + f"+{offset_h:02d}:00"
 
     def get_values(ds, lat, lon):
         if ds is None:
