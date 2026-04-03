@@ -763,7 +763,7 @@ export default function Home() {
                 {isCurrentlyStreaming
                   ? <div id={`stream-${msg.id}`} className="text-[15px] leading-relaxed whitespace-pre-wrap text-foreground" />
                   : msg.content ? <MarkdownContent content={msg.content} /> : null}
-                {isCurrentlyStreaming && <BounceLoader />}
+                {isCurrentlyStreaming && (loadingStatus ? <StatusLoader text={loadingStatus} /> : <BounceLoader />)}
                 {photoHint && !isStreaming && (
                   <div className="mt-3 text-[14px]" data-testid="text-photo-location-hint">
                     <div className="flex items-center gap-2 flex-wrap text-muted-foreground italic">
