@@ -349,7 +349,7 @@ export async function extractGreeceWarning(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Übersetze diese englische Seewetter-Warnung ins Deutsche. Das Gebiet "${emyName}" ist von der Warnung betroffen. Beaufort-Skala und nautische Begriffe beibehalten. Antworte nur mit der Übersetzung.\n\n${text}`,
+        content: `Aus dieser englischen Seewetter-Warnung: Extrahiere NUR den Warnungstext für das Gebiet "${emyName}" (Windrichtung, Windstärke Beaufort, Gültigkeitsdauer). NICHT die General Synopsis, NICHT andere Gebiete. Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Antworte nur mit der Übersetzung für "${emyName}", nichts anderes.\n\n${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
