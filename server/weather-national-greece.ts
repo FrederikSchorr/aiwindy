@@ -354,7 +354,7 @@ export async function preprocessGreeceLocalWind(
   }
 
   const TZ = "Europe/Athens";
-  type Row = { time: string; dir: string; spd: number; gust: number; waveH: number | null; waveP: number | null; waveD: string | null; swellH: number | null };
+  type Row = { time: string; dir: string; spd: number; gust: number };
   const byDate = new Map<string, Row[]>();
 
   for (let i = 0; i < forecast.timestamps.length; i++) {
@@ -366,37 +366,20 @@ export async function preprocessGreeceLocalWind(
       dir: forecast.windDir[i],
       spd: Math.round(forecast.windSpeedKt[i]),
       gust: Math.round(forecast.gustKt[i]),
-      waveH: forecast.waveHeightM?.[i] ?? null,
-      waveP: forecast.wavePeriodS?.[i] ?? null,
-      waveD: forecast.waveDir?.[i] ?? null,
-      swellH: forecast.swellHeightM?.[i] ?? null,
     });
   }
 
   const days = Array.from(byDate.entries()).slice(0, 2);
   if (!days.length) return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
 
-  const hasWaves = days.some(([, rows]) => rows.some(r => r.waveH !== null));
   const table = days
     .map(([label, rows]) => {
-      const rowStr = rows.map(r => {
-        let line = `${r.time} ${r.dir} ${r.spd}kt Böe ${r.gust}kt`;
-        if (hasWaves && r.waveH !== null) {
-          line += ` | Welle ${r.waveH}m`;
-          if (r.waveP !== null) line += ` ${r.waveP}s`;
-          if (r.waveD) line += ` aus ${r.waveD}`;
-          if (r.swellH !== null && r.swellH > 0.1) line += ` (Dünung ${r.swellH}m)`;
-        }
-        return line;
-      }).join("  ");
+      const rowStr = rows.map(r => `${r.time} ${r.dir} ${r.spd}kt Böe ${r.gust}kt`).join("  ");
       return `${label}:\n${rowStr}`;
     })
     .join("\n\n");
 
-  const waveInstruction = hasWaves
-    ? " Beschreibe auch Wellenhöhe, Periode und ggf. Dünung."
-    : "";
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Wind- und Wellenverlauf für jeden Tag in je einem deutschen Satz (max. 30 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf.${waveInstruction} Format: "Di 31.03: ...\nMi 01.04: ..."
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Format: "Di 31.03: ...\nMi 01.04: ..."
 
 ${table}`;
 
@@ -411,6 +394,87 @@ ${table}`;
   } catch {
     return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
   }
+}
+
+const DOUGLAS_SCALE: { max: number; label: string }[] = [
+  { max: 0.0,  label: "0 (glatt)" },
+  { max: 0.1,  label: "1 (ruhig)" },
+  { max: 0.5,  label: "2 (schwach bewegt)" },
+  { max: 1.25, label: "3 (leicht bewegt)" },
+  { max: 2.5,  label: "4 (mäßig bewegt)" },
+  { max: 4.0,  label: "5 (grob)" },
+  { max: 6.0,  label: "6 (sehr grob)" },
+  { max: 9.0,  label: "7 (hoch)" },
+  { max: 14.0, label: "8 (sehr hoch)" },
+  { max: Infinity, label: "9 (phänomenal)" },
+];
+
+function toDouglasScale(heightM: number): string {
+  for (const d of DOUGLAS_SCALE) {
+    if (heightM <= d.max) return d.label;
+  }
+  return DOUGLAS_SCALE[DOUGLAS_SCALE.length - 1].label;
+}
+
+export function preprocessGreeceLocalWave(
+  rawData: Record<string, unknown>,
+): Record<string, unknown> {
+  const forecast = rawData["greeceWindCloudRain"] as any;
+  const url: string | null = forecast?.url ?? null;
+  const src = "OpenSkiron WAM";
+  if (!forecast?.timestamps || !forecast?.waveHeightM) {
+    return { wave: { source: src, url, text_de: null } };
+  }
+
+  const hasAnyWave = (forecast.waveHeightM as (number | null)[]).some(
+    (v: number | null) => v !== null && !isNaN(v),
+  );
+  if (!hasAnyWave) {
+    return { wave: { source: src, url, text_de: null } };
+  }
+
+  const TZ = "Europe/Athens";
+  type WaveRow = { hour: number; waveH: number; swellH: number | null; waveD: string | null; waveP: number | null };
+  const byDate = new Map<string, WaveRow[]>();
+
+  for (let i = 0; i < forecast.timestamps.length; i++) {
+    const wh = forecast.waveHeightM[i];
+    if (wh === null || isNaN(wh)) continue;
+    const { label, hour } = toLocalDateHour(forecast.timestamps[i], TZ);
+    if (hour < 6 || hour > 20) continue;
+    if (!byDate.has(label)) byDate.set(label, []);
+    byDate.get(label)!.push({
+      hour,
+      waveH: wh,
+      swellH: forecast.swellHeightM?.[i] ?? null,
+      waveD: forecast.waveDir?.[i] ?? null,
+      waveP: forecast.wavePeriodS?.[i] ?? null,
+    });
+  }
+
+  const days = Array.from(byDate.entries()).slice(0, 3);
+  if (!days.length) return { wave: { source: src, url, text_de: null } };
+
+  const lines = days.map(([label, rows]) => {
+    const maxH = Math.max(...rows.map(r => r.waveH));
+    const minH = Math.min(...rows.map(r => r.waveH));
+    const avgH = rows.reduce((s, r) => s + r.waveH, 0) / rows.length;
+    const douglas = toDouglasScale(avgH);
+    const maxSwell = Math.max(...rows.map(r => r.swellH ?? 0));
+    const dirs = rows.map(r => r.waveD).filter(Boolean);
+    const mainDir = dirs.length > 0 ? dirs[Math.floor(dirs.length / 2)] : null;
+    const avgPeriod = rows.filter(r => r.waveP !== null).length > 0
+      ? (rows.reduce((s, r) => s + (r.waveP ?? 0), 0) / rows.filter(r => r.waveP !== null).length).toFixed(1)
+      : null;
+
+    let line = `${label}: See ${douglas}`;
+    if (mainDir) line += ` aus ${mainDir}`;
+    if (avgPeriod) line += `, Periode ${avgPeriod}s`;
+    if (maxSwell > 0.1) line += `, Dünung ${toDouglasScale(maxSwell)}`;
+    return line;
+  });
+
+  return { wave: { source: src, url, text_de: lines.join("\n") } };
 }
 
 export async function preprocessGreeceLocalCloudRainThunderstorm(

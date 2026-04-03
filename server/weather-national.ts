@@ -20,6 +20,7 @@ import {
   preprocessGreeceNationalSynopsis,
   extractGreeceWarning,
   preprocessGreeceLocalWind,
+  preprocessGreeceLocalWave,
   preprocessGreeceLocalCloudRainThunderstorm,
   preprocessGreeceLocalTemperature,
   preprocessGreeceLocalWaterTemp,
@@ -92,6 +93,7 @@ export async function preprocessLocalWeather(
     return {
       ...await extractGreeceWarning(text, emyName, anthropic),
       ...await preprocessGreeceLocalWind(rawData, anthropic),
+      ...preprocessGreeceLocalWave(rawData),
       ...await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic),
       ...preprocessGreeceLocalTemperature(rawData),
       ...preprocessGreeceLocalWaterTemp(rawData),
