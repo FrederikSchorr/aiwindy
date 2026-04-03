@@ -871,7 +871,7 @@ export default function Home() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ort, Frage oder Nachricht..."
+                placeholder="Ort, Foto oder Frage..."
                 className="text-[15px]"
                 disabled={isStreaming}
                 data-testid="input-message"
