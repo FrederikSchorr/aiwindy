@@ -59,6 +59,8 @@ let lastAnalysisContext: {
   location: string;
   date: string;
   sections: Record<string, string>;
+  meta: string;
+  preprocessed: string;
 } | null = null;
 let lastAnalysisFilePath: string | null = null;
 import {
@@ -1294,12 +1296,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         }
         if (lastAnalysisContext) {
           systemPrompt += `\n\nLETZTE WETTERANALYSE (${lastAnalysisContext.date}, ${lastAnalysisContext.location}):\n`;
+          systemPrompt += `\n--- META ---\n${lastAnalysisContext.meta}\n`;
+          systemPrompt += `\n--- ANALYSE-ERGEBNIS (5 Sektionen) ---\n`;
           for (const [section, text] of Object.entries(
             lastAnalysisContext.sections,
           )) {
             systemPrompt += `${section}: ${text}\n`;
           }
-          systemPrompt += `\nDer Benutzer kann Rückfragen zu dieser Analyse stellen. Erkläre die Ergebnisse verständlich.`;
+          systemPrompt += `\n--- WETTERDATEN (preprocessed) ---\n${lastAnalysisContext.preprocessed}\n`;
+          systemPrompt += `\nDer Benutzer kann Rückfragen zu dieser Analyse stellen. Beantworte sie basierend auf den obigen Daten. Du kennst das verwendete Wettermodell, die Koordinaten, die Wetterdaten und alle Details der Analyse.`;
         }
 
         const chatMessages: Anthropic.MessageParam[] = [
@@ -1595,12 +1600,45 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         cityObj.name_de ??
         displayName.split(",")[0].trim();
       lastAnalysisFilePath = analysis.filePath;
+
+      const metaLines: string[] = [];
+      metaLines.push(`Ort: ${analysisLabel}`);
+      metaLines.push(`Land: ${country} (${countryCode})`);
+      metaLines.push(`Segelrevier: ${sailingAreaObj?.name_de ?? "nicht erkannt"}`);
+      metaLines.push(`Stadt: ${cityObj.name_de} (${cityObj.coordinates.lat.toFixed(2)}°N, ${cityObj.coordinates.lon.toFixed(2)}°E)`);
+      metaLines.push(`Windmodell: ${regional.label}`);
+      if (sailingAreaObj?.coordinates) {
+        metaLines.push(`Revier-Koordinaten: ${sailingAreaObj.coordinates.lat.toFixed(2)}°N, ${sailingAreaObj.coordinates.lon.toFixed(2)}°E`);
+      }
+
+      const preParts: string[] = [];
+      const pre = analysis.data.weatherPreprocessed;
+      if (pre.europe?.generalWeather?.text_de) {
+        preParts.push(`EUROPA-WETTERLAGE:\n${pre.europe.generalWeather.text_de}`);
+      }
+      if (pre.national) {
+        for (const [k, v] of Object.entries(pre.national)) {
+          if (v && typeof v === "object" && "text_de" in v && v.text_de) {
+            preParts.push(`${k.toUpperCase()}:\n${v.text_de}`);
+          }
+        }
+      }
+      if (pre.local) {
+        for (const [k, v] of Object.entries(pre.local)) {
+          if (v && typeof v === "object" && "text_de" in v && typeof v.text_de === "string" && v.text_de) {
+            preParts.push(`LOKAL ${k.toUpperCase()}:\n${v.text_de}`);
+          }
+        }
+      }
+
       lastAnalysisContext = {
         location: analysisLabel,
         date: new Date().toLocaleString("de-AT", {
           timeZone: COUNTRY_TIMEZONE[countryCode] || "Europe/Vienna",
         }),
         sections: {},
+        meta: metaLines.join("\n"),
+        preprocessed: preParts.join("\n\n").slice(0, 6000),
       };
       for (const [key, value] of Object.entries(weatherOutput)) {
         if (typeof value === "string")
