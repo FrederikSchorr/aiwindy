@@ -71,6 +71,8 @@ import {
   fetchWetterzentraleChart,
   buildWetterzentraleCurrentUrl,
   buildWetterzentraleForecastUrl,
+  currentRunDate,
+  nextForecastTarget,
   stripHtml,
   getEuropeSources,
 } from "./weather-europe.js";
@@ -1496,9 +1498,6 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           text_de: null,
         };
       }
-      const wz850Current = await fetchWetterzentraleChart(
-        buildWetterzentraleCurrentUrl(),
-      );
       const localTz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
       const fmtLocal = (d: Date) =>
         new Intl.DateTimeFormat("de-DE", {
@@ -1506,25 +1505,19 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           hour: "2-digit", minute: "2-digit",
           timeZone: localTz,
         }).format(d);
-      const runHour = Math.floor(new Date().getUTCHours() / 6) * 6;
-      const nowUtc = new Date();
-      const runDate = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), runHour));
-      const minTime = nowUtc.getTime() + 6 * 60 * 60 * 1000;
-      const y = nowUtc.getUTCFullYear(), mo = nowUtc.getUTCMonth(), d = nowUtc.getUTCDate();
-      let forecastTarget: Date | null = null;
-      for (const h of [0, 12]) {
-        const c = new Date(Date.UTC(y, mo, d, h));
-        if (c.getTime() >= minTime) { forecastTarget = c; break; }
-      }
-      if (!forecastTarget) {
-        forecastTarget = new Date(Date.UTC(y, mo, d + 1, 0));
-      }
+      const runUtc = currentRunDate();
+      const fcTarget = nextForecastTarget();
+      const currentTs = `Aktuell ${fmtLocal(runUtc)} Ortszeit`;
+      const forecastTs = `Forecast ${fmtLocal(fcTarget)} Ortszeit`;
 
+      const wz850Current = await fetchWetterzentraleChart(
+        buildWetterzentraleCurrentUrl(),
+      );
       analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
         source: "Wetterzentrale",
         url: wz850Current?.url ?? null,
         imageBase64: wz850Current?.imageBase64 ?? null,
-        timestamp: `Aktuell ${fmtLocal(runDate)} Ortszeit`,
+        timestamp: currentTs,
       };
       const wz850Forecast = await fetchWetterzentraleChart(
         buildWetterzentraleForecastUrl(),
@@ -1533,21 +1526,21 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         source: "Wetterzentrale",
         url: wz850Forecast?.url ?? null,
         imageBase64: wz850Forecast?.imageBase64 ?? null,
-        timestamp: `Forecast ${fmtLocal(forecastTarget)} Ortszeit`,
+        timestamp: forecastTs,
       };
       const knmi = await fetchKnmiChart();
       analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
         source: "KNMI",
         url: knmi?.url ?? null,
         imageBase64: knmi?.imageBase64 ?? null,
-        timestamp: `Aktuell ${fmtLocal(runDate)} Ortszeit`,
+        timestamp: currentTs,
       };
       const knmiForecast = await fetchKnmiForecast();
       analysis.data.weatherPreprocessed.europe["frontForecast"] = {
         source: "KNMI",
         url: knmiForecast?.url ?? null,
         imageBase64: knmiForecast?.imageBase64 ?? null,
-        timestamp: `Forecast ${fmtLocal(forecastTarget)} Ortszeit`,
+        timestamp: forecastTs,
       };
 
       analysis.data.sources.europe.push(...getEuropeSources());

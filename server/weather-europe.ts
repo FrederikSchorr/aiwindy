@@ -68,12 +68,18 @@ export async function fetchMeteonews(): Promise<string> {
 // ── Shared time helpers ───────────────────────────────────────────────────────
 
 /** Current ECMWF run: last elapsed 0/6/12/18 UTC slot */
-function currentRunHour(): number {
+export function currentRunHour(): number {
   return Math.floor(new Date().getUTCHours() / 6) * 6;
 }
 
+export function currentRunDate(): Date {
+  const now = new Date();
+  const run = currentRunHour();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), run));
+}
+
 /** Next 00 or 12 UTC that is at least 6 h in the future */
-function nextForecastTarget(): Date {
+export function nextForecastTarget(): Date {
   const now = new Date();
   const minTime = now.getTime() + 6 * 60 * 60 * 1000;
   const y = now.getUTCFullYear(),
