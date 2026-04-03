@@ -1346,6 +1346,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // ── Ortserkennung ─────────────────────────────────────────────────────
       const userInput = classification.location;
+      sendSSE({ loadingStatus: "Suche Segelrevier" });
       const detected = await detectLocation(userInput, anthropic);
 
       if (detected === null) {
@@ -1446,6 +1447,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       };
 
       sendSSE({ location: geocoded });
+      sendSSE({ loadingStatus: "Lade Europa Wetterkarten" });
 
       // ── Analysis JSON ──────────────────────────────────────────────────────
       const analysis = createAnalysis({
@@ -1535,6 +1537,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         },
       });
       analysis.save();
+      sendSSE({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
 
       const national = await fetchNationalWeather(
         countryCode,
@@ -1546,6 +1549,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       Object.assign(analysis.data.weatherRaw, national.data);
       for (const u of national.sourceUrls)
         analysis.data.sources.national.push(u);
+      if (national.openskironDownload) {
+        sendSSE({ loadingStatus: `Speichern der OpenSkiron Wetterdaten für ${national.openskironDownload.domain} ${national.openskironDownload.timestamp}` });
+      }
       const nationalPre = await preprocessNationalWeather(
         analysis.data.weatherRaw,
         anthropic,
@@ -1565,6 +1571,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       Object.assign(analysis.data.weatherPreprocessed.local, localPre);
       analysis.save();
 
+      sendSSE({ loadingStatus: "Interpretieren der lokalen Wetterdaten" });
       const weatherOutput = await generateWeatherOutput(
         analysis.data,
         anthropic,

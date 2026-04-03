@@ -79,7 +79,7 @@ function getOpenskironDomain(sailingAreaNameDe: string): string | null {
 async function fetchGreeceWindCloudRain(
   sailingAreaObj: NonNullable<SailingAreaObj>,
   cityObj: CityObj,
-): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown> }> {
+): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironDownload?: { domain: string; timestamp: string } }> {
   const nullWindCloudRain = {
     source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
     sailingArea: sailingAreaObj,
@@ -126,6 +126,7 @@ async function fetchGreeceWindCloudRain(
     proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
     proc.on("close", (code: number | null) => {
       clearTimeout(timer);
+      const didDownload = stderr.includes("[download]");
       const stderrClean = stderr
         .split("\n")
         .filter(l => !l.includes("missingValue") && !l.includes("Ignoring index file")
@@ -143,7 +144,7 @@ async function fetchGreeceWindCloudRain(
         const jsonStart = stdout.indexOf('{');
         if (jsonStart < 0) throw new Error("No JSON object in stdout");
         const parsed = JSON.parse(stdout.slice(jsonStart));
-        resolve({
+        const result: { windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironDownload?: { domain: string; timestamp: string } } = {
           windCloudRain: {
             source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
             sailingArea: sailingAreaObj,
@@ -166,7 +167,12 @@ async function fetchGreeceWindCloudRain(
             timestamps: parsed.timestamps,
             temp2mC: parsed.temp2mC,
           },
-        });
+        };
+        if (didDownload) {
+          const ts = parsed.timestamps?.[0] ?? new Date().toISOString();
+          result.openskironDownload = { domain, timestamp: ts.slice(0, 16) };
+        }
+        resolve(result);
       } catch (e) {
         console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);
         resolve(nullResult);
@@ -185,7 +191,7 @@ async function fetchGreeceWindCloudRain(
 export async function fetchGreeceWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironDownload?: { domain: string; timestamp: string } }> {
   const [hnms, openskiron] = await Promise.all([
     fetchHnmsGaleWarning(),
     sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj) : null,
@@ -204,7 +210,7 @@ export async function fetchGreeceWeather(
     sourceUrls.push(`Wind, Welle, Wolken, Gewitter von [OpenSkiron](${OPENSKIRON_SOURCE_URL})`);
   }
 
-  return { data, sourceUrls };
+  return { data, sourceUrls, openskironDownload: openskiron?.openskironDownload };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

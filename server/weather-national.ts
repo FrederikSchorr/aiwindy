@@ -42,7 +42,7 @@ export async function fetchNationalWeather(
   sailingAreaName?: string | null,
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironDownload?: { domain: string; timestamp: string } }> {
   switch (countryCode) {
     case "HR": return fetchCroatiaWeather(sailingAreaName);
     case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);

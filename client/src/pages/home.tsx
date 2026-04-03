@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Sailboat, Camera, MapPin, Image } from "lucide-react";
+import { Send, Sailboat, Camera, MapPin, Image, Wind, Compass, Anchor, Waves, Sun, Cloud, CloudRain, Thermometer, Navigation, Flag, CloudSun, Droplets, Ship, type LucideIcon } from "lucide-react";
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 
 const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
@@ -20,6 +20,7 @@ interface SSEPayload {
   content?: string;
   error?: string;
   done?: boolean;
+  loadingStatus?: string;
 }
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker }: {
@@ -148,6 +149,29 @@ function BounceLoader() {
   );
 }
 
+const STATUS_ICONS: LucideIcon[] = [
+  Sailboat, Wind, Compass, Anchor, Waves, Sun, Cloud, CloudRain,
+  Thermometer, Navigation, Flag, CloudSun, Droplets, Ship, MapPin,
+];
+
+function StatusLoader({ text }: { text: string }) {
+  const [iconIndex, setIconIndex] = useState(0);
+  useEffect(() => {
+    setIconIndex(Math.floor(Math.random() * STATUS_ICONS.length));
+    const interval = setInterval(() => {
+      setIconIndex(prev => (prev + 1) % STATUS_ICONS.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [text]);
+  const Icon = STATUS_ICONS[iconIndex];
+  return (
+    <div className="flex items-center gap-2 mt-2 text-muted-foreground text-sm" data-testid="status-loader">
+      <Icon className="w-4 h-4 text-primary/70 shrink-0 transition-all duration-300" />
+      <span>{text}...</span>
+    </div>
+  );
+}
+
 function SectionTitle({ num, title }: { num: number; title: string }) {
   return (
     <h2 className="text-base font-bold mt-4 mb-1" data-testid={`section-title-${num}`}>
@@ -168,13 +192,14 @@ function CountryFlag({ countryCode }: { countryCode: string }) {
   );
 }
 
-function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStreaming, hasError }: {
+function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStreaming, hasError, loadingStatus }: {
   location: GeocodeResult;
   weatherEurope: WeatherEuropeSSE | null;
   weatherOutput: WeatherOutputData | null;
   sources: AnalysisSources | null;
   isStreaming: boolean;
   hasError?: boolean;
+  loadingStatus?: string | null;
 }) {
   const saLat = location.lat;
   const saLon = location.lon;
@@ -217,13 +242,13 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
         <MarkdownContent content={weatherOutput.airPressureMasses.text} />
       )}
 
-      {hasError && !weatherEurope && (
+      {hasError && !weatherOutput && (
         <p className="text-sm text-destructive mt-3" data-testid="text-analysis-error">
           Fehler bei der Datenabfrage. Die Analyse konnte nicht vollständig geladen werden.
         </p>
       )}
 
-      {!weatherEurope && isStreaming && !hasError && <BounceLoader />}
+      {!weatherEurope && isStreaming && !hasError && loadingStatus && <StatusLoader text={loadingStatus} />}
 
       {weatherEurope && (
         <>
@@ -277,7 +302,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
             <MarkdownContent content={weatherOutput.temperature.text} />
           )}
 
-          {!weatherOutput && isStreaming && <BounceLoader />}
+          {!weatherOutput && isStreaming && loadingStatus && <StatusLoader text={loadingStatus} />}
 
           {weatherOutput && sources && (
             <>
@@ -332,6 +357,7 @@ export default function Home() {
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
   const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, boolean>>({});
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -362,6 +388,9 @@ export default function Home() {
     const getChatStreamEl = () => document.getElementById(`stream-${assistantId}`);
 
     const handleEvent = (data: SSEPayload) => {
+      if (data.loadingStatus) {
+        setLoadingStatus(data.loadingStatus);
+      }
       if (data.location) {
         isAnalyse = true;
         setActiveLocation(data.location);
@@ -377,7 +406,11 @@ export default function Home() {
       if (data.sources) {
         setMessageSources(prev => ({ ...prev, [assistantId]: data.sources! }));
       }
+      if (data.done) {
+        setLoadingStatus(null);
+      }
       if (data.error) {
+        setLoadingStatus(null);
         if (isAnalyse) {
           setAnalysisErrors(prev => ({ ...prev, [assistantId]: true }));
         } else {
@@ -427,6 +460,7 @@ export default function Home() {
         uploadHintShownRef.current = true;
         setUploadHintAfterMsgId(assistantId);
       }
+      setLoadingStatus(null);
       setIsStreaming(false);
     };
     xhr.onerror = () => {
@@ -435,6 +469,7 @@ export default function Home() {
           m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
         )
       );
+      setLoadingStatus(null);
       setIsStreaming(false);
     };
 
@@ -709,6 +744,7 @@ export default function Home() {
                     sources={srcs}
                     isStreaming={isStreaming && isLast}
                     hasError={hasAnalysisError}
+                    loadingStatus={isStreaming && isLast ? loadingStatus : null}
                   />
                   {showUploadHint && !isStreaming && (
                     <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-upload-hint">
