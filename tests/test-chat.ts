@@ -110,7 +110,7 @@ async function handleInput(input: string) {
     userInput: input,
     country,
     countryCode,
-    windyModel: regional?.label ?? "ICON-EU 7km",
+    windyModel: "ICON-EU 7km",
     sailingArea: sailingAreaObj,
     city: cityObj,
   });

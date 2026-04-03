@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 import {
   fetchAustriaWeather,
   preprocessNationalWeatherAT,
@@ -14,6 +15,18 @@ import {
   extractDhmzSailingAreaForecast,
   preprocessDhmzLocalTemperature,
 } from "./weather-national-croatia.js";
+import {
+  fetchGreeceWeather,
+  preprocessGreeceNationalSynopsis,
+  extractGreeceWarning,
+} from "./weather-national-greece.js";
+
+function getGreekEmyName(sailingAreaNameDe: string | null): string | null {
+  if (!sailingAreaNameDe) return null;
+  const reviere = (sailingAreasJson as any)["Griechenland"]?.reviere ?? [];
+  const found = reviere.find((r: any) => r.deutsch === sailingAreaNameDe);
+  return found?.emy_name ?? null;
+}
 
 type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
 type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
@@ -28,6 +41,7 @@ export async function fetchNationalWeather(
   switch (countryCode) {
     case "HR": return fetchCroatiaWeather(sailingAreaName);
     case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);
+    case "GR": return fetchGreeceWeather();
     default:   return { data: {}, sourceUrls: [] };
   }
 }
@@ -38,6 +52,10 @@ export async function preprocessNationalWeather(
   countryCode?: string,
 ): Promise<Record<string, unknown>> {
   if (countryCode === "AT") return preprocessNationalWeatherAT(rawData);
+  if (countryCode === "GR") {
+    const text = (rawData["greeceGaleWarning"] as any)?.text as string | null;
+    return await preprocessGreeceNationalSynopsis(text, anthropic);
+  }
   if (countryCode !== "HR") return {};
   const adriaXml = (rawData["croatiaAdriaForecast"] as any)?.xml as string | null;
   return {
@@ -62,6 +80,12 @@ export async function preprocessLocalWeather(
       ...await preprocessLocalCloudRainAT(rawData, anthropic),
       ...preprocessLocalWeatherAT(rawData),
     };
+  }
+
+  if (countryCode === "GR") {
+    const text = (rawData["greeceGaleWarning"] as any)?.text as string | null;
+    const emyName = getGreekEmyName(position.sailingArea);
+    return await extractGreeceWarning(text, emyName, anthropic);
   }
 
   if (countryCode !== "HR") return {};
