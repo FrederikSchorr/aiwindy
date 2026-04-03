@@ -836,7 +836,7 @@ export default function Home() {
             />
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               capture="environment"
               ref={captureInputRef}
               onChange={onFileChange}
