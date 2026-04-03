@@ -14,9 +14,16 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - `server/routes.ts` - All API endpoints (chat, geocode, KNMI proxy, upload)
 - `shared/schema.ts` - Zod schemas, TypeScript types, WeatherEuropeSSE/WeatherOutputData interfaces
 - `server/weather-europe.ts` - European weather data fetching (meteonews, Wetterzentrale, KNMI), time helpers (currentRunDate, nextForecastTarget)
+- `server/weather-national.ts` - Router for national weather: dispatches to country-specific modules, preprocessing pipeline
+- `server/weather-national-austria.ts` - AT: GeoSphere Austria JSON APIs (forecast + warnings + Neusiedler See)
+- `server/weather-national-croatia.ts` - HR: DHMZ XML APIs (Adria forecast, regional warnings, city meteograms)
+- `server/weather-national-greece.ts` - GR: HNMS/EMY gale warnings + OpenSkiron GRIB via Python (wind, wave, cloud, temperature)
 - `server/weather-output.ts` - AI-generated weather output (5 sections via Claude/GPT)
 - `server/analysis-store.ts` - Analysis JSON persistence
 - `server/location.ts` - Location detection (sailingArea + city via Claude Sonnet)
+- `data/sailingareas.json` - 133 sailing areas across 20 countries with coordinates, windyModel, country-specific metadata (e.g. emy_name for GR)
+- `data/countries.json` - Country-level config: windyModel fallback, country names
+- `data/windymodels.json` - Windy model definitions (key + label), referenced by sailingareas.json and countries.json
 
 ## How It Works
 1. User sends a message in the chat
@@ -73,15 +80,21 @@ GPT-4.1-mini classifies each user message:
 - **CHAT**: General meteorology/sailing question or follow-up → direct conversational answer (with weather context if location active). Includes full last analysis context: meta info (location, model, coordinates), 5 section texts, and preprocessed weather data (up to 6000 chars) for follow-up questions.
 - **UNCLEAR**: Ambiguous query → asks user to specify location
 
-## Regional Weather Scraping
-- `fetchMeteonews()`: Scrapes meteonews.at/de/Allgemeine_Lage/K33/Europa for European overview
-- `fetchRegionalWeatherReport(countryCode, lat, lon)`: Scrapes national weather service for local forecast
-- Supported countries: HR (DHMZ), DE (DWD), AT (GeoSphere), IT (MeteoAM), FR (Météo-France), GR (EMY), SI (ARSO), ME (ZHMS), GB (Met Office), NL (KNMI), ES (AEMET), PT (IPMA), TR (MGM), DK (DMI), SE (SMHI), NO (Yr.no), PL (IMGW), CH (MeteoSchweiz)
-- HTML stripped via regex, fallback message if scraping fails
-- Only ONE scrape per region — forecast page is used for both forecast data AND warnings (sections 3-6)
-- For AT: uses GeoSphere JSON APIs for both forecast and warnings (clean data, no preprocessing needed)
-- LLM-based content validation: after scraping, gpt-4.1-mini checks if text contains actual weather data (not just navigation HTML from SPAs). Invalid content is marked unavailable.
-- LLM preprocessing: after validation, gpt-4.1-mini extracts only meteorological content from raw scraped text (removes navigation, menus, boilerplate). Clean text is used by all downstream section LLM calls.
+## Weather Data Sources
+
+### Europe-wide
+- `fetchMeteonews()`: Scrapes meteonews.at European overview (general weather situation)
+- Wetterzentrale: 850hPa temperature charts (current + forecast) with local timestamps
+- KNMI: Fronts analysis charts (current + forecast) with local timestamps
+
+### Country-specific (fully integrated APIs)
+- **AT** (GeoSphere Austria): JSON APIs — forecast, warnings, Neusiedler See wind warnings. No HTML scraping needed.
+- **HR** (DHMZ): XML APIs — Adria sailing forecast, regional maritime warnings, city meteograms (temperature)
+- **GR** (HNMS/EMY + OpenSkiron): Gale warnings via EMY (area-specific via emy_name from sailingareas.json). OpenSkiron GRIB data via Python subprocess — wind, wave (Douglas scale), cloud cover, temperature, CAPE. Cached in `cache/openskiron/`.
+
+### Other countries (20 total in sailingareas.json)
+- No local weather data integrated yet. Analysis uses Europe-wide data + Windy maps only.
+- LLM preprocessing pipeline available: scrape → validate (gpt-4.1-mini checks for actual weather content) → extract meteorological text → feed to section LLM calls.
 
 ## Regional Model Selection (JSON-based, no LLM)
 Windy wind model is selected via static JSON lookup — no LLM call needed:
