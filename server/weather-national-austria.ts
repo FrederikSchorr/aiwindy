@@ -51,11 +51,11 @@ export async function fetchAustriaWeather(
     ...lakeWarnings,
   };
   const sourceUrls = [
-    `Österreich Wetterlage von [Austrocontrol](${AUSTROCONTROL_URL})`,
-    `Wind, Bewölkung, Regen, Temperatur von [GeoSphere Austria](${GEOSPHERE_SOURCE_URL})`,
+    `[Flugwetter](${AUSTROCONTROL_URL}) von Austrocontrol`,
+    `Wind, Wolken, Regen, Temperatur von [Geosphere Austria](${GEOSPHERE_SOURCE_URL}) NWP API`,
   ];
   if (Object.keys(lakeWarnings).length > 0) {
-    sourceUrls.push(`Sturmwarnung von [LSZ Burgenland](${LSZ_BURGENLAND_URL})`);
+    sourceUrls.push(`[Sturmwarnung](${LSZ_BURGENLAND_URL}) von LSZ Burgenland`);
   }
   return { data, sourceUrls };
 }
