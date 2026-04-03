@@ -467,7 +467,7 @@ export async function preprocessGreeceLocalWave(
     return `${label}:\n${rowStr}`;
   }).join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Seegangsverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Verwende NUR Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne Wellenrichtung und ggf. Dünung. Format: "Di 31.03: ...\nMi 01.04: ...\nDo 02.04: ..."
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe NUR den Seegang (KEIN Wind!) für alle Tage in EINEM einzigen Satz (max. 30 Wörter). Verwende Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne Wellenrichtung und ggf. Dünung. Fasse alle Tage zusammen, z.B.: "Heute See 3 leicht bewegt aus S, morgen abnehmend auf See 2, Dünung gering."
 
 ${table}`;
 
