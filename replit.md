@@ -26,8 +26,8 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
    - **UNCLEAR**: Ambiguous message → asks user to specify a location
 3. For ANALYSE mode:
    - Detects location via Claude Sonnet (sailingArea + city objects)
-   - Geocodes via Nominatim, selects regional wind model from sailingareas.json (per revier) or windymodels.json (per country)
-   - SSE sequence: `{ location }` → `{ weatherEurope }` → `{ weatherOutput }` → `{ done }`
+   - Geocodes via Nominatim, selects regional wind model from sailingareas.json (per revier) or countries.json (per country), resolves via windymodels.json
+   - SSE sequence: `{ location }` → `{ weatherEurope }` → `{ weatherOutput, sources }` → `{ done }`
    - Frontend progressively renders sections as SSE events arrive
 
 ## Chat Layout
@@ -85,8 +85,9 @@ GPT-4.1-mini classifies each user message:
 
 ## Regional Model Selection (JSON-based, no LLM)
 Windy wind model is selected via static JSON lookup — no LLM call needed:
-- **sailingareas.json**: Each of 133 sailing areas has `model`, `label`, `zoom` fields (highest priority)
-- **windymodels.json**: Country-level defaults for all 20 countries (fallback when no sailing area detected)
+- **sailingareas.json**: Each of 133 sailing areas has `windyModel` key (highest priority)
+- **windymodels.json**: Windy model definitions (model key + label) — referenced by countries.json and sailingareas.json
+- **countries.json**: Country-level `windyModel` key for all 20 countries (fallback when no sailing area detected)
 - **getRegionalModelFallback()**: Coordinate-based fallback for unknown countries (aromeHd/czeAladin/ukv/iconEu/gfs)
 Models: aromeHd (1.3km), czeAladin (2.3km), ukv (2km), iconEu (7km), gfs (22km)
 

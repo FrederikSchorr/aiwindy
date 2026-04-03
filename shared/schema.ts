@@ -29,7 +29,7 @@ export interface GeocodeResult {
   displayName: string;
   regionalModel: string;
   regionalModelLabel: string;
-  regionalModelZoom: number;
+
   countryCode?: string;
   cityName?: string;
   cityLat?: number;

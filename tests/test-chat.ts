@@ -110,6 +110,7 @@ async function handleInput(input: string) {
     userInput: input,
     country,
     countryCode,
+    windyModel: regional?.label ?? "ICON-EU 7km",
     sailingArea: sailingAreaObj,
     city: cityObj,
   });
@@ -117,7 +118,7 @@ async function handleInput(input: string) {
   const meteonewsText = await fetchMeteonews();
   analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
   if (meteonewsText) {
-    analysis.data.sources.push(METEONEWS_URL);
+    analysis.data.sources.europe.push(`[Europawetter](${METEONEWS_URL}) von Meteonews`);
     const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
     analysis.data.weatherPreprocessed.europe["generalWeather"] = { source: "meteonews", text_de: preprocessed || null };
     console.log(`  ✓ meteonews (${meteonewsText.length} Zeichen)`);
@@ -128,24 +129,24 @@ async function handleInput(input: string) {
   let wzSourceAdded = false;
   const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
   analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = { source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null };
-  if (wz850Current && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); wzSourceAdded = true; }
+  if (wz850Current && !wzSourceAdded) { analysis.data.sources.europe.push(`[Bodendruck + 1.500m Luftmassen](${WETTERZENTRALE_BASE_URL}) von Wetterzentrale`); wzSourceAdded = true; }
   const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
   analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = { source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null };
-  if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); }
+  if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.europe.push(`[Bodendruck + 1.500m Luftmassen](${WETTERZENTRALE_BASE_URL}) von Wetterzentrale`); }
   console.log(`  ✓ Temperatur 850hpa Karten von wetterzentrale.de geladen`);
   // KNMI
   let knmiSourceAdded = false;
   const knmi = await fetchKnmiChart();
   analysis.data.weatherPreprocessed.europe["frontCurrent"] = { source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null };
-  if (knmi && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); knmiSourceAdded = true; }
+  if (knmi && !knmiSourceAdded) { analysis.data.sources.europe.push(`[Wetterfronten](${KNMI_BASE_URL}) von KNMI`); knmiSourceAdded = true; }
   const knmiForecast = await fetchKnmiForecast();
   analysis.data.weatherPreprocessed.europe["frontForecast"] = { source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null };
-  if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
+  if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.europe.push(`[Wetterfronten](${KNMI_BASE_URL}) von KNMI`); }
   console.log(`  ✓ Fronten Karten von KNMI geladen`);
 
   const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null, sailingAreaObj, cityObj);
   Object.assign(analysis.data.weatherRaw, national.data);
-  for (const u of national.sourceUrls) analysis.data.sources.push(u);
+  for (const u of national.sourceUrls) analysis.data.sources.national.push(u);
   const nationalCount = Object.keys(national.data).length;
   if (nationalCount > 0) console.log(`  ✓ Nationale Wetterdaten (${countryCode}): ${nationalCount} Quellen`);
 

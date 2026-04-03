@@ -7,6 +7,7 @@ export interface AnalysisPosition {
   userInput: string;
   country: string;
   countryCode: string;
+  windyModel: string;
   sailingArea: {
     name_de: string;                          // e.g. "Adria Mitte (Kroatien)"
     type: "sea" | "lake";
@@ -18,10 +19,16 @@ export interface AnalysisPosition {
   } | null;
 }
 
+export interface AnalysisSources {
+  windy: string[];
+  national: string[];
+  europe: string[];
+}
+
 export interface AnalysisJson {
   date: string;
   position: AnalysisPosition;
-  sources: string[];
+  sources: AnalysisSources;
   weatherRaw: Record<string, unknown>;
   weatherPreprocessed: {
     europe: Record<string, unknown>;
@@ -62,7 +69,7 @@ export function createAnalysis(position: AnalysisPosition): {
   const data: AnalysisJson = {
     date: now.toISOString(),
     position,
-    sources: [],
+    sources: { windy: [], national: [], europe: [] },
     weatherRaw: {},
     weatherPreprocessed: { europe: {}, national: {}, local: {} },
     weatherOutput: {},

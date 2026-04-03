@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { AnalysisSources } from "./analysis-store.js";
 
 // ── HTML helper ───────────────────────────────────────────────────────────────
 
@@ -19,13 +20,14 @@ export function stripHtml(html: string): string {
 
 // ── Europe: meteonews.at ──────────────────────────────────────────────────────
 
-export const METEONEWS_URL = "https://meteonews.at/de/Allgemeine_Lage/K33/Europa";
+export const METEONEWS_URL =
+  "https://meteonews.at/de/Allgemeine_Lage/K33/Europa";
 
 export async function fetchMeteonews(): Promise<string> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await fetch(METEONEWS_URL, {
-        headers: { "User-Agent": "WindyWeatherApp/1.0", "Accept": "text/html" },
+        headers: { "User-Agent": "WindyWeatherApp/1.0", Accept: "text/html" },
         signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) {
@@ -34,8 +36,12 @@ export async function fetchMeteonews(): Promise<string> {
         const html = await res.text();
 
         const bulletinMatch =
-          html.match(/class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i) ||
-          html.match(/<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+          html.match(
+            /class="[^"]*ModuleBulletinsGeneralSituation[^"]*"[^>]*>[\s\S]*?<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i,
+          ) ||
+          html.match(
+            /<div[^>]*class="[^"]*bulletin-wrap[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+          );
 
         if (bulletinMatch) return stripHtml(bulletinMatch[1]).trim();
 
@@ -43,12 +49,17 @@ export async function fetchMeteonews(): Promise<string> {
         const startIdx = plainText.indexOf("Europawetter");
         if (startIdx >= 0) return plainText.slice(startIdx).trim();
 
-        console.warn(`Meteonews attempt ${attempt}: no bulletin content found in response`);
+        console.warn(
+          `Meteonews attempt ${attempt}: no bulletin content found in response`,
+        );
       }
     } catch (e) {
-      console.warn(`Meteonews attempt ${attempt} failed:`, e instanceof Error ? e.message : e);
+      console.warn(
+        `Meteonews attempt ${attempt} failed:`,
+        e instanceof Error ? e.message : e,
+      );
     }
-    if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 2000));
   }
   console.error("Meteonews: all 3 attempts failed");
   return "";
@@ -65,13 +76,15 @@ function currentRunHour(): number {
 function nextForecastTarget(): Date {
   const now = new Date();
   const minTime = now.getTime() + 6 * 60 * 60 * 1000;
-  const y = now.getUTCFullYear(), mo = now.getUTCMonth(), d = now.getUTCDate();
+  const y = now.getUTCFullYear(),
+    mo = now.getUTCMonth(),
+    d = now.getUTCDate();
   const candidates = [
     new Date(Date.UTC(y, mo, d, 12)),
     new Date(Date.UTC(y, mo, d + 1, 0)),
     new Date(Date.UTC(y, mo, d + 1, 12)),
   ];
-  return candidates.find(c => c.getTime() >= minTime) ?? candidates[2];
+  return candidates.find((c) => c.getTime() >= minTime) ?? candidates[2];
 }
 
 // ── Europe: KNMI Frontenkarte ─────────────────────────────────────────────────
@@ -83,28 +96,45 @@ export function buildKnmiChartUrl(): string {
   return `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
 }
 
-export const KNMI_BASE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
+export const KNMI_BASE_URL =
+  "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
 
-export async function fetchKnmiChart(): Promise<{ url: string; imageBase64: string } | null> {
+export async function fetchKnmiChart(): Promise<{
+  url: string;
+  imageBase64: string;
+} | null> {
   const url = buildKnmiChartUrl();
   const dayStr = new Date().getUTCDate().toString().padStart(2, "0");
   const fallbackUrl = `${KNMI_BASE_URL}/AL${dayStr}00_large.gif`;
   try {
-    let res = await fetch(url, { signal: AbortSignal.timeout(10000), cache: "no-store" });
+    let res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
     let usedUrl = url;
     if (!res.ok) {
-      console.warn(`KNMI chart not found (${res.status}): ${url} → trying fallback`);
-      res = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000), cache: "no-store" });
+      console.warn(
+        `KNMI chart not found (${res.status}): ${url} → trying fallback`,
+      );
+      res = await fetch(fallbackUrl, {
+        signal: AbortSignal.timeout(10000),
+        cache: "no-store",
+      });
       usedUrl = fallbackUrl;
       if (!res.ok) {
-        console.error(`KNMI chart fallback also failed (${res.status}): ${fallbackUrl}`);
+        console.error(
+          `KNMI chart fallback also failed (${res.status}): ${fallbackUrl}`,
+        );
         return null;
       }
     }
     const imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
     return { url: usedUrl, imageBase64 };
   } catch (e) {
-    console.error("KNMI chart fetch failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "KNMI chart fetch failed:",
+      e instanceof Error ? e.message : e,
+    );
     return null;
   }
 }
@@ -118,10 +148,16 @@ export function buildKnmiForecastUrl(): string {
   return `${KNMI_BASE_URL}/PL${dd}${hh}_large.gif`;
 }
 
-export async function fetchKnmiForecast(): Promise<{ url: string; imageBase64: string } | null> {
+export async function fetchKnmiForecast(): Promise<{
+  url: string;
+  imageBase64: string;
+} | null> {
   const url = buildKnmiForecastUrl();
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000), cache: "no-store" });
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
     if (!res.ok) {
       console.error(`KNMI forecast not found (${res.status}): ${url}`);
       return null;
@@ -129,14 +165,18 @@ export async function fetchKnmiForecast(): Promise<{ url: string; imageBase64: s
     const imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
     return { url, imageBase64 };
   } catch (e) {
-    console.error("KNMI forecast fetch failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "KNMI forecast fetch failed:",
+      e instanceof Error ? e.message : e,
+    );
     return null;
   }
 }
 
 // ── Europe: Wetterzentrale 850 hPa ───────────────────────────────────────────
 
-export const WETTERZENTRALE_BASE_URL = "https://www.wetterzentrale.de/de/topkarten.php?map=1&model=ecm&var=2&time=0&run=18&lid=OP&h=0&tr=6&mv=0";
+export const WETTERZENTRALE_BASE_URL =
+  "https://www.wetterzentrale.de/de/topkarten.php?map=1&model=ecm&var=2&time=0&run=18&lid=OP&h=0&tr=6&mv=0";
 const WZ_MAPS = "https://www.wetterzentrale.de/maps";
 
 export function buildWetterzentraleCurrentUrl(): string {
@@ -147,16 +187,24 @@ export function buildWetterzentraleCurrentUrl(): string {
 export function buildWetterzentraleForecastUrl(): string {
   const now = new Date();
   const run = currentRunHour();
-  const runDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), run));
+  const runDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), run),
+  );
   const forecastTarget = nextForecastTarget();
-  const offsetHours = (forecastTarget.getTime() - runDate.getTime()) / (3600 * 1000);
+  const offsetHours =
+    (forecastTarget.getTime() - runDate.getTime()) / (3600 * 1000);
   const runStr = run.toString().padStart(2, "0");
   return `${WZ_MAPS}/ECMOPEU${runStr}_${offsetHours}_2.png`;
 }
 
-export async function fetchWetterzentraleChart(url: string): Promise<{ url: string; imageBase64: string } | null> {
+export async function fetchWetterzentraleChart(
+  url: string,
+): Promise<{ url: string; imageBase64: string } | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000), cache: "no-store" });
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
     if (!res.ok) {
       console.error(`Wetterzentrale chart not found (${res.status}): ${url}`);
       return null;
@@ -164,7 +212,10 @@ export async function fetchWetterzentraleChart(url: string): Promise<{ url: stri
     const imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
     return { url, imageBase64 };
   } catch (e) {
-    console.error("Wetterzentrale fetch failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "Wetterzentrale fetch failed:",
+      e instanceof Error ? e.message : e,
+    );
     return null;
   }
 }
@@ -179,10 +230,24 @@ export async function preprocessMeteonews(
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     temperature: 0,
-    messages: [{
-      role: "user",
-      content: `Entferne aus diesem Europawetterbericht alle konkreten Temperaturangaben (z.B. "5 bis 14 Grad", "13 bis 20 Grad"). Behalte alle anderen Informationen über Drucklagen, Fronten, Niederschlag, Bewölkung und allgemeine Wettermuster unverändert. Gib nur den bereinigten Text zurück, ohne Kommentar.\n\n${text}`,
-    }],
+    messages: [
+      {
+        role: "user",
+        content: `Entferne aus diesem Europawetterbericht alle konkreten Temperaturangaben (z.B. "5 bis 14 Grad", "13 bis 20 Grad"). Behalte alle anderen Informationen über Drucklagen, Fronten, Niederschlag, Bewölkung und allgemeine Wettermuster unverändert. Gib nur den bereinigten Text zurück, ohne Kommentar.\n\n${text}`,
+      },
+    ],
   });
-  return result.content[0]?.type === "text" ? result.content[0].text.trim() : text;
+  return result.content[0]?.type === "text"
+    ? result.content[0].text.trim()
+    : text;
+}
+
+// ── Europe sources ───────────────────────────────────────────────────────────
+
+export function getEuropeSources(): AnalysisSources["europe"] {
+  return [
+    `Europawetter von [Meteonews](${METEONEWS_URL})`,
+    `Bodendruck + 1.500m Luftmassen Karten von [Wetterzentrale](${WETTERZENTRALE_BASE_URL})`,
+    `Wetterfronten Karten von [KNMI](https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen/weerkaarten)`,
+  ];
 }

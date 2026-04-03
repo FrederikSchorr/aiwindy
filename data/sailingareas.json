@@ -7,9 +7,7 @@
         "lat": 40.8,
         "lon": 19,
         "orte": "Durrës, Vlorë, Sarandë, Shëngjin, Himarë",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -21,9 +19,7 @@
         "lat": 51.3,
         "lon": 2.8,
         "orte": "Ostende, Zeebrügge, Blankenberge, Nieuwpoort, De Panne",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       }
     ]
   },
@@ -36,9 +32,7 @@
         "lat": 55,
         "lon": 7.5,
         "orte": "Cuxhaven, Borkum, Sylt, Helgoland, Husum",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Ostsee West (Deutschland)",
@@ -47,9 +41,7 @@
         "lat": 54.7,
         "lon": 10.5,
         "orte": "Kiel, Flensburg, Eckernförde, Laboe, Strande",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Ostsee Süd",
@@ -58,9 +50,7 @@
         "lat": 54.5,
         "lon": 12.5,
         "orte": "Rostock, Stralsund, Rügen, Greifswald, Warnemünde",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Belte und Sund (Deutschland)",
@@ -69,9 +59,7 @@
         "lat": 54.8,
         "lon": 10,
         "orte": "Flensburg, Kappeln, Schleswig, Glücksburg, Sonderburg",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Chiemsee",
@@ -79,9 +67,7 @@
         "lat": 47.88,
         "lon": 12.45,
         "orte": "Prien, Seebruck, Gstadt",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Starnberger See",
@@ -89,9 +75,7 @@
         "lat": 47.9,
         "lon": 11.31,
         "orte": "Starnberg, Tutzing, Berg",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Ammersee",
@@ -99,9 +83,7 @@
         "lat": 47.99,
         "lon": 11.12,
         "orte": "Herrsching, Dießen, Utting",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Tegernsee",
@@ -109,9 +91,7 @@
         "lat": 47.72,
         "lon": 11.75,
         "orte": "Tegernsee, Rottach-Egern",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Walchensee",
@@ -119,9 +99,7 @@
         "lat": 47.58,
         "lon": 11.34,
         "orte": "Walchensee, Urfeld",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Müritz",
@@ -129,9 +107,7 @@
         "lat": 53.43,
         "lon": 12.69,
         "orte": "Waren, Röbel, Rechlin",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Schweriner See",
@@ -139,9 +115,7 @@
         "lat": 53.63,
         "lon": 11.42,
         "orte": "Schwerin, Zippendorf",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Steinhuder Meer",
@@ -149,9 +123,7 @@
         "lat": 52.46,
         "lon": 9.34,
         "orte": "Steinhude, Mardorf",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Bodensee (Deutschland)",
@@ -159,9 +131,7 @@
         "lat": 47.65,
         "lon": 9.4,
         "orte": "Konstanz, Friedrichshafen, Lindau, Meersburg, Überlingen",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "iconD2"
       }
     ]
   },
@@ -174,9 +144,7 @@
         "lat": 56.2,
         "lon": 11,
         "orte": "Aarhus, Randers, Grenaa, Ebeltoft, Odder",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Belte und Sund (Dänemark)",
@@ -185,9 +153,7 @@
         "lat": 55.2,
         "lon": 10.5,
         "orte": "Odense, Svendborg, Middelfart, Kolding, Assens",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Nordsee (Dänemark)",
@@ -195,9 +161,7 @@
         "lat": 56.5,
         "lon": 7.5,
         "orte": "Esbjerg, Hvide Sande, Thyborøn, Hirtshals, Hanstholm",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Ostsee West (Dänemark)",
@@ -206,9 +170,7 @@
         "lat": 55.5,
         "lon": 12.5,
         "orte": "Kopenhagen, Roskilde, Køge, Helsingør, Dragør",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Bornholm",
@@ -216,9 +178,7 @@
         "lat": 55.1,
         "lon": 14.9,
         "orte": "Rønne, Nexø, Svaneke, Gudhjem, Allinge",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Skagerrak (Dänemark)",
@@ -227,9 +187,7 @@
         "lat": 57.5,
         "lon": 9.5,
         "orte": "Skagen, Frederikshavn, Hjørring, Aalborg, Hirtshals",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconD2"
       }
     ]
   },
@@ -243,9 +201,7 @@
         "lat": 42.5,
         "lon": 3.8,
         "orte": "Perpignan, Sète, Montpellier, Agde, Port-Vendres",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Golfe du Lion Ost",
@@ -255,9 +211,7 @@
         "lat": 43,
         "lon": 5.5,
         "orte": "Marseille, Toulon, Fréjus, Cassis, La Ciotat",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Côte d'Azur",
@@ -267,9 +221,7 @@
         "lat": 43.3,
         "lon": 7.2,
         "orte": "Cannes, Nizza, Monaco, Antibes, Saint-Tropez",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Korsika",
@@ -279,9 +231,7 @@
         "lat": 42,
         "lon": 8.5,
         "orte": "Ajaccio, Bastia, Calvi, Porto-Vecchio, Bonifacio",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Ärmelkanal Ost (Frankreich)",
@@ -291,9 +241,7 @@
         "lat": 51,
         "lon": 1.8,
         "orte": "Dunkerque, Calais, Boulogne, Étaples, Berck",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Normandie",
@@ -303,9 +251,7 @@
         "lat": 49.8,
         "lon": 0,
         "orte": "Dieppe, Le Havre, Cherbourg, Honfleur, Granville",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Bretagne",
@@ -315,9 +261,7 @@
         "lat": 47.5,
         "lon": -5,
         "orte": "Brest, Lorient, Saint-Malo, Quimper, Concarneau",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Biskaya Nord",
@@ -327,9 +271,7 @@
         "lat": 46.5,
         "lon": -3.5,
         "orte": "Saint-Nazaire, La Rochelle, Les Sables, Noirmoutier, Pornic",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Biskaya Süd",
@@ -339,9 +281,7 @@
         "lat": 44,
         "lon": -2.5,
         "orte": "Arcachon, Bayonne, Biarritz, Capbreton, Hendaye",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       }
     ]
   },
@@ -355,9 +295,7 @@
         "lat": 38.8,
         "lon": 20,
         "orte": "Lefkada, Preveza, Korfu, Paxos, Sivota",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ionisches Meer Süd (Griechenland)",
@@ -367,9 +305,7 @@
         "lat": 37,
         "lon": 21,
         "orte": "Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Patraikos",
@@ -379,9 +315,7 @@
         "lat": 38.3,
         "lon": 21.5,
         "orte": "Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Korinthiakos",
@@ -391,9 +325,7 @@
         "lat": 38.1,
         "lon": 22.5,
         "orte": "Korinth, Galaxidi, Itea, Nafpaktos, Loutraki",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Kythira-See",
@@ -403,9 +335,7 @@
         "lat": 36.5,
         "lon": 22.8,
         "orte": "Kythira, Neapolis, Gythio, Monemvasia, Elafonisos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Kretisches Meer West",
@@ -415,9 +345,7 @@
         "lat": 35.5,
         "lon": 23.5,
         "orte": "Chania, Rethymno, Heraklion, Kissamos, Paleochora",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Kretisches Meer Ost",
@@ -427,9 +355,7 @@
         "lat": 35.2,
         "lon": 26,
         "orte": "Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Saronischer Golf",
@@ -439,9 +365,7 @@
         "lat": 37.5,
         "lon": 23.5,
         "orte": "Athen/Piräus, Aegina, Poros, Hydra, Spetses",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ägäis Mitte",
@@ -451,9 +375,7 @@
         "lat": 37.5,
         "lon": 25,
         "orte": "Mykonos, Naxos, Syros, Paros, Tinos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ägäis Südwest",
@@ -463,9 +385,7 @@
         "lat": 36.8,
         "lon": 24.5,
         "orte": "Milos, Santorini, Folegandros, Sifnos, Serifos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ägäis Südost",
@@ -475,9 +395,7 @@
         "lat": 37.5,
         "lon": 26.5,
         "orte": "Ikaria, Samos, Chios, Patmos, Kos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Dodekanes",
@@ -487,9 +405,7 @@
         "lat": 36.5,
         "lon": 27.5,
         "orte": "Rhodos, Kos, Kalymnos, Leros, Symi",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ägäis Nordwest",
@@ -499,9 +415,7 @@
         "lat": 39.5,
         "lon": 24,
         "orte": "Skiathos, Skopelos, Volos, Alonissos, Skyros",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ägäis Nordost",
@@ -511,9 +425,7 @@
         "lat": 39.5,
         "lon": 26,
         "orte": "Lesbos, Chios, Limnos, Samothraki, Thassos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Thrakisches Meer",
@@ -523,9 +435,7 @@
         "lat": 40.5,
         "lon": 25.5,
         "orte": "Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Thermaikos Golf",
@@ -535,9 +445,7 @@
         "lat": 40.2,
         "lon": 22.8,
         "orte": "Thessaloniki, Katerini, Halkidiki, Nea Moudania, Ierissos",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -549,9 +457,7 @@
         "lat": 53.2,
         "lon": -5.5,
         "orte": "Dublin, Dún Laoghaire, Wicklow, Arklow, Howth",
-        "model": "ukv",
-        "label": "UKV 2km",
-        "zoom": 7
+        "windyModel": "ukv"
       },
       {
         "deutsch": "Irland Süd",
@@ -559,9 +465,7 @@
         "lat": 51.2,
         "lon": -9,
         "orte": "Cork, Kinsale, Baltimore, Crosshaven, Bantry",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Irland West",
@@ -569,9 +473,7 @@
         "lat": 53.5,
         "lon": -10.5,
         "orte": "Galway, Westport, Clifden, Killary, Kilronan",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Irland Nord",
@@ -579,9 +481,7 @@
         "lat": 55.2,
         "lon": -6.5,
         "orte": "Londonderry, Portrush, Ballycastle, Carrickfergus, Bangor",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -594,9 +494,7 @@
         "lat": 45.2,
         "lon": 13,
         "orte": "Venedig, Triest, Rimini, Chioggia, Grado",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Adria Mitte (Italien)",
@@ -605,9 +503,7 @@
         "lat": 43,
         "lon": 14.5,
         "orte": "Ancona, Pescara, Bari, Numana, Vieste",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Adria Süd (Italien)",
@@ -616,9 +512,7 @@
         "lat": 41.1798,
         "lon": 17.2995,
         "orte": "Brindisi, Lecce, Otranto, Taranto, Castro",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ligurisches Meer",
@@ -627,9 +521,7 @@
         "lat": 44,
         "lon": 8.8,
         "orte": "Genua, Portofino, La Spezia, Sanremo, Savona",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Tyrrhenisches Meer Nord",
@@ -638,9 +530,7 @@
         "lat": 43.2,
         "lon": 10.2,
         "orte": "Livorno, Piombino, Elba, Viareggio, Giglio",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Tyrrhenisches Meer Mitte",
@@ -649,9 +539,7 @@
         "lat": 41.2,
         "lon": 12.5,
         "orte": "Civitavecchia, Neapel, Ischia, Gaeta, Ponza",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Tyrrhenisches Meer Süd",
@@ -660,9 +548,7 @@
         "lat": 38.8,
         "lon": 15.3,
         "orte": "Reggio Calabria, Tropea, Paola, Vibo Valentia, Scalea",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ionisches Meer Nord (Italien)",
@@ -671,9 +557,7 @@
         "lat": 40,
         "lon": 17.5,
         "orte": "Taranto, Gallipoli, Crotone, Otranto, Leuca",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Sardinien",
@@ -682,9 +566,7 @@
         "lat": 40.2,
         "lon": 8,
         "orte": "Cagliari, Alghero, Olbia, Porto Cervo, La Maddalena",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Sizilien",
@@ -693,9 +575,7 @@
         "lat": 37.5,
         "lon": 12.5,
         "orte": "Palermo, Messina, Trapani, Siracusa, Agrigento",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Gardasee",
@@ -704,9 +584,7 @@
         "lat": 45.65,
         "lon": 10.7,
         "orte": "Riva del Garda, Desenzano del Garda, Malcesine, Sirmione, Bardolino, Torri del Benaco, Garda, Peschiera del Garda",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -719,9 +597,7 @@
         "lat": 44.6284,
         "lon": 13.8522,
         "orte": "Rijeka, Pula, Rovinj, Poreč, Krk",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Adria Mitte (Kroatien)",
@@ -730,9 +606,7 @@
         "lat": 43.8227,
         "lon": 14.9322,
         "orte": "Zadar, Šibenik, Split, Trogir, Primošten",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Adria Süd (Kroatien)",
@@ -741,9 +615,7 @@
         "lat": 42.6702,
         "lon": 17.1459,
         "orte": "Hvar, Korčula, Dubrovnik, Makarska, Omiš",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       }
     ]
   },
@@ -755,9 +627,7 @@
         "lat": 42.2,
         "lon": 18.2,
         "orte": "Kotor, Budva, Bar, Herceg Novi, Tivat",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       }
     ]
   },
@@ -769,9 +639,7 @@
         "lat": 52.5,
         "lon": 3.8,
         "orte": "Den Helder, IJmuiden, Scheveningen, Hoek van Holland, Vlissingen",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Wattenmeer",
@@ -779,9 +647,7 @@
         "lat": 53.3,
         "lon": 5,
         "orte": "Harlingen, Vlieland, Terschelling, Ameland, Texel",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "IJsselmeer",
@@ -789,9 +655,7 @@
         "lat": 52.7,
         "lon": 5.3,
         "orte": "Enkhuizen, Hoorn, Lelystad, Medemblik, Urk",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Markermeer",
@@ -799,9 +663,7 @@
         "lat": 52.5,
         "lon": 5.2,
         "orte": "Amsterdam, Volendam, Marken, Edam, Monnickendam",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Zeeland/Deltagebiet",
@@ -809,9 +671,7 @@
         "lat": 51.5,
         "lon": 3.5,
         "orte": "Middelburg, Vlissingen, Zierikzee, Veere, Brouwershaven",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -824,9 +684,7 @@
         "lat": 58.5,
         "lon": 9,
         "orte": "Kristiansand, Arendal, Larvik, Tønsberg, Fredrikstad",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Oslofjord",
@@ -834,9 +692,7 @@
         "lat": 59.3,
         "lon": 10.5,
         "orte": "Oslo, Drøbak, Moss, Horten, Tønsberg",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Nordsee (Norwegen)",
@@ -844,9 +700,7 @@
         "lat": 59.5,
         "lon": 4,
         "orte": "Stavanger, Bergen, Ålesund, Kristiansund, Haugesund",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Westnorwegen/Hardanger",
@@ -854,9 +708,7 @@
         "lat": 60.2,
         "lon": 5,
         "orte": "Bergen, Rosendal, Norheimsund, Ulvik, Lofthus",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -868,9 +720,7 @@
         "lat": 47.9,
         "lon": 16.8,
         "orte": "Rust, Podersdorf, Neusiedl, Mörbisch, Illmitz",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Attersee",
@@ -878,9 +728,7 @@
         "lat": 47.87,
         "lon": 13.54,
         "orte": "Attersee, Weyregg, Nußdorf, Unterach, Steinbach",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Traunsee",
@@ -888,9 +736,7 @@
         "lat": 47.87,
         "lon": 13.79,
         "orte": "Gmunden, Traunkirchen, Ebensee, Altmünster, Traunkirchen",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Mondsee",
@@ -898,9 +744,7 @@
         "lat": 47.84,
         "lon": 13.38,
         "orte": "Mondsee, Loibichl",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Mattsee",
@@ -908,9 +752,7 @@
         "lat": 47.97,
         "lon": 13.1,
         "orte": "Mattsee, Obertrum",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Wallersee",
@@ -918,9 +760,7 @@
         "lat": 47.94,
         "lon": 13.24,
         "orte": "Seekirchen, Neumarkt",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Wolfgangsee",
@@ -928,9 +768,7 @@
         "lat": 47.74,
         "lon": 13.45,
         "orte": "St. Wolfgang, St. Gilgen",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Zell am See",
@@ -938,9 +776,7 @@
         "lat": 47.32,
         "lon": 12.79,
         "orte": "Zell am See, Thumersbach",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Achensee",
@@ -948,9 +784,7 @@
         "lat": 47.51,
         "lon": 11.71,
         "orte": "Pertisau, Maurach",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Bodensee (Österreich)",
@@ -958,9 +792,7 @@
         "lat": 47.57,
         "lon": 9.73,
         "orte": "Bregenz, Hard, Lochau, Fußach, Höchst",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Wörthersee",
@@ -968,9 +800,7 @@
         "lat": 46.62,
         "lon": 14.15,
         "orte": "Klagenfurt, Velden, Pörtschach, Krumpendorf, Maria Wörth",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Millstätter See",
@@ -978,9 +808,7 @@
         "lat": 46.8,
         "lon": 13.58,
         "orte": "Millstatt, Seeboden",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Ossiacher See",
@@ -988,9 +816,7 @@
         "lat": 46.68,
         "lon": 13.97,
         "orte": "Ossiach, Bodensdorf, Steindorf, Annenheim, Feldkirchen",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Faaker See",
@@ -998,9 +824,7 @@
         "lat": 46.57,
         "lon": 13.91,
         "orte": "Faak, Egg am Faaker See",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Weißensee",
@@ -1008,9 +832,7 @@
         "lat": 46.7,
         "lon": 13.31,
         "orte": "Techendorf, Neusach",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Ottenstein",
@@ -1018,9 +840,7 @@
         "lat": 48.6,
         "lon": 15.47,
         "orte": "Ottenstein, Rastenfeld",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       },
       {
         "deutsch": "Grundlsee",
@@ -1028,9 +848,7 @@
         "lat": 47.62,
         "lon": 13.8,
         "orte": "Grundlsee, Gössl",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       }
     ]
   },
@@ -1044,9 +862,7 @@
         "lat": 41.5,
         "lon": -9.5,
         "orte": "Viana do Castelo, Póvoa de Varzim, Porto, Aveiro, Figueira da Foz",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Portugal Mitte",
@@ -1056,9 +872,7 @@
         "lat": 38.8,
         "lon": -9.8,
         "orte": "Nazaré, Lisboa, Sesimbra, Setúbal, Cascais",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Portugal Süd",
@@ -1068,9 +882,7 @@
         "lat": 36.8,
         "lon": -8.8,
         "orte": "Sagres, Lagos, Faro, Olhão, Portimão",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Madeira",
@@ -1080,9 +892,7 @@
         "lat": 32.7,
         "lon": -17,
         "orte": "Funchal, Porto Santo",
-        "model": "gfs",
-        "label": "GFS 22km",
-        "zoom": 5
+        "windyModel": "gfs"
       }
     ]
   },
@@ -1095,9 +905,7 @@
         "lat": 58,
         "lon": 9.5,
         "orte": "Göteborg, Strömstad, Lysekil, Marstrand, Fjällbacka",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Kattegat (Schweden)",
@@ -1106,9 +914,7 @@
         "lat": 57,
         "lon": 11.7,
         "orte": "Varberg, Falkenberg, Halmstad, Båstad, Helsingborg",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Sund (Öresund)",
@@ -1117,9 +923,7 @@
         "lat": 55.8,
         "lon": 12.8,
         "orte": "Malmö, Helsingborg, Landskrona, Trelleborg, Ystad",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ostsee West (Schweden)",
@@ -1128,9 +932,7 @@
         "lat": 55.5,
         "lon": 14.5,
         "orte": "Karlskrona, Karlshamn, Ronneby, Kristianstad, Sölvesborg",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ostsee Süd (Schweden)",
@@ -1139,9 +941,7 @@
         "lat": 57,
         "lon": 17.5,
         "orte": "Karlshamn, Kalmar, Borgholm, Oskarshamn, Visby",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ostsee Mitte (Schweden)",
@@ -1150,9 +950,7 @@
         "lat": 57.5,
         "lon": 19,
         "orte": "Visby, Gotland, Klintehamn, Slite",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ostsee Nord (Schweden)",
@@ -1161,9 +959,7 @@
         "lat": 59,
         "lon": 19.5,
         "orte": "Kapellskär, Norrtälje, Oxelösund, Nynäshamn",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Schärenmeer",
@@ -1172,9 +968,7 @@
         "lat": 59.5,
         "lon": 20.5,
         "orte": "Stockholm, Sandhamn, Vaxholm, Stavsnäs, Furusund, Arholma",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Bottnischer Meerbusen Süd",
@@ -1183,9 +977,7 @@
         "lat": 62,
         "lon": 18.5,
         "orte": "Sundsvall, Härnösand, Hudiksvall, Örnsköldsvik, Gävle",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Vänern",
@@ -1194,9 +986,7 @@
         "lat": 58.9,
         "lon": 13.5,
         "orte": "Karlstad, Lidköping, Mariestad, Kristinehamn, Vänersborg",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Vättern",
@@ -1204,9 +994,7 @@
         "lat": 58.3,
         "lon": 14.6,
         "orte": "Jönköping, Motala, Hjo, Vadstena, Karlsborg",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Mälaren",
@@ -1214,9 +1002,7 @@
         "lat": 59.5,
         "lon": 17.1,
         "orte": "Stockholm, Västerås, Strängnäs, Enköping, Mariefred",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -1228,9 +1014,7 @@
         "lat": 46.45,
         "lon": 6.55,
         "orte": "Genf, Lausanne, Montreux, Nyon, Morges",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Zürichsee",
@@ -1238,9 +1022,7 @@
         "lat": 47.27,
         "lon": 8.72,
         "orte": "Zürich, Rapperswil, Richterswil, Stäfa, Küsnacht",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Vierwaldstättersee",
@@ -1248,9 +1030,7 @@
         "lat": 47,
         "lon": 8.47,
         "orte": "Luzern, Brunnen, Flüelen, Küssnacht, Weggis",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Thunersee",
@@ -1258,9 +1038,7 @@
         "lat": 46.68,
         "lon": 7.72,
         "orte": "Thun, Spiez, Interlaken, Faulensee, Hilterfingen",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Brienzersee",
@@ -1268,9 +1046,7 @@
         "lat": 46.73,
         "lon": 7.98,
         "orte": "Brienz, Iseltwald, Bönigen, Ringgenberg, Oberried",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Neuenburgersee",
@@ -1278,9 +1054,7 @@
         "lat": 46.9,
         "lon": 6.85,
         "orte": "Neuenburg, Murten, Yverdon, Estavayer, Grandson",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       },
       {
         "deutsch": "Bodensee (Schweiz)",
@@ -1288,9 +1062,7 @@
         "lat": 47.55,
         "lon": 9.5,
         "orte": "Kreuzlingen, Arbon, Rorschach, Romanshorn, Konstanz",
-        "model": "aromeHd",
-        "label": "AROME-HD 1.3km",
-        "zoom": 8
+        "windyModel": "aromeHd"
       }
     ]
   },
@@ -1303,9 +1075,7 @@
         "lat": 45.6,
         "lon": 13.5,
         "orte": "Koper, Piran, Portorož, Izola, Strunjan",
-        "model": "czeAladin",
-        "label": "ALADIN 2.3km",
-        "zoom": 8
+        "windyModel": "czeAladin"
       }
     ]
   },
@@ -1319,9 +1089,7 @@
         "lat": 41,
         "lon": 2.5,
         "orte": "Barcelona, Tarragona, Girona, Sitges, Blanes",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Valencia/Murcia",
@@ -1331,9 +1099,7 @@
         "lat": 39.5,
         "lon": 0.5,
         "orte": "Valencia, Alicante, Cartagena, Dénia, Gandia",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Andalusien Ost/Alboran",
@@ -1343,9 +1109,7 @@
         "lat": 36.5,
         "lon": -3,
         "orte": "Málaga, Almería, Melilla, Motril, Roquetas",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Andalusien West/Gibraltar",
@@ -1355,9 +1119,7 @@
         "lat": 36.3,
         "lon": -6.5,
         "orte": "Gibraltar, Cádiz, Huelva, Barbate, Tarifa",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Balearen",
@@ -1367,9 +1129,7 @@
         "lat": 39.5,
         "lon": 2.5,
         "orte": "Palma, Ibiza, Menorca, Alcúdia, Port Andratx",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Galicien",
@@ -1379,9 +1139,7 @@
         "lat": 42.5,
         "lon": -9.5,
         "orte": "Vigo, La Coruña, Pontevedra, Marin, Vilagarcía",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Kantabrien/Baskenland",
@@ -1391,9 +1149,7 @@
         "lat": 43.8,
         "lon": -3.5,
         "orte": "Santander, Bilbao, San Sebastián, Castro-Urdiales, Pasaia",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -1405,9 +1161,7 @@
         "lat": 38.8,
         "lon": 26,
         "orte": "Çanakkale, Ayvalık, Dikili, Foça, İzmir",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ägäis Süd (Türkei)",
@@ -1415,9 +1169,7 @@
         "lat": 37,
         "lon": 27.5,
         "orte": "Kuşadası, Bodrum, Marmaris, Fethiye, Göcek",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Türkische Riviera",
@@ -1425,9 +1177,7 @@
         "lat": 36.2,
         "lon": 30.5,
         "orte": "Kaş, Kekova, Antalya, Alanya, Side",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Marmara",
@@ -1435,9 +1185,7 @@
         "lat": 40.7,
         "lon": 28,
         "orte": "İstanbul, Erdek, Bandırma, Tekirdağ, Bursa/Mudanya",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   },
@@ -1449,9 +1197,7 @@
         "lat": 51,
         "lon": 1.5,
         "orte": "Dover, Folkestone, Brighton, Eastbourne, Ramsgate",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Ärmelkanal West (UK)",
@@ -1459,9 +1205,7 @@
         "lat": 50.2,
         "lon": -4.5,
         "orte": "Plymouth, Falmouth, Dartmouth, Weymouth, Poole",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       },
       {
         "deutsch": "Irische See",
@@ -1469,9 +1213,7 @@
         "lat": 53.5,
         "lon": -5,
         "orte": "Liverpool, Holyhead, Douglas, Dublin, Belfast",
-        "model": "ukv",
-        "label": "UKV 2km",
-        "zoom": 7
+        "windyModel": "ukv"
       },
       {
         "deutsch": "Nordsee (UK)",
@@ -1479,9 +1221,7 @@
         "lat": 54.5,
         "lon": 1.5,
         "orte": "Hull, Scarborough, Newcastle, Blyth, Whitby",
-        "model": "ukv",
-        "label": "UKV 2km",
-        "zoom": 7
+        "windyModel": "ukv"
       },
       {
         "deutsch": "Schottland West",
@@ -1489,9 +1229,7 @@
         "lat": 56.5,
         "lon": -6,
         "orte": "Oban, Tobermory, Stornoway, Tarbert, Crinan",
-        "model": "ukv",
-        "label": "UKV 2km",
-        "zoom": 7
+        "windyModel": "ukv"
       },
       {
         "deutsch": "Schottland Ost",
@@ -1499,9 +1237,7 @@
         "lat": 57.5,
         "lon": -1.5,
         "orte": "Aberdeen, Stonehaven, Peterhead, Fraserburgh, Arbroath",
-        "model": "ukv",
-        "label": "UKV 2km",
-        "zoom": 7
+        "windyModel": "ukv"
       },
       {
         "deutsch": "Solent/Südengland",
@@ -1509,9 +1245,7 @@
         "lat": 50.5,
         "lon": -1.5,
         "orte": "Southampton, Cowes, Portsmouth, Yarmouth, Lymington",
-        "model": "iconEu",
-        "label": "ICON-EU 7km",
-        "zoom": 7
+        "windyModel": "iconEu"
       }
     ]
   }

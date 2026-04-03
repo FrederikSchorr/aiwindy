@@ -24,6 +24,7 @@ const LOCATIONS: AnalysisPosition[] = [
     userInput: "Attersee",
     country: "Österreich",
     countryCode: "AT",
+    windyModel: "ALADIN 2.3km",
     sailingArea: { name_de: "Attersee (Österreich)", type: "lake", coordinates: { lat: 47.87, lon: 13.54 } },
     city: { name_de: "Attersee", coordinates: { lat: 47.87, lon: 13.54 } },
   },
@@ -31,6 +32,7 @@ const LOCATIONS: AnalysisPosition[] = [
     userInput: "Neusiedler See",
     country: "Österreich",
     countryCode: "AT",
+    windyModel: "ALADIN 2.3km",
     sailingArea: { name_de: "Neusiedler See (Österreich)", type: "lake", coordinates: { lat: 47.80, lon: 16.75 } },
     city: { name_de: "Neusiedl am See", coordinates: { lat: 47.95, lon: 16.84 } },
   },
@@ -77,7 +79,7 @@ for (const position of LOCATIONS) {
 
   // Europe raw + preprocessed
   analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
-  if (meteonewsText) analysis.data.sources.push(METEONEWS_URL);
+  if (meteonewsText) analysis.data.sources.europe.push(`[Europawetter](${METEONEWS_URL}) von Meteonews`);
   analysis.data.weatherPreprocessed.europe["generalWeather"] = { source: "meteonews", text_de: meteonewsPreprocessed };
   analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
     source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
@@ -85,14 +87,14 @@ for (const position of LOCATIONS) {
   analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
     source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
   };
-  if (wz850Current || wz850Forecast) analysis.data.sources.push(WETTERZENTRALE_BASE_URL);
+  if (wz850Current || wz850Forecast) analysis.data.sources.europe.push(`[Bodendruck + 1.500m Luftmassen](${WETTERZENTRALE_BASE_URL}) von Wetterzentrale`);
   analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
     source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
   };
   analysis.data.weatherPreprocessed.europe["frontForecast"] = {
     source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
   };
-  if (knmi || knmiForecast) analysis.data.sources.push(KNMI_BASE_URL);
+  if (knmi || knmiForecast) analysis.data.sources.europe.push(`[Wetterfronten](${KNMI_BASE_URL}) von KNMI`);
 
   // Nationale Rohdaten (pro Ort, wegen koordinatenabhängiger GeoSphere-Timeseries)
   process.stdout.write("  national weather … ");
@@ -105,7 +107,7 @@ for (const position of LOCATIONS) {
     position.city,
   );
   Object.assign(analysis.data.weatherRaw, national.data);
-  for (const u of national.sourceUrls) analysis.data.sources.push(u);
+  for (const u of national.sourceUrls) analysis.data.sources.national.push(u);
 
   const rawKeys = Object.keys(national.data);
   console.log(`✓  ${rawKeys.join(", ")}`);

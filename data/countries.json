@@ -1,0 +1,22 @@
+{
+  "BE": { "windyModel": "aromeHd" },
+  "CH": { "windyModel": "aromeHd" },
+  "FR": { "windyModel": "aromeHd" },
+  "AT": { "windyModel": "czeAladin" },
+  "HR": { "windyModel": "czeAladin" },
+  "ME": { "windyModel": "czeAladin" },
+  "SI": { "windyModel": "czeAladin" },
+  "DE": { "windyModel": "iconD2" },
+  "DK": { "windyModel": "iconD2" },
+  "AL": { "windyModel": "iconEu" },
+  "ES": { "windyModel": "iconEu" },
+  "GR": { "windyModel": "iconEu" },
+  "IT": { "windyModel": "iconEu" },
+  "NL": { "windyModel": "iconEu" },
+  "NO": { "windyModel": "iconEu" },
+  "PT": { "windyModel": "iconEu" },
+  "SE": { "windyModel": "iconEu" },
+  "TR": { "windyModel": "iconEu" },
+  "GB": { "windyModel": "ukv" },
+  "IE": { "windyModel": "ukv" }
+}

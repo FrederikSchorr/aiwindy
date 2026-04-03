@@ -6,11 +6,17 @@ import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } 
 
 const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
 
+interface AnalysisSources {
+  windy: string[];
+  national: string[];
+  europe: string[];
+}
+
 interface SSEPayload {
   location?: GeocodeResult;
   weatherEurope?: WeatherEuropeSSE;
   weatherOutput?: WeatherOutputData;
-  sources?: string[];
+  sources?: AnalysisSources;
   content?: string;
   error?: string;
   done?: boolean;
@@ -166,7 +172,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   location: GeocodeResult;
   weatherEurope: WeatherEuropeSSE | null;
   weatherOutput: WeatherOutputData | null;
-  sources: string[] | null;
+  sources: AnalysisSources | null;
   isStreaming: boolean;
   hasError?: boolean;
 }) {
@@ -176,7 +182,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   const cityLon = location.cityLon ?? location.lon;
   const model = location.regionalModel;
   const modelLabel = location.regionalModelLabel;
-  const zoom = location.regionalModelZoom;
+  const zoom = 7;
   const locationShort = location.cityName || location.displayName?.split(",")[0]?.trim() || "";
   const sailingAreaShort = location.sailingArea || locationShort;
   const windUrl = `https://www.windy.com/-wind-${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${Math.min(zoom + 2, 14)}`;
@@ -273,21 +279,15 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           {!weatherOutput && isStreaming && <BounceLoader />}
 
-          {weatherOutput && sources && sources.length > 0 && (
+          {weatherOutput && sources && (
             <>
               <SectionTitle num={6} title="Quellen" />
-              <ul className="mt-1 mb-2 space-y-0.5 list-disc list-inside" data-testid="section-sources">
-                {[...sources].reverse().map((url, i) => (
-                  <li key={i} className="text-sm">
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-primary transition-colors underline"
-                    >
-                      {url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                    </a>
-                  </li>
+              <ul className="mt-1 mb-2 space-y-0.5 list-disc pl-5" data-testid="section-sources">
+                {[...sources.windy, ...sources.national, ...sources.europe].map((md, i) => (
+                  <li key={i} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{
+                    __html: md.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+                      (_, text, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`)
+                  }} />
                 ))}
                 <li className="text-sm">
                   <span className="text-muted-foreground">
@@ -330,7 +330,7 @@ export default function Home() {
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
-  const [messageSources, setMessageSources] = useState<Record<string, string[]>>({});
+  const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, boolean>>({});
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);

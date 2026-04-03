@@ -13,7 +13,6 @@ import {
   extractDhmzWarning,
   extractDhmzSailingAreaForecast,
   preprocessDhmzLocalTemperature,
-  DHMZ_SOURCE_URL,
 } from "./weather-national-croatia.js";
 
 type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
@@ -27,7 +26,7 @@ export async function fetchNationalWeather(
   cityObj?: CityObj,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
   switch (countryCode) {
-    case "HR": return { data: await fetchCroatiaWeather(sailingAreaName), sourceUrls: [DHMZ_SOURCE_URL] };
+    case "HR": return fetchCroatiaWeather(sailingAreaName);
     case "AT": return fetchAustriaWeather(sailingAreaObj, cityObj);
     default:   return { data: {}, sourceUrls: [] };
   }

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
+import countriesJson from "../data/countries.json" with { type: "json" };
 import windyModelsJson from "../data/windymodels.json" with { type: "json" };
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -10,9 +11,7 @@ export interface SegelRevier {
   lat: number;
   lon: number;
   orte: string;
-  model: string;
-  label: string;
-  zoom: number;
+  windyModel: string;
   [key: string]: unknown;
 }
 
@@ -40,7 +39,7 @@ export interface GeocodedLocation {
   lon: number;
   displayName: string;
   countryCode: string;
-  country: string;           // German country name, e.g. "Kroatien"
+  country: string; // German country name, e.g. "Kroatien"
   // Sailing-area fields (null when no revier found)
   sailingArea: string | null;
   type: "sea" | "lake" | null;
@@ -49,7 +48,6 @@ export interface GeocodedLocation {
   // For downstream model selection (filled later in routes.ts)
   regionalModel: string;
   regionalModelLabel: string;
-  regionalModelZoom: number;
   // Original user input
   userInput: string;
 }
@@ -57,33 +55,49 @@ export interface GeocodedLocation {
 // ── Country mapping ────────────────────────────────────────────────────────
 
 export const LAND_TO_COUNTRY_CODE: Record<string, string> = {
-  "Albanien": "AL",
-  "Belgien": "BE",
-  "Deutschland": "DE",
-  "Dänemark": "DK",
-  "Frankreich": "FR",
-  "Griechenland": "GR",
-  "Irland": "IE",
-  "Italien": "IT",
-  "Kroatien": "HR",
-  "Montenegro": "ME",
-  "Niederlande": "NL",
-  "Norwegen": "NO",
-  "Österreich": "AT",
-  "Portugal": "PT",
-  "Schweden": "SE",
-  "Schweiz": "CH",
-  "Slowenien": "SI",
-  "Spanien": "ES",
-  "Türkei": "TR",
+  Albanien: "AL",
+  Belgien: "BE",
+  Deutschland: "DE",
+  Dänemark: "DK",
+  Frankreich: "FR",
+  Griechenland: "GR",
+  Irland: "IE",
+  Italien: "IT",
+  Kroatien: "HR",
+  Montenegro: "ME",
+  Niederlande: "NL",
+  Norwegen: "NO",
+  Österreich: "AT",
+  Portugal: "PT",
+  Schweden: "SE",
+  Schweiz: "CH",
+  Slowenien: "SI",
+  Spanien: "ES",
+  Türkei: "TR",
   "Vereinigtes Königreich": "GB",
 };
 
 export const COUNTRY_CODE_TO_FLAG: Record<string, string> = {
-  AL: "🇦🇱", BE: "🇧🇪", DE: "🇩🇪", DK: "🇩🇰", FR: "🇫🇷",
-  GR: "🇬🇷", IE: "🇮🇪", IT: "🇮🇹", HR: "🇭🇷", ME: "🇲🇪",
-  NL: "🇳🇱", NO: "🇳🇴", AT: "🇦🇹", PT: "🇵🇹", SE: "🇸🇪",
-  CH: "🇨🇭", SI: "🇸🇮", ES: "🇪🇸", TR: "🇹🇷", GB: "🇬🇧",
+  AL: "🇦🇱",
+  BE: "🇧🇪",
+  DE: "🇩🇪",
+  DK: "🇩🇰",
+  FR: "🇫🇷",
+  GR: "🇬🇷",
+  IE: "🇮🇪",
+  IT: "🇮🇹",
+  HR: "🇭🇷",
+  ME: "🇲🇪",
+  NL: "🇳🇱",
+  NO: "🇳🇴",
+  AT: "🇦🇹",
+  PT: "🇵🇹",
+  SE: "🇸🇪",
+  CH: "🇨🇭",
+  SI: "🇸🇮",
+  ES: "🇪🇸",
+  TR: "🇹🇷",
+  GB: "🇬🇧",
 };
 
 // ── JSON loading ───────────────────────────────────────────────────────────
@@ -98,7 +112,9 @@ function buildRevierList(data: SegelreviereData): string {
   const lines: string[] = [];
   for (const [land, { reviere }] of Object.entries(data)) {
     for (const r of reviere) {
-      lines.push(`"${r.deutsch}" [${land}, ${r.lat.toFixed(1)}°N ${r.lon.toFixed(1)}°E] — ${r.orte}`);
+      lines.push(
+        `"${r.deutsch}" [${land}, ${r.lat.toFixed(1)}°N ${r.lon.toFixed(1)}°E] — ${r.orte}`,
+      );
     }
   }
   return lines.join("\n");
@@ -159,7 +175,8 @@ export async function detectLocation(
     messages: [{ role: "user", content: `Ort: "${locationName}"` }],
   });
 
-  const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
+  const text =
+    result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
   console.log(`[DEBUG] detectLocation("${locationName}") → ${text}`);
   let parsed: { sailingArea: string | null; city: string | null } | null = null;
   try {
@@ -173,17 +190,26 @@ export async function detectLocation(
   const city = parsed?.city?.trim() || null;
   if (!city) return null; // unrecognisable input — caller will ask user again
 
-  const sailingAreaName = typeof parsed?.sailingArea === "string" ? parsed.sailingArea.trim() : null;
+  const sailingAreaName =
+    typeof parsed?.sailingArea === "string" ? parsed.sailingArea.trim() : null;
   if (!sailingAreaName) return { kind: "city", city };
 
   const data = loadSegelreviere();
   for (const [land, { reviere }] of Object.entries(data)) {
     const revier = reviere.find((r) => r.deutsch === sailingAreaName);
     if (revier) {
-      return { kind: "revier", revier, land, countryCode: LAND_TO_COUNTRY_CODE[land] ?? "", city };
+      return {
+        kind: "revier",
+        revier,
+        land,
+        countryCode: LAND_TO_COUNTRY_CODE[land] ?? "",
+        city,
+      };
     }
   }
-  console.warn(`detectLocation: unknown sailingArea "${sailingAreaName}", returning city-only`);
+  console.warn(
+    `detectLocation: unknown sailingArea "${sailingAreaName}", returning city-only`,
+  );
   return { kind: "city", city };
 }
 
@@ -195,26 +221,53 @@ export function countryFlag(countryCode: string): string {
 
 // ── Regional model selection ───────────────────────────────────────────────
 
-function getRegionalModelFallback(lat: number, lon: number): { model: string; label: string; zoom: number } {
-  if (lat >= 42 && lat <= 51 && lon >= -5 && lon <= 8) {
-    return { model: "aromeHd", label: "AROME-HD 1.3km", zoom: 8 };
-  }
-  if (lat >= 46 && lat <= 52 && lon >= 10 && lon <= 22) {
-    return { model: "czeAladin", label: "ALADIN 2.3km", zoom: 7 };
-  }
-  if (lat >= 51 && lat <= 58 && lon >= -8 && lon <= 0) {
-    return { model: "ukv", label: "UKV 2km", zoom: 7 };
-  }
-  if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45) {
-    return { model: "iconEu", label: "ICON-EU 7km", zoom: 6 };
-  }
-  return { model: "gfs", label: "GFS 22km", zoom: 5 };
+const windyModels = windyModelsJson as Record<
+  string,
+  { model: string; label: string }
+>;
+const countries = countriesJson as Record<string, { windyModel: string }>;
+
+export function resolveWindyModel(key: string): {
+  model: string;
+  label: string;
+} {
+  return windyModels[key] ?? windyModels["iconEu"];
 }
 
-const windyModels = windyModelsJson as Record<string, { model: string; label: string; zoom: number }>;
+function getRegionalModelFallback(
+  lat: number,
+  lon: number,
+): { model: string; label: string } {
+  if (lat >= 42 && lat <= 51 && lon >= -5 && lon <= 8)
+    return resolveWindyModel("aromeHd");
+  if (lat >= 46 && lat <= 52 && lon >= 10 && lon <= 22)
+    return resolveWindyModel("czeAladin");
+  if (lat >= 51 && lat <= 58 && lon >= -8 && lon <= 0)
+    return resolveWindyModel("ukv");
+  if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45)
+    return resolveWindyModel("iconEu");
+  return resolveWindyModel("gfs");
+}
 
-export function getModelForCountry(countryCode: string): { model: string; label: string; zoom: number } | null {
-  return windyModels[countryCode] ?? null;
+export function getModelForCountry(
+  countryCode: string,
+): { model: string; label: string } | null {
+  const entry = countries[countryCode];
+  if (!entry) return null;
+  return resolveWindyModel(entry.windyModel);
+}
+
+// ── Windy sources ─────────────────────────────────────────────────────────
+
+export function getWindySources(
+  regional: { model: string; label: string },
+  coords: { lat: number; lon: number },
+  locationName: string,
+): string[] {
+  const url = `https://www.windy.com/-wind-${regional.model}?${regional.model},${coords.lat.toFixed(3)},${coords.lon.toFixed(3)},9`;
+  return [
+    `Interaktive [Windy](${url}) Karten, Prognosemodell ${regional.label}`,
+  ];
 }
 
 // ── Message classification ─────────────────────────────────────────────────
@@ -224,11 +277,15 @@ export async function classifyMessage(
   hasActiveLocation: boolean,
   anthropic: Anthropic,
   activeLocationName?: string,
-): Promise<{ type: "ANALYSE" | "CHAT" | "UNCLEAR" | "OFFTOPIC"; location?: string }> {
+): Promise<{
+  type: "ANALYSE" | "CHAT" | "UNCLEAR" | "OFFTOPIC";
+  location?: string;
+}> {
   try {
-    const activeLocInfo = hasActiveLocation && activeLocationName
-      ? `Es ist bereits ein Ort aktiv: "${activeLocationName}".`
-      : "Es ist KEIN Ort aktiv.";
+    const activeLocInfo =
+      hasActiveLocation && activeLocationName
+        ? `Es ist bereits ein Ort aktiv: "${activeLocationName}".`
+        : "Es ist KEIN Ort aktiv.";
 
     const result = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -278,7 +335,8 @@ ${activeLocInfo}
 Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`,
       messages: [{ role: "user", content: message }],
     });
-    const text = result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
+    const text =
+      result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
     if (text.startsWith("ANALYSE")) {
       const location = text.replace("ANALYSE", "").trim();
       return { type: "ANALYSE", location: location || undefined };
@@ -287,7 +345,10 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
     if (text === "OFFTOPIC") return { type: "OFFTOPIC" };
     return { type: "CHAT" };
   } catch (e) {
-    console.error("Message classification failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "Message classification failed:",
+      e instanceof Error ? e.message : e,
+    );
     return { type: "CHAT" };
   }
 }
@@ -298,9 +359,13 @@ export async function geocodeLocation(
   locationName: string,
   hintCoords?: { lat: number; lon: number },
 ): Promise<{
-  lat: number; lon: number; displayName: string;
-  regionalModel: string; regionalModelLabel: string; regionalModelZoom: number;
-  countryCode?: string; cityName?: string;
+  lat: number;
+  lon: number;
+  displayName: string;
+  regionalModel: string;
+  regionalModelLabel: string;
+  countryCode?: string;
+  cityName?: string;
 } | null> {
   try {
     const viewbox = hintCoords
@@ -308,15 +373,23 @@ export async function geocodeLocation(
       : "";
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&addressdetails=1&accept-language=de,en${viewbox}`,
-      { headers: { "User-Agent": "WindyWeatherApp/1.0" } }
+      { headers: { "User-Agent": "WindyWeatherApp/1.0" } },
     );
     if (!response.ok) return null;
 
-    const results = await response.json() as Array<{
-      lat: string; lon: string; display_name: string;
-      class: string; type: string;
+    const results = (await response.json()) as Array<{
+      lat: string;
+      lon: string;
+      display_name: string;
+      class: string;
+      type: string;
       namedetails?: Record<string, string>;
-      address?: { country_code?: string; city?: string; town?: string; village?: string };
+      address?: {
+        country_code?: string;
+        city?: string;
+        town?: string;
+        village?: string;
+      };
     }>;
     if (!results.length) return null;
 
@@ -333,11 +406,11 @@ export async function geocodeLocation(
     const regional = countryModel ?? getRegionalModelFallback(lat, lon);
 
     return {
-      lat, lon,
+      lat,
+      lon,
       displayName: result.display_name,
       regionalModel: regional.model,
       regionalModelLabel: regional.label,
-      regionalModelZoom: regional.zoom,
       countryCode,
       cityName,
     };

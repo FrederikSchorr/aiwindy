@@ -14,23 +14,28 @@ const HR_ENDPOINTS_ALWAYS: Record<string, string> = {
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-export async function fetchCroatiaWeather(sailingArea?: string | null): Promise<Record<string, unknown>> {
+export async function fetchCroatiaWeather(sailingArea?: string | null): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
   const endpoints = {
     ...(sailingArea ? HR_ENDPOINTS_SAILING : {}),
     ...HR_ENDPOINTS_ALWAYS,
   };
-  const result: Record<string, unknown> = {};
+  const data: Record<string, unknown> = {};
   for (const [key, url] of Object.entries(endpoints)) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-      result[key] = { source: "DHMZ", url, xml: res.ok ? await res.text() : null };
+      data[key] = { source: "DHMZ", url, xml: res.ok ? await res.text() : null };
       if (!res.ok) console.error(`Croatia "${key}" failed (${res.status}): ${url}`);
     } catch (e) {
-      result[key] = { source: "DHMZ", url, xml: null };
+      data[key] = { source: "DHMZ", url, xml: null };
       console.error(`Croatia "${key}" error:`, e instanceof Error ? e.message : e);
     }
   }
-  return result;
+  const sourceUrls = [
+    `Kroatien Seewetter von [DHMZ](${DHMZ_SOURCE_URL}) Jadran API`,
+    `Wind, Seegang, Wolken, Regen, Sicht von [DHMZ](https://meteo.hr/prognoze.php?section=prognoze_specp&param=pomorci) Pomorci API`,
+    `Temperatur von [DHMZ](https://meteo.hr/index.php) Meteogrami API`,
+  ];
+  return { data, sourceUrls };
 }
 
 // ── Preprocessing ─────────────────────────────────────────────────────────────

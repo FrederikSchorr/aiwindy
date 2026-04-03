@@ -10,7 +10,16 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
-import { detectLocation, countryFlag, LAND_TO_COUNTRY_CODE, getModelForCountry, classifyMessage, geocodeLocation } from "./location.js";
+import {
+  detectLocation,
+  countryFlag,
+  LAND_TO_COUNTRY_CODE,
+  getModelForCountry,
+  resolveWindyModel,
+  getWindySources,
+  classifyMessage,
+  geocodeLocation,
+} from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
 
 import sailingAreasData from "../data/sailingareas.json" with { type: "json" };
@@ -18,7 +27,10 @@ import windSystemsData from "../data/windsystems.json" with { type: "json" };
 
 function buildSailingAreasSummary(): string {
   const lines: string[] = [];
-  for (const [country, data] of Object.entries(sailingAreasData) as [string, any][]) {
+  for (const [country, data] of Object.entries(sailingAreasData) as [
+    string,
+    any,
+  ][]) {
     const reviere = (data.reviere || []).map((r: any) => r.deutsch).join(", ");
     if (reviere) lines.push(`${country}: ${reviere}`);
   }
@@ -28,9 +40,12 @@ function buildSailingAreasSummary(): string {
 function buildWindSystemsSummary(): string {
   const lines: string[] = [];
   for (const entry of windSystemsData as any[]) {
-    const wlist = entry.winds.map((w: any) =>
-      `${w.name}${w.alternativeNames ? ` (${w.alternativeNames})` : ""}: ${w.description.split(".")[0]}`
-    ).join("; ");
+    const wlist = entry.winds
+      .map(
+        (w: any) =>
+          `${w.name}${w.alternativeNames ? ` (${w.alternativeNames})` : ""}: ${w.description.split(".")[0]}`,
+      )
+      .join("; ");
     lines.push(`${entry.country}: ${wlist}`);
   }
   return lines.join("\n");
@@ -39,38 +54,84 @@ function buildWindSystemsSummary(): string {
 const SAILING_AREAS_SUMMARY = buildSailingAreasSummary();
 const WIND_SYSTEMS_SUMMARY = buildWindSystemsSummary();
 
-let lastAnalysisContext: { location: string; date: string; sections: Record<string, string> } | null = null;
+let lastAnalysisContext: {
+  location: string;
+  date: string;
+  sections: Record<string, string>;
+} | null = null;
 let lastAnalysisFilePath: string | null = null;
-import { fetchMeteonews, preprocessMeteonews, fetchKnmiChart, fetchKnmiForecast, fetchWetterzentraleChart, buildWetterzentraleCurrentUrl, buildWetterzentraleForecastUrl, stripHtml, METEONEWS_URL, KNMI_BASE_URL, WETTERZENTRALE_BASE_URL } from "./weather-europe.js";
-import { fetchNationalWeather, preprocessNationalWeather, preprocessLocalWeather } from "./weather-national.js";
+import {
+  fetchMeteonews,
+  preprocessMeteonews,
+  fetchKnmiChart,
+  fetchKnmiForecast,
+  fetchWetterzentraleChart,
+  buildWetterzentraleCurrentUrl,
+  buildWetterzentraleForecastUrl,
+  stripHtml,
+  getEuropeSources,
+} from "./weather-europe.js";
+import {
+  fetchNationalWeather,
+  preprocessNationalWeather,
+  preprocessLocalWeather,
+} from "./weather-national.js";
 import { generateWeatherOutput } from "./weather-output.js";
 
 const execFileAsync = promisify(execFile);
 
 function debugLog(_s: string, _d?: string): void {}
 function debugLogRequestSeparator(_l: string): void {}
-function debugLogLLM(_m: string, _c: string, _msgs: unknown[], _si?: string): void {}
+function debugLogLLM(
+  _m: string,
+  _c: string,
+  _msgs: unknown[],
+  _si?: string,
+): void {}
 function debugLogLLMResponse(_m: string, _c: string, _r: string): void {}
-function debugLogScrape(_s: string, _u: string, _st: number, _t: string): void {}
+function debugLogScrape(
+  _s: string,
+  _u: string,
+  _st: number,
+  _t: string,
+): void {}
 
 const COUNTRY_TIMEZONE: Record<string, string> = {
-  HR: "Europe/Zagreb", DE: "Europe/Berlin", AT: "Europe/Vienna",
-  IT: "Europe/Rome", FR: "Europe/Paris", GR: "Europe/Athens",
-  SI: "Europe/Ljubljana", ME: "Europe/Podgorica", GB: "Europe/London",
-  NL: "Europe/Amsterdam", ES: "Europe/Madrid", PT: "Europe/Lisbon",
-  TR: "Europe/Istanbul", DK: "Europe/Copenhagen", SE: "Europe/Stockholm",
-  NO: "Europe/Oslo", PL: "Europe/Warsaw", CH: "Europe/Zurich",
-  AL: "Europe/Tirane", BE: "Europe/Brussels", IE: "Europe/Dublin",
+  HR: "Europe/Zagreb",
+  DE: "Europe/Berlin",
+  AT: "Europe/Vienna",
+  IT: "Europe/Rome",
+  FR: "Europe/Paris",
+  GR: "Europe/Athens",
+  SI: "Europe/Ljubljana",
+  ME: "Europe/Podgorica",
+  GB: "Europe/London",
+  NL: "Europe/Amsterdam",
+  ES: "Europe/Madrid",
+  PT: "Europe/Lisbon",
+  TR: "Europe/Istanbul",
+  DK: "Europe/Copenhagen",
+  SE: "Europe/Stockholm",
+  NO: "Europe/Oslo",
+  PL: "Europe/Warsaw",
+  CH: "Europe/Zurich",
+  AL: "Europe/Tirane",
+  BE: "Europe/Brussels",
+  IE: "Europe/Dublin",
 };
 
 async function extractVideoThumbnail(filePath: string): Promise<string | null> {
   try {
     const outputPath = `/tmp/vthumb-${Date.now()}.jpg`;
     await execFileAsync("ffmpeg", [
-      "-i", filePath,
-      "-ss", "00:00:01",
-      "-vframes", "1",
-      "-q:v", "3",
+      "-i",
+      filePath,
+      "-ss",
+      "00:00:01",
+      "-vframes",
+      "1",
+      "-q:v",
+      "3",
       "-y",
       outputPath,
     ]);
@@ -81,9 +142,12 @@ async function extractVideoThumbnail(filePath: string): Promise<string | null> {
     try {
       const outputPath = `/tmp/vthumb-${Date.now()}.jpg`;
       await execFileAsync("ffmpeg", [
-        "-i", filePath,
-        "-vframes", "1",
-        "-q:v", "3",
+        "-i",
+        filePath,
+        "-vframes",
+        "1",
+        "-q:v",
+        "3",
         "-y",
         outputPath,
       ]);
@@ -111,8 +175,10 @@ async function extractVideoMetadata(filePath: string): Promise<{
 }> {
   try {
     const { stdout } = await execFileAsync("ffprobe", [
-      "-v", "quiet",
-      "-print_format", "json",
+      "-v",
+      "quiet",
+      "-print_format",
+      "json",
       "-show_format",
       filePath,
     ]);
@@ -130,14 +196,20 @@ async function extractVideoMetadata(filePath: string): Promise<{
     }
 
     let time: string | null = null;
-    const creationTag = tags["creation_time"] || tags["com.apple.quicktime.creationdate"] || tags["date"];
+    const creationTag =
+      tags["creation_time"] ||
+      tags["com.apple.quicktime.creationdate"] ||
+      tags["date"];
     if (creationTag) {
       const d = new Date(creationTag);
       if (!isNaN(d.getTime())) {
         time = d.toLocaleString("de-DE", {
           timeZone: "Europe/Berlin",
-          year: "numeric", month: "2-digit", day: "2-digit",
-          hour: "2-digit", minute: "2-digit",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
         });
       }
     }
@@ -166,18 +238,29 @@ const gemini = new GoogleGenAI({
   },
 });
 
-
-const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: string; warningUrl: string; warningLabel: string }> = {
+const REGIONAL_FORECAST_SERVICES: Record<
+  string,
+  {
+    forecastUrl: string;
+    label: string;
+    warningUrl: string;
+    warningLabel: string;
+  }
+> = {
   HR: {
-    forecastUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
+    forecastUrl:
+      "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
     label: "DHMZ Kroatien",
-    warningUrl: "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
+    warningUrl:
+      "https://meteo.hr/prognoze_e.php?section=prognoze_specp&param=jadran",
     warningLabel: "DHMZ Kroatien",
   },
   DE: {
-    forecastUrl: "https://www.dwd.de/DWD/wetter/wv_allg/deutschland/text/vhdl13_dwoh.html",
+    forecastUrl:
+      "https://www.dwd.de/DWD/wetter/wv_allg/deutschland/text/vhdl13_dwoh.html",
     label: "DWD Deutschland",
-    warningUrl: "https://www.dwd.de/DE/wetter/warnungen_gemeinden/warnWetter_node.html",
+    warningUrl:
+      "https://www.dwd.de/DE/wetter/warnungen_gemeinden/warnWetter_node.html",
     warningLabel: "DWD Deutschland",
   },
   AT: {
@@ -199,9 +282,11 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
     warningLabel: "Météo-France Marine",
   },
   GR: {
-    forecastUrl: "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi",
+    forecastUrl:
+      "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi",
     label: "EMY (HNMS) Griechenland",
-    warningUrl: "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi",
+    warningUrl:
+      "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi",
     warningLabel: "EMY (HNMS) Griechenland",
   },
   SI: {
@@ -219,7 +304,8 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
   GB: {
     forecastUrl: "https://weather.metoffice.gov.uk/forecast/uk",
     label: "Met Office UK",
-    warningUrl: "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings",
+    warningUrl:
+      "https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings",
     warningLabel: "Met Office UK",
   },
   NL: {
@@ -278,7 +364,9 @@ const REGIONAL_FORECAST_SERVICES: Record<string, { forecastUrl: string; label: s
   },
 };
 
-function getRegionalService(countryCode: string): typeof REGIONAL_FORECAST_SERVICES["HR"] | undefined {
+function getRegionalService(
+  countryCode: string,
+): (typeof REGIONAL_FORECAST_SERVICES)["HR"] | undefined {
   return REGIONAL_FORECAST_SERVICES[countryCode];
 }
 
@@ -286,35 +374,59 @@ type FetchResult = { text: string; available: boolean };
 
 const REGIONAL_MIN_TEXT_LENGTH = 150;
 
-async function validateScrapedContent(text: string, expectedType: "forecast" | "warning", label: string): Promise<boolean> {
+async function validateScrapedContent(
+  text: string,
+  expectedType: "forecast" | "warning",
+  label: string,
+): Promise<boolean> {
   if (text.length < REGIONAL_MIN_TEXT_LENGTH) return false;
   try {
-    const typeDesc = expectedType === "forecast"
-      ? "einen echten Wetterbericht oder eine Wettervorhersage mit konkreten Wetterdaten (Temperatur, Wind, Niederschlag, Bewölkung, Drucklage)"
-      : "echte Wetterwarninformationen (aktive Warnungen ODER die explizite Meldung dass keine Warnungen aktiv sind)";
+    const typeDesc =
+      expectedType === "forecast"
+        ? "einen echten Wetterbericht oder eine Wettervorhersage mit konkreten Wetterdaten (Temperatur, Wind, Niederschlag, Bewölkung, Drucklage)"
+        : "echte Wetterwarninformationen (aktive Warnungen ODER die explizite Meldung dass keine Warnungen aktiv sind)";
     const messages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: `Enthält der folgende Text ${typeDesc}? Oder ist es nur Website-Navigation, Menüs, Impressum, JavaScript-Code, Beaufort-Tabellen, oder sonstiger Nicht-Wetter-Inhalt? Antworte NUR mit JA oder NEIN.` },
+      {
+        role: "system",
+        content: `Enthält der folgende Text ${typeDesc}? Oder ist es nur Website-Navigation, Menüs, Impressum, JavaScript-Code, Beaufort-Tabellen, oder sonstiger Nicht-Wetter-Inhalt? Antworte NUR mit JA oder NEIN.`,
+      },
       { role: "user", content: text.slice(0, 4000) },
     ];
-    debugLogLLM("gpt-4.1-mini", `validate ${expectedType} [${label}]`, messages);
+    debugLogLLM(
+      "gpt-4.1-mini",
+      `validate ${expectedType} [${label}]`,
+      messages,
+    );
     const result = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages,
       max_completion_tokens: 2,
       temperature: 0,
     });
-    const answer = result.choices[0]?.message?.content?.trim().toUpperCase() || "";
+    const answer =
+      result.choices[0]?.message?.content?.trim().toUpperCase() || "";
     const isValid = answer.startsWith("JA");
-    debugLog(`Validierung ${expectedType} [${label}]: ${answer} → ${isValid ? "gültig" : "als nicht verfügbar markiert"}`);
-    debugLogLLMResponse("gpt-4.1-mini", `validate ${expectedType} [${label}]`, answer);
+    debugLog(
+      `Validierung ${expectedType} [${label}]: ${answer} → ${isValid ? "gültig" : "als nicht verfügbar markiert"}`,
+    );
+    debugLogLLMResponse(
+      "gpt-4.1-mini",
+      `validate ${expectedType} [${label}]`,
+      answer,
+    );
     return isValid;
   } catch (e) {
-    debugLog(`Validierung ${expectedType} [${label}]: Fehler, als gültig behandelt`);
+    debugLog(
+      `Validierung ${expectedType} [${label}]: Fehler, als gültig behandelt`,
+    );
     return true;
   }
 }
 
-const AT_BUNDESLAND_COORDS: Record<number, { name: string; lat: number; lon: number }> = {
+const AT_BUNDESLAND_COORDS: Record<
+  number,
+  { name: string; lat: number; lon: number }
+> = {
   8009100: { name: "Vorarlberg", lat: 47.25, lon: 9.9 },
   8009200: { name: "Tirol", lat: 47.26, lon: 11.39 },
   8009300: { name: "Salzburg", lat: 47.26, lon: 13.05 },
@@ -326,22 +438,32 @@ const AT_BUNDESLAND_COORDS: Record<number, { name: string; lat: number; lon: num
   8009900: { name: "Kärnten", lat: 46.72, lon: 14.3 },
 };
 
-async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchResult> {
+async function fetchGeoSphereForecasts(
+  lat: number,
+  lon: number,
+): Promise<FetchResult> {
   const url = "https://www.geosphere.at/data/textforecasts";
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
     });
     debugLog(`GeoSphere textforecasts API → ${res.status}`);
     if (!res.ok) return { text: "", available: false };
-    const data = await res.json() as Array<{ stationid: number; text: string; validity_range: string[] }>;
-    if (!Array.isArray(data) || data.length === 0) return { text: "", available: false };
+    const data = (await res.json()) as Array<{
+      stationid: number;
+      text: string;
+      validity_range: string[];
+    }>;
+    if (!Array.isArray(data) || data.length === 0)
+      return { text: "", available: false };
 
     let bestId = 8009000;
     let bestDist = Infinity;
     for (const [idStr, info] of Object.entries(AT_BUNDESLAND_COORDS)) {
-      const dist = Math.sqrt(Math.pow(lat - info.lat, 2) + Math.pow(lon - info.lon, 2));
+      const dist = Math.sqrt(
+        Math.pow(lat - info.lat, 2) + Math.pow(lon - info.lon, 2),
+      );
       if (dist < bestDist) {
         bestDist = dist;
         bestId = Number(idStr);
@@ -349,14 +471,15 @@ async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchR
     }
     const bestName = AT_BUNDESLAND_COORDS[bestId]?.name || "Österreich";
 
-    const regionalEntries = data.filter(e => e.stationid === bestId);
-    const generalEntries = data.filter(e => e.stationid === 8009000);
-    const entries = regionalEntries.length > 0 ? regionalEntries : generalEntries;
+    const regionalEntries = data.filter((e) => e.stationid === bestId);
+    const generalEntries = data.filter((e) => e.stationid === 8009000);
+    const entries =
+      regionalEntries.length > 0 ? regionalEntries : generalEntries;
 
     const parts = entries
       .slice(0, 3)
-      .map(e => e.text)
-      .filter(t => t && t.length > 10);
+      .map((e) => e.text)
+      .filter((t) => t && t.length > 10);
 
     if (parts.length === 0) return { text: "", available: false };
 
@@ -364,38 +487,55 @@ async function fetchGeoSphereForecasts(lat: number, lon: number): Promise<FetchR
     debugLogScrape("forecast [AT]", url, res.status, fullText);
     return { text: fullText, available: true };
   } catch (e) {
-    console.error("GeoSphere textforecasts fetch error:", e instanceof Error ? e.message : e);
+    console.error(
+      "GeoSphere textforecasts fetch error:",
+      e instanceof Error ? e.message : e,
+    );
     return { text: "", available: false };
   }
 }
 
-
-
-async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FORECAST_SERVICES["HR"], _lat?: number, _lon?: number): Promise<FetchResult> {
+async function tryFetchForecast(
+  countryCode: string,
+  service: (typeof REGIONAL_FORECAST_SERVICES)["HR"],
+  _lat?: number,
+  _lon?: number,
+): Promise<FetchResult> {
   if (countryCode === "DK") {
     const dkUrl = "https://www.dmi.dk/dmidk_byvejrWS/rest/json/Danmark/DK/land";
     const dmiRes = await fetch(dkUrl, {
-      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
     });
     debugLog(`Scrape forecast [${countryCode}] → ${dmiRes.status}`);
     if (!dmiRes.ok) return { text: "", available: false };
-    const data = await dmiRes.json() as { date?: string; valid?: string; weatherForecast?: string; slipperyWarning?: string | null };
+    const data = (await dmiRes.json()) as {
+      date?: string;
+      valid?: string;
+      weatherForecast?: string;
+      slipperyWarning?: string | null;
+    };
     const parts: string[] = [];
     if (data.date) parts.push(data.date);
     if (data.valid) parts.push(data.valid);
     if (data.weatherForecast) parts.push(data.weatherForecast);
-    if (data.slipperyWarning) parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
+    if (data.slipperyWarning)
+      parts.push(`Glatteis/Rutschwarnung: ${data.slipperyWarning}`);
     const fullText = parts.join(" ");
     debugLogScrape(`forecast [${countryCode}]`, dkUrl, dmiRes.status, fullText);
-    const valid = await validateScrapedContent(fullText, "forecast", countryCode);
+    const valid = await validateScrapedContent(
+      fullText,
+      "forecast",
+      countryCode,
+    );
     return { text: fullText, available: valid };
   }
 
   const res = await fetch(service.forecastUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml",
       "Accept-Language": "de,en;q=0.9",
     },
     signal: AbortSignal.timeout(10000),
@@ -404,13 +544,23 @@ async function tryFetchForecast(countryCode: string, service: typeof REGIONAL_FO
   if (!res.ok) return { text: "", available: false };
   const html = await res.text();
   const fullText = stripHtml(html);
-  debugLogScrape(`forecast [${countryCode}]`, service.forecastUrl, res.status, fullText);
+  debugLogScrape(
+    `forecast [${countryCode}]`,
+    service.forecastUrl,
+    res.status,
+    fullText,
+  );
   const valid = await validateScrapedContent(fullText, "forecast", countryCode);
   return { text: fullText, available: valid };
 }
 
-async function fetchGreekMarineForecast(lat: number, lon: number, locationName: string): Promise<FetchResult> {
-  const url = "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
+async function fetchGreekMarineForecast(
+  lat: number,
+  lon: number,
+  locationName: string,
+): Promise<FetchResult> {
+  const url =
+    "http://oldportal.emy.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -437,9 +587,12 @@ async function fetchGreekMarineForecast(lat: number, lon: number, locationName: 
 Find the sea area(s) closest to the given location and extract ONLY those paragraphs. Include PART 2 (GENERAL SYNOPSIS) plus the relevant sea area forecast(s) from PART 3.
 
 If the location is coastal, pick the adjacent sea area(s). If inland Greece, pick the nearest sea area.
-Output the extracted text exactly as written, preserving all wind speeds, sea states, and weather data.`
+Output the extracted text exactly as written, preserving all wind speeds, sea states, and weather data.`,
       },
-      { role: "user", content: `Location: ${locationName} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)\n\nBULLETIN:\n${bulletinText}` }
+      {
+        role: "user",
+        content: `Location: ${locationName} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)\n\nBULLETIN:\n${bulletinText}`,
+      },
     ];
     debugLogLLM("gpt-4.1-mini", "extract-greek-sea-area", extractMessages);
     const result = await openai.chat.completions.create({
@@ -453,14 +606,23 @@ Output the extracted text exactly as written, preserving all wind speeds, sea st
     if (extracted.length < 30) return { text: bulletinText, available: true };
     return { text: extracted, available: true };
   } catch (e) {
-    console.error("EMY METAREA-3 fetch error:", e instanceof Error ? e.message : e);
+    console.error(
+      "EMY METAREA-3 fetch error:",
+      e instanceof Error ? e.message : e,
+    );
     return { text: "", available: false };
   }
 }
 
-async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon: number, locationName?: string): Promise<FetchResult> {
+async function fetchRegionalWeatherReport(
+  countryCode: string,
+  lat: number,
+  lon: number,
+  locationName?: string,
+): Promise<FetchResult> {
   if (countryCode === "AT") return fetchGeoSphereForecasts(lat, lon);
-  if (countryCode === "GR") return fetchGreekMarineForecast(lat, lon, locationName || "Greece");
+  if (countryCode === "GR")
+    return fetchGreekMarineForecast(lat, lon, locationName || "Greece");
 
   const service = REGIONAL_FORECAST_SERVICES[countryCode];
   if (!service) return { text: "", available: false };
@@ -468,11 +630,15 @@ async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon:
   try {
     const first = await tryFetchForecast(countryCode, service);
     if (first.available) return first;
-    console.warn(`Regional forecast first attempt failed for ${countryCode}, retrying in 1s...`);
-    await new Promise(r => setTimeout(r, 1000));
+    console.warn(
+      `Regional forecast first attempt failed for ${countryCode}, retrying in 1s...`,
+    );
+    await new Promise((r) => setTimeout(r, 1000));
     const second = await tryFetchForecast(countryCode, service);
     if (second.available) return second;
-    console.error(`Regional forecast unavailable for ${countryCode} (${lat.toFixed(2)},${lon.toFixed(2)}) after 2 attempts`);
+    console.error(
+      `Regional forecast unavailable for ${countryCode} (${lat.toFixed(2)},${lon.toFixed(2)}) after 2 attempts`,
+    );
     return { text: "", available: false };
   } catch (e) {
     console.error(`Regional forecast fetch error for ${countryCode}:`, e);
@@ -480,8 +646,10 @@ async function fetchRegionalWeatherReport(countryCode: string, lat: number, lon:
   }
 }
 
-
-async function preprocessWeatherText(rawText: string, serviceName: string): Promise<string> {
+async function preprocessWeatherText(
+  rawText: string,
+  serviceName: string,
+): Promise<string> {
   if (!rawText || rawText.length < 50) return rawText;
   try {
     const messages: OpenAI.ChatCompletionMessageParam[] = [
@@ -505,9 +673,9 @@ Rules:
 - Keep the original language (English, German, Croatian, etc.)
 - Output clean text paragraphs, no HTML
 - If text contains forecast AND warnings, include BOTH
-- Do NOT add any information not in the source text`
+- Do NOT add any information not in the source text`,
       },
-      { role: "user", content: rawText.slice(0, 15000) }
+      { role: "user", content: rawText.slice(0, 15000) },
     ];
     debugLogLLM("gpt-4.1-mini", `preprocess [${serviceName}]`, messages);
     const result = await openai.chat.completions.create({
@@ -517,15 +685,19 @@ Rules:
       temperature: 0,
     });
     const cleaned = result.choices[0]?.message?.content?.trim() || rawText;
-    debugLog(`Preprocess [${serviceName}]: ${rawText.length} chars → ${cleaned.length} chars`);
+    debugLog(
+      `Preprocess [${serviceName}]: ${rawText.length} chars → ${cleaned.length} chars`,
+    );
     debugLogLLMResponse("gpt-4.1-mini", `preprocess [${serviceName}]`, cleaned);
     return cleaned;
   } catch (e) {
-    console.error(`Preprocess failed for ${serviceName}:`, e instanceof Error ? e.message : e);
+    console.error(
+      `Preprocess failed for ${serviceName}:`,
+      e instanceof Error ? e.message : e,
+    );
     return rawText;
   }
 }
-
 
 function getKnmiChartTime(): { hour: string; label: string } {
   const now = new Date();
@@ -627,7 +799,6 @@ Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen b
 
 ${SECTION_STYLE}`;
 
-
 async function fetchKnmiChartBase64(): Promise<string | null> {
   try {
     const now = new Date();
@@ -637,30 +808,42 @@ async function fetchKnmiChartBase64(): Promise<string | null> {
     const dayStr = utcDay.toString().padStart(2, "0");
     const chartUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
 
-    let chartRes = await fetch(chartUrl, { signal: AbortSignal.timeout(10000), cache: "no-store" });
+    let chartRes = await fetch(chartUrl, {
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
     if (!chartRes.ok) {
       const fallbackUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}00_large.gif`;
-      chartRes = await fetch(fallbackUrl, { signal: AbortSignal.timeout(10000), cache: "no-store" });
+      chartRes = await fetch(fallbackUrl, {
+        signal: AbortSignal.timeout(10000),
+        cache: "no-store",
+      });
       if (!chartRes.ok) return null;
     }
     const buffer = Buffer.from(await chartRes.arrayBuffer());
     return buffer.toString("base64");
   } catch (e) {
-    console.error("KNMI chart fetch for vision failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "KNMI chart fetch for vision failed:",
+      e instanceof Error ? e.message : e,
+    );
     return null;
   }
 }
 
-
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
   app.post("/api/geocode", async (req, res) => {
-    debugLogRequestSeparator(`POST /api/geocode — ${req.body?.location || "unknown"}`);
+    debugLogRequestSeparator(
+      `POST /api/geocode — ${req.body?.location || "unknown"}`,
+    );
     const parsed = geocodeRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request. Please provide a location." });
+      return res
+        .status(400)
+        .json({ error: "Invalid request. Please provide a location." });
     }
 
     const { location } = parsed.data;
@@ -671,7 +854,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Location not found." });
       }
 
-      const service = geocoded.countryCode ? getRegionalService(geocoded.countryCode) : undefined;
+      const service = geocoded.countryCode
+        ? getRegionalService(geocoded.countryCode)
+        : undefined;
 
       return res.json({
         ...geocoded,
@@ -714,12 +899,20 @@ export async function registerRoutes(
     }
   });
 
-
   const upload = multer({
     dest: "/tmp/uploads",
     limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
-      const allowed = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "video/mp4", "video/quicktime", "video/webm"];
+      const allowed = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif",
+        "video/mp4",
+        "video/quicktime",
+        "video/webm",
+      ];
       cb(null, allowed.includes(file.mimetype));
     },
   });
@@ -762,7 +955,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
   });
 
   app.post("/api/upload", upload.single("photo"), async (req, res) => {
-    debugLogRequestSeparator(`POST /api/upload — ${req.file?.originalname || "no file"}`);
+    debugLogRequestSeparator(
+      `POST /api/upload — ${req.file?.originalname || "no file"}`,
+    );
     if (!req.file) {
       return res.status(400).json({ error: "Keine Datei hochgeladen" });
     }
@@ -783,7 +978,11 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const fileBuffer = fs.readFileSync(filePath);
       const isVideo = req.file.mimetype.startsWith("video/");
 
-      sendSSE({ status: isVideo ? "📹 Video empfangen — analysiere Metadaten..." : "📷 Foto empfangen — analysiere Metadaten..." });
+      sendSSE({
+        status: isVideo
+          ? "📹 Video empfangen — analysiere Metadaten..."
+          : "📷 Foto empfangen — analysiere Metadaten...",
+      });
 
       let exifLocation: { lat: number; lon: number } | null = null;
       let exifTime: string | null = null;
@@ -797,7 +996,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         videoThumbnailBase64 = thumbResult;
         if (metaResult.gps) exifLocation = metaResult.gps;
         if (metaResult.time) exifTime = metaResult.time;
-      } else if (req.file.mimetype === "image/jpeg" || req.file.mimetype === "image/png") {
+      } else if (
+        req.file.mimetype === "image/jpeg" ||
+        req.file.mimetype === "image/png"
+      ) {
         try {
           const parser = exifParser.create(fileBuffer);
           const exifData = parser.parse();
@@ -814,8 +1016,11 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
             const ts = tags.DateTimeOriginal as number;
             exifTime = new Date(ts * 1000).toLocaleString("de-DE", {
               timeZone: "Europe/Berlin",
-              year: "numeric", month: "2-digit", day: "2-digit",
-              hour: "2-digit", minute: "2-digit",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
             });
           }
         } catch (e) {
@@ -827,13 +1032,18 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       let exifLocationName: string | null = null;
       let exifCountryCode: string | null = null;
       if (exifLocation) {
-        sendSSE({ status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E` });
+        sendSSE({
+          status: `📍 GPS gefunden: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`,
+        });
         metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
 
-        const geocoded = await geocodeLocation(`${exifLocation.lat},${exifLocation.lon}`);
+        const geocoded = await geocodeLocation(
+          `${exifLocation.lat},${exifLocation.lon}`,
+        );
         if (geocoded) {
           sendSSE({ location: geocoded });
-          exifLocationName = geocoded.cityName || geocoded.displayName.split(",")[0].trim();
+          exifLocationName =
+            geocoded.cityName || geocoded.displayName.split(",")[0].trim();
           exifCountryCode = geocoded.countryCode || null;
           metadataInfo += `\nOrt: ${geocoded.displayName}`;
         }
@@ -844,9 +1054,22 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       }
 
       if (isVideo) {
-        sendSSE({ videoMeta: { thumbnailBase64: videoThumbnailBase64, time: exifTime, locationName: exifLocationName, countryCode: exifCountryCode } });
+        sendSSE({
+          videoMeta: {
+            thumbnailBase64: videoThumbnailBase64,
+            time: exifTime,
+            locationName: exifLocationName,
+            countryCode: exifCountryCode,
+          },
+        });
       } else {
-        sendSSE({ exifMeta: { time: exifTime, locationName: exifLocationName, countryCode: exifCountryCode } });
+        sendSSE({
+          exifMeta: {
+            time: exifTime,
+            locationName: exifLocationName,
+            countryCode: exifCountryCode,
+          },
+        });
       }
 
       if (!exifLocation && !exifTime && !isVideo) {
@@ -859,23 +1082,39 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         sendSSE({ status: "🔍 Analysiere Video mit Gemini 2.5 Flash..." });
 
         const base64Video = fileBuffer.toString("base64");
-        const videoPrompt = systemPrompt
-          .replace(/\bBild\b/g, "Video")
-          .replace(
-            "## 🌫️ Bedeckungsgrad",
-            "## 💨 Windgeschwindigkeit\n(Schätze die Windstärke anhand sichtbarer Hinweise: Baumbeweigung, Wasserkräuselung, Gischt, Flaggen, Wellenhöhe, Schaumstreifen. Gib Windstärke NUR in Knoten (kt) an, mit kurzer Begründung der Schätzung. KEINE Beaufort-Angabe.)\n\n## 🌫️ Bedeckungsgrad"
-          ) + "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
+        const videoPrompt =
+          systemPrompt
+            .replace(/\bBild\b/g, "Video")
+            .replace(
+              "## 🌫️ Bedeckungsgrad",
+              "## 💨 Windgeschwindigkeit\n(Schätze die Windstärke anhand sichtbarer Hinweise: Baumbeweigung, Wasserkräuselung, Gischt, Flaggen, Wellenhöhe, Schaumstreifen. Gib Windstärke NUR in Knoten (kt) an, mit kurzer Begründung der Schätzung. KEINE Beaufort-Angabe.)\n\n## 🌫️ Bedeckungsgrad",
+            ) +
+          "\n\nBesonders beachten bei Videos:\n- Wolkenbewegung und -entwicklung über die Zeit\n- Wellenmuster und Windstärke auf dem Wasser\n- Veränderungen in Lichtverhältnissen und Sichtweite\n- Dynamische Wetterphänomene (ziehende Fronten, aufbauende Konvektion)";
 
         let vidText = "";
         try {
-          const geminiContents = [{
-            role: "user",
-            parts: [
-              { inlineData: { mimeType: req.file!.mimetype, data: base64Video } },
-              { text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen." },
-            ],
-          }];
-          debugLogLLM("gemini-2.5-flash", "video analysis", geminiContents, videoPrompt);
+          const geminiContents = [
+            {
+              role: "user",
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: req.file!.mimetype,
+                    data: base64Video,
+                  },
+                },
+                {
+                  text: "Analysiere dieses Video meteorologisch. Achte besonders auf Bewegungen und zeitliche Entwicklungen.",
+                },
+              ],
+            },
+          ];
+          debugLogLLM(
+            "gemini-2.5-flash",
+            "video analysis",
+            geminiContents,
+            videoPrompt,
+          );
           const result = await gemini.models.generateContent({
             model: "gemini-2.5-flash",
             contents: geminiContents,
@@ -884,18 +1123,32 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           vidText = result.text || "";
           debugLogLLMResponse("gemini-2.5-flash", "video analysis", vidText);
         } catch (geminiErr) {
-          console.warn("Gemini video analysis failed, falling back to GPT-4.1 Vision with thumbnail:", geminiErr instanceof Error ? geminiErr.message : geminiErr);
+          console.warn(
+            "Gemini video analysis failed, falling back to GPT-4.1 Vision with thumbnail:",
+            geminiErr instanceof Error ? geminiErr.message : geminiErr,
+          );
         }
 
         if (!vidText && videoThumbnailBase64) {
-          sendSSE({ status: "🔍 Analysiere Video-Standbild mit GPT-4.1 Vision..." });
+          sendSSE({
+            status: "🔍 Analysiere Video-Standbild mit GPT-4.1 Vision...",
+          });
           const fallbackMessages: OpenAI.ChatCompletionMessageParam[] = [
             { role: "system", content: videoPrompt },
             {
               role: "user",
               content: [
-                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${videoThumbnailBase64}`, detail: "high" } },
-                { type: "text", text: "Analysiere dieses Video-Standbild meteorologisch." },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:image/jpeg;base64,${videoThumbnailBase64}`,
+                    detail: "high",
+                  },
+                },
+                {
+                  type: "text",
+                  text: "Analysiere dieses Video-Standbild meteorologisch.",
+                },
               ],
             },
           ];
@@ -907,7 +1160,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
             temperature: 0.3,
             stream: false,
           });
-          const fallbackContent = fallbackRes.choices[0]?.message?.content || "";
+          const fallbackContent =
+            fallbackRes.choices[0]?.message?.content || "";
           debugLogLLMResponse("gpt-4.1", "video fallback", fallbackContent);
           if (fallbackContent) {
             vidText = `> ⚠️ *Video-Analyse nicht verfügbar — Analyse basiert auf einem Standbild (1. Sekunde).*\n\n${fallbackContent}`;
@@ -959,7 +1213,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       sendSSE({ done: true });
       res.end();
 
-      try { fs.unlinkSync(filePath); } catch {}
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
     } catch (error) {
       console.error("Upload analysis error:", error);
       if (res.headersSent) {
@@ -968,13 +1224,17 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       } else {
         res.status(500).json({ error: "Failed to analyze image" });
       }
-      try { if (req.file) fs.unlinkSync(req.file.path); } catch {}
+      try {
+        if (req.file) fs.unlinkSync(req.file.path);
+      } catch {}
     }
   });
 
   app.post("/api/chat", async (req, res) => {
     const { message, history, currentLocation } = req.body;
-    debugLogRequestSeparator(`POST /api/chat — "${(message || "").slice(0, 80)}"`);
+    debugLogRequestSeparator(
+      `POST /api/chat — "${(message || "").slice(0, 80)}"`,
+    );
 
     if (!message) {
       return res.status(400).json({ error: "Message required" });
@@ -993,21 +1253,33 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
     try {
       const hasActiveLocation = !!currentLocation;
-      const activeLocationName = currentLocation?.displayName?.split(",")[0]?.trim() || lastAnalysisContext?.location;
-      const classification = await classifyMessage(message, hasActiveLocation, anthropic, activeLocationName);
+      const activeLocationName =
+        currentLocation?.displayName?.split(",")[0]?.trim() ||
+        lastAnalysisContext?.location;
+      const classification = await classifyMessage(
+        message,
+        hasActiveLocation,
+        anthropic,
+        activeLocationName,
+      );
 
       if (classification.type === "OFFTOPIC") {
-        sendSSE({ content: "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden. Oder lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse." });
+        sendSSE({
+          content:
+            "Ich kann nur Segel- und Wetter-Fragen beantworten. Frage mich z.B. nach Segelrevieren oder lokalen Winden. Oder lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse.",
+        });
         sendSSE({ done: true });
         res.end();
         return;
       }
 
       if (classification.type === "CHAT") {
-        const chatHistory = (history || []).map((m: { role: string; content: string }) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        }));
+        const chatHistory = (history || []).map(
+          (m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }),
+        );
 
         let userContent = message;
         let systemPrompt = GENERAL_CHAT_PROMPT;
@@ -1016,7 +1288,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         }
         if (lastAnalysisContext) {
           systemPrompt += `\n\nLETZTE WETTERANALYSE (${lastAnalysisContext.date}, ${lastAnalysisContext.location}):\n`;
-          for (const [section, text] of Object.entries(lastAnalysisContext.sections)) {
+          for (const [section, text] of Object.entries(
+            lastAnalysisContext.sections,
+          )) {
             systemPrompt += `${section}: ${text}\n`;
           }
           systemPrompt += `\nDer Benutzer kann Rückfragen zu dieser Analyse stellen. Erkläre die Ergebnisse verständlich.`;
@@ -1038,7 +1312,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           system: systemPrompt,
           messages: chatMessages,
         });
-        const chatText = chatResponse.content[0]?.type === "text" ? chatResponse.content[0].text : "";
+        const chatText =
+          chatResponse.content[0]?.type === "text"
+            ? chatResponse.content[0].text
+            : "";
         debugLogLLMResponse("claude-sonnet-4-6", "general chat", chatText);
         if (chatText) sendSSE({ content: chatText });
 
@@ -1048,14 +1325,20 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       }
 
       if (classification.type === "UNCLEAR") {
-        sendSSE({ content: "Welchen Ort meinst du? Nenne mir einen konkreten Ort, Hafen oder See — z.B. \"Punat\", \"Gardasee\" oder \"Split\"." });
+        sendSSE({
+          content:
+            'Welchen Ort meinst du? Nenne mir einen konkreten Ort, Hafen oder See — z.B. "Punat", "Gardasee" oder "Split".',
+        });
         sendSSE({ done: true });
         res.end();
         return;
       }
 
       if (!classification.location) {
-        sendSSE({ content: "Welchen Ort meinst du? Nenne mir einen konkreten Ort, Hafen oder See — z.B. \"Punat\", \"Gardasee\" oder \"Split\"." });
+        sendSSE({
+          content:
+            'Welchen Ort meinst du? Nenne mir einen konkreten Ort, Hafen oder See — z.B. "Punat", "Gardasee" oder "Split".',
+        });
         sendSSE({ done: true });
         res.end();
         return;
@@ -1066,50 +1349,76 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       const detected = await detectLocation(userInput, anthropic);
 
       if (detected === null) {
-        sendSSE({ content: `Für „${userInput}" konnte ich keinen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. „Split in Kroatien" oder „Traunsee".` });
+        sendSSE({
+          content: `Für „${userInput}" konnte ich keinen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. „Split in Kroatien" oder „Traunsee".`,
+        });
         sendSSE({ done: true });
         res.end();
         return;
       }
 
       const cityNameFromSonnet = detected.city;
-      const hintCoords = detected.kind === "revier"
-        ? { lat: detected.revier.lat, lon: detected.revier.lon }
-        : undefined;
-      const geocodedCity = await geocodeLocation(cityNameFromSonnet, hintCoords);
+      const hintCoords =
+        detected.kind === "revier"
+          ? { lat: detected.revier.lat, lon: detected.revier.lon }
+          : undefined;
+      const geocodedCity = await geocodeLocation(
+        cityNameFromSonnet,
+        hintCoords,
+      );
 
       const sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] =
         detected.kind === "revier"
           ? {
               name_de: detected.revier.deutsch,
               type: detected.revier.typ === "meer" ? "sea" : "lake",
-              coordinates: { lat: detected.revier.lat, lon: detected.revier.lon },
+              coordinates: {
+                lat: detected.revier.lat,
+                lon: detected.revier.lon,
+              },
             }
           : null;
 
-      const cityObj: import("./analysis-store.js").AnalysisPosition["city"] = geocodedCity
-        ? { name_de: geocodedCity.cityName ?? cityNameFromSonnet, coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon } }
-        : { name_de: cityNameFromSonnet, coordinates: { lat: 0, lon: 0 } };
+      const cityObj: import("./analysis-store.js").AnalysisPosition["city"] =
+        geocodedCity
+          ? {
+              name_de: geocodedCity.cityName ?? cityNameFromSonnet,
+              coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon },
+            }
+          : { name_de: cityNameFromSonnet, coordinates: { lat: 0, lon: 0 } };
 
       const coords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
       const lat = coords.lat;
       const lon = coords.lon;
 
-      const countryCode = geocodedCity?.countryCode
-        ?? (detected.kind === "revier" ? detected.countryCode : "")
-        ?? "";
-      const country = Object.entries(LAND_TO_COUNTRY_CODE).find(([, v]) => v === countryCode)?.[0] ?? countryCode;
+      const countryCode =
+        geocodedCity?.countryCode ??
+        (detected.kind === "revier" ? detected.countryCode : "") ??
+        "";
+      const country =
+        Object.entries(LAND_TO_COUNTRY_CODE).find(
+          ([, v]) => v === countryCode,
+        )?.[0] ?? countryCode;
 
       const displayName = geocodedCity?.displayName ?? cityNameFromSonnet;
-      const revierModel = detected.kind === "revier"
-        ? { model: detected.revier.model, label: detected.revier.label, zoom: detected.revier.zoom }
-        : null;
+      const revierModel =
+        detected.kind === "revier"
+          ? resolveWindyModel(detected.revier.windyModel)
+          : null;
       const countryModel = countryCode ? getModelForCountry(countryCode) : null;
-      const regional = revierModel
-        ?? countryModel
-        ?? (geocodedCity ? { model: geocodedCity.regionalModel, label: geocodedCity.regionalModelLabel, zoom: geocodedCity.regionalModelZoom } : null);
+      const regional =
+        revierModel ??
+        countryModel ??
+        (geocodedCity
+          ? {
+              model: geocodedCity.regionalModel,
+              label: geocodedCity.regionalModelLabel,
+            }
+          : null);
       if (!regional) {
-        sendSSE({ content: `Für „${userInput}" konnte kein Wettermodell bestimmt werden. Bitte versuche einen konkreteren Ortsnamen.` });
+        sendSSE({
+          content: `Für „${userInput}" konnte kein Wettermodell bestimmt werden. Bitte versuche einen konkreteren Ortsnamen.`,
+        });
         sendSSE({ done: true });
         res.end();
         return;
@@ -1117,14 +1426,18 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // SSE location object (frontend-compatible)
       const geocoded = {
-        lat, lon, displayName,
+        lat,
+        lon,
+        displayName,
         countryCode,
-        cityName: cityObj.name_de || sailingAreaObj?.name_de || displayName.split(",")[0].trim(),
+        cityName:
+          cityObj.name_de ||
+          sailingAreaObj?.name_de ||
+          displayName.split(",")[0].trim(),
         cityLat: cityObj.coordinates.lat,
         cityLon: cityObj.coordinates.lon,
         regionalModel: regional.model,
         regionalModelLabel: regional.label,
-        regionalModelZoom: regional.zoom,
         sailingArea: sailingAreaObj?.name_de ?? null,
         type: sailingAreaObj?.type ?? null,
         country,
@@ -1139,54 +1452,79 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         userInput,
         country,
         countryCode,
+        windyModel: regional.label,
         sailingArea: sailingAreaObj,
         city: cityObj,
       });
 
       // ── Wetterdaten scrapen ───────────────────────────────────────────────
+
+      const saLat = sailingAreaObj?.coordinates.lat ?? cityObj.coordinates.lat;
+      const saLon = sailingAreaObj?.coordinates.lon ?? cityObj.coordinates.lon;
+      analysis.data.sources.windy.push(...getWindySources(regional, { lat: saLat, lon: saLon }, sailingAreaObj?.name_de ?? cityObj.name_de));
+
       const meteonewsText = await fetchMeteonews();
-      analysis.data.weatherRaw["generalWeather"] = { source: "meteonews", text_de: meteonewsText || null };
+      analysis.data.weatherRaw["generalWeather"] = {
+        source: "meteonews",
+        text_de: meteonewsText || null,
+      };
       if (meteonewsText) {
-        analysis.data.sources.push(METEONEWS_URL);
-        const preprocessed = await preprocessMeteonews(meteonewsText, anthropic);
+        const preprocessed = await preprocessMeteonews(
+          meteonewsText,
+          anthropic,
+        );
         analysis.data.weatherPreprocessed.europe["generalWeather"] = {
-          source: "meteonews", text_de: preprocessed || null,
+          source: "meteonews",
+          text_de: preprocessed || null,
         };
       } else {
         analysis.data.weatherPreprocessed.europe["generalWeather"] = {
-          source: "meteonews", text_de: null,
+          source: "meteonews",
+          text_de: null,
         };
       }
-      let wzSourceAdded = false;
-      const wz850Current = await fetchWetterzentraleChart(buildWetterzentraleCurrentUrl());
+      const wz850Current = await fetchWetterzentraleChart(
+        buildWetterzentraleCurrentUrl(),
+      );
       analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
-        source: "Wetterzentrale", url: wz850Current?.url ?? null, imageBase64: wz850Current?.imageBase64 ?? null,
+        source: "Wetterzentrale",
+        url: wz850Current?.url ?? null,
+        imageBase64: wz850Current?.imageBase64 ?? null,
       };
-      if (wz850Current && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); wzSourceAdded = true; }
-      const wz850Forecast = await fetchWetterzentraleChart(buildWetterzentraleForecastUrl());
+      const wz850Forecast = await fetchWetterzentraleChart(
+        buildWetterzentraleForecastUrl(),
+      );
       analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
-        source: "Wetterzentrale", url: wz850Forecast?.url ?? null, imageBase64: wz850Forecast?.imageBase64 ?? null,
+        source: "Wetterzentrale",
+        url: wz850Forecast?.url ?? null,
+        imageBase64: wz850Forecast?.imageBase64 ?? null,
       };
-      if (wz850Forecast && !wzSourceAdded) { analysis.data.sources.push(WETTERZENTRALE_BASE_URL); }
-      let knmiSourceAdded = false;
       const knmi = await fetchKnmiChart();
       analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
-        source: "KNMI", url: knmi?.url ?? null, imageBase64: knmi?.imageBase64 ?? null,
+        source: "KNMI",
+        url: knmi?.url ?? null,
+        imageBase64: knmi?.imageBase64 ?? null,
       };
-      if (knmi && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); knmiSourceAdded = true; }
       const knmiForecast = await fetchKnmiForecast();
       analysis.data.weatherPreprocessed.europe["frontForecast"] = {
-        source: "KNMI", url: knmiForecast?.url ?? null, imageBase64: knmiForecast?.imageBase64 ?? null,
+        source: "KNMI",
+        url: knmiForecast?.url ?? null,
+        imageBase64: knmiForecast?.imageBase64 ?? null,
       };
-      if (knmiForecast && !knmiSourceAdded) { analysis.data.sources.push(KNMI_BASE_URL); }
+
+      analysis.data.sources.europe.push(...getEuropeSources());
 
       const knmiUtcHour = Math.floor(new Date().getUTCHours() / 6) * 6;
       const knmiUtcDate = new Date();
       knmiUtcDate.setUTCHours(knmiUtcHour, 0, 0, 0);
       const tz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
       const frontCurrentLocalTime = new Intl.DateTimeFormat("de-DE", {
-        day: "2-digit", month: "2-digit", year: "numeric",
-        hour: "2-digit", minute: "2-digit", timeZone: tz,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: tz,
       }).format(knmiUtcDate);
 
       sendSSE({
@@ -1198,34 +1536,58 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       });
       analysis.save();
 
-      const national = await fetchNationalWeather(countryCode, { lat, lon }, sailingAreaObj?.name_de ?? null, sailingAreaObj, cityObj);
+      const national = await fetchNationalWeather(
+        countryCode,
+        { lat, lon },
+        sailingAreaObj?.name_de ?? null,
+        sailingAreaObj,
+        cityObj,
+      );
       Object.assign(analysis.data.weatherRaw, national.data);
-      for (const u of national.sourceUrls) analysis.data.sources.push(u);
-      const nationalPre = await preprocessNationalWeather(analysis.data.weatherRaw, anthropic, countryCode);
+      for (const u of national.sourceUrls)
+        analysis.data.sources.national.push(u);
+      const nationalPre = await preprocessNationalWeather(
+        analysis.data.weatherRaw,
+        anthropic,
+        countryCode,
+      );
       Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
       const localPre = await preprocessLocalWeather(
         analysis.data.weatherRaw,
-        { userInput: analysis.data.position.userInput, city: cityObj.name_de, sailingArea: sailingAreaObj?.name_de ?? null },
+        {
+          userInput: analysis.data.position.userInput,
+          city: cityObj.name_de,
+          sailingArea: sailingAreaObj?.name_de ?? null,
+        },
         anthropic,
         countryCode,
       );
       Object.assign(analysis.data.weatherPreprocessed.local, localPre);
       analysis.save();
 
-      const weatherOutput = await generateWeatherOutput(analysis.data, anthropic);
+      const weatherOutput = await generateWeatherOutput(
+        analysis.data,
+        anthropic,
+      );
       Object.assign(analysis.data.weatherOutput, weatherOutput);
       analysis.save();
       sendSSE({ weatherOutput, sources: analysis.data.sources });
 
-      const analysisLabel = sailingAreaObj?.name_de ?? cityObj.name_de ?? displayName.split(",")[0].trim();
+      const analysisLabel =
+        sailingAreaObj?.name_de ??
+        cityObj.name_de ??
+        displayName.split(",")[0].trim();
       lastAnalysisFilePath = analysis.filePath;
       lastAnalysisContext = {
         location: analysisLabel,
-        date: new Date().toLocaleString("de-AT", { timeZone: COUNTRY_TIMEZONE[countryCode] || "Europe/Vienna" }),
+        date: new Date().toLocaleString("de-AT", {
+          timeZone: COUNTRY_TIMEZONE[countryCode] || "Europe/Vienna",
+        }),
         sections: {},
       };
       for (const [key, value] of Object.entries(weatherOutput)) {
-        if (typeof value === "string") lastAnalysisContext.sections[key] = value;
+        if (typeof value === "string")
+          lastAnalysisContext.sections[key] = value;
       }
 
       // ── Chat-Ausgabe ───────────────────────────────────────────────────────
