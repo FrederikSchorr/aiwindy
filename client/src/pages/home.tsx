@@ -850,7 +850,7 @@ export default function Home() {
               onClick={() => captureInputRef.current?.click()}
               disabled={isStreaming}
               data-testid="button-capture"
-              title="Foto aufnehmen"
+              title="Foto/Video aufnehmen"
               className="shrink-0"
             >
               <Camera className="w-4 h-4" />
