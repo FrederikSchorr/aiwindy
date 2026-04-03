@@ -325,6 +325,9 @@ export async function extractGreeceWarning(
   if (!matchedBlocks.length) return nullResult;
 
   const blockText = matchedBlocks.join("\n\n");
+  const contentLines = blockText.split("\n").filter(l => l.trim() && l.trim().toUpperCase() !== target);
+  if (!contentLines.length) return nullResult;
+
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
