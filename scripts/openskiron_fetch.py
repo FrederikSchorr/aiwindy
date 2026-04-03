@@ -76,31 +76,41 @@ def discover_url(domain: str) -> str:
     return url
 
 
-def fetch_grib(domain: str) -> Path:
-    """Download GRIB if not cached or URL changed, return path to .grb2 file."""
+def _parse_created(url: str, domain: str) -> str:
+    """Extract creation timestamp from GRIB filename like '...260403-00.grb.bz2' → '2026-04-03 00Z'."""
+    import re
+    m = re.search(rf'{re.escape(domain)}_WRF_WAM_(\d{{6}})-(\d{{2}})\.grb\.bz2', url)
+    if m:
+        raw, hour = m.group(1), m.group(2)
+        return f"20{raw[0:2]}-{raw[2:4]}-{raw[4:6]} {hour}Z"
+    return ""
+
+
+def fetch_grib(domain: str) -> tuple[Path, str]:
+    """Download GRIB if not cached or URL changed, return (path, created_stamp)."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_path = CACHE_DIR / f"{domain}.grb2"
     url_cache = CACHE_DIR / f"{domain}.url"
     headers = {"User-Agent": "Mozilla/5.0"}
 
-    # Discover current URL from the WRF page
     try:
         url = discover_url(domain)
     except Exception as e:
         print(f"[warn] URL discovery failed: {e}", file=sys.stderr)
         if cache_path.exists():
             print(f"[cache] using existing cache for {domain}", file=sys.stderr)
-            return cache_path
+            cached_url = url_cache.read_text().strip() if url_cache.exists() else ""
+            return cache_path, _parse_created(cached_url, domain)
         raise
 
-    # Check if we already have this exact file cached
+    created = _parse_created(url, domain)
+
     if cache_path.exists() and url_cache.exists():
         cached_url = url_cache.read_text().strip()
         if cached_url == url:
             print(f"[cache] {domain} is up-to-date ({url.split('/')[-1]})", file=sys.stderr)
-            return cache_path
+            return cache_path, created
 
-    # Download + decompress
     print(f"[download] {url}", file=sys.stderr)
     resp = requests.get(url, headers=headers, timeout=120, stream=True)
     resp.raise_for_status()
@@ -109,7 +119,7 @@ def fetch_grib(domain: str) -> Path:
     cache_path.write_bytes(grb2_data)
     url_cache.write_text(url)
     print(f"[ok] downloaded {domain}: {len(grb2_data):,} bytes", file=sys.stderr)
-    return cache_path
+    return cache_path, created
 
 
 def extract_data(
@@ -277,8 +287,9 @@ def main():
     city_lon = float(sys.argv[5])
 
     try:
-        grb2_path = fetch_grib(domain)
+        grb2_path, created = fetch_grib(domain)
         result = extract_data(grb2_path, wind_lat, wind_lon, city_lat, city_lon)
+        result["created"] = created
         print(json.dumps(result))
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
