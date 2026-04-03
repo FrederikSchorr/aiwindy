@@ -259,11 +259,6 @@ export async function preprocessGreeceNationalSynopsis(
   const nullResult = { "synopsis": { source: "HNMS", url: HNMS_GALE_URL, text_de: null } };
   if (!text) return nullResult;
 
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const headerLine = lines.find(l => /WARNING NR.*UTC/i.test(l)) ?? "";
-  const headerDate = parseHnmsTimestamp(headerLine);
-  const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
-
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -276,8 +271,7 @@ ${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
-    const text_de = [timeLabel, translated].filter(Boolean).join("\n");
-    return { "synopsis": { source: "HNMS", url: HNMS_GALE_URL, text_de } };
+    return { "synopsis": { source: "HNMS", url: HNMS_GALE_URL, text_de: translated } };
   } catch (e) {
     console.error("preprocessGreeceNationalSynopsis error:", e instanceof Error ? e.message : e);
     return nullResult;
