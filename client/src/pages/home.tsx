@@ -216,19 +216,14 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
   return (
     <div data-testid="analysis-view">
-      <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground/80" data-testid="analysis-header">
+      <div className="mb-3 text-sm font-medium text-foreground/80" data-testid="analysis-header">
         {!location.sailingArea && !location.cityName ? (
           <span className="text-destructive">Weder Segelrevier noch Ort erkannt. Bitte versuche es mit einem konkreteren Ortsnamen.</span>
         ) : location.sailingArea ? (
-          <>
-            <span>Wetteranalyse für {location.cityName}, {location.sailingArea}</span>
-          </>
+          <span>Wetteranalyse für {location.cityName}, {location.sailingArea}{location.countryCode && <>{" "}<CountryFlag countryCode={location.countryCode} /></>}</span>
         ) : (
-          <>
-            <span>Kein Segelrevier erkannt. Wetteranalyse für {location.cityName}</span>
-          </>
+          <span>Kein Segelrevier erkannt. Wetteranalyse für {location.cityName}{location.countryCode && <>{" "}<CountryFlag countryCode={location.countryCode} /></>}</span>
         )}
-        {location.countryCode && <CountryFlag countryCode={location.countryCode} />}
       </div>
 
       {(location.sailingArea || location.cityName) && (
