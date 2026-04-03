@@ -1555,11 +1555,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       for (const u of national.sourceUrls)
         analysis.data.sources.national.push(u);
       if (national.openskironMeta) {
-        (analysis.data.position as any).openskiron_domain = {
-          name: national.openskironMeta.domain,
-          timestamp: national.openskironMeta.timestamp,
-          status: national.openskironMeta.status,
-        };
+        (analysis.data.position as any).openskiron_domain = national.openskironMeta;
         if (national.openskironMeta.status === "downloaded") {
           sendSSE({ loadingStatus: `Speichern der OpenSkiron Wetterdaten für ${national.openskironMeta.domain} ${national.openskironMeta.timestamp}` });
         }
