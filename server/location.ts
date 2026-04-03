@@ -370,7 +370,7 @@ export async function reverseGeocode(
 } | null> {
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1&namedetails=1&accept-language=de,en`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1&namedetails=1&accept-language=de,en`,
       { headers: { "User-Agent": "WindyWeatherApp/1.0" } },
     );
     if (!response.ok) return null;
@@ -392,7 +392,7 @@ export async function reverseGeocode(
     const nd = result.namedetails || {};
     const addr = result.address || {};
     const countryCode = addr.country_code?.toUpperCase();
-    const cityName = nd["name:de"] || nd["name"] || addr.city || addr.town || addr.village || result.display_name.split(",")[0].trim();
+    const cityName = addr.city || addr.town || addr.village || nd["name:de"] || nd["name"] || result.display_name.split(",")[0].trim();
 
     const countryModel = countryCode ? getModelForCountry(countryCode) : null;
     const regional = countryModel ?? getRegionalModelFallback(lat, lon);
