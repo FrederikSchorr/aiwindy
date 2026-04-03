@@ -47,41 +47,26 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
     });
     if (!res.ok) {
       console.error(`HNMS gale fetch failed (${res.status})`);
-      return { source: "HNMS", url: HNMS_GALE_URL, text: null, affectedAreas: [] };
+      return { source: "HNMS", url: HNMS_GALE_URL, text: null };
     }
     const html = await res.text();
 
-    const affectedAreas: string[] = [];
-    const areaRegex = /naftilia_deltio_thalasson\?thalassa=nav_area_\d+[^>]*>([^<]+)</gi;
-    let m: RegExpExecArray | null;
-    while ((m = areaRegex.exec(html)) !== null) {
-      affectedAreas.push(m[1].trim());
+    const printable = html.match(/id="printableArea">([\s\S]*?)<\/div>\s*<\/div>/i);
+    if (!printable) {
+      return { source: "HNMS", url: HNMS_GALE_URL, text: null };
     }
 
-    const issuedMatch = html.match(/Issued:\s*([^<]+)/i);
-    const issuedStr = issuedMatch ? issuedMatch[1].trim() : null;
+    const text = printable[1]
+      .replace(/<[^>]+>/g, "\n")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#\d+;/g, "")
+      .split("\n").map(l => l.trim()).filter(Boolean)
+      .filter(l => l !== "National Meteorological Center")
+      .join("\n");
 
-    const panelMatch = html.match(/<div[^>]*class="panel[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-    let warningText: string | null = null;
-    if (panelMatch) {
-      warningText = panelMatch[1]
-        .replace(/<[^>]+>/g, " ")
-        .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
-        .replace(/[ \t]+/g, " ")
-        .replace(/\n\s*\n/g, "\n")
-        .trim();
-    }
-
-    const text = [
-      issuedStr ? `Issued: ${issuedStr}` : null,
-      affectedAreas.length ? `Seas affected: ${affectedAreas.join(", ")}` : null,
-      warningText,
-    ].filter(Boolean).join("\n") || null;
-
-    return { source: "HNMS", url: HNMS_GALE_URL, text, affectedAreas };
+    return { source: "HNMS", url: HNMS_GALE_URL, text: text || null };
   } catch (e) {
     console.error("fetchHnmsGaleWarning error:", e instanceof Error ? e.message : e);
-    return { source: "HNMS", url: HNMS_GALE_URL, text: null, affectedAreas: [] };
+    return { source: "HNMS", url: HNMS_GALE_URL, text: null };
   }
 }
 
@@ -279,26 +264,15 @@ export async function preprocessGreeceNationalSynopsis(
   const headerDate = parseHnmsTimestamp(headerLine);
   const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
 
-  const cleanText = text.replace(/\r\r/g, "\n").replace(/\r/g, "\n");
-  const synStart = cleanText.search(/GENERAL SYNOPSIS/i);
-  if (synStart < 0) return nullResult;
-  const afterSyn = cleanText.slice(synStart);
-  const areaMatch = afterSyn.search(/\n\s*(KITHIRA|NORTHEAST|NORTHWEST|SOUTHEAST|SOUTHWEST|NORTH AEGEAN|SOUTH AEGEAN|EAST AEGEAN|WEST AEGEAN|SARONIC|TAURUS|IONIO|CRETAN|KRITIKO|DODECANESE|THRACIAN|THERMAIKOS|KARPATHOS|KASOS|CYCLADES|SPORADES|MIRTOO|EVVOIKOS)/i);
-  let synopsisRaw = (areaMatch >= 0 ? afterSyn.slice(0, areaMatch) : afterSyn.split("\n\n")[0]).trim();
-  if (!synopsisRaw) return nullResult;
-
-  synopsisRaw = synopsisRaw.replace(/^GENERAL SYNOPSIS\s*/i, "").trim();
-  const toSentenceCase = (s: string) =>
-    s.toLowerCase().replace(/(^|[.]\s*)([a-z])/g, (_, pre, c) => pre + c.toUpperCase());
-  synopsisRaw = toSentenceCase(synopsisRaw);
-
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Übersetze diesen englischen Seewetter-Synopsetext ins Deutsche. Behalte alle Druckwerte (hPa) und UTC-Zeitangaben bei. Antworte nur mit der Übersetzung, ohne Erklärungen.\n\n${synopsisRaw}`,
+        content: `Aus dieser Seewetter-Warnung: Extrahiere NUR den Abschnitt "GENERAL SYNOPSIS" (großräumige Wetterlage mit Druckgebieten und Positionen). IGNORIERE alle gebietsspezifischen Warnungen (z.B. KITHIRA SEA, SOUTHWEST KRITIKO etc.). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Behalte alle Druckwerte (hPa) und UTC-Zeitangaben bei. Antworte nur mit der Übersetzung, ohne Erklärungen.
+
+${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
@@ -326,22 +300,11 @@ export async function extractGreeceWarning(
   if (!galeData || !emyName) return nullResult;
 
   const text = galeData["text"] as string | null;
-  const affectedAreas = (galeData["affectedAreas"] as string[]) ?? [];
-
   if (!text) return nullResult;
 
-  const isAffected = affectedAreas.some(a =>
-    a.toUpperCase() === emyName.toUpperCase() ||
-    a.toUpperCase().includes(emyName.toUpperCase()) ||
-    emyName.toUpperCase().includes(a.toUpperCase()),
-  );
-
-  if (!isAffected) return nullResult;
-
-  const issuedMatch = text.match(/Issued:\s*(.+)/i);
-  const issuedStr = issuedMatch ? issuedMatch[1].trim() : null;
-  const headerDate = issuedStr ? parseHnmsTimestamp(`WARNING ${issuedStr} UTC`) : null;
-  const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : (issuedStr ? `Stand: ${issuedStr}` : "");
+  const headerLine = text.split("\n").find(l => /WARNING NR.*UTC/i.test(l)) ?? "";
+  const headerDate = parseHnmsTimestamp(headerLine);
+  const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
 
   try {
     const msg = await anthropic.messages.create({
@@ -349,11 +312,19 @@ export async function extractGreeceWarning(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Aus dieser englischen Seewetter-Warnung: Extrahiere NUR den Warnungstext für das Gebiet "${emyName}" (Windrichtung, Windstärke Beaufort, Gültigkeitsdauer). NICHT die General Synopsis, NICHT andere Gebiete. Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Antworte nur mit der Übersetzung für "${emyName}", nichts anderes.\n\n${text}`,
+        content: `Analysiere diese englische Seewetter-Warnung und beantworte für das Seegebiet "${emyName}":
+
+1. Ist "${emyName}" in der Warnung betroffen? (Prüfe die einzelnen Gebiets-Abschnitte NACH der "GENERAL SYNOPSIS")
+2. Falls ja: Extrahiere NUR den Warnungstext für "${emyName}" (Windrichtung, Windstärke, Gültigkeitsdauer). Übersetze ins Deutsche, normale Groß-/Kleinschreibung.
+3. Falls nein: Antworte mit genau "NONE"
+
+IGNORIERE die "GENERAL SYNOPSIS" — extrahiere nur gebietsspezifische Warnungen. Antworte NUR mit der deutschen Übersetzung oder "NONE".
+
+${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
-    if (!translated) return nullResult;
+    if (!translated || translated === "NONE") return nullResult;
     const text_de = ["Aktuelle Sturmwarnung:", timeLabel, translated].filter(Boolean).join("\n");
     return { "warnings": { source: "HNMS", url: HNMS_GALE_URL, sailingArea: emyName, text_de } };
   } catch (e) {
