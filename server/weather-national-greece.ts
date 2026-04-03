@@ -47,24 +47,41 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
     });
     if (!res.ok) {
       console.error(`HNMS gale fetch failed (${res.status})`);
-      return { source: "HNMS", url: HNMS_GALE_URL, text: null };
+      return { source: "HNMS", url: HNMS_GALE_URL, text: null, affectedAreas: [] };
     }
     const html = await res.text();
-    const clean = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n +/g, "\n")
-      .trim();
 
-    const idx = clean.indexOf("GALE WARNING");
-    const text = idx >= 0 ? clean.slice(idx).trim() : null;
-    return { source: "HNMS", url: HNMS_GALE_URL, text };
+    const affectedAreas: string[] = [];
+    const areaRegex = /naftilia_deltio_thalasson\?thalassa=nav_area_\d+[^>]*>([^<]+)</gi;
+    let m: RegExpExecArray | null;
+    while ((m = areaRegex.exec(html)) !== null) {
+      affectedAreas.push(m[1].trim());
+    }
+
+    const issuedMatch = html.match(/Issued:\s*([^<]+)/i);
+    const issuedStr = issuedMatch ? issuedMatch[1].trim() : null;
+
+    const panelMatch = html.match(/<div[^>]*class="panel[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    let warningText: string | null = null;
+    if (panelMatch) {
+      warningText = panelMatch[1]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n\s*\n/g, "\n")
+        .trim();
+    }
+
+    const text = [
+      issuedStr ? `Issued: ${issuedStr}` : null,
+      affectedAreas.length ? `Seas affected: ${affectedAreas.join(", ")}` : null,
+      warningText,
+    ].filter(Boolean).join("\n") || null;
+
+    return { source: "HNMS", url: HNMS_GALE_URL, text, affectedAreas };
   } catch (e) {
     console.error("fetchHnmsGaleWarning error:", e instanceof Error ? e.message : e);
-    return { source: "HNMS", url: HNMS_GALE_URL, text: null };
+    return { source: "HNMS", url: HNMS_GALE_URL, text: null, affectedAreas: [] };
   }
 }
 
@@ -285,48 +302,37 @@ export async function preprocessGreeceNationalSynopsis(
 }
 
 export async function extractGreeceWarning(
-  text: string | null,
+  galeData: Record<string, unknown> | null,
   emyName: string | null,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
+  const noWarning = "Aktuell: Keine Sturmwarnung von EMY";
   const nullResult = {
     "warnings": {
       source: "HNMS", url: HNMS_GALE_URL,
       sailingArea: emyName,
-      text_de: "Keine Marine-Warnung von EMY",
+      text_de: noWarning,
     },
   };
-  if (!text || !emyName) return nullResult;
+  if (!galeData || !emyName) return nullResult;
 
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const headerLine = lines.find(l => /WARNING NR.*UTC/i.test(l)) ?? "";
-  const headerDate = parseHnmsTimestamp(headerLine);
-  const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
+  const text = galeData["text"] as string | null;
+  const affectedAreas = (galeData["affectedAreas"] as string[]) ?? [];
 
-  const target = emyName.toUpperCase();
-  const matchedBlocks: string[] = [];
+  if (!text) return nullResult;
 
-  let i = 0;
-  while (i < lines.length) {
-    const upper = lines[i].toUpperCase();
-    if (upper === target || upper.startsWith(target)) {
-      const block: string[] = [lines[i]];
-      i++;
-      while (i < lines.length && !isAreaHeading(lines[i])) {
-        block.push(lines[i]);
-        i++;
-      }
-      matchedBlocks.push(block.join("\n"));
-    } else {
-      i++;
-    }
-  }
+  const isAffected = affectedAreas.some(a =>
+    a.toUpperCase() === emyName.toUpperCase() ||
+    a.toUpperCase().includes(emyName.toUpperCase()) ||
+    emyName.toUpperCase().includes(a.toUpperCase()),
+  );
 
-  if (!matchedBlocks.length) return nullResult;
+  if (!isAffected) return nullResult;
 
-  const blockText = matchedBlocks.join("\n\n");
-  const contentLines = blockText.split("\n").filter(l => l.trim() && l.trim().toUpperCase() !== target);
-  if (!contentLines.length) return nullResult;
+  const issuedMatch = text.match(/Issued:\s*(.+)/i);
+  const issuedStr = issuedMatch ? issuedMatch[1].trim() : null;
+  const headerDate = issuedStr ? parseHnmsTimestamp(`WARNING ${issuedStr} UTC`) : null;
+  const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : (issuedStr ? `Stand: ${issuedStr}` : "");
 
   try {
     const msg = await anthropic.messages.create({
@@ -334,10 +340,11 @@ export async function extractGreeceWarning(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Übersetze diese englische Seewetter-Warnung für das Gebiet "${emyName}" ins Deutsche. Beaufort-Skala und nautische Begriffe beibehalten. Antworte nur mit der Übersetzung.\n\n${blockText}`,
+        content: `Übersetze diese englische Seewetter-Warnung ins Deutsche. Das Gebiet "${emyName}" ist von der Warnung betroffen. Beaufort-Skala und nautische Begriffe beibehalten. Antworte nur mit der Übersetzung.\n\n${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
+    if (!translated) return nullResult;
     const text_de = [timeLabel, translated].filter(Boolean).join("\n");
     return { "warnings": { source: "HNMS", url: HNMS_GALE_URL, sailingArea: emyName, text_de } };
   } catch (e) {

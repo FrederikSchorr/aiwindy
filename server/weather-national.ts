@@ -116,10 +116,10 @@ export async function preprocessLocalWeather(
   }
 
   if (countryCode === "GR") {
-    const text = (rawData["greeceGaleWarning"] as any)?.text as string | null;
+    const galeData = rawData["greeceGaleWarning"] as Record<string, unknown> | null;
     const emyName = getGreekEmyName(position.sailingArea);
     return {
-      ...(await extractGreeceWarning(text, emyName, anthropic)),
+      ...(await extractGreeceWarning(galeData, emyName, anthropic)),
       ...(await preprocessGreeceLocalWind(rawData, anthropic)),
       ...(await preprocessGreeceLocalWave(rawData, anthropic)),
       ...(await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic)),
