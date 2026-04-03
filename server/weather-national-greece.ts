@@ -111,7 +111,7 @@ async function fetchGreeceWindCloudRain(
       String(windLat), String(windLon),
       String(cityLat), String(cityLon),
     ];
-    const proc = spawn("python", args, {
+    const proc = spawn("python3", args, {
       env: { ...process.env, ECCODES_LOG_LEVEL: "0" },
     });
     let stdout = "";
