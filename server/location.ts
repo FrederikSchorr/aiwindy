@@ -354,6 +354,63 @@ Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`
   }
 }
 
+// ── Nominatim reverse geocoding ──────────────────────────────────────────────
+
+export async function reverseGeocode(
+  lat: number,
+  lon: number,
+): Promise<{
+  lat: number;
+  lon: number;
+  displayName: string;
+  regionalModel: string;
+  regionalModelLabel: string;
+  countryCode?: string;
+  cityName?: string;
+} | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1&namedetails=1&accept-language=de,en`,
+      { headers: { "User-Agent": "WindyWeatherApp/1.0" } },
+    );
+    if (!response.ok) return null;
+
+    const result = (await response.json()) as {
+      lat: string;
+      lon: string;
+      display_name: string;
+      namedetails?: Record<string, string>;
+      address?: {
+        country_code?: string;
+        city?: string;
+        town?: string;
+        village?: string;
+      };
+    };
+    if (!result.display_name) return null;
+
+    const nd = result.namedetails || {};
+    const addr = result.address || {};
+    const countryCode = addr.country_code?.toUpperCase();
+    const cityName = nd["name:de"] || nd["name"] || addr.city || addr.town || addr.village || result.display_name.split(",")[0].trim();
+
+    const countryModel = countryCode ? getModelForCountry(countryCode) : null;
+    const regional = countryModel ?? getRegionalModelFallback(lat, lon);
+
+    return {
+      lat,
+      lon,
+      displayName: result.display_name,
+      regionalModel: regional.model,
+      regionalModelLabel: regional.label,
+      countryCode,
+      cityName,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ── Nominatim geocoding ────────────────────────────────────────────────────
 
 export async function geocodeLocation(

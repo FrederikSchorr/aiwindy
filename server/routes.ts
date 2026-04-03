@@ -19,6 +19,7 @@ import {
   getWindySources,
   classifyMessage,
   geocodeLocation,
+  reverseGeocode,
 } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
 
@@ -1041,8 +1042,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         });
         metadataInfo += `\nGPS-Koordinaten aus EXIF: ${exifLocation.lat.toFixed(4)}°N, ${exifLocation.lon.toFixed(4)}°E`;
 
-        const geocoded = await geocodeLocation(
-          `${exifLocation.lat},${exifLocation.lon}`,
+        const geocoded = await reverseGeocode(
+          exifLocation.lat,
+          exifLocation.lon,
         );
         if (geocoded) {
           sendSSE({ location: geocoded });
