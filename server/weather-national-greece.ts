@@ -345,7 +345,7 @@ export async function extractGreeceWarning(
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
     if (!translated) return nullResult;
-    const text_de = [timeLabel, translated].filter(Boolean).join("\n");
+    const text_de = ["Aktuelle Sturmwarnung:", timeLabel, translated].filter(Boolean).join("\n");
     return { "warnings": { source: "HNMS", url: HNMS_GALE_URL, sailingArea: emyName, text_de } };
   } catch (e) {
     console.error("extractGreeceWarning error:", e instanceof Error ? e.message : e);
