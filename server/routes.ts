@@ -1566,9 +1566,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         },
       });
       analysis.save();
-      sendSSE({ loadingStatus: countryCode === "GR"
-        ? `Lade lokale Wetterdaten für Griechenland aus OpenSkiron ...`
-        : `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
+      sendSSE({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
 
       const national = await fetchNationalWeather(
         countryCode,
@@ -1577,6 +1575,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         sailingAreaObj,
         cityObj,
         country,
+        (status) => sendSSE({ loadingStatus: status }),
       );
       Object.assign(analysis.data.weatherRaw, national.data);
       for (const u of national.sourceUrls)

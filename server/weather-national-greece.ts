@@ -223,7 +223,11 @@ async function fetchGreeceWindCloudRain(
 export async function fetchGreeceWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
+  onProgress?: (status: string) => void,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; status: "cached" | "downloaded" } }> {
+  if (sailingAreaObj && onProgress) {
+    onProgress("Lade lokale Wetterdaten für Griechenland aus OpenSkiron ...");
+  }
   const [hnms, openskiron] = await Promise.all([
     fetchHnmsGaleWarning(),
     sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj) : null,

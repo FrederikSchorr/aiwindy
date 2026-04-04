@@ -53,6 +53,7 @@ export async function fetchNationalWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
   country?: string,
+  onProgress?: (status: string) => void,
 ): Promise<{
   data: Record<string, unknown>;
   sourceUrls: string[];
@@ -64,7 +65,7 @@ export async function fetchNationalWeather(
     case "AT":
       return fetchAustriaWeather(sailingAreaObj, cityObj);
     case "GR":
-      return fetchGreeceWeather(sailingAreaObj, cityObj);
+      return fetchGreeceWeather(sailingAreaObj, cityObj, onProgress);
     default:
       return {
         data: {},
