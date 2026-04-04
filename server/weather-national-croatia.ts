@@ -179,7 +179,7 @@ export async function preprocessDhmzLocalTemperature(
         max_tokens: 50,
         messages: [{
           role: "user",
-          content: `From this list of Croatian cities, return the single city name that best matches "${locationHint}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. Prefer exact name matches over geographic proximity. Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
+          content: `From this list of Croatian cities, return the single city name that is geographically closest to "${locationHint}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. If "${locationHint}" is on an island (e.g. Brač, Hvar, Korčula, Vis), pick the nearest coastal city on the mainland or the island's own city if listed. Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
         }],
       });
       const llmResult = (msg.content[0] as { type: "text"; text: string }).text.trim();
