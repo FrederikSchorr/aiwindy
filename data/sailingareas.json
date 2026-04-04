@@ -347,8 +347,8 @@
         "typ": "meer",
         "emy_name": "West Kritiko",
         "emy_nr": 38,
-        "lat": 35.5,
-        "lon": 23.5,
+        "lat": 35.644380,
+        "lon": 23.367590,
         "orte": "Chania, Rethymno, Heraklion, Kissamos, Paleochora",
         "windyModel": "iconEu",
         "openskiron_domain": "Aegean_SW_4km"
