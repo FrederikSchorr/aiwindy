@@ -171,9 +171,10 @@ async function fetchGreeceWindCloudRain(
         onProgress(`Download der OpenSkiron Wetterdaten ${filename ?? domain}`);
       }
       if (chunk.includes("[extract]") && onProgress) {
-        const extractMatch = chunk.match(/\[extract\]\s+(\S+)/);
+        const extractMatch = chunk.match(/\[extract\]\s+(\S+)\s*(.*)/);
         const filename = extractMatch ? extractMatch[1] : domain;
-        onProgress(`Extrahiere lokale Daten aus ${filename}`);
+        const created = extractMatch?.[2]?.trim() || "";
+        onProgress(`Extrahiere lokale Daten aus ${filename}${created ? " " + created : ""}`);
       }
     });
     proc.on("close", (code: number | null) => {

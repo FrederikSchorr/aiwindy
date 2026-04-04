@@ -313,7 +313,7 @@ def main():
             except Exception:
                 pass
 
-        print(f"[extract] {grb2_path.name}", file=sys.stderr)
+        print(f"[extract] {grb2_path.name} {created}", file=sys.stderr)
         result = extract_data(grb2_path, wind_lat, wind_lon, city_lat, city_lon)
         result["created"] = created
 
