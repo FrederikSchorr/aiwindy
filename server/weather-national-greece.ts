@@ -82,7 +82,7 @@ async function fetchGreeceWindCloudRain(
   sailingAreaObj: NonNullable<SailingAreaObj>,
   cityObj: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: { domain: string; created: string; status: "cached" | "downloaded" } }> {
+): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: { domain: string; created: string; status: "cached" | "extracted" | "downloaded" } }> {
   const nullWindCloudRain = {
     source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
     sailingArea: sailingAreaObj,
@@ -179,6 +179,7 @@ async function fetchGreeceWindCloudRain(
     proc.on("close", (code: number | null) => {
       clearTimeout(timer);
       const didDownload = stderr.includes("[download]");
+      const didJsonCache = stderr.includes("[json-cache] reusing");
       const stderrClean = stderr
         .split("\n")
         .filter(l => !l.includes("missingValue") && !l.includes("Ignoring index file")
@@ -219,7 +220,7 @@ async function fetchGreeceWindCloudRain(
             timestamps: parsed.timestamps,
             temp2mC: parsed.temp2mC,
           },
-          openskironMeta: { domain, created: parsed.created ?? "", status: didDownload ? "downloaded" : "cached" },
+          openskironMeta: { domain, created: parsed.created ?? "", status: didDownload ? "downloaded" : didJsonCache ? "cached" : "extracted" },
         });
       } catch (e) {
         console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);
@@ -240,7 +241,7 @@ export async function fetchGreeceWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; status: "cached" | "downloaded" } }> {
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; status: "cached" | "extracted" | "downloaded" } }> {
   const [hnms, openskiron] = await Promise.all([
     fetchHnmsGaleWarning(),
     sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj, onProgress) : null,
