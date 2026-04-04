@@ -507,8 +507,8 @@
         "deutsch": "Adria Nord (Italien)",
         "typ": "meer",
         "italienisch": "Adriatico Settentrionale",
-        "lat": 45.2,
-        "lon": 13,
+        "lat": 45.464939,
+        "lon": 12.972575,
         "orte": "Venedig, Triest, Rimini, Chioggia, Grado",
         "windyModel": "czeAladin"
       },
