@@ -86,15 +86,13 @@ export function createAnalysis(position: AnalysisPosition): {
 
   const save = () => {
     try {
+      const exportData = JSON.parse(JSON.stringify(data));
+      const rawGw = exportData.weatherRaw?.["generalWeather"];
+      if (rawGw && typeof rawGw.text_de === "string" && rawGw.text_de.length > 100) {
+        rawGw.text_de = rawGw.text_de.slice(0, 100) + "...";
+      }
       const replacer = (_key: string, value: unknown) => {
         if (_key.endsWith("Base64")) return undefined;
-        if (_key === "generalWeather" && value && typeof value === "object") {
-          const obj = { ...(value as Record<string, unknown>) };
-          if (typeof obj.text_de === "string" && obj.text_de.length > 100) {
-            obj.text_de = obj.text_de.slice(0, 100) + "...";
-          }
-          return obj;
-        }
         if ((_key === "austriaWindCloudRain" || _key === "greeceWindWaveCloudRain") && value && typeof value === "object") {
           const obj = { ...(value as Record<string, unknown>) };
           for (const [k, v] of Object.entries(obj)) {
@@ -113,7 +111,7 @@ export function createAnalysis(position: AnalysisPosition): {
         if (_key === "xml" && typeof value === "string" && value.length > 2000) return value.slice(0, 2000) + "...";
         return value;
       };
-      fs.writeFileSync(filePath, JSON.stringify(data, replacer, 2), "utf-8");
+      fs.writeFileSync(filePath, JSON.stringify(exportData, replacer, 2), "utf-8");
     } catch (e) {
       console.error("Failed to save analysis JSON:", e);
     }
