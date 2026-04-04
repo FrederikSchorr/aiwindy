@@ -57,7 +57,7 @@ export async function fetchNationalWeather(
 ): Promise<{
   data: Record<string, unknown>;
   sourceUrls: string[];
-  openskironMeta?: { domain: string; created: string; status: "cached" | "extracted" | "downloaded" };
+  openskironMeta?: { domain: string; created: string; fetch: string };
 }> {
   switch (countryCode) {
     case "HR":

@@ -82,7 +82,7 @@ async function fetchGreeceWindCloudRain(
   sailingAreaObj: NonNullable<SailingAreaObj>,
   cityObj: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: { domain: string; created: string; status: "cached" | "extracted" | "downloaded" } }> {
+): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: { domain: string; created: string; fetch: string } }> {
   const nullWindCloudRain = {
     source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
     sailingArea: sailingAreaObj,
@@ -220,7 +220,7 @@ async function fetchGreeceWindCloudRain(
             timestamps: parsed.timestamps,
             temp2mC: parsed.temp2mC,
           },
-          openskironMeta: { domain, created: parsed.created ?? "", status: didDownload ? "downloaded" : didJsonCache ? "cached" : "extracted" },
+          openskironMeta: { domain, created: parsed.created ?? "", fetch: didDownload ? "grib downloaded + json extracted" : didJsonCache ? "grib + json cached" : "grib cached + json extracted" },
         });
       } catch (e) {
         console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);
@@ -241,7 +241,7 @@ export async function fetchGreeceWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; status: "cached" | "extracted" | "downloaded" } }> {
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; fetch: string } }> {
   const [hnms, openskiron] = await Promise.all([
     fetchHnmsGaleWarning(),
     sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj, onProgress) : null,
