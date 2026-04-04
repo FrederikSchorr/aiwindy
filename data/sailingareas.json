@@ -358,8 +358,8 @@
         "typ": "meer",
         "emy_name": "East Kritiko",
         "emy_nr": 39,
-        "lat": 35.2,
-        "lon": 26,
+        "lat": 35.095729,
+        "lon": 26.584788,
         "orte": "Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos",
         "windyModel": "iconEu",
         "openskiron_domain": "Aegean_SW_4km"
