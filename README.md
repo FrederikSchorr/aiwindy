@@ -1,5 +1,7 @@
 # AIWindy — AI-Powered Sailing Weather Advisor
 
+**Live App: [aiwindy.schorr.wien](https://aiwindy.schorr.wien)**
+
 An AI-powered sailing weather analysis app for European waters. Each analysis presents 5 interactive [Windy](https://www.windy.com) maps paired with AI-generated explanations — zooming in from the continental scale down to the local sailing area:
 
 1. **Druck & Luftmassen** — Europe-wide 850hPa pressure and air mass map (ECMWF)
