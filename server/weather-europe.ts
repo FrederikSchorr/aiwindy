@@ -1,6 +1,28 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AnalysisSources } from "./analysis-store.js";
 
+// ── Image cache (URL-based, in-memory) ───────────────────────────────────────
+
+const imageCache = new Map<string, { imageBase64: string; fetchedAt: number }>();
+const IMAGE_CACHE_TTL = 3 * 3600 * 1000;
+
+function getCachedImage(url: string): string | null {
+  const entry = imageCache.get(url);
+  if (!entry) return null;
+  if (Date.now() - entry.fetchedAt > IMAGE_CACHE_TTL) {
+    imageCache.delete(url);
+    return null;
+  }
+  return entry.imageBase64;
+}
+
+function setCachedImage(url: string, imageBase64: string): void {
+  imageCache.set(url, { imageBase64, fetchedAt: Date.now() });
+  for (const [key, val] of imageCache) {
+    if (Date.now() - val.fetchedAt > IMAGE_CACHE_TTL) imageCache.delete(key);
+  }
+}
+
 // ── HTML helper ───────────────────────────────────────────────────────────────
 
 export function stripHtml(html: string): string {
@@ -113,6 +135,11 @@ export async function fetchKnmiChart(): Promise<{
   const dayStr = new Date().getUTCDate().toString().padStart(2, "0");
   const fallbackUrl = `${KNMI_BASE_URL}/AL${dayStr}00_large.gif`;
   try {
+    const cached = getCachedImage(url);
+    if (cached) {
+      console.log(`[cache] KNMI chart hit: ${url}`);
+      return { url, imageBase64: cached };
+    }
     let res = await fetch(url, {
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
@@ -122,6 +149,11 @@ export async function fetchKnmiChart(): Promise<{
       console.warn(
         `KNMI chart not found (${res.status}): ${url} → trying fallback`,
       );
+      const cachedFb = getCachedImage(fallbackUrl);
+      if (cachedFb) {
+        console.log(`[cache] KNMI chart fallback hit: ${fallbackUrl}`);
+        return { url: fallbackUrl, imageBase64: cachedFb };
+      }
       res = await fetch(fallbackUrl, {
         signal: AbortSignal.timeout(10000),
         cache: "no-store",
@@ -135,6 +167,8 @@ export async function fetchKnmiChart(): Promise<{
       }
     }
     const imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+    setCachedImage(usedUrl, imageBase64);
+    console.log(`[cache] KNMI chart stored: ${usedUrl}`);
     return { url: usedUrl, imageBase64 };
   } catch (e) {
     console.error(
@@ -160,6 +194,11 @@ export async function fetchKnmiForecast(): Promise<{
 } | null> {
   const url = buildKnmiForecastUrl();
   try {
+    const cached = getCachedImage(url);
+    if (cached) {
+      console.log(`[cache] KNMI forecast hit: ${url}`);
+      return { url, imageBase64: cached };
+    }
     const res = await fetch(url, {
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
@@ -169,6 +208,8 @@ export async function fetchKnmiForecast(): Promise<{
       return null;
     }
     const imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+    setCachedImage(url, imageBase64);
+    console.log(`[cache] KNMI forecast stored: ${url}`);
     return { url, imageBase64 };
   } catch (e) {
     console.error(
@@ -207,6 +248,11 @@ export async function fetchWetterzentraleChart(
   url: string,
 ): Promise<{ url: string; imageBase64: string } | null> {
   try {
+    const cached = getCachedImage(url);
+    if (cached) {
+      console.log(`[cache] Wetterzentrale hit: ${url}`);
+      return { url, imageBase64: cached };
+    }
     const res = await fetch(url, {
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
@@ -216,6 +262,8 @@ export async function fetchWetterzentraleChart(
       return null;
     }
     const imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+    setCachedImage(url, imageBase64);
+    console.log(`[cache] Wetterzentrale stored: ${url}`);
     return { url, imageBase64 };
   } catch (e) {
     console.error(
