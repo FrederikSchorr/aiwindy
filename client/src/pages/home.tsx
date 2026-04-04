@@ -357,6 +357,7 @@ export default function Home() {
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
   const lastAnalysisTimeRef = useRef<string | null>(null);
+  const lastAnalysisOutputRef = useRef<WeatherOutputData | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -400,6 +401,7 @@ export default function Home() {
       }
       if (data.weatherOutput) {
         setMessageWeatherOutput(prev => ({ ...prev, [assistantId]: data.weatherOutput! }));
+        lastAnalysisOutputRef.current = data.weatherOutput;
       }
       if (data.sources) {
         setMessageSources(prev => ({ ...prev, [assistantId]: data.sources! }));
@@ -675,13 +677,31 @@ export default function Home() {
                       const subject = encodeURIComponent("Feedback zu aiWindy");
                       let body = "";
                       if (activeLocation) {
+                        const sectionLabels: Record<string, string> = {
+                          airPressureMasses: "🌀 Druck & Luftmassen",
+                          weatherFront: "🌊 Fronten",
+                          windWaves: "💨 Wind & Welle",
+                          cloudsRain: "☁️ Wolken & Regen",
+                          temperature: "🌡️ Temperatur",
+                        };
                         const parts = [
-                          `Ort: ${activeLocation.displayName}`,
-                          `Koordinaten: ${activeLocation.lat}, ${activeLocation.lon}`,
-                          activeLocation.regionalModelLabel ? `Windmodell: ${activeLocation.regionalModelLabel}` : "",
-                          lastAnalysisTimeRef.current ? `Analyse vom: ${lastAnalysisTimeRef.current}` : "",
+                          lastAnalysisTimeRef.current ? `📅 Analyse vom: ${lastAnalysisTimeRef.current}` : "",
+                          activeLocation.country ? `🏳️ ${activeLocation.country}` : "",
+                          activeLocation.sailingArea ? `⛵ ${activeLocation.sailingArea}` : "",
+                          activeLocation.cityName ? `📍 ${activeLocation.cityName}` : "",
+                          activeLocation.regionalModelLabel ? `🔬 Windmodell: ${activeLocation.regionalModelLabel}` : "",
                         ].filter(Boolean);
-                        body = encodeURIComponent("\n\n---\nLetzte Analyse:\n" + parts.join("\n"));
+                        body = "\n\n---\nLetzte Analyse:\n" + parts.join("\n");
+                        const wo = lastAnalysisOutputRef.current;
+                        if (wo) {
+                          for (const [key, label] of Object.entries(sectionLabels)) {
+                            const section = wo[key as keyof typeof wo];
+                            if (section?.text) {
+                              body += `\n\n${label}\n${section.text}`;
+                            }
+                          }
+                        }
+                        body = encodeURIComponent(body);
                       }
                       return `mailto:frederik@schorr.wien?subject=${subject}&body=${body}`;
                     })()}
