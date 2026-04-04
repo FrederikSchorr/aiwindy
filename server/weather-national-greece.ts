@@ -166,7 +166,9 @@ async function fetchGreeceWindCloudRain(
       stderr += chunk;
       if (!downloadNotified && chunk.includes("[download]") && onProgress) {
         downloadNotified = true;
-        onProgress("Lade lokale Wetterdaten für Griechenland aus OpenSkiron ...");
+        const urlMatch = chunk.match(/\[download\]\s+(\S+)/);
+        const filename = urlMatch ? urlMatch[1].split("/").pop() : domain;
+        onProgress(`Speichern der OpenSkiron Wetterdaten für ${domain} ${filename ?? ""}`);
       }
     });
     proc.on("close", (code: number | null) => {
