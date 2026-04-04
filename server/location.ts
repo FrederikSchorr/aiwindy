@@ -430,7 +430,7 @@ export async function geocodeLocation(
       ? `&viewbox=${hintCoords.lon - 0.5},${hintCoords.lat + 0.5},${hintCoords.lon + 0.5},${hintCoords.lat - 0.5}&bounded=0`
       : "";
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1&extratags=1&namedetails=1&addressdetails=1&accept-language=de,en${viewbox}`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=5&extratags=1&namedetails=1&addressdetails=1&accept-language=de,en${viewbox}`,
       { headers: { "User-Agent": "WindyWeatherApp/1.0" } },
     );
     if (!response.ok) return null;
@@ -441,6 +441,7 @@ export async function geocodeLocation(
       display_name: string;
       class: string;
       type: string;
+      addresstype?: string;
       namedetails?: Record<string, string>;
       address?: {
         country_code?: string;
@@ -451,7 +452,8 @@ export async function geocodeLocation(
     }>;
     if (!results.length) return null;
 
-    const result = results[0];
+    const placeTypes = new Set(["city", "town", "village", "hamlet", "suburb"]);
+    const result = results.find(r => placeTypes.has(r.type) || placeTypes.has(r.addresstype ?? "")) ?? results[0];
     const lat = parseFloat(result.lat);
     const lon = parseFloat(result.lon);
     const nd = result.namedetails || {};
