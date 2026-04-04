@@ -927,8 +927,8 @@
         "deutsch": "Kattegat (Schweden)",
         "typ": "meer",
         "smhi": "Kattegat",
-        "lat": 57,
-        "lon": 11.7,
+        "lat": 56.695116,
+        "lon": 12.251700,
         "orte": "Varberg, Falkenberg, Halmstad, Båstad, Helsingborg",
         "windyModel": "iconEu"
       },
