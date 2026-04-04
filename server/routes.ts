@@ -1566,7 +1566,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         },
       });
       analysis.save();
-      sendSSE({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
+      sendSSE({ loadingStatus: countryCode === "GR"
+        ? `Lade lokale Wetterdaten für Griechenland aus OpenSkiron ...`
+        : `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
 
       const national = await fetchNationalWeather(
         countryCode,
@@ -1581,9 +1583,6 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         analysis.data.sources.national.push(u);
       if (national.openskironMeta) {
         analysis.data.position.openskiron_domain = national.openskironMeta;
-        if (national.openskironMeta.status === "downloaded") {
-          sendSSE({ loadingStatus: `Speichern der OpenSkiron Wetterdaten für ${national.openskironMeta.domain} ${national.openskironMeta.created}` });
-        }
       }
       const nationalPre = await preprocessNationalWeather(
         analysis.data.weatherRaw,
