@@ -347,8 +347,8 @@
         "typ": "meer",
         "emy_name": "West Kritiko",
         "emy_nr": 38,
-        "lat": 35.644380,
-        "lon": 23.367590,
+        "lat": 35.64438,
+        "lon": 23.36759,
         "orte": "Chania, Rethymno, Heraklion, Kissamos, Paleochora",
         "windyModel": "iconEu",
         "openskiron_domain": "Aegean_SW_4km"
@@ -613,7 +613,7 @@
         "lat": 44.6284,
         "lon": 13.8522,
         "orte": "Rijeka, Pula, Rovinj, Poreč, Krk",
-        "windyModel": "czeAladin"
+        "windyModel": "iconD2"
       },
       {
         "deutsch": "Adria Mitte (Kroatien)",
@@ -781,7 +781,7 @@
       {
         "deutsch": "Wolfgangsee",
         "typ": "see",
-        "lat": 47.727530,
+        "lat": 47.72753,
         "lon": 13.454801,
         "orte": "St. Wolfgang, St. Gilgen",
         "windyModel": "czeAladin"
@@ -928,7 +928,7 @@
         "typ": "meer",
         "smhi": "Kattegat",
         "lat": 56.695116,
-        "lon": 12.251700,
+        "lon": 12.2517,
         "orte": "Varberg, Falkenberg, Halmstad, Båstad, Helsingborg",
         "windyModel": "iconEu"
       },
