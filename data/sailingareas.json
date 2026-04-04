@@ -765,8 +765,8 @@
       {
         "deutsch": "Mattsee",
         "typ": "see",
-        "lat": 47.97,
-        "lon": 13.1,
+        "lat": 47.983816,
+        "lon": 13.119373,
         "orte": "Mattsee, Obertrum",
         "windyModel": "czeAladin"
       },
