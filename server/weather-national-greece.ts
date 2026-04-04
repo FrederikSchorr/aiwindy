@@ -609,7 +609,7 @@ export function preprocessGreeceLocalTemperature(
   }).format(new Date())) % 24;
 
   const allowedLabels = new Set<string>();
-  for (let offset = 0; offset <= 2; offset++) {
+  for (let offset = 0; offset <= 1; offset++) {
     const d = new Date(new Date(`${todayStr}T12:00:00Z`).getTime() + offset * 86400000);
     const dp = d.toISOString().slice(0, 10).split("-");
     allowedLabels.add(`${DAY_NAMES[d.getUTCDay()]} ${dp[2]}.${dp[1]}`);
@@ -635,7 +635,7 @@ export function preprocessGreeceLocalTemperature(
     } else {
       lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
     }
-    if (lines.length >= 3) break;
+    if (lines.length >= 2) break;
   }
 
   return {
