@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Sailboat, Camera, MapPin, Image, Wind, Compass, Anchor, Waves, Sun, Cloud, CloudRain, Thermometer, Navigation, Flag, CloudSun, Droplets, Ship, Info, Mail, type LucideIcon } from "lucide-react";
+import { SiGithub, SiLinkedin } from "react-icons/si";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 
@@ -660,7 +661,15 @@ export default function Home() {
               <PopoverContent align="end" className="w-56 p-3 text-sm" data-testid="popover-info">
                 <div className="space-y-2">
                   <p className="font-semibold">aiWindy <span className="font-normal text-muted-foreground">v2.0 · April 2025</span></p>
-                  <p className="text-muted-foreground text-xs">© Frederik Schorr</p>
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <span>© Frederik Schorr</span>
+                    <a href="https://github.com/FrederikSchorr/aiwindy" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" aria-label="GitHub" data-testid="link-github">
+                      <SiGithub className="w-3.5 h-3.5" />
+                    </a>
+                    <a href="https://www.linkedin.com/in/frederik-schorr-69ba971/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" aria-label="LinkedIn" data-testid="link-linkedin">
+                      <SiLinkedin className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                   <a
                     href={(() => {
                       const subject = encodeURIComponent("Feedback zu aiWindy");
