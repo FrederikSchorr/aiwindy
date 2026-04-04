@@ -81,6 +81,7 @@ function getOpenskironDomain(sailingAreaNameDe: string): string | null {
 async function fetchGreeceWindCloudRain(
   sailingAreaObj: NonNullable<SailingAreaObj>,
   cityObj: CityObj,
+  onProgress?: (status: string) => void,
 ): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: { domain: string; created: string; status: "cached" | "downloaded" } }> {
   const nullWindCloudRain = {
     source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
@@ -158,8 +159,16 @@ async function fetchGreeceWindCloudRain(
       console.error("openskiron_fetch timed out after 60s");
     }, 60000);
 
+    let downloadNotified = false;
     proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-    proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    proc.stderr.on("data", (d: Buffer) => {
+      const chunk = d.toString();
+      stderr += chunk;
+      if (!downloadNotified && chunk.includes("[download]") && onProgress) {
+        downloadNotified = true;
+        onProgress("Lade lokale Wetterdaten für Griechenland aus OpenSkiron ...");
+      }
+    });
     proc.on("close", (code: number | null) => {
       clearTimeout(timer);
       const didDownload = stderr.includes("[download]");
@@ -225,12 +234,9 @@ export async function fetchGreeceWeather(
   cityObj?: CityObj,
   onProgress?: (status: string) => void,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; status: "cached" | "downloaded" } }> {
-  if (sailingAreaObj && onProgress) {
-    onProgress("Lade lokale Wetterdaten für Griechenland aus OpenSkiron ...");
-  }
   const [hnms, openskiron] = await Promise.all([
     fetchHnmsGaleWarning(),
-    sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj) : null,
+    sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj, onProgress) : null,
   ]);
 
   const data: Record<string, unknown> = { greeceMarineForecast: hnms };
