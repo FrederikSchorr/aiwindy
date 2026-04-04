@@ -325,8 +325,8 @@
         "typ": "meer",
         "emy_name": "Korinthiakos",
         "emy_nr": 28,
-        "lat": 38.1,
-        "lon": 22.5,
+        "lat": 38.200691,
+        "lon": 22.539263,
         "orte": "Korinth, Galaxidi, Itea, Nafpaktos, Loutraki",
         "windyModel": "iconEu",
         "openskiron_domain": "Ionian_Islands_4km"
