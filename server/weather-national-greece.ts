@@ -258,7 +258,7 @@ export async function fetchGreeceWeather(
     `Griechenland Wetterlage und Warnungen von [HNMS](${HNMS_SOURCE_URL})`,
   ];
   if (openskiron) {
-    sourceUrls.push(`Wind, Welle, Wolken, Gewitter von [OpenSkiron](${OPENSKIRON_SOURCE_URL}) API`);
+    sourceUrls.push(`Wind, Welle, Wolken, Regen, Gewitter, Temperatur von [OpenSkiron](${OPENSKIRON_SOURCE_URL}) API`);
   }
 
   return { data, sourceUrls, openskironMeta: openskiron?.openskironMeta };
