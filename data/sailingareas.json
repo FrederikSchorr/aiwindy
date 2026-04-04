@@ -829,8 +829,8 @@
       {
         "deutsch": "Ossiacher See",
         "typ": "see",
-        "lat": 46.68,
-        "lon": 13.97,
+        "lat": 46.666773,
+        "lon": 13.960125,
         "orte": "Ossiach, Bodensdorf, Steindorf, Annenheim, Feldkirchen",
         "windyModel": "czeAladin"
       },
