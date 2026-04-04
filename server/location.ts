@@ -392,7 +392,7 @@ export async function reverseGeocode(
     const nd = result.namedetails || {};
     const addr = result.address || {};
     const countryCode = addr.country_code?.toUpperCase();
-    const cityName = addr.city || addr.town || addr.village || nd["name:de"] || nd["name"] || result.display_name.split(",")[0].trim();
+    const cityName = nd["name:de"] || addr.city || addr.town || addr.village || nd["name"] || result.display_name.split(",")[0].trim();
 
     const countryModel = countryCode ? getModelForCountry(countryCode) : null;
     const regional = countryModel ?? getRegionalModelFallback(lat, lon);
