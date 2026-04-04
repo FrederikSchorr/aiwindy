@@ -392,7 +392,7 @@ export async function reverseGeocode(
     const nd = result.namedetails || {};
     const addr = result.address || {};
     const countryCode = addr.country_code?.toUpperCase();
-    const cityName = nd["name:de"] || addr.city || addr.town || addr.village || nd["name"] || result.display_name.split(",")[0].trim();
+    const cityName = nd["name:de"] || nd["name:en"] || nd["int_name"] || addr.city || addr.town || addr.village || result.display_name.split(",")[0].trim();
 
     const countryModel = countryCode ? getModelForCountry(countryCode) : null;
     const regional = countryModel ?? getRegionalModelFallback(lat, lon);
@@ -458,7 +458,7 @@ export async function geocodeLocation(
     const searchName = result.display_name.split(",")[0].trim();
 
     const countryCode = result.address?.country_code?.toUpperCase();
-    const cityName = nd["name:de"] || nd["name"] || searchName;
+    const cityName = nd["name:de"] || nd["name:en"] || nd["int_name"] || searchName;
 
     const countryModel = countryCode ? getModelForCountry(countryCode) : null;
     const regional = countryModel ?? getRegionalModelFallback(lat, lon);
