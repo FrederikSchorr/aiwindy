@@ -198,7 +198,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   weatherOutput: WeatherOutputData | null;
   sources: AnalysisSources | null;
   isStreaming: boolean;
-  hasError?: boolean;
+  hasError?: string | boolean;
   loadingStatus?: string | null;
 }) {
   const saLat = location.lat;
@@ -239,7 +239,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
       {hasError && !weatherOutput && (
         <p className="text-sm text-destructive mt-3" data-testid="text-analysis-error">
-          Fehler bei der Datenabfrage. Die Analyse konnte nicht vollständig geladen werden.
+          {typeof hasError === "string" ? hasError : "Fehler bei der Datenabfrage. Die Analyse konnte nicht vollständig geladen werden."}
         </p>
       )}
 
@@ -351,7 +351,7 @@ export default function Home() {
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
   const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
-  const [analysisErrors, setAnalysisErrors] = useState<Record<string, boolean>>({});
+  const [analysisErrors, setAnalysisErrors] = useState<Record<string, string | boolean>>({});
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
@@ -407,7 +407,7 @@ export default function Home() {
       if (data.error) {
         setLoadingStatus(null);
         if (isAnalyse) {
-          setAnalysisErrors(prev => ({ ...prev, [assistantId]: true }));
+          setAnalysisErrors(prev => ({ ...prev, [assistantId]: data.error! }));
         } else {
           setMessages((prev) =>
             prev.map((m) =>

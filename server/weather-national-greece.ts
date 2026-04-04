@@ -107,7 +107,7 @@ async function fetchGreeceWindCloudRain(
   const cityLat = cityObj?.coordinates.lat ?? windLat;
   const cityLon = cityObj?.coordinates.lon ?? windLon;
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const args = [
       "scripts/openskiron_fetch.py",
       domain,
@@ -136,14 +136,20 @@ async function fetchGreeceWindCloudRain(
             resolve(null);
           }
         });
-        proc2.on("error", () => {
-          console.error("openskiron_fetch: neither python3 nor python found");
-          resolve(null);
+        proc2.on("error", (err2: NodeJS.ErrnoException) => {
+          if (err2.code === "ENOENT") {
+            reject(new Error("Python ist nicht installiert. OpenSkiron-Wetterdaten für Griechenland können nicht berechnet werden. Bitte Python 3 installieren (python3)."));
+          } else {
+            reject(new Error(`OpenSkiron-Fehler: ${err2.message}`));
+          }
         });
         return;
       }
-      console.error("openskiron_fetch spawn error:", err.message);
-      resolve(null);
+      if (err.code === "ENOENT") {
+        reject(new Error("Python ist nicht installiert. OpenSkiron-Wetterdaten für Griechenland können nicht berechnet werden. Bitte Python 3 installieren (python3)."));
+      } else {
+        reject(new Error(`OpenSkiron-Fehler: ${err.message}`));
+      }
     });
     let stdout = "";
     let stderr = "";

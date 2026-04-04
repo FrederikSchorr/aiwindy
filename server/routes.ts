@@ -1671,11 +1671,12 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       res.end();
     } catch (error) {
       console.error("Chat error:", error);
+      const errMsg = error instanceof Error ? error.message : "Fehler bei der Wetteranalyse";
       if (res.headersSent) {
-        sendSSE({ error: "Fehler bei der Wetteranalyse" });
+        sendSSE({ error: errMsg });
         res.end();
       } else {
-        res.status(500).json({ error: "Failed to process chat message" });
+        res.status(500).json({ error: errMsg });
       }
     }
   });
