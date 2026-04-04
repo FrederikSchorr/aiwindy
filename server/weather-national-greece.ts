@@ -604,10 +604,6 @@ export function preprocessGreeceLocalTemperature(
   const todayDow = new Date(`${todayStr}T12:00:00Z`).getUTCDay();
   const todayLabel = `${DAY_NAMES[todayDow]} ${todayParts[2]}.${todayParts[1]}`;
 
-  const localHour = parseInt(new Intl.DateTimeFormat("en-US", {
-    hour: "numeric", hour12: false, timeZone: TZ,
-  }).format(new Date())) % 24;
-
   const allowedLabels = new Set<string>();
   for (let offset = 0; offset <= 1; offset++) {
     const d = new Date(new Date(`${todayStr}T12:00:00Z`).getTime() + offset * 86400000);
@@ -625,16 +621,7 @@ export function preprocessGreeceLocalTemperature(
   const lines: string[] = [];
   for (const [day, temps] of Array.from(byDate)) {
     if (!allowedLabels.has(day)) continue;
-    if (day === todayLabel) {
-      if (localHour >= 13) continue;
-      if (localHour >= 5) {
-        lines.push(`${day}: max ${Math.round(Math.max(...temps))}°C`);
-      } else {
-        lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
-      }
-    } else {
-      lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
-    }
+    lines.push(`${day}: ${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C`);
     if (lines.length >= 2) break;
   }
 
