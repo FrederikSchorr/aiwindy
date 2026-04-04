@@ -1142,8 +1142,8 @@
         "typ": "meer",
         "spanisch": "Costa de Baleares",
         "aemet_area": "bal1",
-        "lat": 39.5,
-        "lon": 2.5,
+        "lat": 39.252737,
+        "lon": 2.198193,
         "orte": "Palma, Ibiza, Menorca, Alcúdia, Port Andratx",
         "windyModel": "iconEu"
       },
