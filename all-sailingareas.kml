@@ -1,0 +1,1122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+<name>Alle Segelreviere</name>
+<Style id="style_0"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Mitteleuropa (44)</name>
+<Placemark>
+<name>Neusiedler See (Österreich)</name>
+<description>lat: 47.9, lon: 16.8
+Windy: czeAladin
+Orte: Rust, Podersdorf, Neusiedl, Mörbisch, Illmitz</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>16.8,47.9,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Attersee</name>
+<description>lat: 47.87, lon: 13.54
+Windy: czeAladin
+Orte: Attersee, Weyregg, Nußdorf, Unterach, Steinbach</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.54,47.87,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Traunsee</name>
+<description>lat: 47.87, lon: 13.79
+Windy: czeAladin
+Orte: Gmunden, Traunkirchen, Ebensee, Altmünster, Traunkirchen</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.79,47.87,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Mondsee</name>
+<description>lat: 47.84, lon: 13.38
+Windy: czeAladin
+Orte: Mondsee, Loibichl</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.38,47.84,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Mattsee</name>
+<description>lat: 47.97, lon: 13.1
+Windy: czeAladin
+Orte: Mattsee, Obertrum</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.1,47.97,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Wallersee</name>
+<description>lat: 47.94, lon: 13.24
+Windy: czeAladin
+Orte: Seekirchen, Neumarkt</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.24,47.94,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Wolfgangsee</name>
+<description>lat: 47.74, lon: 13.45
+Windy: czeAladin
+Orte: St. Wolfgang, St. Gilgen</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.45,47.74,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Zell am See</name>
+<description>lat: 47.32, lon: 12.79
+Windy: czeAladin
+Orte: Zell am See, Thumersbach</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>12.79,47.32,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Achensee</name>
+<description>lat: 47.51, lon: 11.71
+Windy: czeAladin
+Orte: Pertisau, Maurach</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>11.71,47.51,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Bodensee (Österreich)</name>
+<description>lat: 47.57, lon: 9.73
+Windy: czeAladin
+Orte: Bregenz, Hard, Lochau, Fußach, Höchst</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>9.73,47.57,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Wörthersee</name>
+<description>lat: 46.62, lon: 14.15
+Windy: czeAladin
+Orte: Klagenfurt, Velden, Pörtschach, Krumpendorf, Maria Wörth</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>14.15,46.62,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Millstätter See</name>
+<description>lat: 46.8, lon: 13.58
+Windy: czeAladin
+Orte: Millstatt, Seeboden</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.58,46.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ossiacher See</name>
+<description>lat: 46.68, lon: 13.97
+Windy: czeAladin
+Orte: Ossiach, Bodensdorf, Steindorf, Annenheim, Feldkirchen</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.97,46.68,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Faaker See</name>
+<description>lat: 46.57, lon: 13.91
+Windy: czeAladin
+Orte: Faak, Egg am Faaker See</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.91,46.57,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Weißensee</name>
+<description>lat: 46.7, lon: 13.31
+Windy: czeAladin
+Orte: Techendorf, Neusach</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.31,46.7,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ottenstein</name>
+<description>lat: 48.6, lon: 15.47
+Windy: czeAladin
+Orte: Ottenstein, Rastenfeld</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>15.47,48.6,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Grundlsee</name>
+<description>lat: 47.62, lon: 13.8
+Windy: czeAladin
+Orte: Grundlsee, Gössl</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.8,47.62,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Genfersee</name>
+<description>lat: 46.45, lon: 6.55
+Windy: aromeHd
+Orte: Genf, Lausanne, Montreux, Nyon, Morges</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>6.55,46.45,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Zürichsee</name>
+<description>lat: 47.27, lon: 8.72
+Windy: aromeHd
+Orte: Zürich, Rapperswil, Richterswil, Stäfa, Küsnacht</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>8.72,47.27,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Vierwaldstättersee</name>
+<description>lat: 47, lon: 8.47
+Windy: aromeHd
+Orte: Luzern, Brunnen, Flüelen, Küssnacht, Weggis</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>8.47,47,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Thunersee</name>
+<description>lat: 46.68, lon: 7.72
+Windy: aromeHd
+Orte: Thun, Spiez, Interlaken, Faulensee, Hilterfingen</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>7.72,46.68,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Brienzersee</name>
+<description>lat: 46.73, lon: 7.98
+Windy: aromeHd
+Orte: Brienz, Iseltwald, Bönigen, Ringgenberg, Oberried</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>7.98,46.73,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Neuenburgersee</name>
+<description>lat: 46.9, lon: 6.85
+Windy: aromeHd
+Orte: Neuenburg, Murten, Yverdon, Estavayer, Grandson</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>6.85,46.9,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Bodensee (Schweiz)</name>
+<description>lat: 47.55, lon: 9.5
+Windy: aromeHd
+Orte: Kreuzlingen, Arbon, Rorschach, Romanshorn, Konstanz</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>9.5,47.55,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Nordsee (Deutschland)</name>
+<description>lat: 55, lon: 7.5
+Windy: iconD2
+Orte: Cuxhaven, Borkum, Sylt, Helgoland, Husum</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>7.5,55,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee West (Deutschland)</name>
+<description>lat: 54.7, lon: 10.5
+Windy: iconD2
+Orte: Kiel, Flensburg, Eckernförde, Laboe, Strande</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>10.5,54.7,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee Süd</name>
+<description>lat: 54.5, lon: 12.5
+Windy: iconD2
+Orte: Rostock, Stralsund, Rügen, Greifswald, Warnemünde</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>12.5,54.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Belte und Sund (Deutschland)</name>
+<description>lat: 54.8, lon: 10
+Windy: iconD2
+Orte: Flensburg, Kappeln, Schleswig, Glücksburg, Sonderburg</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>10,54.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Chiemsee</name>
+<description>lat: 47.88, lon: 12.45
+Windy: iconD2
+Orte: Prien, Seebruck, Gstadt</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>12.45,47.88,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Starnberger See</name>
+<description>lat: 47.9, lon: 11.31
+Windy: iconD2
+Orte: Starnberg, Tutzing, Berg</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>11.31,47.9,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ammersee</name>
+<description>lat: 47.99, lon: 11.12
+Windy: iconD2
+Orte: Herrsching, Dießen, Utting</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>11.12,47.99,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Tegernsee</name>
+<description>lat: 47.72, lon: 11.75
+Windy: iconD2
+Orte: Tegernsee, Rottach-Egern</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>11.75,47.72,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Walchensee</name>
+<description>lat: 47.58, lon: 11.34
+Windy: iconD2
+Orte: Walchensee, Urfeld</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>11.34,47.58,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Müritz</name>
+<description>lat: 53.43, lon: 12.69
+Windy: iconD2
+Orte: Waren, Röbel, Rechlin</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>12.69,53.43,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Schweriner See</name>
+<description>lat: 53.63, lon: 11.42
+Windy: iconD2
+Orte: Schwerin, Zippendorf</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>11.42,53.63,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Steinhuder Meer</name>
+<description>lat: 52.46, lon: 9.34
+Windy: iconD2
+Orte: Steinhude, Mardorf</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>9.34,52.46,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Bodensee (Deutschland)</name>
+<description>lat: 47.65, lon: 9.4
+Windy: iconD2
+Orte: Konstanz, Friedrichshafen, Lindau, Meersburg, Überlingen</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>9.4,47.65,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Nordsee (Belgien)</name>
+<description>lat: 51.3, lon: 2.8
+Windy: aromeHd
+Orte: Ostende, Zeebrügge, Blankenberge, Nieuwpoort, De Panne</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>2.8,51.3,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Nordsee (Niederlande)</name>
+<description>lat: 52.5, lon: 3.8
+Windy: iconEu
+Orte: Den Helder, IJmuiden, Scheveningen, Hoek van Holland, Vlissingen</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>3.8,52.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Wattenmeer</name>
+<description>lat: 53.3, lon: 5
+Windy: iconEu
+Orte: Harlingen, Vlieland, Terschelling, Ameland, Texel</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>5,53.3,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>IJsselmeer</name>
+<description>lat: 52.7, lon: 5.3
+Windy: iconEu
+Orte: Enkhuizen, Hoorn, Lelystad, Medemblik, Urk</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>5.3,52.7,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Markermeer</name>
+<description>lat: 52.5, lon: 5.2
+Windy: iconEu
+Orte: Amsterdam, Volendam, Marken, Edam, Monnickendam</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>5.2,52.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Zeeland/Deltagebiet</name>
+<description>lat: 51.5, lon: 3.5
+Windy: iconEu
+Orte: Middelburg, Vlissingen, Zierikzee, Veere, Brouwershaven</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>3.5,51.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Nord (Slowenien)</name>
+<description>lat: 45.6, lon: 13.5
+Windy: czeAladin
+Orte: Koper, Piran, Portorož, Izola, Strunjan</description>
+<styleUrl>#style_0</styleUrl>
+<Point><coordinates>13.5,45.6,0</coordinates></Point>
+</Placemark>
+</Folder>
+<Style id="style_1"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Nordeuropa (33)</name>
+<Placemark>
+<name>Kattegat (Dänemark)</name>
+<description>lat: 56.2, lon: 11
+Windy: iconD2
+Orte: Aarhus, Randers, Grenaa, Ebeltoft, Odder</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>11,56.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Belte und Sund (Dänemark)</name>
+<description>lat: 55.2, lon: 10.5
+Windy: iconD2
+Orte: Odense, Svendborg, Middelfart, Kolding, Assens</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>10.5,55.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Nordsee (Dänemark)</name>
+<description>lat: 56.5, lon: 7.5
+Windy: iconD2
+Orte: Esbjerg, Hvide Sande, Thyborøn, Hirtshals, Hanstholm</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>7.5,56.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee West (Dänemark)</name>
+<description>lat: 55.5, lon: 12.5
+Windy: iconD2
+Orte: Kopenhagen, Roskilde, Køge, Helsingør, Dragør</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>12.5,55.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Bornholm</name>
+<description>lat: 55.1, lon: 14.9
+Windy: iconD2
+Orte: Rønne, Nexø, Svaneke, Gudhjem, Allinge</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>14.9,55.1,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Skagerrak (Dänemark)</name>
+<description>lat: 57.5, lon: 9.5
+Windy: iconD2
+Orte: Skagen, Frederikshavn, Hjørring, Aalborg, Hirtshals</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>9.5,57.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Skagerrak (Schweden)</name>
+<description>lat: 58, lon: 9.5
+Windy: iconEu
+Orte: Göteborg, Strömstad, Lysekil, Marstrand, Fjällbacka</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>9.5,58,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Kattegat (Schweden)</name>
+<description>lat: 57, lon: 11.7
+Windy: iconEu
+Orte: Varberg, Falkenberg, Halmstad, Båstad, Helsingborg</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>11.7,57,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Sund (Öresund)</name>
+<description>lat: 55.8, lon: 12.8
+Windy: iconEu
+Orte: Malmö, Helsingborg, Landskrona, Trelleborg, Ystad</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>12.8,55.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee West (Schweden)</name>
+<description>lat: 55.5, lon: 14.5
+Windy: iconEu
+Orte: Karlskrona, Karlshamn, Ronneby, Kristianstad, Sölvesborg</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>14.5,55.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee Süd (Schweden)</name>
+<description>lat: 57, lon: 17.5
+Windy: iconEu
+Orte: Karlshamn, Kalmar, Borgholm, Oskarshamn, Visby</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>17.5,57,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee Mitte (Schweden)</name>
+<description>lat: 57.5, lon: 19
+Windy: iconEu
+Orte: Visby, Gotland, Klintehamn, Slite</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>19,57.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ostsee Nord (Schweden)</name>
+<description>lat: 59, lon: 19.5
+Windy: iconEu
+Orte: Kapellskär, Norrtälje, Oxelösund, Nynäshamn</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>19.5,59,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Schärenmeer</name>
+<description>lat: 59.5, lon: 20.5
+Windy: iconEu
+Orte: Stockholm, Sandhamn, Vaxholm, Stavsnäs, Furusund, Arholma</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>20.5,59.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Bottnischer Meerbusen Süd</name>
+<description>lat: 62, lon: 18.5
+Windy: iconEu
+Orte: Sundsvall, Härnösand, Hudiksvall, Örnsköldsvik, Gävle</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>18.5,62,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Vänern</name>
+<description>lat: 58.9, lon: 13.5
+Windy: iconEu
+Orte: Karlstad, Lidköping, Mariestad, Kristinehamn, Vänersborg</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>13.5,58.9,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Vättern</name>
+<description>lat: 58.3, lon: 14.6
+Windy: iconEu
+Orte: Jönköping, Motala, Hjo, Vadstena, Karlsborg</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>14.6,58.3,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Mälaren</name>
+<description>lat: 59.5, lon: 17.1
+Windy: iconEu
+Orte: Stockholm, Västerås, Strängnäs, Enköping, Mariefred</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>17.1,59.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Skagerrak (Norwegen)</name>
+<description>lat: 58.5, lon: 9
+Windy: iconEu
+Orte: Kristiansand, Arendal, Larvik, Tønsberg, Fredrikstad</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>9,58.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Oslofjord</name>
+<description>lat: 59.3, lon: 10.5
+Windy: iconEu
+Orte: Oslo, Drøbak, Moss, Horten, Tønsberg</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>10.5,59.3,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Nordsee (Norwegen)</name>
+<description>lat: 59.5, lon: 4
+Windy: iconEu
+Orte: Stavanger, Bergen, Ålesund, Kristiansund, Haugesund</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>4,59.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Westnorwegen/Hardanger</name>
+<description>lat: 60.2, lon: 5
+Windy: iconEu
+Orte: Bergen, Rosendal, Norheimsund, Ulvik, Lofthus</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>5,60.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Irische See (Irland)</name>
+<description>lat: 53.2, lon: -5.5
+Windy: ukv
+Orte: Dublin, Dún Laoghaire, Wicklow, Arklow, Howth</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-5.5,53.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Irland Süd</name>
+<description>lat: 51.2, lon: -9
+Windy: iconEu
+Orte: Cork, Kinsale, Baltimore, Crosshaven, Bantry</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-9,51.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Irland West</name>
+<description>lat: 53.5, lon: -10.5
+Windy: iconEu
+Orte: Galway, Westport, Clifden, Killary, Kilronan</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-10.5,53.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Irland Nord</name>
+<description>lat: 55.2, lon: -6.5
+Windy: iconEu
+Orte: Londonderry, Portrush, Ballycastle, Carrickfergus, Bangor</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-6.5,55.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ärmelkanal Ost (UK)</name>
+<description>lat: 51, lon: 1.5
+Windy: iconEu
+Orte: Dover, Folkestone, Brighton, Eastbourne, Ramsgate</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>1.5,51,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ärmelkanal West (UK)</name>
+<description>lat: 50.2, lon: -4.5
+Windy: iconEu
+Orte: Plymouth, Falmouth, Dartmouth, Weymouth, Poole</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-4.5,50.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Irische See</name>
+<description>lat: 53.5, lon: -5
+Windy: ukv
+Orte: Liverpool, Holyhead, Douglas, Dublin, Belfast</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-5,53.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Nordsee (UK)</name>
+<description>lat: 54.5, lon: 1.5
+Windy: ukv
+Orte: Hull, Scarborough, Newcastle, Blyth, Whitby</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>1.5,54.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Schottland West</name>
+<description>lat: 56.5, lon: -6
+Windy: ukv
+Orte: Oban, Tobermory, Stornoway, Tarbert, Crinan</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-6,56.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Schottland Ost</name>
+<description>lat: 57.5, lon: -1.5
+Windy: ukv
+Orte: Aberdeen, Stonehaven, Peterhead, Fraserburgh, Arbroath</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-1.5,57.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Solent/Südengland</name>
+<description>lat: 50.5, lon: -1.5
+Windy: iconEu
+Orte: Southampton, Cowes, Portsmouth, Yarmouth, Lymington</description>
+<styleUrl>#style_1</styleUrl>
+<Point><coordinates>-1.5,50.5,0</coordinates></Point>
+</Placemark>
+</Folder>
+<Style id="style_2"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Griechenland (16)</name>
+<Placemark>
+<name>Ionisches Meer Nord (Griechenland)</name>
+<description>lat: 38.8, lon: 20
+Windy: iconEu
+OpenSkiron: Ionian_Islands_4km
+EMY: North Ionio
+Orte: Lefkada, Preveza, Korfu, Paxos, Sivota</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>20,38.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ionisches Meer Süd (Griechenland)</name>
+<description>lat: 37, lon: 21
+Windy: iconEu
+OpenSkiron: Ionian_Islands_4km
+EMY: South Ionio
+Orte: Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>21,37,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Patraikos</name>
+<description>lat: 38.260009, lon: 21.477871
+Windy: iconEu
+OpenSkiron: Ionian_Islands_4km
+EMY: Patraikos
+Orte: Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>21.477871,38.260009,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Korinthiakos</name>
+<description>lat: 38.200691, lon: 22.539263
+Windy: iconEu
+OpenSkiron: Ionian_Islands_4km
+EMY: Korinthiakos
+Orte: Korinth, Galaxidi, Itea, Nafpaktos, Loutraki</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>22.539263,38.200691,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Kythira-See</name>
+<description>lat: 36.5, lon: 22.8
+Windy: iconEu
+OpenSkiron: Ionian_Islands_4km
+EMY: Kithira Sea
+Orte: Kythira, Neapolis, Gythio, Monemvasia, Elafonisos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>22.8,36.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Kretisches Meer West</name>
+<description>lat: 35.64438, lon: 23.36759
+Windy: iconEu
+OpenSkiron: Aegean_SW_4km
+EMY: West Kritiko
+Orte: Chania, Rethymno, Heraklion, Kissamos, Paleochora</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>23.36759,35.64438,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Kretisches Meer Ost</name>
+<description>lat: 35.095729, lon: 26.584788
+Windy: iconEu
+OpenSkiron: Aegean_SW_4km
+EMY: East Kritiko
+Orte: Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>26.584788,35.095729,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Saronischer Golf</name>
+<description>lat: 37.784805, lon: 23.289855
+Windy: iconEu
+OpenSkiron: Aegean_SW_4km
+EMY: Saronikos
+Orte: Athen/Piräus, Aegina, Poros, Hydra, Spetses</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>23.289855,37.784805,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ägäis Mitte</name>
+<description>lat: 37.5, lon: 25
+Windy: iconEu
+OpenSkiron: Aegean_SW_4km
+EMY: Central Aegean
+Orte: Mykonos, Naxos, Syros, Paros, Tinos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>25,37.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ägäis Südwest</name>
+<description>lat: 36.870972, lon: 24.402883
+Windy: iconEu
+OpenSkiron: Aegean_SW_4km
+EMY: Southwest Aegean
+Orte: Milos, Santorini, Folegandros, Sifnos, Serifos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>24.402883,36.870972,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ägäis Südost</name>
+<description>lat: 37.5, lon: 26.5
+Windy: iconEu
+OpenSkiron: Aegean_SW_4km
+EMY: Southeast Aegean
+Orte: Ikaria, Samos, Chios, Patmos, Kos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>26.5,37.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Dodekanes</name>
+<description>lat: 36.5, lon: 27.5
+Windy: iconEu
+OpenSkiron: Aegean_SE_4km
+EMY: Rodos Sea
+Orte: Rhodos, Kos, Kalymnos, Leros, Symi</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>27.5,36.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ägäis Nordwest</name>
+<description>lat: 39.5, lon: 24
+Windy: iconEu
+OpenSkiron: Aegean_NW_4km
+EMY: Northwest Aegean
+Orte: Skiathos, Skopelos, Volos, Alonissos, Skyros</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>24,39.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ägäis Nordost</name>
+<description>lat: 39.5, lon: 26
+Windy: iconEu
+OpenSkiron: Aegean_NW_4km
+EMY: Northeast Aegean
+Orte: Lesbos, Chios, Limnos, Samothraki, Thassos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>26,39.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Thrakisches Meer</name>
+<description>lat: 40.594826, lon: 25.475261
+Windy: iconEu
+OpenSkiron: Aegean_NW_4km
+EMY: Thrakiko
+Orte: Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>25.475261,40.594826,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Thermaikos Golf</name>
+<description>lat: 40.2, lon: 22.8
+Windy: iconEu
+OpenSkiron: Aegean_NW_4km
+EMY: Thermaikos
+Orte: Thessaloniki, Katerini, Halkidiki, Nea Moudania, Ierissos</description>
+<styleUrl>#style_2</styleUrl>
+<Point><coordinates>22.8,40.2,0</coordinates></Point>
+</Placemark>
+</Folder>
+<Style id="style_3"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Adria (5)</name>
+<Placemark>
+<name>Adria Nord (Kroatien)</name>
+<description>lat: 44.6284, lon: 13.8522
+Windy: czeAladin
+Orte: Rijeka, Pula, Rovinj, Poreč, Krk</description>
+<styleUrl>#style_3</styleUrl>
+<Point><coordinates>13.8522,44.6284,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Mitte (Kroatien)</name>
+<description>lat: 43.8227, lon: 14.9322
+Windy: czeAladin
+Orte: Zadar, Šibenik, Split, Trogir, Primošten</description>
+<styleUrl>#style_3</styleUrl>
+<Point><coordinates>14.9322,43.8227,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Süd (Kroatien)</name>
+<description>lat: 42.6702, lon: 17.1459
+Windy: czeAladin
+Orte: Hvar, Korčula, Dubrovnik, Makarska, Omiš</description>
+<styleUrl>#style_3</styleUrl>
+<Point><coordinates>17.1459,42.6702,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Süd (Montenegro)</name>
+<description>lat: 42.2, lon: 18.2
+Windy: czeAladin
+Orte: Kotor, Budva, Bar, Herceg Novi, Tivat</description>
+<styleUrl>#style_3</styleUrl>
+<Point><coordinates>18.2,42.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Süd (Albanien)</name>
+<description>lat: 40.8, lon: 19
+Windy: iconEu
+Orte: Durrës, Vlorë, Sarandë, Shëngjin, Himarë</description>
+<styleUrl>#style_3</styleUrl>
+<Point><coordinates>19,40.8,0</coordinates></Point>
+</Placemark>
+</Folder>
+<Style id="style_4"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Italien (11)</name>
+<Placemark>
+<name>Adria Nord (Italien)</name>
+<description>lat: 45.464939, lon: 12.972575
+Windy: czeAladin
+Orte: Venedig, Triest, Rimini, Chioggia, Grado</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>12.972575,45.464939,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Mitte (Italien)</name>
+<description>lat: 43, lon: 14.5
+Windy: iconEu
+Orte: Ancona, Pescara, Bari, Numana, Vieste</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>14.5,43,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Adria Süd (Italien)</name>
+<description>lat: 41.1798, lon: 17.2995
+Windy: iconEu
+Orte: Brindisi, Lecce, Otranto, Taranto, Castro</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>17.2995,41.1798,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ligurisches Meer</name>
+<description>lat: 44, lon: 8.8
+Windy: iconEu
+Orte: Genua, Portofino, La Spezia, Sanremo, Savona</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>8.8,44,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Tyrrhenisches Meer Nord</name>
+<description>lat: 43.2, lon: 10.2
+Windy: iconEu
+Orte: Livorno, Piombino, Elba, Viareggio, Giglio</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>10.2,43.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Tyrrhenisches Meer Mitte</name>
+<description>lat: 41.2, lon: 12.5
+Windy: iconEu
+Orte: Civitavecchia, Neapel, Ischia, Gaeta, Ponza</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>12.5,41.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Tyrrhenisches Meer Süd</name>
+<description>lat: 38.8, lon: 15.3
+Windy: iconEu
+Orte: Reggio Calabria, Tropea, Paola, Vibo Valentia, Scalea</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>15.3,38.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ionisches Meer Nord (Italien)</name>
+<description>lat: 40, lon: 17.5
+Windy: iconEu
+Orte: Taranto, Gallipoli, Crotone, Otranto, Leuca</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>17.5,40,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Sardinien</name>
+<description>lat: 40.2, lon: 8
+Windy: iconEu
+Orte: Cagliari, Alghero, Olbia, Porto Cervo, La Maddalena</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>8,40.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Sizilien</name>
+<description>lat: 37.5, lon: 12.5
+Windy: iconEu
+Orte: Palermo, Messina, Trapani, Siracusa, Agrigento</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>12.5,37.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Gardasee</name>
+<description>lat: 45.65, lon: 10.7
+Windy: iconEu
+Orte: Riva del Garda, Desenzano del Garda, Malcesine, Sirmione, Bardolino, Torri del Benaco, Garda, Peschiera del Garda</description>
+<styleUrl>#style_4</styleUrl>
+<Point><coordinates>10.7,45.65,0</coordinates></Point>
+</Placemark>
+</Folder>
+<Style id="style_5"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Westliches Mittelmeer (19)</name>
+<Placemark>
+<name>Golfe du Lion West</name>
+<description>lat: 42.5, lon: 3.8
+Windy: aromeHd
+Orte: Perpignan, Sète, Montpellier, Agde, Port-Vendres</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>3.8,42.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Golfe du Lion Ost</name>
+<description>lat: 43, lon: 5.5
+Windy: aromeHd
+Orte: Marseille, Toulon, Fréjus, Cassis, La Ciotat</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>5.5,43,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Côte d'Azur</name>
+<description>lat: 43.3, lon: 7.2
+Windy: aromeHd
+Orte: Cannes, Nizza, Monaco, Antibes, Saint-Tropez</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>7.2,43.3,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Korsika</name>
+<description>lat: 42, lon: 8.5
+Windy: aromeHd
+Orte: Ajaccio, Bastia, Calvi, Porto-Vecchio, Bonifacio</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>8.5,42,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ärmelkanal Ost (Frankreich)</name>
+<description>lat: 51, lon: 1.8
+Windy: aromeHd
+Orte: Dunkerque, Calais, Boulogne, Étaples, Berck</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>1.8,51,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Bretagne</name>
+<description>lat: 47.5, lon: -5
+Windy: aromeHd
+Orte: Brest, Lorient, Saint-Malo, Quimper, Concarneau</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-5,47.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Biskaya Nord</name>
+<description>lat: 46.5, lon: -3.5
+Windy: aromeHd
+Orte: Saint-Nazaire, La Rochelle, Les Sables, Noirmoutier, Pornic</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-3.5,46.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Biskaya Süd</name>
+<description>lat: 44, lon: -2.5
+Windy: aromeHd
+Orte: Arcachon, Bayonne, Biarritz, Capbreton, Hendaye</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-2.5,44,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Katalonien</name>
+<description>lat: 41, lon: 2.5
+Windy: iconEu
+Orte: Barcelona, Tarragona, Girona, Sitges, Blanes</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>2.5,41,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Valencia/Murcia</name>
+<description>lat: 39.5, lon: 0.5
+Windy: iconEu
+Orte: Valencia, Alicante, Cartagena, Dénia, Gandia</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>0.5,39.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Andalusien Ost/Alboran</name>
+<description>lat: 36.5, lon: -3
+Windy: iconEu
+Orte: Málaga, Almería, Melilla, Motril, Roquetas</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-3,36.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Andalusien West/Gibraltar</name>
+<description>lat: 36.3, lon: -6.5
+Windy: iconEu
+Orte: Gibraltar, Cádiz, Huelva, Barbate, Tarifa</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-6.5,36.3,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Balearen</name>
+<description>lat: 39.5, lon: 2.5
+Windy: iconEu
+Orte: Palma, Ibiza, Menorca, Alcúdia, Port Andratx</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>2.5,39.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Galicien</name>
+<description>lat: 42.5, lon: -9.5
+Windy: iconEu
+Orte: Vigo, La Coruña, Pontevedra, Marin, Vilagarcía</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-9.5,42.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Kantabrien/Baskenland</name>
+<description>lat: 43.8, lon: -3.5
+Windy: iconEu
+Orte: Santander, Bilbao, San Sebastián, Castro-Urdiales, Pasaia</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-3.5,43.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Portugal Nord</name>
+<description>lat: 41.5, lon: -9.5
+Windy: iconEu
+Orte: Viana do Castelo, Póvoa de Varzim, Porto, Aveiro, Figueira da Foz</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-9.5,41.5,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Portugal Mitte</name>
+<description>lat: 38.8, lon: -9.8
+Windy: iconEu
+Orte: Nazaré, Lisboa, Sesimbra, Setúbal, Cascais</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-9.8,38.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Portugal Süd</name>
+<description>lat: 36.8, lon: -8.8
+Windy: iconEu
+Orte: Sagres, Lagos, Faro, Olhão, Portimão</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-8.8,36.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Madeira</name>
+<description>lat: 32.7, lon: -17
+Windy: gfs
+Orte: Funchal, Porto Santo</description>
+<styleUrl>#style_5</styleUrl>
+<Point><coordinates>-17,32.7,0</coordinates></Point>
+</Placemark>
+</Folder>
+<Style id="style_6"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+<Folder>
+<name>Türkei (4)</name>
+<Placemark>
+<name>Ägäis Nord (Türkei)</name>
+<description>lat: 38.8, lon: 26
+Windy: iconEu
+Orte: Çanakkale, Ayvalık, Dikili, Foça, İzmir</description>
+<styleUrl>#style_6</styleUrl>
+<Point><coordinates>26,38.8,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Ägäis Süd (Türkei)</name>
+<description>lat: 37, lon: 27.5
+Windy: iconEu
+Orte: Kuşadası, Bodrum, Marmaris, Fethiye, Göcek</description>
+<styleUrl>#style_6</styleUrl>
+<Point><coordinates>27.5,37,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Türkische Riviera</name>
+<description>lat: 36.2, lon: 30.5
+Windy: iconEu
+Orte: Kaş, Kekova, Antalya, Alanya, Side</description>
+<styleUrl>#style_6</styleUrl>
+<Point><coordinates>30.5,36.2,0</coordinates></Point>
+</Placemark>
+<Placemark>
+<name>Marmara</name>
+<description>lat: 40.7, lon: 28
+Windy: iconEu
+Orte: İstanbul, Erdek, Bandırma, Tekirdağ, Bursa/Mudanya</description>
+<styleUrl>#style_6</styleUrl>
+<Point><coordinates>28,40.7,0</coordinates></Point>
+</Placemark>
+</Folder>
+</Document>
+</kml>
