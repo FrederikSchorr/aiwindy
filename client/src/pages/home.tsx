@@ -338,7 +338,7 @@ export default function Home() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Ahoi! Sage mir wo Du segelst ⛵ in 🇭🇷 HR, 🇬🇷 GR, 🇦🇹 AT, oder lade ein Wolken-Foto ☁️ hoch.",
+      content: "Ahoi! Sage mir wo Du segelst ⛵ in 🇭🇷, 🇬🇷, 🇦🇹, oder lade ein Wolken-Foto ☁️ hoch.",
     },
   ]);
   const [input, setInput] = useState("");
