@@ -303,13 +303,13 @@ export async function extractGreeceWarning(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Analysiere diese englische Seewetter-Warnung und beantworte für das Seegebiet "${emyName}":
+        content: `Seewetter-Bulletin. Suche in PART 3 den Abschnitt für "${emyName}".
 
-1. Ist "${emyName}" in PART 3 der Warnung betroffen?
-2. Falls ja: Extrahiere NUR explizite Unwetterwarnungen für "${emyName}" (THUNDERSTORM, STORM, GALE, LOCALLY POOR, CHANCE OF THUNDERSTORM). Normale Windvorhersagen (z.B. "NORTHWEST 5 OR 6. MODERATE.") sind KEINE Warnung. Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort in Knoten umrechnen, NUR Knoten angeben. UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen, immer mit Datum, KEIN UTC anzeigen.
-3. Falls keine Unwetterwarnung: Antworte mit genau "NONE"
+Gibt es dort explizite Unwetterwarnungen (THUNDERSTORM, STORM, GALE, LOCALLY POOR, CHANCE OF THUNDERSTORM)?
+- JA: Antworte NUR mit dem übersetzten Warnungstext (z.B. "Gewittermöglichkeit im Westen"). Keine Erklärungen, keine Einleitung.
+- NEIN (oder normaler Wind wie "NORTHWEST 5 OR 6. MODERATE."): Antworte mit genau "NONE"
 
-IGNORIERE die "GENERAL SYNOPSIS" (PART 2) — prüfe nur PART 3. Antworte NUR mit der deutschen Übersetzung oder "NONE".
+Übersetzungsregeln: Deutsch, normale Groß-/Kleinschreibung. UTC+3 = griechische Ortszeit, immer mit Datum. Kein UTC anzeigen. Beaufort → Knoten.
 
 ${text}`,
       }],
