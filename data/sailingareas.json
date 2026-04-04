@@ -813,8 +813,8 @@
       {
         "deutsch": "Wörthersee",
         "typ": "see",
-        "lat": 46.62,
-        "lon": 14.15,
+        "lat": 46.625415,
+        "lon": 14.155704,
         "orte": "Klagenfurt, Velden, Pörtschach, Krumpendorf, Maria Wörth",
         "windyModel": "czeAladin"
       },
