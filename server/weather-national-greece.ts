@@ -4,8 +4,8 @@ import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const HNMS_GALE_URL = "http://newportal.hnms.gr/emy/en/warning/gale_html";
-export const HNMS_SOURCE_URL = "http://newportal.hnms.gr/emy/en/warning/gale_html";
+export const HNMS_BULLETIN_URL = "http://newportal.hnms.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
+export const HNMS_SOURCE_URL = "http://newportal.hnms.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
 export const OPENSKIRON_BASE_URL = "https://openskiron.org/gribs_wrf_4km/";
 export const OPENSKIRON_SOURCE_URL = "https://openskiron.org/";
 
@@ -41,19 +41,19 @@ type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | 
 
 async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
   try {
-    const res = await fetch(HNMS_GALE_URL, {
+    const res = await fetch(HNMS_BULLETIN_URL, {
       headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" },
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
       console.error(`HNMS gale fetch failed (${res.status})`);
-      return { source: "HNMS", url: HNMS_GALE_URL, text: null };
+      return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null };
     }
     const html = await res.text();
 
     const printable = html.match(/id="printableArea">([\s\S]*?)<\/div>\s*<\/div>/i);
     if (!printable) {
-      return { source: "HNMS", url: HNMS_GALE_URL, text: null };
+      return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null };
     }
 
     const text = printable[1]
@@ -63,10 +63,10 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
       .filter(l => l !== "National Meteorological Center")
       .join("\n");
 
-    return { source: "HNMS", url: HNMS_GALE_URL, text: text || null };
+    return { source: "HNMS", url: HNMS_BULLETIN_URL, text: text || null };
   } catch (e) {
     console.error("fetchHnmsGaleWarning error:", e instanceof Error ? e.message : e);
-    return { source: "HNMS", url: HNMS_GALE_URL, text: null };
+    return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null };
   }
 }
 
@@ -214,7 +214,7 @@ export async function fetchGreeceWeather(
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function parseHnmsTimestamp(line: string): Date | null {
-  const m = line.match(/(\d{1,2})\s+([A-Z]+)\s+(\d{4})\/(\d{2})(\d{2})\s+UTC/i);
+  const m = line.match(/(\d{1,2})\s+([A-Z]+)\s+(\d{4})\s*\/\s*(\d{2})(\d{2})\s+UTC/i);
   if (!m) return null;
   const [, day, mon, year, hh, mm] = m;
   const month = MONTHS[mon.toUpperCase()];
@@ -256,7 +256,7 @@ export async function preprocessGreeceNationalSynopsis(
   text: string | null,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const nullResult = { "synopsis": { source: "HNMS", url: HNMS_GALE_URL, text_de: null } };
+  const nullResult = { "synopsis": { source: "HNMS", url: HNMS_BULLETIN_URL, text_de: null } };
   if (!text) return nullResult;
 
   try {
@@ -271,7 +271,7 @@ ${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
-    return { "synopsis": { source: "HNMS", url: HNMS_GALE_URL, text_de: translated } };
+    return { "synopsis": { source: "HNMS", url: HNMS_BULLETIN_URL, text_de: translated } };
   } catch (e) {
     console.error("preprocessGreeceNationalSynopsis error:", e instanceof Error ? e.message : e);
     return nullResult;
@@ -283,22 +283,19 @@ export async function extractGreeceWarning(
   emyName: string | null,
   anthropic: Anthropic,
 ): Promise<Record<string, unknown>> {
-  const noWarning = "Aktuell: Keine Sturmwarnung von EMY";
-  const nullResult = {
-    "warnings": {
-      source: "HNMS", url: HNMS_GALE_URL,
-      sailingArea: emyName,
-      text_de: noWarning,
-    },
-  };
-  if (!galeData || !emyName) return nullResult;
+  if (!galeData || !emyName) {
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: "Aktuell: Keine Sturmwarnung von HNMS" } };
+  }
 
   const text = galeData["text"] as string | null;
-  if (!text) return nullResult;
+  if (!text) {
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: "Aktuell: Keine Sturmwarnung von HNMS" } };
+  }
 
-  const headerLine = text.split("\n").find(l => /WARNING NR.*UTC/i.test(l)) ?? "";
+  const headerLine = text.split("\n").find(l => /ATHENS,.*\/\s*\d{4}\s+UTC/i.test(l)) ?? "";
   const headerDate = parseHnmsTimestamp(headerLine);
-  const timeLabel = headerDate ? `Stand: ${formatAthenTime(headerDate)}` : "";
+  const timeLabel = headerDate ? formatAthenTime(headerDate) : "";
+  const noWarningText = timeLabel ? `Aktuell ${timeLabel}: Keine Sturmwarnung von HNMS` : "Aktuell: Keine Sturmwarnung von HNMS";
 
   try {
     const msg = await anthropic.messages.create({
@@ -308,22 +305,24 @@ export async function extractGreeceWarning(
         role: "user",
         content: `Analysiere diese englische Seewetter-Warnung und beantworte für das Seegebiet "${emyName}":
 
-1. Ist "${emyName}" in der Warnung betroffen? (Prüfe die einzelnen Gebiets-Abschnitte NACH der "GENERAL SYNOPSIS")
-2. Falls ja: Extrahiere NUR den Warnungstext für "${emyName}" (Windrichtung, Windstärke, Gültigkeitsdauer). Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort in Knoten umrechnen und NUR Knoten angeben, KEINE Beaufort-Werte (z.B. 7 Bft → "28-33 kn", 7 or 8 → "28-40 kn"). UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen, immer mit Datum, KEIN UTC anzeigen (z.B. "03/22 UTC" → "04.04. 01:00 Ortszeit").
-3. Falls nein: Antworte mit genau "NONE"
+1. Ist "${emyName}" in PART 3 der Warnung betroffen?
+2. Falls ja: Extrahiere NUR explizite Unwetterwarnungen für "${emyName}" (THUNDERSTORM, STORM, GALE, LOCALLY POOR, CHANCE OF THUNDERSTORM). Normale Windvorhersagen (z.B. "NORTHWEST 5 OR 6. MODERATE.") sind KEINE Warnung. Übersetze ins Deutsche, normale Groß-/Kleinschreibung. Beaufort in Knoten umrechnen, NUR Knoten angeben. UTC-Zeiten auf griechische Ortszeit (UTC+3) umrechnen, immer mit Datum, KEIN UTC anzeigen.
+3. Falls keine Unwetterwarnung: Antworte mit genau "NONE"
 
-IGNORIERE die "GENERAL SYNOPSIS" — extrahiere nur gebietsspezifische Warnungen. Antworte NUR mit der deutschen Übersetzung oder "NONE".
+IGNORIERE die "GENERAL SYNOPSIS" (PART 2) — prüfe nur PART 3. Antworte NUR mit der deutschen Übersetzung oder "NONE".
 
 ${text}`,
       }],
     });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
-    if (!translated || translated === "NONE") return nullResult;
-    const text_de = ["Aktuelle Sturmwarnung:", timeLabel, translated].filter(Boolean).join("\n");
-    return { "warnings": { source: "HNMS", url: HNMS_GALE_URL, sailingArea: emyName, text_de } };
+    if (!translated || translated === "NONE") {
+      return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText } };
+    }
+    const text_de = `Aktuell ${timeLabel ? timeLabel + " " : ""}Sturmwarnung von HNMS:\n${translated}`;
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de } };
   } catch (e) {
     console.error("extractGreeceWarning error:", e instanceof Error ? e.message : e);
-    return nullResult;
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText } };
   }
 }
 
