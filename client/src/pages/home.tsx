@@ -292,7 +292,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           <SectionTitle num={5} title="Temperatur" />
           <div className="my-3" data-testid="section-card-5">
-            <WindyEmbed lat={cityLat} lon={cityLon} overlay="wind" product={model} level="surface" zoom={zoom} forecast marker />
+            <WindyEmbed lat={cityLat} lon={cityLon} overlay="wind" product={model} level="surface" zoom={Math.min(zoom + 4, 12)} forecast marker />
             <SourceLink label={`Prognose ${locationShort} ${modelLabel} windy.com`} url={prognoseUrl} />
           </div>
           {weatherOutput?.temperature?.text && (
