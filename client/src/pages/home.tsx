@@ -355,6 +355,7 @@ export default function Home() {
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
+  const lastAnalysisTimeRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -391,6 +392,7 @@ export default function Home() {
         setActiveLocation(data.location);
         setMessageLocations(prev => ({ ...prev, [assistantId]: data.location! }));
         lastAnalysisLocationRef.current = data.location!.displayName.split(",")[0].trim();
+        lastAnalysisTimeRef.current = new Date().toLocaleString("de-AT");
       }
       if (data.weatherEurope) {
         setMessageWeatherEurope(prev => ({ ...prev, [assistantId]: data.weatherEurope! }));
@@ -652,7 +654,7 @@ export default function Home() {
             <Popover>
               <PopoverTrigger asChild>
                 <button className="p-1 text-muted-foreground hover:text-foreground transition-colors" aria-label="Info" data-testid="button-info">
-                  <Info className="w-4 h-4" />
+                  <Info className="w-5 h-5" />
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-3 text-sm" data-testid="popover-info">
@@ -668,7 +670,7 @@ export default function Home() {
                           `Ort: ${activeLocation.displayName}`,
                           `Koordinaten: ${activeLocation.lat}, ${activeLocation.lon}`,
                           activeLocation.regionalModelLabel ? `Windmodell: ${activeLocation.regionalModelLabel}` : "",
-                          `Zeitpunkt: ${new Date().toLocaleString("de-AT")}`,
+                          lastAnalysisTimeRef.current ? `Analyse vom: ${lastAnalysisTimeRef.current}` : "",
                         ].filter(Boolean);
                         body = encodeURIComponent("\n\n---\nLetzte Analyse:\n" + parts.join("\n"));
                       }
