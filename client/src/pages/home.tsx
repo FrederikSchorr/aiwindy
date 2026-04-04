@@ -212,7 +212,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   const zoom = 7;
   const locationShort = location.cityName || location.displayName?.split(",")[0]?.trim() || "";
   const sailingAreaShort = location.sailingArea || locationShort;
-  const windUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${Math.min(zoom + 2, 14)},i:pressure,p:favs`;
+  const windUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${zoom},i:pressure,p:favs`;
   const cloudsUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${zoom}`;
   const tempModel = "ecmwf";
   const tempModelLabel = "ECMWF 9km";
@@ -276,7 +276,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           <SectionTitle num={3} title="Wind & Welle" />
           <div className="my-3" data-testid="section-card-3">
-            <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
+            <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={zoom} marker />
             <SourceLink label={`Wind ${sailingAreaShort} ${modelLabel} windy.com`} url={windUrl} />
           </div>
           {weatherOutput?.windWaves?.text && (
@@ -285,7 +285,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           <SectionTitle num={4} title="Wolken & Regen" />
           <div className="my-3" data-testid="section-card-4">
-            <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
+            <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={zoom} marker />
             <SourceLink label={`Wolken ${sailingAreaShort} ${modelLabel} windy.com`} url={cloudsUrl} />
           </div>
           {weatherOutput?.cloudsRain?.text && (
