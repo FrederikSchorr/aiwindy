@@ -285,7 +285,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           <SectionTitle num={4} title="Wolken & Regen" />
           <div className="my-3" data-testid="section-card-4">
-            <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={Math.max(zoom - 3, 4)} marker />
+            <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
             <SourceLink label={`Wolken ${sailingAreaShort} ${modelLabel} windy.com`} url={cloudsUrl} />
           </div>
           {weatherOutput?.cloudsRain?.text && (
