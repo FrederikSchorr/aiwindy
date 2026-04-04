@@ -340,7 +340,7 @@ export default function Home() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Ahoi! Sage mir wo Du segelst ⛵ in 🇭🇷, 🇬🇷, 🇦🇹, oder lade ein Wolken-Foto ☁️ hoch.",
+      content: "welcome",
     },
   ]);
   const [input, setInput] = useState("");
@@ -826,7 +826,15 @@ export default function Home() {
               <div key={msg.id} className="w-full" data-testid={`message-${msg.id}`} data-message-id={msg.id}>
                 {isCurrentlyStreaming
                   ? <div id={`stream-${msg.id}`} className="text-[15px] leading-relaxed whitespace-pre-wrap text-foreground" />
-                  : msg.content ? <MarkdownContent content={msg.content} /> : null}
+                  : msg.id === "welcome" ? (
+                    <div className="text-[15px] leading-relaxed text-foreground">
+                      Ahoi! Sage mir wo Du segelst ⛵ in{" "}
+                      <CountryFlag countryCode="HR" />,{" "}
+                      <CountryFlag countryCode="GR" />,{" "}
+                      <CountryFlag countryCode="AT" />,{" "}
+                      oder lade ein Wolken-Foto ☁️ hoch.
+                    </div>
+                  ) : msg.content ? <MarkdownContent content={msg.content} /> : null}
                 {isCurrentlyStreaming && (loadingStatus ? <StatusLoader text={loadingStatus} /> : <BounceLoader />)}
                 {photoHint && !isStreaming && (
                   <div className="mt-3 text-[14px]" data-testid="text-photo-location-hint">
