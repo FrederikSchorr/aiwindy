@@ -82,7 +82,7 @@ export async function preprocessNationalWeather(
 ): Promise<Record<string, unknown>> {
   if (countryCode === "AT") return preprocessNationalWeatherAT(rawData);
   if (countryCode === "GR") {
-    const text = (rawData["greeceGaleWarning"] as any)?.text as string | null;
+    const text = (rawData["greeceMarineForecast"] as any)?.text as string | null;
     return await preprocessGreeceNationalSynopsis(text, anthropic);
   }
   if (countryCode !== "HR") return {};
@@ -116,7 +116,7 @@ export async function preprocessLocalWeather(
   }
 
   if (countryCode === "GR") {
-    const galeData = rawData["greeceGaleWarning"] as Record<string, unknown> | null;
+    const galeData = rawData["greeceMarineForecast"] as Record<string, unknown> | null;
     const emyName = getGreekEmyName(position.sailingArea);
     return {
       ...(await extractGreeceWarning(galeData, emyName, anthropic)),

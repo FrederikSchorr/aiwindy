@@ -17,6 +17,7 @@ export interface AnalysisPosition {
     name_de: string;                          // e.g. "Split"
     coordinates: { lat: number; lon: number }; // from Nominatim
   } | null;
+  openskiron_domain?: { domain: string; created: string; status: "cached" | "downloaded" };
 }
 
 export interface AnalysisSources {
@@ -87,6 +88,13 @@ export function createAnalysis(position: AnalysisPosition): {
     try {
       const replacer = (_key: string, value: unknown) => {
         if (_key.endsWith("Base64")) return undefined;
+        if (_key === "generalWeather" && value && typeof value === "object") {
+          const obj = { ...(value as Record<string, unknown>) };
+          if (typeof obj.text_de === "string" && obj.text_de.length > 100) {
+            obj.text_de = obj.text_de.slice(0, 100) + "...";
+          }
+          return obj;
+        }
         if ((_key === "austriaWindCloudRain" || _key === "greeceWindWaveCloudRain") && value && typeof value === "object") {
           const obj = { ...(value as Record<string, unknown>) };
           for (const [k, v] of Object.entries(obj)) {

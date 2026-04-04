@@ -195,7 +195,7 @@ export async function fetchGreeceWeather(
     sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj) : null,
   ]);
 
-  const data: Record<string, unknown> = { greeceGaleWarning: hnms };
+  const data: Record<string, unknown> = { greeceMarineForecast: hnms };
   if (openskiron) {
     data["greeceWindWaveCloudRain"] = openskiron.windCloudRain;
     data["greeceTemperature"] = openskiron.temperature;
