@@ -681,13 +681,13 @@ Orte: Kythira, Neapolis, Gythio, Monemvasia, Elafonisos</description>
 </Placemark>
 <Placemark>
 <name>Kretisches Meer West</name>
-<description>lat: 35.64438, lon: 23.36759
+<description>lat: 35.209313, lon: 23.166541
 Windy: iconEu
 OpenSkiron: Aegean_SW_4km
 EMY: West Kritiko
 Orte: Chania, Rethymno, Heraklion, Kissamos, Paleochora</description>
 <styleUrl>#style_2</styleUrl>
-<Point><coordinates>23.36759,35.64438,0</coordinates></Point>
+<Point><coordinates>23.166541,35.209313,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Kretisches Meer Ost</name>
