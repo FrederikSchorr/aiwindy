@@ -296,8 +296,31 @@ def main():
 
     try:
         grb2_path, created = fetch_grib(domain)
+
+        cache_key = f"{domain}_{wind_lat:.4f}_{wind_lon:.4f}_{city_lat:.4f}_{city_lon:.4f}"
+        json_cache_path = CACHE_DIR / f"{cache_key}.json"
+        url_cache_path = CACHE_DIR / f"{domain}.url"
+        current_url = url_cache_path.read_text().strip() if url_cache_path.exists() else ""
+
+        if json_cache_path.exists():
+            try:
+                cached = json.loads(json_cache_path.read_text())
+                if cached.get("_cache_url") == current_url:
+                    print(f"[json-cache] reusing extracted data for {cache_key}", file=sys.stderr)
+                    del cached["_cache_url"]
+                    print(json.dumps(cached))
+                    sys.exit(0)
+            except Exception:
+                pass
+
         result = extract_data(grb2_path, wind_lat, wind_lon, city_lat, city_lon)
         result["created"] = created
+
+        cache_result = dict(result)
+        cache_result["_cache_url"] = current_url
+        json_cache_path.write_text(json.dumps(cache_result))
+        print(f"[json-cache] saved extracted data for {cache_key}", file=sys.stderr)
+
         print(json.dumps(result))
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
