@@ -845,8 +845,8 @@
       {
         "deutsch": "Weißensee",
         "typ": "see",
-        "lat": 46.7,
-        "lon": 13.31,
+        "lat": 46.713859,
+        "lon": 13.303793,
         "orte": "Techendorf, Neusach",
         "windyModel": "czeAladin"
       },
