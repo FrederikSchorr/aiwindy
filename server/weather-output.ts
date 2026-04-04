@@ -56,7 +56,7 @@ export async function generateWeatherOutput(
   const windsystems = getWindsystemsForCountry(position.country);
   const locationLabel = position.sailingArea?.name_de ?? position.city?.name_de ?? position.userInput;
 
-  const _d = new Date(analysis.date);
+  const _d = new Date(analysis.position.requestDate);
   const _days = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
   const todayLabel = `${_days[_d.getDay()]} ${String(_d.getDate()).padStart(2, "0")}.${String(_d.getMonth() + 1).padStart(2, "0")}.`;
 

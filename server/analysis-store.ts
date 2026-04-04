@@ -26,9 +26,17 @@ export interface AnalysisSources {
   europe: string[];
 }
 
+export interface AnalysisMeta {
+  app: string;
+  version: string;
+  website: string;
+  github: string;
+  copyright: string;
+}
+
 export interface AnalysisJson {
-  date: string;
-  position: AnalysisPosition;
+  meta: AnalysisMeta;
+  position: AnalysisPosition & { requestDate: string };
   sources: AnalysisSources;
   weatherRaw: Record<string, unknown>;
   weatherPreprocessed: {
@@ -73,8 +81,14 @@ export function createAnalysis(position: AnalysisPosition): {
 } {
   const now = new Date();
   const data: AnalysisJson = {
-    date: now.toISOString(),
-    position,
+    meta: {
+      app: "aiWindy",
+      version: "2.0",
+      website: "https://aiwindy.schorr.wien",
+      github: "https://github.com/FrederikSchorr/aiwindy",
+      copyright: "© Frederik Schorr",
+    },
+    position: { requestDate: now.toISOString(), ...position },
     sources: { windy: [], national: [], europe: [] },
     weatherRaw: {},
     weatherPreprocessed: { europe: {}, national: {}, local: {} },
