@@ -55,7 +55,7 @@ export async function fetchAustriaWeather(
     `Wind, Wolken, Regen, Temperatur von [Geosphere Austria](${GEOSPHERE_SOURCE_URL}) NWP API`,
   ];
   if (Object.keys(lakeWarnings).length > 0) {
-    sourceUrls.push(`[Sturmwarnung](${LSZ_BURGENLAND_URL}) von LSZ Burgenland`);
+    sourceUrls.push(`Sturmwarnung von [LSZ Burgenland](${LSZ_BURGENLAND_URL})`);
   }
   return { data, sourceUrls };
 }
