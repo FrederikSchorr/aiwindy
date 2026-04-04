@@ -216,8 +216,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   const cloudsUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${zoom}`;
   const tempModel = "ecmwf";
   const tempModelLabel = "ECMWF 9km";
-  const forecastZoom = Math.min(zoom + 4, 12);
-  const prognoseUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/${tempModel}?${tempModel},${cityLat.toFixed(3)},${cityLon.toFixed(3)},${forecastZoom},i:pressure,p:favs`;
+  const prognoseUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/?temp,${cityLat.toFixed(3)},${cityLon.toFixed(3)},${zoom},i:pressure,p:favs`;
 
   return (
     <div data-testid="analysis-view">
@@ -295,7 +294,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           <SectionTitle num={5} title="Temperatur" />
           <div className="my-3" data-testid="section-card-5">
-            <WindyEmbed lat={cityLat} lon={cityLon} overlay="wind" product={tempModel} level="surface" zoom={forecastZoom} forecast marker />
+            <WindyEmbed lat={cityLat} lon={cityLon} overlay="temp" product={tempModel} level="surface" zoom={zoom} forecast marker />
             <SourceLink label={`Prognose ${locationShort} ${tempModelLabel} windy.com`} url={prognoseUrl} />
           </div>
           {weatherOutput?.temperature?.text && (
