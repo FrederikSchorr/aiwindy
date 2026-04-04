@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Sailboat, Camera, MapPin, Image, Wind, Compass, Anchor, Waves, Sun, Cloud, CloudRain, Thermometer, Navigation, Flag, CloudSun, Droplets, Ship, type LucideIcon } from "lucide-react";
+import { Send, Sailboat, Camera, MapPin, Image, Wind, Compass, Anchor, Waves, Sun, Cloud, CloudRain, Thermometer, Navigation, Flag, CloudSun, Droplets, Ship, Info, Mail, type LucideIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 
 const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
@@ -317,8 +318,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
                       download
                       className="underline hover:text-primary transition-colors"
                       data-testid="link-download-analysis"
-                    >hier</a>
-                    . &copy; 2026 Frederik Schorr
+                    >hier</a>.
                   </span>
                 </li>
               </ul>
@@ -647,7 +647,43 @@ export default function Home() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-2 flex items-center gap-2">
           <Sailboat className="w-5 h-5 text-primary shrink-0" />
-          <h1 className="text-base font-semibold" data-testid="text-app-title">Segelwetter AI</h1>
+          <h1 className="text-base font-semibold" data-testid="text-app-title">aiWindy</h1>
+          <div className="ml-auto">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="p-1 text-muted-foreground hover:text-foreground transition-colors" aria-label="Info" data-testid="button-info">
+                  <Info className="w-4 h-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-3 text-sm" data-testid="popover-info">
+                <div className="space-y-2">
+                  <p className="font-semibold">aiWindy <span className="font-normal text-muted-foreground">v2.0 · April 2025</span></p>
+                  <p className="text-muted-foreground text-xs">© Frederik Schorr</p>
+                  <a
+                    href={(() => {
+                      const subject = encodeURIComponent("Feedback zu aiWindy");
+                      let body = "";
+                      if (activeLocation) {
+                        const parts = [
+                          `Ort: ${activeLocation.displayName}`,
+                          `Koordinaten: ${activeLocation.lat}, ${activeLocation.lon}`,
+                          activeLocation.regionalModelLabel ? `Windmodell: ${activeLocation.regionalModelLabel}` : "",
+                          `Zeitpunkt: ${new Date().toLocaleString("de-AT")}`,
+                        ].filter(Boolean);
+                        body = encodeURIComponent("\n\n---\nLetzte Analyse:\n" + parts.join("\n"));
+                      }
+                      return `mailto:frederik@schorr.wien?subject=${subject}&body=${body}`;
+                    })()}
+                    className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                    data-testid="link-feedback"
+                  >
+                    <Mail className="w-3 h-3" />
+                    Feedback senden
+                  </a>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </header>
 
