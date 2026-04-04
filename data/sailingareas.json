@@ -516,8 +516,8 @@
         "deutsch": "Adria Mitte (Italien)",
         "typ": "meer",
         "italienisch": "Adriatico Centrale",
-        "lat": 43,
-        "lon": 14.5,
+        "lat": 43.643627,
+        "lon": 14.073153,
         "orte": "Ancona, Pescara, Bari, Numana, Vieste",
         "windyModel": "iconEu"
       },
