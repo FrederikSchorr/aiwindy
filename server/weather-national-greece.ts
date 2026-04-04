@@ -309,7 +309,7 @@ Gibt es dort explizite Unwetterwarnungen (THUNDERSTORM, STORM, GALE, LOCALLY POO
 - JA: Antworte NUR mit dem übersetzten Warnungstext (z.B. "Gewittermöglichkeit im Westen"). Keine Erklärungen, keine Einleitung.
 - NEIN (oder normaler Wind wie "NORTHWEST 5 OR 6. MODERATE."): Antworte mit genau "NONE"
 
-Übersetzungsregeln: Deutsch, normale Groß-/Kleinschreibung. UTC+3 = griechische Ortszeit, immer mit Datum. Kein UTC anzeigen. Beaufort → Knoten.
+Übersetzungsregeln: Deutsch, normale Groß-/Kleinschreibung. Keine Uhrzeiten nennen. Beaufort → Knoten.
 
 ${text}`,
       }],
