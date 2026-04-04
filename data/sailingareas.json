@@ -446,8 +446,8 @@
         "typ": "meer",
         "emy_name": "Thrakiko",
         "emy_nr": 49,
-        "lat": 40.5,
-        "lon": 25.5,
+        "lat": 40.594826,
+        "lon": 25.475261,
         "orte": "Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi",
         "windyModel": "iconEu",
         "openskiron_domain": "Aegean_NW_4km"
