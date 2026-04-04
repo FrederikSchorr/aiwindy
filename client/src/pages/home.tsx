@@ -689,7 +689,7 @@ export default function Home() {
                           activeLocation.country ? `🏳️ ${activeLocation.country}` : "",
                           activeLocation.sailingArea ? `⛵ ${activeLocation.sailingArea}` : "",
                           activeLocation.cityName ? `📍 ${activeLocation.cityName}` : "",
-                          activeLocation.regionalModelLabel ? `🔬 Windmodell: ${activeLocation.regionalModelLabel}` : "",
+                          activeLocation.regionalModelLabel ? `🔬 Windy Prognosemodell: ${activeLocation.regionalModelLabel}` : "",
                         ].filter(Boolean);
                         body = "\n\n---\nLetzte Analyse:\n" + parts.join("\n");
                         const wo = lastAnalysisOutputRef.current;
