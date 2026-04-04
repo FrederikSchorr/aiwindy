@@ -133,6 +133,7 @@ Wichtig:
 - Die Koordinaten (°N °E) jedes Reviers helfen bei der geografischen Einordnung.
 - Wenn der Input selbst eine echte Stadt, ein Hafen oder ein bekannter Ort ist (z.B. "Punat", "Biograd", "Vodice", "Fažana"): gib GENAU diesen Ort als city zurück, NICHT eine größere Nachbarstadt.
 - Für Seen und Gewässer (z.B. "Neusiedler See", "Bodensee", "Gardasee"): gib die wichtigste Stadt AM Ufer als city zurück (z.B. "Neusiedler See" → city: "Neusiedl am See", "Bodensee" → city: "Konstanz", "Gardasee" → city: "Riva del Garda"). NIEMALS den Seenamen als city verwenden!
+- Für Inseln (z.B. "Brac", "Krk", "Korfu", "Lefkada", "Elba"): gib die wichtigste KÜSTENSTADT oder den Haupthafen der Insel als city zurück (z.B. "Brac" → city: "Bol", "Krk" → city: "Krk", "Korfu" → city: "Korfu", "Lefkada" → city: "Lefkada", "Elba" → city: "Portoferraio"). NIEMALS den Inselnamen als city verwenden, da Geocoding sonst den Bergmittelpunkt der Insel liefert!
 - Für Resorts, Campingplätze, Buchten: gib die nächste echte Stadt an (z.B. "Seepark Weiden" → city: "Weiden am See").
 - Für Segelrevier-Namen ohne Stadtbezug: gib die wichtigste Hafenstadt an (z.B. "Nordadria" → city: "Trieste").
 - Bei allgemeinen Bezeichnungen wie "Adria": sailingArea: "Adria Mitte (Kroatien)", city: "Split".
