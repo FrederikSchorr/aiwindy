@@ -808,38 +808,6 @@ Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen b
 
 ${SECTION_STYLE}`;
 
-async function fetchKnmiChartBase64(): Promise<string | null> {
-  try {
-    const now = new Date();
-    const utcHour = now.getUTCHours();
-    const utcDay = now.getUTCDate();
-    const chartHour = utcHour >= 12 ? "12" : "00";
-    const dayStr = utcDay.toString().padStart(2, "0");
-    const chartUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
-
-    let chartRes = await fetch(chartUrl, {
-      signal: AbortSignal.timeout(10000),
-      cache: "no-store",
-    });
-    if (!chartRes.ok) {
-      const fallbackUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}00_large.gif`;
-      chartRes = await fetch(fallbackUrl, {
-        signal: AbortSignal.timeout(10000),
-        cache: "no-store",
-      });
-      if (!chartRes.ok) return null;
-    }
-    const buffer = Buffer.from(await chartRes.arrayBuffer());
-    return buffer.toString("base64");
-  } catch (e) {
-    console.error(
-      "KNMI chart fetch for vision failed:",
-      e instanceof Error ? e.message : e,
-    );
-    return null;
-  }
-}
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
@@ -877,36 +845,6 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/knmi-chart", async (_req, res) => {
-    try {
-      const now = new Date();
-      const utcHour = now.getUTCHours();
-      const utcDay = now.getUTCDate();
-      const chartHour = utcHour >= 12 ? "12" : "00";
-      const dayStr = utcDay.toString().padStart(2, "0");
-      const chartUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}${chartHour}_large.gif`;
-
-      const chartRes = await fetch(chartUrl, { cache: "no-store" });
-      if (!chartRes.ok) {
-        const fallbackUrl = `https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten/AL${dayStr}00_large.gif`;
-        const fallbackRes = await fetch(fallbackUrl, { cache: "no-store" });
-        if (!fallbackRes.ok) {
-          return res.status(502).json({ error: "KNMI chart unavailable" });
-        }
-        res.setHeader("Content-Type", "image/gif");
-        res.setHeader("Cache-Control", "no-cache, max-age=600");
-        const buffer = Buffer.from(await fallbackRes.arrayBuffer());
-        return res.send(buffer);
-      }
-
-      res.setHeader("Content-Type", "image/gif");
-      res.setHeader("Cache-Control", "no-cache, max-age=600");
-      const buffer = Buffer.from(await chartRes.arrayBuffer());
-      return res.send(buffer);
-    } catch {
-      return res.status(500).json({ error: "Failed to fetch KNMI chart" });
-    }
-  });
 
   const upload = multer({
     dest: "/tmp/uploads",
