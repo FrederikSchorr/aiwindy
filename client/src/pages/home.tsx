@@ -214,12 +214,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   const sailingAreaShort = location.sailingArea || locationShort;
   const windUrl = `https://www.windy.com/-wind-${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${Math.min(zoom + 2, 14)}`;
   const cloudsUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${zoom}`;
+  const tempModel = "iconEu";
+  const tempModelLabel = "ICON-EU 7km (DWD)";
   const forecastZoom = Math.min(zoom + 4, 12);
-  const prognoseUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/${model}?${model},${cityLat.toFixed(3)},${cityLon.toFixed(3)},${forecastZoom},i:pressure,p:favs`;
-  const embedForecastUrl = `https://embed.windy.com/embed2.html?type=forecast&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=kt&zoom=${forecastZoom}&overlay=wind&product=${model}&level=surface&lat=${cityLat}&lon=${cityLon}&detailLat=${cityLat}&detailLon=${cityLon}&marker=true&message=true&pressure=true&calendar=now`;
-  console.log("[Section5 DEBUG] embedUrl:", embedForecastUrl);
-  console.log("[Section5 DEBUG] prognoseUrl:", prognoseUrl);
-  console.log("[Section5 DEBUG] cityLat:", cityLat, "cityLon:", cityLon, "saLat:", saLat, "saLon:", saLon);
+  const prognoseUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/${tempModel}?${tempModel},${cityLat.toFixed(3)},${cityLon.toFixed(3)},${forecastZoom},i:pressure,p:favs`;
 
   return (
     <div data-testid="analysis-view">
@@ -297,8 +295,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
 
           <SectionTitle num={5} title="Temperatur" />
           <div className="my-3" data-testid="section-card-5">
-            <WindyEmbed lat={cityLat} lon={cityLon} overlay="wind" product={model} level="surface" zoom={Math.min(zoom + 4, 12)} forecast marker />
-            <SourceLink label={`Prognose ${locationShort} ${modelLabel} windy.com`} url={prognoseUrl} />
+            <WindyEmbed lat={cityLat} lon={cityLon} overlay="wind" product={tempModel} level="surface" zoom={forecastZoom} forecast marker />
+            <SourceLink label={`Prognose ${locationShort} ${tempModelLabel} windy.com`} url={prognoseUrl} />
           </div>
           {weatherOutput?.temperature?.text && (
             <MarkdownContent content={weatherOutput.temperature.text} />
