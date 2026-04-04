@@ -805,8 +805,8 @@
       {
         "deutsch": "Bodensee (Österreich)",
         "typ": "see",
-        "lat": 47.57,
-        "lon": 9.73,
+        "lat": 47.524041,
+        "lon": 9.714725,
         "orte": "Bregenz, Hard, Lochau, Fußach, Höchst",
         "windyModel": "czeAladin"
       },
