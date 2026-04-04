@@ -48,7 +48,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 2. **Fronten** - KNMI fronts analysis chart (base64 from weatherEurope SSE), KNMI source with local time
 3. **Wind & Welle** - Windy regional wind model map (sailingArea coords, marker), model label via Windy source
 4. **Wolken & Regen** - Windy clouds overlay map (sailingArea coords, marker), model label via Windy source
-5. **Temperatur** - Windy forecast meteogram (city coords, marker), always ICON-EU 7km (DWD) for consistent embed/link accuracy
+5. **Temperatur** - Windy forecast meteogram (city coords, marker), always ECMWF 9km for consistent embed/link accuracy
 
 Progressive rendering phases:
 - Phase 1 (location SSE): Header + Section 1 (Windy ECMWF) shown immediately
