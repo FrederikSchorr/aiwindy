@@ -391,8 +391,8 @@
         "typ": "meer",
         "emy_name": "Southwest Aegean",
         "emy_nr": 40,
-        "lat": 36.8,
-        "lon": 24.5,
+        "lat": 36.870972,
+        "lon": 24.402883,
         "orte": "Milos, Santorini, Folegandros, Sifnos, Serifos",
         "windyModel": "iconEu",
         "openskiron_domain": "Aegean_SW_4km"
