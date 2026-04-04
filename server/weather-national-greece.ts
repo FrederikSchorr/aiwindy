@@ -168,7 +168,7 @@ async function fetchGreeceWindCloudRain(
         downloadNotified = true;
         const urlMatch = chunk.match(/\[download\]\s+(\S+)/);
         const filename = urlMatch ? urlMatch[1].split("/").pop() : domain;
-        onProgress(`Speichern der OpenSkiron Wetterdaten für ${domain} ${filename ?? ""}`);
+        onProgress(`Download der OpenSkiron Wetterdaten ${filename ?? domain}`);
       }
     });
     proc.on("close", (code: number | null) => {
