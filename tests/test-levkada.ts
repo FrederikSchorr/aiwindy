@@ -103,7 +103,7 @@ const rawKeys = Object.keys(national.data);
 console.log(`✓  ${rawKeys.join(", ")}`);
 
 // Raw preview
-const wcr = national.data["greeceWindCloudRain"] as any;
+const wcr = national.data["greeceWindWaveCloudRain"] as any;
 if (wcr?.timestamps?.length) {
   console.log(`   greeceWindCloudRain: ${wcr.timestamps.length} Zeitschritte`);
   console.log(`   Wind[0]: ${wcr.windDir[0]} ${wcr.windSpeedKt[0]} kt, Böe ${wcr.gustKt[0]} kt`);
