@@ -99,6 +99,9 @@ const national = await fetchNationalWeather(
 );
 Object.assign(analysis.data.weatherRaw, national.data);
 for (const u of national.sourceUrls) analysis.data.sources.national.push(u);
+if ((national as any).openskironMeta) {
+  (analysis.data.position as any).openskiron_domain = (national as any).openskironMeta;
+}
 const rawKeys = Object.keys(national.data);
 console.log(`✓  ${rawKeys.join(", ")}`);
 
