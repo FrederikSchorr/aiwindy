@@ -773,8 +773,8 @@
       {
         "deutsch": "Wallersee",
         "typ": "see",
-        "lat": 47.94,
-        "lon": 13.24,
+        "lat": 47.914669,
+        "lon": 13.176109,
         "orte": "Seekirchen, Neumarkt",
         "windyModel": "czeAladin"
       },
