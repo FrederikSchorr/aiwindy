@@ -39,35 +39,35 @@ Orte: Mondsee, Loibichl</description>
 </Placemark>
 <Placemark>
 <name>Mattsee</name>
-<description>lat: 47.97, lon: 13.1
+<description>lat: 47.983816, lon: 13.119373
 Windy: czeAladin
 Orte: Mattsee, Obertrum</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.1,47.97,0</coordinates></Point>
+<Point><coordinates>13.119373,47.983816,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Wallersee</name>
-<description>lat: 47.94, lon: 13.24
+<description>lat: 47.914669, lon: 13.176109
 Windy: czeAladin
 Orte: Seekirchen, Neumarkt</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.24,47.94,0</coordinates></Point>
+<Point><coordinates>13.176109,47.914669,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Wolfgangsee</name>
-<description>lat: 47.74, lon: 13.45
+<description>lat: 47.72753, lon: 13.454801
 Windy: czeAladin
 Orte: St. Wolfgang, St. Gilgen</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.45,47.74,0</coordinates></Point>
+<Point><coordinates>13.454801,47.72753,0</coordinates></Point>
 </Placemark>
 <Placemark>
-<name>Zell am See</name>
-<description>lat: 47.32, lon: 12.79
+<name>Zeller See</name>
+<description>lat: 47.320797, lon: 12.807647
 Windy: czeAladin
 Orte: Zell am See, Thumersbach</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>12.79,47.32,0</coordinates></Point>
+<Point><coordinates>12.807647,47.320797,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Achensee</name>
@@ -79,19 +79,19 @@ Orte: Pertisau, Maurach</description>
 </Placemark>
 <Placemark>
 <name>Bodensee (Österreich)</name>
-<description>lat: 47.57, lon: 9.73
+<description>lat: 47.524041, lon: 9.714725
 Windy: czeAladin
 Orte: Bregenz, Hard, Lochau, Fußach, Höchst</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>9.73,47.57,0</coordinates></Point>
+<Point><coordinates>9.714725,47.524041,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Wörthersee</name>
-<description>lat: 46.62, lon: 14.15
+<description>lat: 46.625415, lon: 14.155704
 Windy: czeAladin
 Orte: Klagenfurt, Velden, Pörtschach, Krumpendorf, Maria Wörth</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>14.15,46.62,0</coordinates></Point>
+<Point><coordinates>14.155704,46.625415,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Millstätter See</name>
@@ -103,27 +103,27 @@ Orte: Millstatt, Seeboden</description>
 </Placemark>
 <Placemark>
 <name>Ossiacher See</name>
-<description>lat: 46.68, lon: 13.97
+<description>lat: 46.666773, lon: 13.960125
 Windy: czeAladin
 Orte: Ossiach, Bodensdorf, Steindorf, Annenheim, Feldkirchen</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.97,46.68,0</coordinates></Point>
+<Point><coordinates>13.960125,46.666773,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Faaker See</name>
-<description>lat: 46.57, lon: 13.91
+<description>lat: 46.579836, lon: 13.926755
 Windy: czeAladin
 Orte: Faak, Egg am Faaker See</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.91,46.57,0</coordinates></Point>
+<Point><coordinates>13.926755,46.579836,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Weißensee</name>
-<description>lat: 46.7, lon: 13.31
+<description>lat: 46.713859, lon: 13.303793
 Windy: czeAladin
 Orte: Techendorf, Neusach</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.31,46.7,0</coordinates></Point>
+<Point><coordinates>13.303793,46.713859,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Ottenstein</name>
@@ -135,11 +135,11 @@ Orte: Ottenstein, Rastenfeld</description>
 </Placemark>
 <Placemark>
 <name>Grundlsee</name>
-<description>lat: 47.62, lon: 13.8
+<description>lat: 47.633537, lon: 13.863326
 Windy: czeAladin
 Orte: Grundlsee, Gössl</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.8,47.62,0</coordinates></Point>
+<Point><coordinates>13.863326,47.633537,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Genfersee</name>
@@ -351,11 +351,11 @@ Orte: Middelburg, Vlissingen, Zierikzee, Veere, Brouwershaven</description>
 </Placemark>
 <Placemark>
 <name>Adria Nord (Slowenien)</name>
-<description>lat: 45.6, lon: 13.5
+<description>lat: 45.578806, lon: 13.528724
 Windy: czeAladin
 Orte: Koper, Piran, Portorož, Izola, Strunjan</description>
 <styleUrl>#style_0</styleUrl>
-<Point><coordinates>13.5,45.6,0</coordinates></Point>
+<Point><coordinates>13.528724,45.578806,0</coordinates></Point>
 </Placemark>
 </Folder>
 <Style id="style_1"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
@@ -371,11 +371,11 @@ Orte: Aarhus, Randers, Grenaa, Ebeltoft, Odder</description>
 </Placemark>
 <Placemark>
 <name>Belte und Sund (Dänemark)</name>
-<description>lat: 55.2, lon: 10.5
+<description>lat: 55.402301, lon: 10.967286
 Windy: iconD2
 Orte: Odense, Svendborg, Middelfart, Kolding, Assens</description>
 <styleUrl>#style_1</styleUrl>
-<Point><coordinates>10.5,55.2,0</coordinates></Point>
+<Point><coordinates>10.967286,55.402301,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Nordsee (Dänemark)</name>
@@ -419,11 +419,11 @@ Orte: Göteborg, Strömstad, Lysekil, Marstrand, Fjällbacka</description>
 </Placemark>
 <Placemark>
 <name>Kattegat (Schweden)</name>
-<description>lat: 57, lon: 11.7
+<description>lat: 56.695116, lon: 12.2517
 Windy: iconEu
 Orte: Varberg, Falkenberg, Halmstad, Båstad, Helsingborg</description>
 <styleUrl>#style_1</styleUrl>
-<Point><coordinates>11.7,57,0</coordinates></Point>
+<Point><coordinates>12.2517,56.695116,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Sund (Öresund)</name>
@@ -847,19 +847,19 @@ Orte: Venedig, Triest, Rimini, Chioggia, Grado</description>
 </Placemark>
 <Placemark>
 <name>Adria Mitte (Italien)</name>
-<description>lat: 43, lon: 14.5
+<description>lat: 43.643627, lon: 14.073153
 Windy: iconEu
 Orte: Ancona, Pescara, Bari, Numana, Vieste</description>
 <styleUrl>#style_4</styleUrl>
-<Point><coordinates>14.5,43,0</coordinates></Point>
+<Point><coordinates>14.073153,43.643627,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Adria Süd (Italien)</name>
-<description>lat: 41.1798, lon: 17.2995
+<description>lat: 41.353381, lon: 17.317775
 Windy: iconEu
 Orte: Brindisi, Lecce, Otranto, Taranto, Castro</description>
 <styleUrl>#style_4</styleUrl>
-<Point><coordinates>17.2995,41.1798,0</coordinates></Point>
+<Point><coordinates>17.317775,41.353381,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Ligurisches Meer</name>
@@ -879,11 +879,11 @@ Orte: Livorno, Piombino, Elba, Viareggio, Giglio</description>
 </Placemark>
 <Placemark>
 <name>Tyrrhenisches Meer Mitte</name>
-<description>lat: 41.2, lon: 12.5
+<description>lat: 40.547628, lon: 11.970714
 Windy: iconEu
 Orte: Civitavecchia, Neapel, Ischia, Gaeta, Ponza</description>
 <styleUrl>#style_4</styleUrl>
-<Point><coordinates>12.5,41.2,0</coordinates></Point>
+<Point><coordinates>11.970714,40.547628,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Tyrrhenisches Meer Süd</name>
@@ -1027,11 +1027,11 @@ Orte: Gibraltar, Cádiz, Huelva, Barbate, Tarifa</description>
 </Placemark>
 <Placemark>
 <name>Balearen</name>
-<description>lat: 39.5, lon: 2.5
+<description>lat: 39.252737, lon: 2.198193
 Windy: iconEu
 Orte: Palma, Ibiza, Menorca, Alcúdia, Port Andratx</description>
 <styleUrl>#style_5</styleUrl>
-<Point><coordinates>2.5,39.5,0</coordinates></Point>
+<Point><coordinates>2.198193,39.252737,0</coordinates></Point>
 </Placemark>
 <Placemark>
 <name>Galicien</name>
