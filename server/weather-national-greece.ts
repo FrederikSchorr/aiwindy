@@ -357,9 +357,13 @@ export async function extractGreeceWarning(
         role: "user",
         content: `Seewetter-Bulletin. Suche in PART 3 den Abschnitt für "${emyName}".
 
-Gibt es dort explizite Unwetterwarnungen (THUNDERSTORM, STORM, GALE, LOCALLY POOR, CHANCE OF THUNDERSTORM)?
-- JA: Antworte NUR mit dem übersetzten Warnungstext (z.B. "Gewittermöglichkeit im Westen"). Keine Erklärungen, keine Einleitung.
-- NEIN (oder normaler Wind wie "NORTHWEST 5 OR 6. MODERATE."): Antworte mit genau "NONE"
+Extrahiere NUR echte Sturmwarnungen. Eine Sturmwarnung liegt nur vor wenn EINES dieser Schlüsselwörter im Text steht:
+GALE, STORM, THUNDERSTORM, CHANCE OF THUNDERSTORM, LOCALLY POOR
+
+WICHTIG: Normaler Segelwind ist KEINE Sturmwarnung! Wind bis Beaufort 7 (z.B. "NORTHWEST 5 OR 6", "NORTH 4 TO 7", "MODERATE", "ROUGH") ist normal und KEINE Warnung.
+
+- Sturmwarnung gefunden: Antworte NUR mit dem übersetzten Warnungstext (z.B. "Gewittermöglichkeit im Westen"). Keine Erklärungen, keine Einleitung.
+- Keine Sturmwarnung: Antworte mit genau "NONE"
 
 Übersetzungsregeln: Deutsch, normale Groß-/Kleinschreibung. Keine Uhrzeiten nennen. Beaufort → Knoten.
 
