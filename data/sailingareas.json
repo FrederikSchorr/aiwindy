@@ -369,8 +369,8 @@
         "typ": "meer",
         "emy_name": "Saronikos",
         "emy_nr": 43,
-        "lat": 37.5,
-        "lon": 23.5,
+        "lat": 37.784805,
+        "lon": 23.289855,
         "orte": "Athen/Piräus, Aegina, Poros, Hydra, Spetses",
         "windyModel": "iconEu",
         "openskiron_domain": "Aegean_SW_4km"
