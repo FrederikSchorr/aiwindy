@@ -314,8 +314,8 @@
         "typ": "meer",
         "emy_name": "Patraikos",
         "emy_nr": 27,
-        "lat": 38.3,
-        "lon": 21.5,
+        "lat": 38.260009,
+        "lon": 21.477871,
         "orte": "Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio",
         "windyModel": "iconEu",
         "openskiron_domain": "Ionian_Islands_4km"
