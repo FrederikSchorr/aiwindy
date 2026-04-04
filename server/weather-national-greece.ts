@@ -358,7 +358,7 @@ export async function extractGreeceWarning(
         content: `Seewetter-Bulletin. Suche in PART 3 den Abschnitt für "${emyName}".
 
 Extrahiere NUR echte Sturmwarnungen. Eine Sturmwarnung liegt nur vor wenn EINES dieser Schlüsselwörter im Text steht:
-GALE, STORM, THUNDERSTORM, CHANCE OF THUNDERSTORM, LOCALLY POOR
+GALE, STORM, THUNDERSTORM, CHANCE OF THUNDERSTORM
 
 WICHTIG: Normaler Segelwind ist KEINE Sturmwarnung! Wind bis Beaufort 7 (z.B. "NORTHWEST 5 OR 6", "NORTH 4 TO 7", "MODERATE", "ROUGH") ist normal und KEINE Warnung.
 
