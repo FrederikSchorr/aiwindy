@@ -114,8 +114,36 @@ async function fetchGreeceWindCloudRain(
       String(windLat), String(windLon),
       String(cityLat), String(cityLon),
     ];
-    const proc = spawn(process.platform === "win32" ? "python" : "python3", args, {
+    const pythonCmd = process.platform === "win32" ? "python" : "python3";
+    const proc = spawn(pythonCmd, args, {
       env: { ...process.env, ECCODES_LOG_LEVEL: "0" },
+    });
+    proc.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT" && pythonCmd === "python3") {
+        console.warn("python3 not found, retrying with python");
+        const proc2 = spawn("python", args, {
+          env: { ...process.env, ECCODES_LOG_LEVEL: "0" },
+        });
+        let stdout2 = "";
+        let stderr2 = "";
+        proc2.stdout.on("data", (d: Buffer) => { stdout2 += d.toString(); });
+        proc2.stderr.on("data", (d: Buffer) => { stderr2 += d.toString(); });
+        proc2.on("close", (code2: number | null) => {
+          if (code2 === 0 && stdout2.trim()) {
+            try { resolve(JSON.parse(stdout2)); } catch { resolve(null); }
+          } else {
+            console.error("openskiron_fetch (python fallback) failed:", stderr2);
+            resolve(null);
+          }
+        });
+        proc2.on("error", () => {
+          console.error("openskiron_fetch: neither python3 nor python found");
+          resolve(null);
+        });
+        return;
+      }
+      console.error("openskiron_fetch spawn error:", err.message);
+      resolve(null);
     });
     let stdout = "";
     let stderr = "";

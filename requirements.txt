@@ -3,3 +3,8 @@ xarray
 eccodes
 requests
 requests
+beautifulsoup4
+cfgrib
+numpy
+requests
+xarray
