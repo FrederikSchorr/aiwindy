@@ -552,8 +552,8 @@
         "deutsch": "Tyrrhenisches Meer Mitte",
         "typ": "meer",
         "italienisch": "Tirreno Centrale",
-        "lat": 41.2,
-        "lon": 12.5,
+        "lat": 40.547628,
+        "lon": 11.970714,
         "orte": "Civitavecchia, Neapel, Ischia, Gaeta, Ponza",
         "windyModel": "iconEu"
       },
