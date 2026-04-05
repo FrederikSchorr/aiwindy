@@ -65,6 +65,8 @@ Backend generates weatherOutput via weather-output.ts (5 separate LLM calls per 
 - If GPS found: auto-geocodes and updates maps
 - OpenAI GPT-4.1 Vision analyzes meteorological relevance of photos
 - Gemini 2.5 Flash for video analysis (native @google/generative-ai SDK)
+- Analysis sections: 📷 Aufnahme, ☁️ Wolkentyp, 🌧️ Regen, 🌊 Wellen, 🌫️ Bedeckungsgrad, 🌤️ Typische Wetterentwicklung
+- Last photo/video analysis stored in `lastPhotoAnalysis` for follow-up chat questions
 - SSE streaming response: `{ videoMeta: { thumbnailBase64, time, locationName, countryCode } }` for videos, `{ exifMeta }` for photos
 - Video: shows still frame thumbnail with "▶ Video" overlay, recording location + date below, "ja" location hint button (same as photo)
 

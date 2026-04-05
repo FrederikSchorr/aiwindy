@@ -63,6 +63,7 @@ let lastAnalysisContext: {
   preprocessed: string;
 } | null = null;
 let lastAnalysisFilePath: string | null = null;
+let lastPhotoAnalysis: { text: string; date: string; locationName?: string } | null = null;
 import {
   fetchMeteonews,
   preprocessMeteonews,
@@ -880,6 +881,9 @@ WENN JA: Beginne sofort mit dem ersten Abschnitt — KEIN einleitender Satz, KEI
 - Beispiel: **Cumulus mediocris** — ~1.500–2.500 m (tief-mittel): Kompakte, blumenkohlförmige Quellwolke mit flacher Basis und klar abgegrenztem Rand. Entsteht durch thermische Konvektion und gilt als Schönwetterwolke solange die Vertikalentwicklung begrenzt bleibt.
 - Beispiel: **Cirrus fibratus** — ~7.000–10.000 m (hoch): Feine, faserige Schleierwolke aus Eiskristallen, oft hakenförmig oder gekämmt. Trübt kaum die Sonne und kündigt häufig eine nahende Warmfront an.
 
+## 🌧️ Regen
+(PFLICHT — immer vorhanden. Ist Niederschlag sichtbar? Regen, Nieselregen, Virga (Fallstreifen), nasse Oberflächen, Regenschleier am Horizont? Wenn ja: Art, Intensität, Richtung. Wenn nein: kurz begründen warum kein Regen zu erwarten ist basierend auf den erkannten Wolkentypen.)
+
 ## 🌊 Wellen
 (PFLICHT — immer vorhanden. Wenn Wasser sichtbar: Wellentyp, geschätzte Höhe, Periode, Beschaffenheit der Oberfläche. Wenn kein Wasser sichtbar: schreibe nur „—".)
 
@@ -1116,7 +1120,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           }
         }
 
-        if (vidText) sendSSE({ content: vidText });
+        if (vidText) {
+          sendSSE({ content: vidText });
+          lastPhotoAnalysis = { text: vidText, date: new Date().toLocaleString("de-AT", { timeZone: "Europe/Vienna" }), locationName: exifLocationName ?? undefined };
+        }
       } else {
         sendSSE({ status: "🔍 Analysiere Bild mit KI..." });
 
@@ -1155,7 +1162,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         });
         const imgText = imgResponse.choices[0]?.message?.content || "";
         debugLogLLMResponse("gpt-4.1", "image analysis", imgText);
-        if (imgText) sendSSE({ content: imgText });
+        if (imgText) {
+          sendSSE({ content: imgText });
+          lastPhotoAnalysis = { text: imgText, date: new Date().toLocaleString("de-AT", { timeZone: "Europe/Vienna" }), locationName: exifLocationName ?? undefined };
+        }
       }
 
       sendSSE({ done: true });
@@ -1245,6 +1255,10 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           }
           systemPrompt += `\n--- WETTERDATEN (preprocessed) ---\n${lastAnalysisContext.preprocessed}\n`;
           systemPrompt += `\nDer Benutzer kann Rückfragen zu dieser Analyse stellen. Beantworte sie basierend auf den obigen Daten. Du kennst das verwendete Wettermodell, die Koordinaten, die Wetterdaten und alle Details der Analyse.`;
+        }
+        if (lastPhotoAnalysis) {
+          systemPrompt += `\n\nLETZTE FOTO/VIDEO-ANALYSE (${lastPhotoAnalysis.date}${lastPhotoAnalysis.locationName ? `, ${lastPhotoAnalysis.locationName}` : ""}):\n${lastPhotoAnalysis.text}\n`;
+          systemPrompt += `\nDer Benutzer kann Rückfragen zu diesem Foto/Video stellen. Beantworte sie basierend auf der obigen Analyse (Wolkentypen, Regen, Wellen, Bedeckungsgrad, Wetterentwicklung).`;
         }
 
         const chatMessages: Anthropic.MessageParam[] = [
