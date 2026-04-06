@@ -112,13 +112,18 @@ python scripts/openskiron_fetch.py <domain> <wind_lat> <wind_lon> <city_lat> <ci
 
 ## Weather Data Preprocessing
 
-LLM preprocessing pipeline (`server/weather-national.ts`): scrape → validate (GPT-4.1-mini checks for actual weather content) → extract meteorological text → feed to section LLM calls. Used for national weather sources.
+Two-stage LLM preprocessing (`server/weather-national.ts`):
+
+1. **National synopsis** (`preprocessNationalWeather`) — extracts/translates the country-level weather overview (e.g. DHMZ Adria synopsis, EMY marine bulletin, Austrocontrol Wetterlage)
+2. **Local weather** (`preprocessLocalWeather`) — extracts area-specific data: warnings, wind, wave, cloud/rain/thunderstorm, temperature. Each country module has dedicated functions (e.g. `extractDhmzWarning`, `preprocessGreeceLocalWind`)
+
+LLM calls (Claude Sonnet / GPT-4.1-mini) extract and translate from raw XML/HTML into structured German text. Numeric data (GeoSphere JSON, OpenSkiron GRIB) is preprocessed without LLM.
 
 ---
 
 ## Weather Output Generation
 
-5 parallel LLM calls generate section texts (`server/weather-output.ts`), each receiving the full preprocessed weather context. Results streamed to frontend via SSE.
+Single Claude Sonnet 4.6 call (`server/weather-output.ts`) with all preprocessed data + weather chart images (Wetterzentrale 850hPa, KNMI fronts). Returns a JSON object with 5 section texts (bullet-point style). Each section has strict rules for content scope, bullet count, and word limits.
 
 ---
 
