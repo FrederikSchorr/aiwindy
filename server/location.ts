@@ -430,11 +430,19 @@ export async function geocodeLocation(
     const viewbox = hintCoords
       ? `&viewbox=${hintCoords.lon - 0.5},${hintCoords.lat + 0.5},${hintCoords.lon + 0.5},${hintCoords.lat - 0.5}&bounded=0`
       : "";
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=5&extratags=1&namedetails=1&addressdetails=1&accept-language=de,en${viewbox}`,
-      { headers: { "User-Agent": "WindyWeatherApp/1.0" } },
-    );
-    if (!response.ok) return null;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=5&extratags=1&namedetails=1&addressdetails=1&accept-language=de,en${viewbox}`;
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await fetch(url, { headers: { "User-Agent": "WindyWeatherApp/1.0" } });
+        if (response.ok) break;
+        console.warn(`[geocode] Nominatim attempt ${attempt + 1} failed: ${response.status}`);
+      } catch (e) {
+        console.warn(`[geocode] Nominatim attempt ${attempt + 1} error:`, e);
+      }
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
+    if (!response || !response.ok) return null;
 
     const results = (await response.json()) as Array<{
       lat: string;

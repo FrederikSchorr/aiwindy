@@ -1345,17 +1345,31 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
             }
           : null;
 
+      const cityFallbackCoords = hintCoords ?? null;
       const cityObj: import("./analysis-store.js").AnalysisPosition["city"] =
         geocodedCity
           ? {
               name_de: geocodedCity.cityName ?? cityNameFromSonnet,
               coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon },
             }
-          : { name_de: cityNameFromSonnet, coordinates: { lat: 0, lon: 0 } };
+          : {
+              name_de: cityNameFromSonnet,
+              coordinates: cityFallbackCoords ?? { lat: 0, lon: 0 },
+            };
 
       const coords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
       const lat = coords.lat;
       const lon = coords.lon;
+
+      if (lat === 0 && lon === 0) {
+        console.warn(`[geocode] Failed to geocode "${cityNameFromSonnet}" — no coordinates available`);
+        sendSSE({
+          content: `Für „${userInput}" konnten keine Koordinaten ermittelt werden. Bitte versuche es mit einem konkreteren Ortsnamen (z.B. Stadt oder Hafen).`,
+        });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
 
       const countryCode =
         (detected.kind === "revier" ? detected.countryCode : null)
