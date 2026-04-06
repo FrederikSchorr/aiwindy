@@ -14,5 +14,13 @@
     "cityLon": -3.0293672,
     "displayName": "La Trinité-sur-Mer, Lorient, Morbihan, Bretagne, Metropolitanes Frankreich, 56470, Frankreich",
     "countryCode": "FR"
+  },
+  "skiathos": {
+    "sailingArea": "Ägäis Nordwest",
+    "city": "Skiathos",
+    "cityLat": 39.1661973,
+    "cityLon": 23.4888908,
+    "displayName": "Skiathos, Skiathos Municipality, Regionalbezirk Sporaden, Region Thessalien, Thessalien - Mittelgriechenland, 370 02, Griechenland",
+    "countryCode": "GR"
   }
 }
