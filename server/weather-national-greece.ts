@@ -1,7 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { spawn } from "child_process";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
-import { cacheGet, cacheSet } from "./cache-db.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -108,19 +107,6 @@ async function fetchGreeceWindCloudRain(
   const windLon = sailingAreaObj.coordinates.lon;
   const cityLat = cityObj?.coordinates.lat ?? windLat;
   const cityLon = cityObj?.coordinates.lon ?? windLon;
-
-  const dbCacheKey = `openskiron:${domain}:${windLat.toFixed(4)}_${windLon.toFixed(4)}_${cityLat.toFixed(4)}_${cityLon.toFixed(4)}`;
-  try {
-    const cachedRaw = await cacheGet(dbCacheKey);
-    if (cachedRaw) {
-      const cached = JSON.parse(cachedRaw);
-      console.log(`[openskiron-cache] DB HIT for ${domain} (${cached.openskironMeta?.created ?? "?"})`);
-      if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
-      return cached;
-    }
-  } catch (e) {
-    console.warn("[openskiron-cache] DB read error:", e);
-  }
 
   return new Promise((resolve, reject) => {
     const args = [
@@ -237,10 +223,6 @@ async function fetchGreeceWindCloudRain(
           },
           openskironMeta: { domain, created: parsed.created ?? "", fetch: didDownload ? "grib downloaded + json extracted" : didJsonCache ? "grib + json cached" : "grib cached + json extracted" },
         };
-        cacheSet(dbCacheKey, JSON.stringify(result), 24 * 60 * 60).then(
-          () => console.log(`[openskiron-cache] DB SAVED ${domain} (24h TTL)`),
-          (e) => console.warn("[openskiron-cache] DB write error:", e),
-        );
         resolve(result);
       } catch (e) {
         console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);

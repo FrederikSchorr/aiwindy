@@ -7,7 +7,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
 - **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, regional weather scraping, and OpenAI streaming chat
 - **AI**: Anthropic Claude Sonnet 4.6 for fronts analysis (Vision with KNMI chart), OpenAI GPT-4.1 for chat/photos, GPT-4.1-mini for section analysis/message classification, Gemini 2.5 Flash for video analysis
-- **PostgreSQL**: `cache_store` table for persistent caching (location lookups, OpenSkiron GRIB results)
+- **PostgreSQL**: `cache_store` table for persistent caching (location lookups)
 
 ## Key Files
 - `client/src/pages/home.tsx` - Single-column chat UI with AnalysisView progressive rendering from JSON pipeline
