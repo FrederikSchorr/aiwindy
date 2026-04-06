@@ -20,6 +20,9 @@ import {
   classifyMessage,
   geocodeLocation,
   reverseGeocode,
+  getCachedLocation,
+  setCachedLocation,
+  getRegionalModelFallback,
 } from "./location.js";
 import { createAnalysis } from "./analysis-store.js";
 
@@ -1309,45 +1312,67 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
-      // ── Ortserkennung ─────────────────────────────────────────────────────
+      // ── Ortserkennung (mit persistentem Cache) ──────────────────────────
       const userInput = classification.location;
-      sendSSE({ loadingStatus: "Suche Segelrevier" });
-      const detected = await detectLocation(userInput, anthropic);
+      const cached = getCachedLocation(userInput);
 
-      if (detected === null) {
-        sendSSE({
-          content: `Für „${userInput}" konnte ich keinen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. „Split in Kroatien" oder „Traunsee".`,
-        });
-        sendSSE({ done: true });
-        res.end();
-        return;
-      }
+      let sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] = null;
+      let cityObj: import("./analysis-store.js").AnalysisPosition["city"];
+      let countryCode: string;
 
-      const cityNameFromSonnet = detected.city;
-      const hintCoords =
-        detected.kind === "revier"
-          ? { lat: detected.revier.lat, lon: detected.revier.lon }
-          : undefined;
-      const geocodedCity = await geocodeLocation(
-        cityNameFromSonnet,
-        hintCoords,
-      );
-
-      const sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] =
-        detected.kind === "revier"
-          ? {
-              name_de: detected.revier.deutsch,
-              type: detected.revier.typ === "meer" ? "sea" : "lake",
-              coordinates: {
-                lat: detected.revier.lat,
-                lon: detected.revier.lon,
-              },
+      if (cached) {
+        console.log(`[location-cache] HIT "${userInput}" → ${cached.city} (${cached.cityLat.toFixed(4)}, ${cached.cityLon.toFixed(4)})`);
+        if (cached.sailingArea) {
+          for (const [, landData] of Object.entries(sailingAreasData as Record<string, { reviere: Array<{ deutsch: string; typ: string; lat: number; lon: number; windyModel: string; [key: string]: unknown }> }>)) {
+            const revier = landData.reviere.find((r) => r.deutsch === cached.sailingArea);
+            if (revier) {
+              sailingAreaObj = {
+                name_de: revier.deutsch,
+                type: revier.typ === "meer" ? "sea" : "lake",
+                coordinates: { lat: revier.lat, lon: revier.lon },
+              };
+              break;
             }
-          : null;
+          }
+        }
+        cityObj = {
+          name_de: cached.city,
+          coordinates: { lat: cached.cityLat, lon: cached.cityLon },
+        };
+        countryCode = cached.countryCode;
+      } else {
+        sendSSE({ loadingStatus: "Suche Segelrevier" });
+        const detected = await detectLocation(userInput, anthropic);
 
-      const cityFallbackCoords = hintCoords ?? null;
-      const cityObj: import("./analysis-store.js").AnalysisPosition["city"] =
-        geocodedCity
+        if (detected === null) {
+          sendSSE({
+            content: `Für „${userInput}" konnte ich keinen bekannten Ort finden. Bitte versuche einen konkreteren Namen, z.B. „Split in Kroatien" oder „Traunsee".`,
+          });
+          sendSSE({ done: true });
+          res.end();
+          return;
+        }
+
+        const cityNameFromSonnet = detected.city;
+        const hintCoords =
+          detected.kind === "revier"
+            ? { lat: detected.revier.lat, lon: detected.revier.lon }
+            : undefined;
+        const geocodedCity = await geocodeLocation(
+          cityNameFromSonnet,
+          hintCoords,
+        );
+
+        if (detected.kind === "revier") {
+          sailingAreaObj = {
+            name_de: detected.revier.deutsch,
+            type: detected.revier.typ === "meer" ? "sea" : "lake",
+            coordinates: { lat: detected.revier.lat, lon: detected.revier.lon },
+          };
+        }
+
+        const cityFallbackCoords = hintCoords ?? null;
+        cityObj = geocodedCity
           ? {
               name_de: geocodedCity.cityName ?? cityNameFromSonnet,
               coordinates: { lat: geocodedCity.lat, lon: geocodedCity.lon },
@@ -1357,12 +1382,29 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
               coordinates: cityFallbackCoords ?? { lat: 0, lon: 0 },
             };
 
+        countryCode =
+          (detected.kind === "revier" ? detected.countryCode : null)
+          ?? geocodedCity?.countryCode
+          ?? "";
+
+        const finalCoords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
+        if (finalCoords.lat !== 0 || finalCoords.lon !== 0) {
+          setCachedLocation(userInput, {
+            sailingArea: sailingAreaObj?.name_de ?? null,
+            city: cityObj.name_de,
+            cityLat: cityObj.coordinates.lat,
+            cityLon: cityObj.coordinates.lon,
+            displayName: geocodedCity?.displayName ?? cityNameFromSonnet,
+            countryCode,
+          });
+        }
+      }
       const coords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
       const lat = coords.lat;
       const lon = coords.lon;
 
       if (lat === 0 && lon === 0) {
-        console.warn(`[geocode] Failed to geocode "${cityNameFromSonnet}" — no coordinates available`);
+        console.warn(`[geocode] Failed to geocode "${cityObj.name_de}" — no coordinates available`);
         sendSSE({
           content: `Für „${userInput}" konnten keine Koordinaten ermittelt werden. Bitte versuche es mit einem konkreteren Ortsnamen (z.B. Stadt oder Hafen).`,
         });
@@ -1371,30 +1413,26 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
-      const countryCode =
-        (detected.kind === "revier" ? detected.countryCode : null)
-        ?? geocodedCity?.countryCode
-        ?? "";
       const country =
         Object.entries(LAND_TO_COUNTRY_CODE).find(
           ([, v]) => v === countryCode,
         )?.[0] ?? countryCode;
 
-      const displayName = geocodedCity?.displayName ?? cityNameFromSonnet;
-      const revierModel =
-        detected.kind === "revier"
-          ? resolveWindyModel(detected.revier.windyModel)
-          : null;
-      const countryModel = countryCode ? getModelForCountry(countryCode) : null;
-      const regional =
-        revierModel ??
-        countryModel ??
-        (geocodedCity
-          ? {
-              model: geocodedCity.regionalModel,
-              label: geocodedCity.regionalModelLabel,
+      const displayName = cached?.displayName ?? cityObj.name_de;
+      const revierModel = sailingAreaObj
+        ? (() => {
+            for (const [, landData] of Object.entries(sailingAreasData as Record<string, { reviere: Array<{ deutsch: string; windyModel: string; [key: string]: unknown }> }>)) {
+              const r = landData.reviere.find((rv) => rv.deutsch === sailingAreaObj.name_de);
+              if (r) return resolveWindyModel(r.windyModel);
             }
-          : null);
+            return null;
+          })()
+        : null;
+      const countryModel = countryCode ? getModelForCountry(countryCode) : null;
+      const fallbackModel = (!revierModel && !countryModel && lat !== 0)
+        ? getRegionalModelFallback(lat, lon)
+        : null;
+      const regional = revierModel ?? countryModel ?? fallbackModel;
       if (!regional) {
         sendSSE({
           content: `Für „${userInput}" konnte kein Wettermodell bestimmt werden. Bitte versuche einen konkreteren Ortsnamen.`,

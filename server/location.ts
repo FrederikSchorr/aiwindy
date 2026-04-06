@@ -1,4 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
+import fs from "fs";
+import path from "path";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 import countriesJson from "../data/countries.json" with { type: "json" };
 import windyModelsJson from "../data/windymodels.json" with { type: "json" };
@@ -32,6 +34,55 @@ export type DetectLocationResult = RevierResult | CityOnlyResult | null;
 
 /** @deprecated use DetectLocationResult */
 export type DetectedRevier = RevierResult;
+
+export interface LocationCacheEntry {
+  sailingArea: string | null;
+  city: string;
+  cityLat: number;
+  cityLon: number;
+  displayName: string;
+  countryCode: string;
+}
+
+const LOCATIONS_CACHE_PATH = path.resolve(
+  import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname),
+  "../data/locations.json",
+);
+
+let locationsCache: Record<string, LocationCacheEntry> | null = null;
+
+function loadLocationsCache(): Record<string, LocationCacheEntry> {
+  if (locationsCache) return locationsCache;
+  try {
+    const raw = fs.readFileSync(LOCATIONS_CACHE_PATH, "utf-8");
+    locationsCache = JSON.parse(raw);
+    return locationsCache!;
+  } catch {
+    locationsCache = {};
+    return locationsCache;
+  }
+}
+
+function normalizeKey(input: string): string {
+  return input.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+export function getCachedLocation(userInput: string): LocationCacheEntry | undefined {
+  const cache = loadLocationsCache();
+  return cache[normalizeKey(userInput)];
+}
+
+export function setCachedLocation(userInput: string, entry: LocationCacheEntry): void {
+  const cache = loadLocationsCache();
+  cache[normalizeKey(userInput)] = entry;
+  locationsCache = cache;
+  try {
+    fs.writeFileSync(LOCATIONS_CACHE_PATH, JSON.stringify(cache, null, 2) + "\n", "utf-8");
+    console.log(`[location-cache] Saved "${normalizeKey(userInput)}" → ${entry.city} (${entry.cityLat.toFixed(4)}, ${entry.cityLon.toFixed(4)})`);
+  } catch (e) {
+    console.warn("[location-cache] Failed to write cache:", e);
+  }
+}
 
 /** Shared geocode result — compatible with the existing geocodeLocation() shape */
 export interface GeocodedLocation {
@@ -236,7 +287,7 @@ export function resolveWindyModel(key: string): {
   return windyModels[key] ?? windyModels["iconEu"];
 }
 
-function getRegionalModelFallback(
+export function getRegionalModelFallback(
   lat: number,
   lon: number,
 ): { model: string; label: string } {

@@ -24,6 +24,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - `data/sailingareas.json` - 133 sailing areas across 20 countries with coordinates, windyModel, country-specific metadata (e.g. emy_name for GR)
 - `data/countries.json` - Country-level config: windyModel fallback, country names
 - `data/windymodels.json` - Windy model definitions (key + label), referenced by sailingareas.json and countries.json
+- `data/locations.json` - Persistent location cache (detectLocation + geocode results), avoids LLM + Nominatim calls for known inputs
 
 ## How It Works
 1. User sends a message in the chat
