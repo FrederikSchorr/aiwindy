@@ -94,7 +94,7 @@ GPT-4.1-mini classifies each user message:
 ### Country-specific (fully integrated APIs)
 - **AT** (GeoSphere Austria): JSON APIs — forecast, warnings, Neusiedler See wind warnings. No HTML scraping needed.
 - **HR** (DHMZ): XML APIs — Adria sailing forecast, regional maritime warnings, city meteograms (temperature)
-- **GR** (HNMS/EMY + OpenSkiron): Gale warnings via EMY (area-specific via emy_name from sailingareas.json). OpenSkiron GRIB data via Python subprocess — wind, wave (Douglas scale), cloud cover, temperature, CAPE. Cached in `cache/openskiron/`.
+- **GR** (HNMS/EMY + OpenSkiron): Gale warnings via EMY (area-specific via emy_name from sailingareas.json). OpenSkiron GRIB data via Python subprocess — wind, wave (Douglas scale), cloud cover, temperature, CAPE. GRIB files cached on filesystem (`cache/openskiron/`), extracted JSON cached in DB separately for sailingArea and city coordinates (URL-based invalidation).
 
 ### Other countries (20 total in sailingareas.json)
 - No local weather data integrated yet. Analysis uses Europe-wide data + Windy maps only.

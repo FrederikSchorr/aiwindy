@@ -102,11 +102,19 @@ async function discoverOpenskironUrl(domain: string): Promise<string | null> {
   }
 }
 
+type OpenskironMeta = {
+  domain: string;
+  created: string;
+  gribFile: "downloaded" | "cached";
+  sailingAreaData: "extracted" | "cached";
+  cityData: "extracted" | "cached";
+};
+
 async function fetchGreeceWindCloudRain(
   sailingAreaObj: NonNullable<SailingAreaObj>,
   cityObj: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: { domain: string; created: string; fetch: string } }> {
+): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: OpenskironMeta }> {
   const nullWindCloudRain = {
     source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
     sailingArea: sailingAreaObj,
@@ -132,26 +140,61 @@ async function fetchGreeceWindCloudRain(
   const cityLat = cityObj?.coordinates.lat ?? windLat;
   const cityLon = cityObj?.coordinates.lon ?? windLon;
 
-  const dbCacheKey = `openskiron:${domain}:${windLat.toFixed(4)}_${windLon.toFixed(4)}_${cityLat.toFixed(4)}_${cityLon.toFixed(4)}`;
+  const sailingAreaCacheKey = `openskiron:sa:${domain}:${windLat.toFixed(4)}_${windLon.toFixed(4)}`;
+  const cityCacheKey = `openskiron:city:${domain}:${cityLat.toFixed(4)}_${cityLon.toFixed(4)}`;
 
   const currentGribUrl = await discoverOpenskironUrl(domain);
+
+  let cachedSailingArea: Record<string, unknown> | null = null;
+  let cachedCity: Record<string, unknown> | null = null;
+  let cachedCreated = "";
+
   if (currentGribUrl) {
     try {
-      const cachedRaw = await cacheGet(dbCacheKey);
-      if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw);
-        if (cached._gribUrl === currentGribUrl) {
-          console.log(`[openskiron-cache] DB HIT for ${domain} — GRIB URL unchanged (${cached.openskironMeta?.created ?? "?"})`);
-          if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
-          delete cached._gribUrl;
-          if (cached.openskironMeta) cached.openskironMeta.fetch = "grib + json cached";
-          return cached;
+      const [saRaw, cityRaw] = await Promise.all([
+        cacheGet(sailingAreaCacheKey),
+        cacheGet(cityCacheKey),
+      ]);
+      if (saRaw) {
+        const sa = JSON.parse(saRaw);
+        if (sa._gribUrl === currentGribUrl) {
+          cachedSailingArea = sa.data;
+          cachedCreated = sa.created ?? "";
+          console.log(`[openskiron-cache] sailingArea HIT for ${domain}`);
+        } else {
+          console.log(`[openskiron-cache] sailingArea STALE for ${domain}`);
         }
-        console.log(`[openskiron-cache] DB STALE for ${domain} — new GRIB available`);
+      }
+      if (cityRaw) {
+        const city = JSON.parse(cityRaw);
+        if (city._gribUrl === currentGribUrl) {
+          cachedCity = city.data;
+          if (!cachedCreated) cachedCreated = city.created ?? "";
+          console.log(`[openskiron-cache] city HIT for ${domain}`);
+        } else {
+          console.log(`[openskiron-cache] city STALE for ${domain}`);
+        }
       }
     } catch (e) {
       console.warn("[openskiron-cache] DB read error:", e);
     }
+  }
+
+  if (cachedSailingArea && cachedCity) {
+    if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
+    return {
+      windCloudRain: {
+        source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
+        sailingArea: sailingAreaObj,
+        ...cachedSailingArea,
+      },
+      temperature: {
+        source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
+        city: cityObj ?? null,
+        ...cachedCity,
+      },
+      openskironMeta: { domain, created: cachedCreated, gribFile: "cached", sailingAreaData: "cached", cityData: "cached" },
+    };
   }
 
   return new Promise((resolve, reject) => {
@@ -226,7 +269,6 @@ async function fetchGreeceWindCloudRain(
     proc.on("close", (code: number | null) => {
       clearTimeout(timer);
       const didDownload = stderr.includes("[download]");
-      const didJsonCache = stderr.includes("[json-cache] reusing");
       const stderrClean = stderr
         .split("\n")
         .filter(l => !l.includes("missingValue") && !l.includes("Ignoring index file")
@@ -244,39 +286,63 @@ async function fetchGreeceWindCloudRain(
         const jsonStart = stdout.indexOf('{');
         if (jsonStart < 0) throw new Error("No JSON object in stdout");
         const parsed = JSON.parse(stdout.slice(jsonStart));
+        const created = parsed.created ?? "";
+
+        const gribStatus: "downloaded" | "cached" = didDownload ? "downloaded" : "cached";
+        const saStatus: "extracted" | "cached" = cachedSailingArea ? "cached" : "extracted";
+        const cityStatus: "extracted" | "cached" = cachedCity ? "cached" : "extracted";
+
+        const freshSailingArea = {
+          timestamps: parsed.timestamps,
+          windSpeedKt: parsed.windSpeedKt,
+          windDir: parsed.windDir,
+          gustKt: parsed.gustKt,
+          rainMm: parsed.rainMm,
+          cape: parsed.cape,
+          cloudCover: parsed.cloudCover,
+          waterTempC: parsed.waterTempC,
+          waveHeightM: parsed.waveHeightM,
+          wavePeriodS: parsed.wavePeriodS,
+          waveDir: parsed.waveDir,
+          swellHeightM: parsed.swellHeightM,
+        };
+        const freshCity = {
+          timestamps: parsed.timestamps,
+          temp2mC: parsed.temp2mC,
+        };
+
+        const finalSailingArea = cachedSailingArea ?? freshSailingArea;
+        const finalCity = cachedCity ?? freshCity;
+
         const result = {
           windCloudRain: {
             source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
             sailingArea: sailingAreaObj,
-            timestamps: parsed.timestamps,
-            windSpeedKt: parsed.windSpeedKt,
-            windDir: parsed.windDir,
-            gustKt: parsed.gustKt,
-            rainMm: parsed.rainMm,
-            cape: parsed.cape,
-            cloudCover: parsed.cloudCover,
-            waterTempC: parsed.waterTempC,
-            waveHeightM: parsed.waveHeightM,
-            wavePeriodS: parsed.wavePeriodS,
-            waveDir: parsed.waveDir,
-            swellHeightM: parsed.swellHeightM,
+            ...finalSailingArea,
           },
           temperature: {
             source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
             city: cityObj ?? null,
-            timestamps: parsed.timestamps,
-            temp2mC: parsed.temp2mC,
+            ...finalCity,
           },
-          openskironMeta: { domain, created: parsed.created ?? "", fetch: didDownload ? "grib downloaded + json extracted" : didJsonCache ? "grib + json cached" : "grib cached + json extracted" },
+          openskironMeta: { domain, created, gribFile: gribStatus, sailingAreaData: saStatus, cityData: cityStatus } as OpenskironMeta,
         };
 
-        const gribUrlForCache = currentGribUrl ?? "";
-        if (gribUrlForCache) {
-          const toStore = { ...result, _gribUrl: gribUrlForCache };
-          cacheSet(dbCacheKey, JSON.stringify(toStore)).then(
-            () => console.log(`[openskiron-cache] DB SAVED ${domain} (URL-based invalidation)`),
-            (e) => console.warn("[openskiron-cache] DB write error:", e),
-          );
+        if (currentGribUrl) {
+          const saves: Promise<void>[] = [];
+          if (!cachedSailingArea) {
+            saves.push(
+              cacheSet(sailingAreaCacheKey, JSON.stringify({ _gribUrl: currentGribUrl, created, data: freshSailingArea }))
+                .then(() => console.log(`[openskiron-cache] sailingArea SAVED for ${domain}`)),
+            );
+          }
+          if (!cachedCity) {
+            saves.push(
+              cacheSet(cityCacheKey, JSON.stringify({ _gribUrl: currentGribUrl, created, data: freshCity }))
+                .then(() => console.log(`[openskiron-cache] city SAVED for ${domain}`)),
+            );
+          }
+          Promise.all(saves).catch((e) => console.warn("[openskiron-cache] DB write error:", e));
         }
 
         resolve(result);
@@ -299,7 +365,7 @@ export async function fetchGreeceWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: { domain: string; created: string; fetch: string } }> {
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: OpenskironMeta }> {
   const [hnms, openskiron] = await Promise.all([
     fetchHnmsGaleWarning(),
     sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj, onProgress) : null,
