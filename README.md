@@ -158,14 +158,14 @@ If GPS found: reverse geocodes via Nominatim, shows location + date, offers "ja"
 
 ```
 server/
-  routes.ts                    Express API endpoints
+  routes.ts                    Express API endpoints (chat, upload, geocode, KNMI proxy)
   weather-europe.ts            European data (Meteonews, Wetterzentrale, KNMI) + time helpers
   weather-national.ts          National dispatch (AT/HR/GR) + preprocessing pipeline
-  weather-national-austria.ts  GeoSphere Austria integration
+  weather-national-austria.ts  GeoSphere Austria + Austrocontrol + LSZ Burgenland
   weather-national-croatia.ts  DHMZ Croatia integration
   weather-national-greece.ts   EMY + OpenSkiron Greece integration
-  weather-output.ts            AI output generation (5 sections)
-  analysis-store.ts            JSON persistence for analyses
+  weather-output.ts            AI output generation (single Claude Sonnet call → 5 sections)
+  analysis-store.ts            Analysis JSON persistence (filesystem + PostgreSQL)
   location.ts                  Location detection (sailing area + city via Claude Sonnet)
   cache-db.ts                  PostgreSQL cache helpers (TTL, location cache, OpenSkiron cache)
 
@@ -173,6 +173,7 @@ data/
   sailingareas.json            133 sailing areas with windyModel, coordinates, openskiron_domain, emy_name
   countries.json               Country-level wind model fallback
   windymodels.json             Windy model definitions (key + label)
+  windsystems.json             Local wind systems per country (Bora, Meltemi, etc.)
 
 scripts/
   openskiron_fetch.py          Python: GRIB1 fetch + extraction for Greece
@@ -193,7 +194,7 @@ Single-column chat interface built with React + Tailwind + shadcn/ui. Progressiv
 | `{ weatherEurope }` | Sections 2–5 (KNMI fronts chart + 3 Windy iframes) |
 | `{ weatherOutput }` | Bullet text fills in for all 5 sections |
 
-Chat mode includes full last analysis context (meta, sections, preprocessed data) for follow-up questions.
+Chat mode (CHAT classification) uses GPT-4.1 with full last analysis context (meta, sections, preprocessed data) for follow-up questions.
 
 ---
 
@@ -211,12 +212,14 @@ npm install
 pip install -r requirements.txt
 ```
 
-### Environment Variables (`.env`)
+### Environment Variables
 
 ```
+DATABASE_URL=postgresql://...
+SESSION_SECRET=...
 AI_INTEGRATIONS_ANTHROPIC_API_KEY=sk-ant-...
-AI_INTEGRATIONS_ANTHROPIC_BASE_URL=https://api.anthropic.com   # optional
-OPENAI_API_KEY=sk-...
+AI_INTEGRATIONS_OPENAI_API_KEY=sk-...
+AI_INTEGRATIONS_GEMINI_API_KEY=...
 ```
 
 ### Development
