@@ -135,7 +135,15 @@ export function createAnalysis(position: AnalysisPosition): {
 
       const hasWeatherOutput = exportData.weatherOutput && Object.keys(exportData.weatherOutput).length > 0;
       if (hasWeatherOutput) {
-        const dbData = JSON.parse(jsonStr);
+        const finalizedDate = new Date();
+        const durationSec = Math.round((finalizedDate.getTime() - now.getTime()) / 1000);
+        exportData.meta.finalizedDate = finalizedDate.toISOString();
+        exportData.meta.durationSec = durationSec;
+        const finalJsonStr = JSON.stringify(exportData, null, 2);
+        fs.writeFileSync(filePath, finalJsonStr, "utf-8");
+        data.meta.finalizedDate = finalizedDate.toISOString();
+        data.meta.durationSec = durationSec;
+        const dbData = JSON.parse(finalJsonStr);
         saveAnalysis(dbData).then(
           () => console.log(`[analysis-db] saved: ${position.userInput}`),
           (e) => console.error("[analysis-db] failed to save:", e),
