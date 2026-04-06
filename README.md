@@ -44,19 +44,25 @@ The backend pipeline is **JSON-based**: raw data → preprocessed structured tex
 
 ### European (all locations)
 
-| Source | Data | File |
-|---|---|---|
-| [Meteonews](https://www.meteonews.at/de/Allgemeine_Lage/K33/Europa) | General European weather overview (German text) | `server/weather-europe.ts` |
-| [Wetterzentrale](https://www.wetterzentrale.de) | 850 hPa temperature / air mass charts (current + forecast images with local timestamps) | `server/weather-europe.ts` |
-| [KNMI](https://www.knmi.nl) | Weather fronts analysis + forecast charts (images with local timestamps) | `server/weather-europe.ts` |
+| Source | URL | Data | File |
+|---|---|---|---|
+| Meteonews | `meteonews.at/de/Allgemeine_Lage/K33/Europa` | Allgemeine Wetterlage Europa (HTML scrape) | `server/weather-europe.ts` |
+| Wetterzentrale | `wetterzentrale.de/maps` | 850hPa ECMWF Temperatur-/Druckkarten (Bild-URLs) | `server/weather-europe.ts` |
+| KNMI | `cdn.knmi.nl/.../weerkaarten` | Frontenanalyse + Frontenprognose (GIF charts) | `server/weather-europe.ts` |
+| Windy | `embed.windy.com` | Interaktive Karten: 850hPa, Wind, Wolken, Meteogramm | Frontend iframes |
 
 ### National (per country)
 
-| Country | Source | Data | File |
-|---|---|---|---|
-| 🇦🇹 Austria | GeoSphere Austria JSON APIs | Hourly wind, temperature, precipitation, cloud cover for sailing area + city. Neusiedler See wind warnings. | `server/weather-national-austria.ts` |
-| 🇭🇷 Croatia | DHMZ XML feeds | Adriatic sailing forecast text, regional maritime warnings, city meteogram temperatures | `server/weather-national-croatia.ts` |
-| 🇬🇷 Greece | EMY gale warnings + OpenSkiron WRF 4km GRIB | Area-specific gale warnings (via emy_name from sailingareas.json). Wind, wave (Douglas scale), cloud cover, temperature, CAPE via Python subprocess. Cached in `cache/openskiron/`. | `server/weather-national-greece.ts` |
+| Country | Source | URL | Data | File |
+|---|---|---|---|---|
+| 🇦🇹 Austria | GeoSphere Austria | `dataset.api.hub.geosphere.at` | Hourly wind, gusts, temperature, precipitation, cloud cover (JSON API) | `server/weather-national-austria.ts` |
+| 🇦🇹 Austria | Austrocontrol | `austrocontrol.at/wetter/wetter_fuer_alle/wettervorhersage` | Flugwetter Wetterlage + FXOS Vorhersage (HTML scrape) | `server/weather-national-austria.ts` |
+| 🇦🇹 Austria | LSZ Burgenland | `lsz-b.at/fuer-buergerinnen/sturmwarnung-webcams/` | Neusiedler See Sturmwarnungen (HTML scrape) | `server/weather-national-austria.ts` |
+| 🇭🇷 Croatia | DHMZ | `prognoza.hr/jadran_h.xml` | Adria Segelwetter-Vorhersage (XML API) | `server/weather-national-croatia.ts` |
+| 🇭🇷 Croatia | DHMZ | `prognoza.hr/pomorci.xml` | Maritime Warnungen, Wind, Seegang, Sicht (XML API) | `server/weather-national-croatia.ts` |
+| 🇭🇷 Croatia | DHMZ | `prognoza.hr/sedam/hrvatska/7d_meteogrami.xml` | Städte-Meteogramme, Temperatur (XML API) | `server/weather-national-croatia.ts` |
+| 🇬🇷 Greece | HNMS/EMY | `newportal.hnms.gr/emy/.../naftilia_deltio_thalasson_ektiposi` | Sturmwarnungen, Seewetter-Bulletin (HTML scrape) | `server/weather-national-greece.ts` |
+| 🇬🇷 Greece | OpenSkiron | `openskiron.org/en/openwrf` | WRF 4km GRIB: Wind, Welle (Douglas), Wolken, Temperatur, CAPE | `server/weather-national-greece.ts` + `openskiron_fetch.py` |
 
 Other countries (20 total in sailingareas.json): analysis uses Europe-wide data + Windy maps. LLM preprocessing pipeline available for future integrations.
 
