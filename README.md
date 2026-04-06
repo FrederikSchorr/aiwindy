@@ -88,13 +88,13 @@ If GPS found: reverse geocodes via Nominatim, shows location + date, offers "ja"
 Python subprocess (`scripts/openskiron_fetch.py`) handles GRIB1 fetch and extraction since GRIB parsing requires native ecCodes.
 
 ```
-python scripts/openskiron_fetch.py <domain> <wind_lat> <wind_lon> <city_lat> <city_lon>
+python scripts/openskiron_fetch.py <domain> <wind_lat> <wind_lon> <city_lat> <city_lon> [grib_url]
 ```
 
-1. Scrapes `openskiron.org/en/openwrf` to discover current timestamped URL
+1. Node.js discovers current GRIB URL, checks DB cache (URL-based invalidation), passes URL as optional 7th arg
 2. Downloads + bz2-decompresses if not cached in `cache/openskiron/`; `.url` sidecar detects staleness
 3. Opens GRIB1 with `cfgrib` (non-standard WRF table → uses parameter IDs, not shortNames)
-4. Extracts 49-step hourly time series at nearest grid point → JSON to stdout
+4. Extracts 49-step hourly time series at nearest grid point → JSON to stdout; results cached in DB per coordinate pair
 
 4 domains cover all Greek sailing areas (`openskiron_domain` in sailingareas.json):
 `Ionian_Islands_4km`, `Aegean_SW_4km`, `Aegean_NW_4km`, `Aegean_SE_4km`
