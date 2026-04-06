@@ -144,6 +144,7 @@ async function fetchGreeceWindCloudRain(
           console.log(`[openskiron-cache] DB HIT for ${domain} — GRIB URL unchanged (${cached.openskironMeta?.created ?? "?"})`);
           if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
           delete cached._gribUrl;
+          if (cached.openskironMeta) cached.openskironMeta.fetch = "db cached";
           return cached;
         }
         console.log(`[openskiron-cache] DB STALE for ${domain} — new GRIB available`);
@@ -159,6 +160,7 @@ async function fetchGreeceWindCloudRain(
         console.log(`[openskiron-cache] DB HIT for ${domain} — URL discover failed, using cached data (${cached.openskironMeta?.created ?? "?"})`);
         if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
         delete cached._gribUrl;
+        if (cached.openskironMeta) cached.openskironMeta.fetch = "db cached (offline fallback)";
         return cached;
       }
     } catch (e) {
