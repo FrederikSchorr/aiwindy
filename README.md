@@ -146,9 +146,11 @@ Camera button in chat input. Accepts images (JPEG, PNG, WebP, HEIC) and videos (
 | Feature | Photos | Videos |
 |---|---|---|
 | Metadata | EXIF extraction (exif-parser) → GPS + timestamp | ffprobe → GPS (ISO6709) + creation_time from MP4 atoms |
-| AI Analysis | GPT-4.1 Vision — meteorological relevance | Gemini 2.5 Flash (native @google/generative-ai SDK) |
+| AI Analysis | GPT-4.1 Vision | Gemini 2.5 Flash |
 | Thumbnail | Original image | ffmpeg: 1s frame extraction, "▶ Video" overlay |
 | SSE event | `{ exifMeta }` | `{ videoMeta: { thumbnailBase64, time, locationName, countryCode } }` |
+
+Analysis sections: 📷 Aufnahme, ☁️ Wolkentyp, 🌧️ Regen, 🌊 Wellen, 🌫️ Bedeckungsgrad, 🌤️ Wetterentwicklung. Videos additionally: 💨 Windgeschwindigkeit.
 
 If GPS found: reverse geocodes via Nominatim, shows location + date, offers "ja" button to trigger weather analysis for that location.
 
