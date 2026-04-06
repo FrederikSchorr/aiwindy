@@ -129,11 +129,14 @@ export function createAnalysis(position: AnalysisPosition): {
       const jsonStr = JSON.stringify(exportData, replacer, 2);
       fs.writeFileSync(filePath, jsonStr, "utf-8");
 
-      const dbData = JSON.parse(jsonStr);
-      saveAnalysis(dbData).then(
-        () => console.log(`[analysis-db] saved: ${position.userInput}`),
-        (e) => console.error("[analysis-db] failed to save:", e),
-      );
+      const hasWeatherOutput = exportData.weatherOutput && Object.keys(exportData.weatherOutput).length > 0;
+      if (hasWeatherOutput) {
+        const dbData = JSON.parse(jsonStr);
+        saveAnalysis(dbData).then(
+          () => console.log(`[analysis-db] saved: ${position.userInput}`),
+          (e) => console.error("[analysis-db] failed to save:", e),
+        );
+      }
     } catch (e) {
       console.error("Failed to save analysis JSON:", e);
     }
