@@ -33,11 +33,14 @@ export interface AnalysisMeta {
   website: string;
   github: string;
   copyright: string;
+  requestDate: string;
+  finalizedDate?: string;
+  durationSec?: number;
 }
 
 export interface AnalysisJson {
   meta: AnalysisMeta;
-  position: AnalysisPosition & { requestDate: string };
+  position: AnalysisPosition;
   sources: AnalysisSources;
   weatherRaw: Record<string, unknown>;
   weatherPreprocessed: {
@@ -88,8 +91,9 @@ export function createAnalysis(position: AnalysisPosition): {
       website: "https://aiwindy.schorr.wien",
       github: "https://github.com/FrederikSchorr/aiwindy",
       copyright: "© Frederik Schorr",
+      requestDate: now.toISOString(),
     },
-    position: { requestDate: now.toISOString(), ...position },
+    position: { ...position },
     sources: { windy: [], national: [], europe: [] },
     weatherRaw: {},
     weatherPreprocessed: { europe: {}, national: {}, local: {} },
