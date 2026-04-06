@@ -52,7 +52,7 @@ GPT-4.1-mini classifies each user message:
 
 ## Location Detection & Windy Model Selection
 
-Claude Sonnet detects `sailingArea` + `city` from user input, matched against `data/sailingareas.json` (133 sailing areas across 20 countries). Geocoding via Nominatim.
+Claude Sonnet detects `sailingArea` + `city` from user input, matched against `data/sailingareas.json` (133 sailing areas across 20 countries). The full sailing area list is sent as system prompt with Anthropic prompt caching (`cache_control: ephemeral`) to reduce cost and latency. Geocoding via Nominatim.
 
 Windy wind model is selected via static JSON lookup — no LLM call:
 
@@ -134,7 +134,6 @@ Single Claude Sonnet 4.6 call (`server/weather-output.ts`) with all preprocessed
 | Location lookups | `loc:{normalized input}` | PostgreSQL `cache_store` | No TTL (permanent) | `server/cache-db.ts` |
 | OpenSkiron weather data | `openskiron:sa:{domain}:{coords}`, `openskiron:city:{domain}:{coords}` | PostgreSQL `cache_store` | URL-based (new GRIB URL → cache miss) | `server/cache-db.ts` |
 | OpenSkiron GRIB files | `cache/openskiron/{domain}.grb2` | Filesystem | `.url` sidecar file detects staleness | `scripts/openskiron_fetch.py` |
-| LLM prompt (sailing areas) | In-memory + Anthropic ephemeral | Process memory + Anthropic API | Process restart | `server/location.ts` |
 | Analysis results | `analyses` table (JSONB) | PostgreSQL | Append-only (1 row per analysis) | `server/analysis-store.ts` |
 
 ---
