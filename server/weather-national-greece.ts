@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { spawn } from "child_process";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
+import { cacheGet, cacheSet } from "./cache-db.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,29 @@ function getOpenskironDomain(sailingAreaNameDe: string): string | null {
   return found?.openskiron_domain ?? null;
 }
 
+const OPENSKIRON_WRF_PAGE = "https://openskiron.org/en/openwrf";
+
+async function discoverOpenskironUrl(domain: string): Promise<string | null> {
+  try {
+    const res = await fetch(OPENSKIRON_WRF_PAGE, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const escaped = domain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(
+      `https://openskiron\\.org/gribs_wrf_4km/(${escaped}_WRF_WAM_[^"'<>\\s]+\\.grb\\.bz2)`,
+    );
+    const m = html.match(pattern);
+    if (!m) return null;
+    return `${OPENSKIRON_BASE_URL}${m[1]}`;
+  } catch (e) {
+    console.warn("[openskiron-discover] URL check failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 async function fetchGreeceWindCloudRain(
   sailingAreaObj: NonNullable<SailingAreaObj>,
   cityObj: CityObj,
@@ -107,6 +131,40 @@ async function fetchGreeceWindCloudRain(
   const windLon = sailingAreaObj.coordinates.lon;
   const cityLat = cityObj?.coordinates.lat ?? windLat;
   const cityLon = cityObj?.coordinates.lon ?? windLon;
+
+  const dbCacheKey = `openskiron:${domain}:${windLat.toFixed(4)}_${windLon.toFixed(4)}_${cityLat.toFixed(4)}_${cityLon.toFixed(4)}`;
+
+  const currentGribUrl = await discoverOpenskironUrl(domain);
+  if (currentGribUrl) {
+    try {
+      const cachedRaw = await cacheGet(dbCacheKey);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached._gribUrl === currentGribUrl) {
+          console.log(`[openskiron-cache] DB HIT for ${domain} — GRIB URL unchanged (${cached.openskironMeta?.created ?? "?"})`);
+          if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
+          delete cached._gribUrl;
+          return cached;
+        }
+        console.log(`[openskiron-cache] DB STALE for ${domain} — new GRIB available`);
+      }
+    } catch (e) {
+      console.warn("[openskiron-cache] DB read error:", e);
+    }
+  } else {
+    try {
+      const cachedRaw = await cacheGet(dbCacheKey);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        console.log(`[openskiron-cache] DB HIT for ${domain} — URL discover failed, using cached data (${cached.openskironMeta?.created ?? "?"})`);
+        if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
+        delete cached._gribUrl;
+        return cached;
+      }
+    } catch (e) {
+      console.warn("[openskiron-cache] DB fallback read error:", e);
+    }
+  }
 
   return new Promise((resolve, reject) => {
     const args = [
@@ -223,6 +281,16 @@ async function fetchGreeceWindCloudRain(
           },
           openskironMeta: { domain, created: parsed.created ?? "", fetch: didDownload ? "grib downloaded + json extracted" : didJsonCache ? "grib + json cached" : "grib cached + json extracted" },
         };
+
+        const gribUrlForCache = currentGribUrl ?? "";
+        if (gribUrlForCache) {
+          const toStore = { ...result, _gribUrl: gribUrlForCache };
+          cacheSet(dbCacheKey, JSON.stringify(toStore)).then(
+            () => console.log(`[openskiron-cache] DB SAVED ${domain} (URL-based invalidation)`),
+            (e) => console.warn("[openskiron-cache] DB write error:", e),
+          );
+        }
+
         resolve(result);
       } catch (e) {
         console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);
