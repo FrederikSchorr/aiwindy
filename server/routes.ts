@@ -1314,7 +1314,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // ── Ortserkennung (mit persistentem Cache) ──────────────────────────
       const userInput = classification.location;
-      const cached = getCachedLocation(userInput);
+      const cached = await getCachedLocation(userInput);
 
       let sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] = null;
       let cityObj: import("./analysis-store.js").AnalysisPosition["city"];
@@ -1389,7 +1389,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
         const finalCoords = sailingAreaObj?.coordinates ?? cityObj.coordinates;
         if (finalCoords.lat !== 0 || finalCoords.lon !== 0) {
-          setCachedLocation(userInput, {
+          await setCachedLocation(userInput, {
             sailingArea: sailingAreaObj?.name_de ?? null,
             city: cityObj.name_de,
             cityLat: cityObj.coordinates.lat,

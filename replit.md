@@ -7,7 +7,7 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui components
 - **Backend**: Express.js API with AI message classification, geocoding, KNMI chart proxy, regional weather scraping, and OpenAI streaming chat
 - **AI**: Anthropic Claude Sonnet 4.6 for fronts analysis (Vision with KNMI chart), OpenAI GPT-4.1 for chat/photos, GPT-4.1-mini for section analysis/message classification, Gemini 2.5 Flash for video analysis
-- **No database required** - stateless app
+- **PostgreSQL**: `cache_store` table for persistent caching (location lookups, OpenSkiron GRIB results)
 
 ## Key Files
 - `client/src/pages/home.tsx` - Single-column chat UI with AnalysisView progressive rendering from JSON pipeline
@@ -24,7 +24,8 @@ A sailing weather advisor app with AI-powered meteorological analysis. Features 
 - `data/sailingareas.json` - 133 sailing areas across 20 countries with coordinates, windyModel, country-specific metadata (e.g. emy_name for GR)
 - `data/countries.json` - Country-level config: windyModel fallback, country names
 - `data/windymodels.json` - Windy model definitions (key + label), referenced by sailingareas.json and countries.json
-- `data/locations.json` - Persistent location cache (detectLocation + geocode results), avoids LLM + Nominatim calls for known inputs
+- `server/cache-db.ts` - PostgreSQL cache helpers (cacheGet/cacheSet/cacheSetBinary with TTL, getCachedLocation/setCachedLocation)
+- `data/locations.json` - Legacy location cache (unused, replaced by DB)
 
 ## How It Works
 1. User sends a message in the chat

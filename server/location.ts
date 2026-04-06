@@ -1,9 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
-import fs from "fs";
-import path from "path";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 import countriesJson from "../data/countries.json" with { type: "json" };
 import windyModelsJson from "../data/windymodels.json" with { type: "json" };
+import { cacheGet, cacheSet } from "./cache-db.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -44,43 +43,30 @@ export interface LocationCacheEntry {
   countryCode: string;
 }
 
-const LOCATIONS_CACHE_PATH = path.resolve(
-  import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname),
-  "../data/locations.json",
-);
-
-let locationsCache: Record<string, LocationCacheEntry> | null = null;
-
-function loadLocationsCache(): Record<string, LocationCacheEntry> {
-  if (locationsCache) return locationsCache;
-  try {
-    const raw = fs.readFileSync(LOCATIONS_CACHE_PATH, "utf-8");
-    locationsCache = JSON.parse(raw);
-    return locationsCache!;
-  } catch {
-    locationsCache = {};
-    return locationsCache;
-  }
-}
-
 function normalizeKey(input: string): string {
   return input.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export function getCachedLocation(userInput: string): LocationCacheEntry | undefined {
-  const cache = loadLocationsCache();
-  return cache[normalizeKey(userInput)];
+export async function getCachedLocation(userInput: string): Promise<LocationCacheEntry | undefined> {
+  try {
+    const raw = await cacheGet(`loc:${normalizeKey(userInput)}`);
+    if (raw) {
+      const entry = JSON.parse(raw) as LocationCacheEntry;
+      console.log(`[location-cache] DB HIT "${userInput}" → ${entry.city} (${entry.cityLat.toFixed(4)}, ${entry.cityLon.toFixed(4)})`);
+      return entry;
+    }
+  } catch (e) {
+    console.warn("[location-cache] DB read error:", e);
+  }
+  return undefined;
 }
 
-export function setCachedLocation(userInput: string, entry: LocationCacheEntry): void {
-  const cache = loadLocationsCache();
-  cache[normalizeKey(userInput)] = entry;
-  locationsCache = cache;
+export async function setCachedLocation(userInput: string, entry: LocationCacheEntry): Promise<void> {
   try {
-    fs.writeFileSync(LOCATIONS_CACHE_PATH, JSON.stringify(cache, null, 2) + "\n", "utf-8");
-    console.log(`[location-cache] Saved "${normalizeKey(userInput)}" → ${entry.city} (${entry.cityLat.toFixed(4)}, ${entry.cityLon.toFixed(4)})`);
+    await cacheSet(`loc:${normalizeKey(userInput)}`, JSON.stringify(entry));
+    console.log(`[location-cache] DB SAVED "${normalizeKey(userInput)}" → ${entry.city} (${entry.cityLat.toFixed(4)}, ${entry.cityLon.toFixed(4)})`);
   } catch (e) {
-    console.warn("[location-cache] Failed to write cache:", e);
+    console.warn("[location-cache] DB write error:", e);
   }
 }
 
