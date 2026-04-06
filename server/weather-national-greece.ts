@@ -105,7 +105,7 @@ async function discoverOpenskironUrl(domain: string): Promise<string | null> {
 type OpenskironMeta = {
   domain: string;
   created: string;
-  gribFile: "downloaded" | "cached";
+  gribFile: "downloaded" | "cached" | "not needed";
   sailingAreaData: "extracted" | "cached";
   cityData: "extracted" | "cached";
 };
@@ -193,7 +193,7 @@ async function fetchGreeceWindCloudRain(
         city: cityObj ?? null,
         ...cachedCity,
       },
-      openskironMeta: { domain, created: cachedCreated, gribFile: "cached", sailingAreaData: "cached", cityData: "cached" },
+      openskironMeta: { domain, created: cachedCreated, gribFile: "not needed", sailingAreaData: "cached", cityData: "cached" },
     };
   }
 
