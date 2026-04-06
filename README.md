@@ -40,9 +40,31 @@ The backend pipeline is **JSON-based**: raw data → preprocessed structured tex
 
 ---
 
-## Data Sources
+## Message Classification
 
-### European (all locations)
+GPT-4.1-mini classifies each user message:
+
+- **ANALYSE \<location\>** — Location-specific weather query → full 5-section analysis
+- **CHAT** — General meteorology/sailing question or follow-up → direct GPT-4.1 answer (with full last analysis context: meta, sections, preprocessed data)
+- **UNCLEAR** — Ambiguous query → asks user to specify location
+
+---
+
+## Location Detection & Windy Model Selection
+
+Claude Sonnet detects `sailingArea` + `city` from user input, matched against `data/sailingareas.json` (133 sailing areas across 20 countries). Geocoding via Nominatim.
+
+Windy wind model is selected via static JSON lookup — no LLM call:
+
+1. `data/sailingareas.json` — each sailing area has `windyModel` (highest priority)
+2. `data/countries.json` — country-level fallback
+3. `server/location.ts` — coordinate-based fallback for unlisted countries
+
+Models: `aromeHd` (1.3km), `czeAladin` (2.3km), `ukv` (2km), `iconEu` (7km), `gfs` (22km).
+
+---
+
+## European Weather Data
 
 | Source | URL | Data | File |
 |---|---|---|---|
@@ -51,7 +73,9 @@ The backend pipeline is **JSON-based**: raw data → preprocessed structured tex
 | KNMI | `cdn.knmi.nl/.../weerkaarten` | Frontenanalyse + Frontenprognose (GIF charts) | `server/weather-europe.ts` |
 | Windy | `embed.windy.com` | Interaktive Karten: 850hPa, Wind, Wolken, Meteogramm | Frontend iframes |
 
-### National (per country)
+---
+
+## National Weather Data
 
 | Country | Source | URL | Data | File |
 |---|---|---|---|---|
@@ -65,21 +89,6 @@ The backend pipeline is **JSON-based**: raw data → preprocessed structured tex
 | 🇬🇷 Greece | OpenSkiron | `openskiron.org/en/openwrf` | WRF 4km GRIB: Wind, Welle (Douglas), Wolken, Temperatur, CAPE | `server/weather-national-greece.ts` + `openskiron_fetch.py` |
 
 Other countries (20 total in sailingareas.json): analysis uses Europe-wide data + Windy maps. LLM preprocessing pipeline available for future integrations.
-
----
-
-## Photo & Video Upload
-
-Camera button in chat input. Accepts images (JPEG, PNG, WebP, HEIC) and videos (MP4, QuickTime, WebM), max 20MB.
-
-| Feature | Photos | Videos |
-|---|---|---|
-| Metadata | EXIF extraction (exif-parser) → GPS + timestamp | ffprobe → GPS (ISO6709) + creation_time from MP4 atoms |
-| AI Analysis | GPT-4.1 Vision — meteorological relevance | Gemini 2.5 Flash (native @google/generative-ai SDK) |
-| Thumbnail | Original image | ffmpeg: 1s frame extraction, "▶ Video" overlay |
-| SSE event | `{ exifMeta }` | `{ videoMeta: { thumbnailBase64, time, locationName, countryCode } }` |
-
-If GPS found: reverse geocodes via Nominatim, shows location + date, offers "ja" button to trigger weather analysis for that location.
 
 ---
 
@@ -101,15 +110,30 @@ python scripts/openskiron_fetch.py <domain> <wind_lat> <wind_lon> <city_lat> <ci
 
 ---
 
-## Regional Wind Model Selection
+## Weather Data Preprocessing
 
-Static JSON lookup — no LLM call:
+LLM preprocessing pipeline (`server/weather-national.ts`): scrape → validate (GPT-4.1-mini checks for actual weather content) → extract meteorological text → feed to section LLM calls. Used for national weather sources.
 
-1. `data/sailingareas.json` — 133 sailing areas across 20 countries, each with `windyModel` (highest priority)
-2. `data/countries.json` — country-level fallback
-3. `server/location.ts` — coordinate-based fallback for unlisted countries
+---
 
-Models: `aromeHd` (1.3km), `czeAladin` (2.3km), `ukv` (2km), `iconEu` (7km), `gfs` (22km).
+## Weather Output Generation
+
+5 parallel LLM calls generate section texts (`server/weather-output.ts`), each receiving the full preprocessed weather context. Results streamed to frontend via SSE.
+
+---
+
+## Photo & Video Upload
+
+Camera button in chat input. Accepts images (JPEG, PNG, WebP, HEIC) and videos (MP4, QuickTime, WebM), max 20MB.
+
+| Feature | Photos | Videos |
+|---|---|---|
+| Metadata | EXIF extraction (exif-parser) → GPS + timestamp | ffprobe → GPS (ISO6709) + creation_time from MP4 atoms |
+| AI Analysis | GPT-4.1 Vision — meteorological relevance | Gemini 2.5 Flash (native @google/generative-ai SDK) |
+| Thumbnail | Original image | ffmpeg: 1s frame extraction, "▶ Video" overlay |
+| SSE event | `{ exifMeta }` | `{ videoMeta: { thumbnailBase64, time, locationName, countryCode } }` |
+
+If GPS found: reverse geocodes via Nominatim, shows location + date, offers "ja" button to trigger weather analysis for that location.
 
 ---
 
@@ -126,6 +150,7 @@ server/
   weather-output.ts            AI output generation (5 sections)
   analysis-store.ts            JSON persistence for analyses
   location.ts                  Location detection (sailing area + city via Claude Sonnet)
+  cache-db.ts                  PostgreSQL cache helpers (TTL, location cache, OpenSkiron cache)
 
 data/
   sailingareas.json            133 sailing areas with windyModel, coordinates, openskiron_domain, emy_name
@@ -150,13 +175,6 @@ Single-column chat interface built with React + Tailwind + shadcn/ui. Progressiv
 | `{ location }` | Header + Section 1 (Windy 850hPa map, no marker) |
 | `{ weatherEurope }` | Sections 2–5 (KNMI fronts chart + 3 Windy iframes) |
 | `{ weatherOutput }` | Bullet text fills in for all 5 sections |
-
-The 5 output sections displayed:
-1. **Druck & Luftmassen** — Windy ECMWF 850hPa map
-2. **Fronten** — KNMI fronts chart + LLM analysis
-3. **Wind & Welle** — Windy regional model map + wind/wave bullets
-4. **Wolken & Regen** — Windy clouds overlay + precipitation bullets
-5. **Temperatur** — Windy meteogram + temperature summary
 
 Chat mode includes full last analysis context (meta, sections, preprocessed data) for follow-up questions.
 
