@@ -86,22 +86,26 @@ def _parse_created(url: str, domain: str) -> str:
     return ""
 
 
-def fetch_grib(domain: str) -> tuple[Path, str]:
+def fetch_grib(domain: str, pre_discovered_url: str | None = None) -> tuple[Path, str]:
     """Download GRIB if not cached or URL changed, return (path, created_stamp)."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_path = CACHE_DIR / f"{domain}.grb2"
     url_cache = CACHE_DIR / f"{domain}.url"
     headers = {"User-Agent": "Mozilla/5.0"}
 
-    try:
-        url = discover_url(domain)
-    except Exception as e:
-        print(f"[warn] URL discovery failed: {e}", file=sys.stderr)
-        if cache_path.exists():
-            print(f"[cache] using existing cache for {domain}", file=sys.stderr)
-            cached_url = url_cache.read_text().strip() if url_cache.exists() else ""
-            return cache_path, _parse_created(cached_url, domain)
-        raise
+    if pre_discovered_url:
+        url = pre_discovered_url
+        print(f"[discover] {url} (pre-discovered)", file=sys.stderr)
+    else:
+        try:
+            url = discover_url(domain)
+        except Exception as e:
+            print(f"[warn] URL discovery failed: {e}", file=sys.stderr)
+            if cache_path.exists():
+                print(f"[cache] using existing cache for {domain}", file=sys.stderr)
+                cached_url = url_cache.read_text().strip() if url_cache.exists() else ""
+                return cache_path, _parse_created(cached_url, domain)
+            raise
 
     created = _parse_created(url, domain)
 
@@ -281,9 +285,9 @@ def extract_data(
 
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) < 6:
         print(
-            f"Usage: {sys.argv[0]} <domain> <wind_lat> <wind_lon> <city_lat> <city_lon>",
+            f"Usage: {sys.argv[0]} <domain> <wind_lat> <wind_lon> <city_lat> <city_lon> [grib_url]",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -293,9 +297,10 @@ def main():
     wind_lon = float(sys.argv[3])
     city_lat = float(sys.argv[4])
     city_lon = float(sys.argv[5])
+    pre_discovered_url = sys.argv[6] if len(sys.argv) > 6 else None
 
     try:
-        grb2_path, created = fetch_grib(domain)
+        grb2_path, created = fetch_grib(domain, pre_discovered_url)
 
         cache_key = f"{domain}_{wind_lat:.4f}_{wind_lon:.4f}_{city_lat:.4f}_{city_lon:.4f}"
         json_cache_path = CACHE_DIR / f"{cache_key}.json"

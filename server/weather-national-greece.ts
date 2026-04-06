@@ -1,7 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { spawn } from "child_process";
+import fs from "fs";
+import path from "path";
 import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
 import { cacheGet, cacheSet } from "./cache-db.js";
+
+const OPENSKIRON_CACHE_DIR = path.join(process.cwd(), "cache", "openskiron");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -182,6 +186,12 @@ async function fetchGreeceWindCloudRain(
 
   if (cachedSailingArea && cachedCity) {
     if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
+    if (currentGribUrl) {
+      try {
+        fs.mkdirSync(OPENSKIRON_CACHE_DIR, { recursive: true });
+        fs.writeFileSync(path.join(OPENSKIRON_CACHE_DIR, `${domain}.url`), currentGribUrl, "utf-8");
+      } catch {}
+    }
     return {
       windCloudRain: {
         source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
@@ -203,6 +213,7 @@ async function fetchGreeceWindCloudRain(
       domain,
       String(windLat), String(windLon),
       String(cityLat), String(cityLon),
+      ...(currentGribUrl ? [currentGribUrl] : []),
     ];
     const pythonCmd = process.platform === "win32" ? "python" : "python3";
     const proc = spawn(pythonCmd, args, {
