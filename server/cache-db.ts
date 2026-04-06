@@ -88,3 +88,34 @@ export async function cacheCleanExpired(): Promise<number> {
   );
   return res.rowCount ?? 0;
 }
+
+let analysesTableReady = false;
+async function ensureAnalysesTable(): Promise<void> {
+  if (analysesTableReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS analyses (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMP DEFAULT NOW(),
+      user_input TEXT NOT NULL,
+      country_code TEXT,
+      sailing_area TEXT,
+      city TEXT,
+      data JSONB NOT NULL
+    )
+  `);
+  analysesTableReady = true;
+}
+
+export async function saveAnalysis(data: Record<string, unknown>): Promise<void> {
+  await ensureAnalysesTable();
+  const position = data.position as Record<string, unknown> | undefined;
+  const userInput = (position?.userInput as string) ?? "";
+  const countryCode = (position?.countryCode as string) ?? null;
+  const sailingArea = (position?.sailingArea as Record<string, unknown>)?.name_de as string ?? null;
+  const city = (position?.city as Record<string, unknown>)?.name_de as string ?? null;
+  await pool.query(
+    `INSERT INTO analyses (user_input, country_code, sailing_area, city, data)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [userInput, countryCode, sailingArea, city, JSON.stringify(data)],
+  );
+}

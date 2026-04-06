@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { saveAnalysis } from "./cache-db.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +126,14 @@ export function createAnalysis(position: AnalysisPosition): {
         if (_key === "xml" && typeof value === "string" && value.length > 2000) return value.slice(0, 2000) + "...";
         return value;
       };
-      fs.writeFileSync(filePath, JSON.stringify(exportData, replacer, 2), "utf-8");
+      const jsonStr = JSON.stringify(exportData, replacer, 2);
+      fs.writeFileSync(filePath, jsonStr, "utf-8");
+
+      const dbData = JSON.parse(jsonStr);
+      saveAnalysis(dbData).then(
+        () => console.log(`[analysis-db] saved: ${position.userInput}`),
+        (e) => console.error("[analysis-db] failed to save:", e),
+      );
     } catch (e) {
       console.error("Failed to save analysis JSON:", e);
     }
