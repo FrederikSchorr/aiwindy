@@ -122,6 +122,18 @@ LLM preprocessing pipeline (`server/weather-national.ts`): scrape → validate (
 
 ---
 
+## Caching
+
+| Layer | Key Pattern | Storage | Invalidation | File |
+|---|---|---|---|---|
+| Location lookups | `loc:{normalized input}` | PostgreSQL `cache_store` | No TTL (permanent) | `server/cache-db.ts` |
+| OpenSkiron weather data | `openskiron:sa:{domain}:{coords}`, `openskiron:city:{domain}:{coords}` | PostgreSQL `cache_store` | URL-based (new GRIB URL → cache miss) | `server/cache-db.ts` |
+| OpenSkiron GRIB files | `cache/openskiron/{domain}.grb2` | Filesystem | `.url` sidecar file detects staleness | `scripts/openskiron_fetch.py` |
+| LLM prompt (sailing areas) | In-memory + Anthropic ephemeral | Process memory + Anthropic API | Process restart | `server/location.ts` |
+| Analysis results | `analyses` table (JSONB) | PostgreSQL | Append-only (1 row per analysis) | `server/analysis-store.ts` |
+
+---
+
 ## Photo & Video Upload
 
 Camera button in chat input. Accepts images (JPEG, PNG, WebP, HEIC) and videos (MP4, QuickTime, WebM), max 20MB.
