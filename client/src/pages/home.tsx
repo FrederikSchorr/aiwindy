@@ -687,11 +687,17 @@ export default function Home() {
                           cloudsRain: "☁️ Wolken & Regen",
                           temperature: "🌡️ Temperatur",
                         };
+                        const saCoords = activeLocation.lat != null && activeLocation.lon != null
+                          ? ` (${activeLocation.lat.toFixed(4)}, ${activeLocation.lon.toFixed(4)})`
+                          : "";
+                        const cityCoords = activeLocation.cityLat != null && activeLocation.cityLon != null
+                          ? ` (${activeLocation.cityLat.toFixed(4)}, ${activeLocation.cityLon.toFixed(4)})`
+                          : "";
                         const parts = [
                           lastAnalysisTimeRef.current ? `📅 Analyse vom: ${lastAnalysisTimeRef.current}` : "",
                           activeLocation.country ? `🏳️ ${activeLocation.country}` : "",
-                          activeLocation.sailingArea ? `⛵ ${activeLocation.sailingArea}` : "",
-                          activeLocation.cityName ? `📍 ${activeLocation.cityName}` : "",
+                          activeLocation.sailingArea ? `⛵ ${activeLocation.sailingArea}${saCoords}` : "",
+                          activeLocation.cityName ? `📍 ${activeLocation.cityName}${cityCoords}` : "",
                           activeLocation.regionalModelLabel ? `🔬 Windy Prognosemodell: ${activeLocation.regionalModelLabel}` : "",
                         ].filter(Boolean);
                         body = "\n\n---\nLetzte Analyse:\n" + parts.join("\n");
