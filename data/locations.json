@@ -1,1 +1,18 @@
-{}
+{
+  "wien": {
+    "sailingArea": null,
+    "city": "Wien",
+    "cityLat": 48.2083537,
+    "cityLon": 16.3725042,
+    "displayName": "Wien, Österreich",
+    "countryCode": "AT"
+  },
+  "trinité-sur-mer": {
+    "sailingArea": "Bretagne",
+    "city": "La Trinité-sur-Mer",
+    "cityLat": 47.5862608,
+    "cityLon": -3.0293672,
+    "displayName": "La Trinité-sur-Mer, Lorient, Morbihan, Bretagne, Metropolitanes Frankreich, 56470, Frankreich",
+    "countryCode": "FR"
+  }
+}

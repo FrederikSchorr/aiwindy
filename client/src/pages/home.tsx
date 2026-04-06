@@ -238,8 +238,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
         <WindyEmbed lat={48} lon={5} overlay="temp" product="ecmwf" level="850h" zoom={3} />
         <SourceLink label="Windy Temperatur 1.500m ECMWF" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
       </div>
-      {weatherOutput?.airPressureMasses?.text && (
+      {weatherOutput?.airPressureMasses?.text ? (
         <MarkdownContent content={weatherOutput.airPressureMasses.text} />
+      ) : isStreaming && !hasError && weatherEurope && (
+        <BounceLoader />
       )}
 
       {hasError && !weatherOutput && (
@@ -271,8 +273,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
               url={weatherEurope.frontCurrentUrl || KNMI_SOURCE_URL}
             />
           </div>
-          {weatherOutput?.weatherFront?.text && (
+          {weatherOutput?.weatherFront?.text ? (
             <MarkdownContent content={weatherOutput.weatherFront.text} />
+          ) : isStreaming && !hasError && (
+            <BounceLoader />
           )}
 
           <SectionTitle num={3} title="Wind & Welle" />
@@ -280,8 +284,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
             <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
             <SourceLink label={`Wind ${sailingAreaShort} ${modelLabel} windy.com`} url={windUrl} />
           </div>
-          {weatherOutput?.windWaves?.text && (
+          {weatherOutput?.windWaves?.text ? (
             <MarkdownContent content={weatherOutput.windWaves.text} />
+          ) : isStreaming && !hasError && (
+            <BounceLoader />
           )}
 
           <SectionTitle num={4} title="Wolken & Regen" />
@@ -289,8 +295,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
             <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
             <SourceLink label={`Wolken ${sailingAreaShort} ${modelLabel} windy.com`} url={cloudsUrl} />
           </div>
-          {weatherOutput?.cloudsRain?.text && (
+          {weatherOutput?.cloudsRain?.text ? (
             <MarkdownContent content={weatherOutput.cloudsRain.text} />
+          ) : isStreaming && !hasError && (
+            <BounceLoader />
           )}
 
           <SectionTitle num={5} title="Temperatur" />
