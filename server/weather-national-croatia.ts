@@ -179,10 +179,11 @@ export async function preprocessDhmzLocalTemperature(
         max_tokens: 50,
         messages: [{
           role: "user",
-          content: `From this list of Croatian cities, return the single city name that is geographically closest to "${locationHint}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. If "${locationHint}" is on an island (e.g. Brač, Hvar, Korčula, Vis), pick the nearest coastal city on the mainland or the island's own city if listed. Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
+          content: `From this list of Croatian cities, return the single city name that is geographically closest to "${locationHint}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. Always prefer the nearest city in the list — if "${locationHint}" is on an island and that island's city is listed, pick the island city (e.g. Punat→Krk, Bol→Hvar, Vela Luka→Korcula). Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
         }],
       });
       const llmResult = (msg.content[0] as { type: "text"; text: string }).text.trim();
+      console.log(`[dhmz-temperature] LLM city match: "${locationHint}" → "${llmResult}"`);
       matchedCity = cityNames.includes(llmResult)
         ? llmResult
         : cityNames.find(c => c.toLowerCase() === llmResult.toLowerCase());
