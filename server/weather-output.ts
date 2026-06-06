@@ -166,7 +166,19 @@ Antworte NUR mit diesem JSON-Objekt, ohne weitere Erklärungen:
       console.error("generateWeatherOutput: no JSON in response");
       return emptyOutput();
     }
-    const parsed = JSON.parse(jsonMatch[0]) as Record<string, string>;
+    let parsed: Record<string, string>;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (e1) {
+      const fixed = fixJsonNewlines(jsonMatch[0]);
+      try {
+        parsed = JSON.parse(fixed);
+      } catch (e2) {
+        console.error("generateWeatherOutput JSON parse failed. Raw (first 200):", JSON.stringify(jsonMatch[0].slice(0, 200)));
+        console.error("generateWeatherOutput JSON parse errors:", e1 instanceof Error ? e1.message : e1, "|", e2 instanceof Error ? e2.message : e2);
+        return emptyOutput();
+      }
+    }
 
     const source = "claude-sonnet-4-6";
     return {
@@ -180,6 +192,29 @@ Antworte NUR mit diesem JSON-Objekt, ohne weitere Erklärungen:
     console.error("generateWeatherOutput error:", e instanceof Error ? e.message : e);
     return emptyOutput();
   }
+}
+
+function fixJsonNewlines(json: string): string {
+  let inString = false;
+  let escaped = false;
+  let result = "";
+  for (const ch of json) {
+    if (escaped) {
+      result += ch;
+      escaped = false;
+    } else if (ch === "\\" && inString) {
+      result += ch;
+      escaped = true;
+    } else if (ch === '"') {
+      result += ch;
+      inString = !inString;
+    } else if (inString && (ch === "\n" || ch === "\r")) {
+      result += "\\n";
+    } else {
+      result += ch;
+    }
+  }
+  return result;
 }
 
 function emptyOutput(): Record<string, unknown> {
