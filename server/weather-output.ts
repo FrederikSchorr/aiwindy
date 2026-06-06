@@ -140,14 +140,18 @@ Regeln pro Abschnitt:
 - max 1 Bullet, max 20 Wörter: Temperatur heute + morgen
 - Falls keine Daten: leer lassen (leerer String)
 
-Antworte NUR mit diesem JSON-Objekt, ohne weitere Erklärungen:
-{
-  "airPressureMasses": "- 🌀 ...",
-  "weatherFront": "- 🔵 ...",
-  "windWaves": "- 💨 ...",
-  "cloudsRain": "- ☁️ ...",
-  "temperature": "- 🌡️ ..."
-}
+Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt mit dem Marker in einer eigenen Zeile):
+===airPressureMasses===
+- 🌀 ...
+===weatherFront===
+- 🔵 ...
+===windWaves===
+- 💨 ...
+===cloudsRain===
+- ☁️ ...
+===temperature===
+- 🌡️ ...
+===END===
 `,
   });
 
@@ -162,23 +166,10 @@ Antworte NUR mit diesem JSON-Objekt, ohne weitere Erklärungen:
     }, { signal });
 
     const raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error("generateWeatherOutput: no JSON in response");
+    const parsed = parseSectionMarkers(raw);
+    if (!parsed) {
+      console.error("generateWeatherOutput: no section markers in response. Raw (first 200):", raw.slice(0, 200));
       return emptyOutput();
-    }
-    let parsed: Record<string, string>;
-    try {
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch (e1) {
-      const fixed = fixJsonNewlines(jsonMatch[0]);
-      try {
-        parsed = JSON.parse(fixed);
-      } catch (e2) {
-        console.error("generateWeatherOutput JSON parse failed. Raw (first 200):", JSON.stringify(jsonMatch[0].slice(0, 200)));
-        console.error("generateWeatherOutput JSON parse errors:", e1 instanceof Error ? e1.message : e1, "|", e2 instanceof Error ? e2.message : e2);
-        return emptyOutput();
-      }
     }
 
     const source = "claude-sonnet-4-6";
@@ -195,27 +186,27 @@ Antworte NUR mit diesem JSON-Objekt, ohne weitere Erklärungen:
   }
 }
 
-function fixJsonNewlines(json: string): string {
-  let inString = false;
-  let escaped = false;
-  let result = "";
-  for (const ch of json) {
-    if (escaped) {
-      result += ch;
-      escaped = false;
-    } else if (ch === "\\" && inString) {
-      result += ch;
-      escaped = true;
-    } else if (ch === '"') {
-      result += ch;
-      inString = !inString;
-    } else if (inString && (ch === "\n" || ch === "\r")) {
-      result += "\\n";
-    } else {
-      result += ch;
-    }
+const SECTION_KEYS = ["airPressureMasses", "weatherFront", "windWaves", "cloudsRain", "temperature"] as const;
+
+function parseSectionMarkers(raw: string): Record<string, string> | null {
+  const result: Record<string, string> = {};
+  let found = 0;
+  for (const key of SECTION_KEYS) {
+    const startMarker = `===${key}===`;
+    const start = raw.indexOf(startMarker);
+    if (start === -1) continue;
+    const contentStart = start + startMarker.length;
+    // Next marker or ===END=== closes this section
+    const nextMarkerIdx = SECTION_KEYS
+      .filter(k => k !== key)
+      .map(k => raw.indexOf(`===${k}===`, contentStart))
+      .filter(i => i !== -1)
+      .concat([raw.indexOf("===END===", contentStart)].filter(i => i !== -1))
+      .reduce((min, i) => (i < min ? i : min), raw.length);
+    result[key] = raw.slice(contentStart, nextMarkerIdx).trim();
+    found++;
   }
-  return result;
+  return found > 0 ? result : null;
 }
 
 function emptyOutput(): Record<string, unknown> {

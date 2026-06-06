@@ -1,0 +1,1 @@
+- [Weather output format](weather-output-format.md) — use section markers not JSON; Claude embeds ASCII quotes inside JSON strings (e.g. „Quella") that break parsers
