@@ -322,17 +322,6 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
                       (_, text, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`)
                   }} />
                 ))}
-                <li className="text-sm">
-                  <span className="text-muted-foreground">
-                    Alle Wetter Details{" "}
-                    <a
-                      href="/api/analysis-json"
-                      download
-                      className="underline hover:text-primary transition-colors"
-                      data-testid="link-download-analysis"
-                    >hier</a>.
-                  </span>
-                </li>
               </ul>
             </>
           )}
