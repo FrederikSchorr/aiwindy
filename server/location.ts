@@ -205,6 +205,7 @@ function getStaticSystemBlocks(): Anthropic.Messages.TextBlockParam[] {
 export async function detectLocation(
   locationName: string,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<DetectLocationResult> {
   const result = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -212,7 +213,7 @@ export async function detectLocation(
     temperature: 0,
     system: getStaticSystemBlocks(),
     messages: [{ role: "user", content: `Ort: "${locationName}"` }],
-  });
+  }, { signal });
 
   const text =
     result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
@@ -316,6 +317,7 @@ export async function classifyMessage(
   hasActiveLocation: boolean,
   anthropic: Anthropic,
   activeLocationName?: string,
+  signal?: AbortSignal,
 ): Promise<{
   type: "ANALYSE" | "CHAT" | "UNCLEAR" | "OFFTOPIC";
   location?: string;
@@ -373,7 +375,7 @@ ${activeLocInfo}
 
 Antworte NUR mit der Kategorie (und bei ANALYSE dem Ortsnamen). Nichts anderes.`,
       messages: [{ role: "user", content: message }],
-    });
+    }, { signal });
     const text =
       result.content[0]?.type === "text" ? result.content[0].text.trim() : "";
     if (text.startsWith("ANALYSE")) {

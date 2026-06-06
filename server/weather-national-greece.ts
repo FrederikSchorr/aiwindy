@@ -442,6 +442,7 @@ function toLocalDateHour(utcTs: string, tz: string): { label: string; hour: numb
 export async function preprocessGreeceNationalSynopsis(
   text: string | null,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const nullResult = { "synopsis": { source: "HNMS", url: HNMS_BULLETIN_URL, text_de: null } };
   if (!text) return nullResult;
@@ -456,7 +457,7 @@ export async function preprocessGreeceNationalSynopsis(
 
 ${text}`,
       }],
-    });
+    }, { signal });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
     return { "synopsis": { source: "HNMS", url: HNMS_BULLETIN_URL, text_de: translated } };
   } catch (e) {
@@ -469,6 +470,7 @@ export async function extractGreeceWarning(
   galeData: Record<string, unknown> | null,
   emyName: string | null,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   if (!galeData || !emyName) {
     return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: "Aktuell: Keine Sturmwarnung von HNMS" } };
@@ -490,7 +492,7 @@ export async function extractGreeceWarning(
       max_tokens: 200,
       messages: [{
         role: "user",
-        content: `Seewetter-Bulletin. Suche in PART 3 den Abschnitt für "${emyName}".
+        content: `Seewetter-Bulletin. Suche in PART 3 den Abschnitt für "${emyName ?? ""}".
 
 Extrahiere NUR echte Sturmwarnungen. Eine Sturmwarnung liegt nur vor wenn EINES dieser Schlüsselwörter im Text steht:
 GALE, STORM, THUNDERSTORM, CHANCE OF THUNDERSTORM
@@ -504,7 +506,7 @@ WICHTIG: Normaler Segelwind ist KEINE Sturmwarnung! Wind bis Beaufort 7 (z.B. "N
 
 ${text}`,
       }],
-    });
+    }, { signal });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
     if (!translated || translated === "NONE") {
       return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText } };
@@ -522,6 +524,7 @@ ${text}`,
 export async function preprocessGreeceLocalWind(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
@@ -564,7 +567,7 @@ ${table}`;
       model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       messages: [{ role: "user", content: prompt }],
-    });
+    }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
     return { wind: { source: "OpenSkiron WRF 4km", url, text_de: text } };
   } catch {
@@ -595,6 +598,7 @@ function toDouglasScale(heightM: number): string {
 export async function preprocessGreeceLocalWave(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
@@ -652,7 +656,7 @@ ${table}`;
       model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       messages: [{ role: "user", content: prompt }],
-    });
+    }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
     return { wave: { source: src, url, text_de: text } };
   } catch {
@@ -663,6 +667,7 @@ ${table}`;
 export async function preprocessGreeceLocalCloudRainThunderstorm(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["greeceWindWaveCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
@@ -715,7 +720,7 @@ ${table}`;
       model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       messages: [{ role: "user", content: prompt }],
-    });
+    }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
     return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: text } };
   } catch {

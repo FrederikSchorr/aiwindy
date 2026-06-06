@@ -58,6 +58,20 @@ function buildWindSystemsSummary(): string {
 const SAILING_AREAS_SUMMARY = buildSailingAreasSummary();
 const WIND_SYSTEMS_SUMMARY = buildWindSystemsSummary();
 
+let lastAnalysisContext: {
+  location: string;
+  date: string;
+  sections: Record<string, string>;
+  meta: string;
+  preprocessed: string;
+} | null = null;
+let lastAnalysisFilePath: string | null = null;
+let lastPhotoAnalysis: { text: string; date: string; locationName?: string } | null = null;
+
+const MAX_CONCURRENT_CHAT = 5;
+const MAX_CONCURRENT_UPLOAD = 3;
+let activeChatRequests = 0;
+let activeUploadRequests = 0;
 import {
   fetchMeteonews,
   preprocessMeteonews,
@@ -79,6 +93,21 @@ import {
 import { generateWeatherOutput } from "./weather-output.js";
 
 const execFileAsync = promisify(execFile);
+
+function detectMagicMimeType(buf: Buffer): string | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return "image/jpeg";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return "image/png";
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return "image/webp";
+  if (buf.length >= 12 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) {
+    const brand = buf.slice(8, 12).toString("ascii").toLowerCase();
+    if (["heic", "mif1", "heif", "msf1"].some(b => brand.startsWith(b))) return "image/heic";
+    return "video/mp4";
+  }
+  if (buf[0] === 0x1A && buf[1] === 0x45 && buf[2] === 0xDF && buf[3] === 0xA3) return "video/webm";
+  return null;
+}
 
 function debugLog(_s: string, _d?: string): void {}
 function debugLogRequestSeparator(_l: string): void {}
@@ -120,7 +149,7 @@ const COUNTRY_TIMEZONE: Record<string, string> = {
   IE: "Europe/Dublin",
 };
 
-async function extractVideoThumbnail(filePath: string): Promise<string | null> {
+async function extractVideoThumbnail(filePath: string, signal?: AbortSignal): Promise<string | null> {
   try {
     const outputPath = `/tmp/vthumb-${Date.now()}.jpg`;
     await execFileAsync("ffmpeg", [
@@ -134,7 +163,7 @@ async function extractVideoThumbnail(filePath: string): Promise<string | null> {
       "3",
       "-y",
       outputPath,
-    ]);
+    ], { signal });
     const buf = fs.readFileSync(outputPath);
     fs.unlinkSync(outputPath);
     return buf.toString("base64");
@@ -150,7 +179,7 @@ async function extractVideoThumbnail(filePath: string): Promise<string | null> {
         "3",
         "-y",
         outputPath,
-      ]);
+      ], { signal });
       const buf = fs.readFileSync(outputPath);
       fs.unlinkSync(outputPath);
       return buf.toString("base64");
@@ -169,7 +198,7 @@ function parseISO6709(raw: string): { lat: number; lon: number } | null {
   return { lat, lon };
 }
 
-async function extractVideoMetadata(filePath: string): Promise<{
+async function extractVideoMetadata(filePath: string, signal?: AbortSignal): Promise<{
   gps: { lat: number; lon: number } | null;
   time: string | null;
 }> {
@@ -181,7 +210,7 @@ async function extractVideoMetadata(filePath: string): Promise<{
       "json",
       "-show_format",
       filePath,
-    ]);
+    ], { signal });
     const data = JSON.parse(stdout);
     const tags: Record<string, string> = data?.format?.tags || {};
 
@@ -898,6 +927,12 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       return res.status(400).json({ error: "Keine Datei hochgeladen" });
     }
 
+    if (activeUploadRequests >= MAX_CONCURRENT_UPLOAD) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+      return res.status(503).json({ error: "Server derzeit ausgelastet. Bitte kurz warten." });
+    }
+    activeUploadRequests++;
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -905,14 +940,31 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
     res.flushHeaders();
     if (req.socket) req.socket.setNoDelay(true);
 
+    const abortController = new AbortController();
+    let clientGone = false;
+    req.on("close", () => {
+      clientGone = true;
+      abortController.abort();
+      try { if (req.file) fs.unlinkSync(req.file.path); } catch {}
+    });
+
     const sendSSE = (data: Record<string, unknown>) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (!clientGone) res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
     try {
       const filePath = req.file.path;
       const fileBuffer = fs.readFileSync(filePath);
-      const isVideo = req.file.mimetype.startsWith("video/");
+
+      const detectedMime = detectMagicMimeType(fileBuffer);
+      if (!detectedMime) {
+        try { fs.unlinkSync(filePath); } catch {}
+        sendSSE({ error: "Ungültiges Dateiformat. Nur Bilder (JPEG, PNG, WebP, HEIC) und Videos (MP4, MOV, WebM) werden unterstützt." });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
+      const isVideo = detectedMime.startsWith("video/");
 
       sendSSE({
         status: isVideo
@@ -926,15 +978,15 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       if (isVideo) {
         const [thumbResult, metaResult] = await Promise.all([
-          extractVideoThumbnail(filePath),
-          extractVideoMetadata(filePath),
+          extractVideoThumbnail(filePath, abortController.signal),
+          extractVideoMetadata(filePath, abortController.signal),
         ]);
         videoThumbnailBase64 = thumbResult;
         if (metaResult.gps) exifLocation = metaResult.gps;
         if (metaResult.time) exifTime = metaResult.time;
       } else if (
-        req.file.mimetype === "image/jpeg" ||
-        req.file.mimetype === "image/png"
+        detectedMime === "image/jpeg" ||
+        detectedMime === "image/png"
       ) {
         try {
           const parser = exifParser.create(fileBuffer);
@@ -1011,6 +1063,11 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       if (!exifLocation && !exifTime && !isVideo) {
         sendSSE({ status: "ℹ️ Keine GPS/Zeit-Metadaten im Bild gefunden" });
+      }
+
+      if (clientGone) {
+        try { fs.unlinkSync(filePath); } catch {}
+        return;
       }
 
       const systemPrompt = PHOTO_ANALYSIS_PROMPT;
@@ -1096,7 +1153,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
             max_completion_tokens: 4096,
             temperature: 0.3,
             stream: false,
-          });
+          }, { signal: abortController.signal });
           const fallbackContent =
             fallbackRes.choices[0]?.message?.content || "";
           debugLogLLMResponse("gpt-4.1", "video fallback", fallbackContent);
@@ -1124,7 +1181,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:${req.file!.mimetype};base64,${base64Image}`,
+                  url: `data:${detectedMime};base64,${base64Image}`,
                   detail: "high",
                 },
               },
@@ -1143,7 +1200,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           max_completion_tokens: 4096,
           temperature: 0.3,
           stream: false,
-        });
+        }, { signal: abortController.signal });
         const imgText = imgResponse.choices[0]?.message?.content || "";
         debugLogLLMResponse("gpt-4.1", "image analysis", imgText);
         if (imgText) {
@@ -1168,6 +1225,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       try {
         if (req.file) fs.unlinkSync(req.file.path);
       } catch {}
+    } finally {
+      activeUploadRequests--;
     }
   });
 
@@ -1180,6 +1239,29 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
     if (!message) {
       return res.status(400).json({ error: "Message required" });
     }
+    if (typeof message !== "string" || message.length > 2000) {
+      return res.status(400).json({ error: "Nachricht zu lang (max. 2000 Zeichen)" });
+    }
+    if (history !== undefined) {
+      if (!Array.isArray(history) || history.length > 20) {
+        return res.status(400).json({ error: "Ungültiger Nachrichtenverlauf" });
+      }
+      for (const item of history) {
+        if (
+          typeof item !== "object" ||
+          item === null ||
+          typeof item.content !== "string" ||
+          item.content.length > 2000
+        ) {
+          return res.status(400).json({ error: "Ungültiger Nachrichtenverlauf" });
+        }
+      }
+    }
+
+    if (activeChatRequests >= MAX_CONCURRENT_CHAT) {
+      return res.status(503).json({ error: "Server derzeit ausgelastet. Bitte kurz warten." });
+    }
+    activeChatRequests++;
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -1188,11 +1270,19 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
     res.flushHeaders();
     if (req.socket) req.socket.setNoDelay(true);
 
+    const abortController = new AbortController();
+    let clientGone = false;
+    req.on("close", () => {
+      clientGone = true;
+      abortController.abort();
+    });
+
     const sendSSE = (data: Record<string, unknown>) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (!clientGone) res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
     try {
+      if (clientGone) return;
       const hasActiveLocation = !!currentLocation;
       const activeLocationName =
         currentLocation?.displayName?.split(",")[0]?.trim();
@@ -1201,6 +1291,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         hasActiveLocation,
         anthropic,
         activeLocationName,
+        abortController.signal,
       );
 
       if (classification.type === "OFFTOPIC") {
@@ -1241,7 +1332,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
           temperature: 0.3,
           system: systemPrompt,
           messages: chatMessages,
-        });
+        }, { signal: abortController.signal });
         const chatText =
           chatResponse.content[0]?.type === "text"
             ? chatResponse.content[0].text
@@ -1303,8 +1394,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         };
         countryCode = cached.countryCode;
       } else {
+        if (clientGone) return;
         sendSSE({ loadingStatus: "Suche Segelrevier" });
-        const detected = await detectLocation(userInput, anthropic);
+        const detected = await detectLocation(userInput, anthropic, abortController.signal);
 
         if (detected === null) {
           sendSSE({
@@ -1453,6 +1545,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         const preprocessed = await preprocessMeteonews(
           meteonewsText,
           anthropic,
+          abortController.signal,
         );
         analysis.data.weatherPreprocessed.europe["generalWeather"] = {
           source: "meteonews",
@@ -1534,6 +1627,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       analysis.save();
       sendSSE({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
 
+      if (clientGone) return;
       const national = await fetchNationalWeather(
         countryCode,
         { lat, lon },
@@ -1553,6 +1647,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         analysis.data.weatherRaw,
         anthropic,
         countryCode,
+        abortController.signal,
       );
       Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
       const localPre = await preprocessLocalWeather(
@@ -1564,14 +1659,17 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         },
         anthropic,
         countryCode,
+        abortController.signal,
       );
       Object.assign(analysis.data.weatherPreprocessed.local, localPre);
       analysis.save();
 
+      if (clientGone) return;
       sendSSE({ loadingStatus: "Interpretieren der lokalen Wetterdaten" });
       const weatherOutput = await generateWeatherOutput(
         analysis.data,
         anthropic,
+        abortController.signal,
       );
       Object.assign(analysis.data.weatherOutput, weatherOutput);
       analysis.save();
@@ -1597,6 +1695,8 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       } else {
         res.status(500).json({ error: errMsg });
       }
+    } finally {
+      activeChatRequests--;
     }
   });
 

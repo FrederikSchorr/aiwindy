@@ -438,6 +438,7 @@ export function preprocessLocalWeatherAT(
 export async function preprocessLocalWindAT(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["austriaWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
@@ -500,7 +501,7 @@ ${table}`;
       model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       messages: [{ role: "user", content: prompt }],
-    });
+    }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
     return { wind: { source: "GeoSphere Austria", url, text_de: text } };
   } catch {
@@ -511,6 +512,7 @@ ${table}`;
 export async function preprocessLocalCloudRainAT(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const forecast = rawData["austriaWindCloudRain"] as any;
   const url: string | null = forecast?.url ?? null;
@@ -577,7 +579,7 @@ ${table}`;
       model: "claude-haiku-4-5-20251001",
       max_tokens: 150,
       messages: [{ role: "user", content: prompt }],
-    });
+    }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
     return { cloudRain: { source: "GeoSphere Austria", url, text_de: text } };
   } catch {

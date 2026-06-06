@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const httpServer = createServer(app);
@@ -21,6 +22,24 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+app.set("trust proxy", 1);
+
+const chatRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Zu viele Anfragen. Bitte warte kurz und versuche es erneut." },
+});
+
+const uploadRateLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Zu viele Upload-Anfragen. Bitte warte kurz und versuche es erneut." },
+});
 
 const CUSTOM_DOMAIN = "aiwindy.schorr.wien";
 const REPLIT_DOMAINS = (process.env.REPLIT_DOMAINS || "").split(",").map(d => d.trim()).filter(Boolean);
@@ -72,6 +91,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  app.use("/api/chat", chatRateLimit);
+  app.use("/api/upload", uploadRateLimit);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

@@ -279,6 +279,7 @@ export async function fetchWetterzentraleChart(
 export async function preprocessMeteonews(
   text: string,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<string> {
   const result = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -290,7 +291,7 @@ export async function preprocessMeteonews(
         content: `Entferne aus diesem Europawetterbericht alle konkreten Temperaturangaben (z.B. "5 bis 14 Grad", "13 bis 20 Grad"). Behalte alle anderen Informationen über Drucklagen, Fronten, Niederschlag, Bewölkung und allgemeine Wettermuster unverändert. Gib nur den bereinigten Text zurück, ohne Kommentar.\n\n${text}`,
       },
     ],
-  });
+  }, { signal });
   return result.content[0]?.type === "text"
     ? result.content[0].text.trim()
     : text;

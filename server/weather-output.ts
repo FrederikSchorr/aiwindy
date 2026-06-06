@@ -47,6 +47,7 @@ function imageBlock(base64: string | null | undefined): Anthropic.Messages.Image
 export async function generateWeatherOutput(
   analysis: AnalysisJson,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const { position, weatherPreprocessed } = analysis;
   const europe = weatherPreprocessed.europe as Record<string, any>;
@@ -158,7 +159,7 @@ Antworte NUR mit diesem JSON-Objekt, ohne weitere Erklärungen:
       max_tokens: 1200,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content }],
-    });
+    }, { signal });
 
     const raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);

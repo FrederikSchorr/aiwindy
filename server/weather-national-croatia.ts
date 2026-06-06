@@ -40,7 +40,7 @@ export async function fetchCroatiaWeather(sailingArea?: string | null): Promise<
 
 // ── Preprocessing ─────────────────────────────────────────────────────────────
 
-export async function preprocessDhmzSynopsis(xml: string, anthropic: Anthropic): Promise<string | null> {
+export async function preprocessDhmzSynopsis(xml: string, anthropic: Anthropic, signal?: AbortSignal): Promise<string | null> {
   const match = xml.match(/<Stanje_tekst>([\s\S]*?)<\/Stanje_tekst>/);
   if (!match) return null;
   const croatianText = match[1].trim();
@@ -52,7 +52,7 @@ export async function preprocessDhmzSynopsis(xml: string, anthropic: Anthropic):
         role: "user",
         content: `Translate the following Croatian weather text to fluent German. Return only the translated text, no XML tags, no extra newlines:\n\n${croatianText}`,
       }],
-    });
+    }, { signal });
     return (msg.content[0] as { type: "text"; text: string }).text.trim() || null;
   } catch (e) {
     console.error("preprocessDhmzSynopsis error:", e instanceof Error ? e.message : e);
@@ -91,7 +91,7 @@ function extractDhmzReportTimestamp(xml: string): string | null {
   return m ? utcToCroatiaLocal(m[1], m[2]) : null;
 }
 
-export async function extractDhmzWarning(xml: string, sailingArea: string | null, anthropic: Anthropic): Promise<string | null> {
+export async function extractDhmzWarning(xml: string, sailingArea: string | null, anthropic: Anthropic, signal?: AbortSignal): Promise<string | null> {
   const match = xml.match(/<Upozorenje>([\s\S]*?)<\/Upozorenje>/);
   if (!match) return null;
   const croatianText = match[1].trim();
@@ -116,7 +116,7 @@ Return only the filtered German text, no labels, no XML.
 
 Croatian text:\n${croatianText}`,
       }],
-    });
+    }, { signal });
     const text = (msg.content[0] as { type: "text"; text: string }).text.trim();
     if (!text) return null;
     return timestamp ? `Aktuell (${timestamp}): ${text}` : text;
@@ -132,7 +132,7 @@ function extractDhmzForecastValidity(xml: string): string | null {
   return m ? `Nächste 24h (bis ${utcToCroatiaLocal(m[1], m[2])})` : null;
 }
 
-export async function extractDhmzSailingAreaForecast(xml: string, sailingArea: string | null, anthropic: Anthropic): Promise<string | null> {
+export async function extractDhmzSailingAreaForecast(xml: string, sailingArea: string | null, anthropic: Anthropic, signal?: AbortSignal): Promise<string | null> {
   const isNorth = isNorthAdriaticSailingArea(sailingArea);
   const validity = extractDhmzForecastValidity(xml);
   try {
@@ -148,7 +148,7 @@ ${isNorth
 
 XML:\n${xml}`,
       }],
-    });
+    }, { signal });
     const text = (msg.content[0] as { type: "text"; text: string }).text.trim();
     if (!text) return null;
     return validity ? `${validity}: ${text}` : text;
@@ -163,6 +163,7 @@ export async function preprocessDhmzLocalTemperature(
   locationHint: string,
   sailingArea: string | null,
   anthropic: Anthropic,
+  signal?: AbortSignal,
 ): Promise<{ city: string; text_de: string } | null> {
   const cityNames = Array.from(xml.matchAll(/ime="([^"]+)"/g)).map(m => m[1]);
   if (!cityNames.length) return null;
@@ -181,7 +182,7 @@ export async function preprocessDhmzLocalTemperature(
           role: "user",
           content: `From this list of Croatian cities, return the single city name that is geographically closest to "${locationHint}"${sailingArea ? ` (sailing area: "${sailingArea}")` : ""}. Always prefer the nearest city in the list — if "${locationHint}" is on an island and that island's city is listed, pick the island city (e.g. Punat→Krk, Supetar→Hvar, Vela Luka→Korcula, Novalja→Pag). Reply with only the city name, exactly as it appears in the list.\n\nCities:\n${cityNames.join(", ")}`,
         }],
-      });
+      }, { signal });
       const llmResult = (msg.content[0] as { type: "text"; text: string }).text.trim();
       console.log(`[dhmz-temperature] LLM city match: "${locationHint}" → "${llmResult}"`);
       matchedCity = cityNames.includes(llmResult)

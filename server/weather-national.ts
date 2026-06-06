@@ -80,11 +80,12 @@ export async function preprocessNationalWeather(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
   countryCode?: string,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   if (countryCode === "AT") return preprocessNationalWeatherAT(rawData);
   if (countryCode === "GR") {
     const text = (rawData["greeceMarineForecast"] as any)?.text as string | null;
-    return await preprocessGreeceNationalSynopsis(text, anthropic);
+    return await preprocessGreeceNationalSynopsis(text, anthropic, signal);
   }
   if (countryCode !== "HR") return {};
   const adriaXml = (rawData["croatiaAdriaForecast"] as any)?.xml as
@@ -95,7 +96,7 @@ export async function preprocessNationalWeather(
       source: "DHMZ",
       url: "https://prognoza.hr/jadran_h.xml",
       text_de: adriaXml
-        ? await preprocessDhmzSynopsis(adriaXml, anthropic)
+        ? await preprocessDhmzSynopsis(adriaXml, anthropic, signal)
         : null,
     },
   };
@@ -106,12 +107,13 @@ export async function preprocessLocalWeather(
   position: { userInput: string; city: string; sailingArea: string | null },
   anthropic: Anthropic,
   countryCode?: string,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   if (countryCode === "AT") {
     return {
       ...preprocessLocalWarningsNeusiedler(rawData, position.sailingArea),
-      ...(await preprocessLocalWindAT(rawData, anthropic)),
-      ...(await preprocessLocalCloudRainAT(rawData, anthropic)),
+      ...(await preprocessLocalWindAT(rawData, anthropic, signal)),
+      ...(await preprocessLocalCloudRainAT(rawData, anthropic, signal)),
       ...preprocessLocalWeatherAT(rawData),
     };
   }
@@ -120,10 +122,10 @@ export async function preprocessLocalWeather(
     const galeData = rawData["greeceMarineForecast"] as Record<string, unknown> | null;
     const emyName = getGreekEmyName(position.sailingArea);
     return {
-      ...(await extractGreeceWarning(galeData, emyName, anthropic)),
-      ...(await preprocessGreeceLocalWind(rawData, anthropic)),
-      ...(await preprocessGreeceLocalWave(rawData, anthropic)),
-      ...(await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic)),
+      ...(await extractGreeceWarning(galeData, emyName, anthropic, signal)),
+      ...(await preprocessGreeceLocalWind(rawData, anthropic, signal)),
+      ...(await preprocessGreeceLocalWave(rawData, anthropic, signal)),
+      ...(await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic, signal)),
       ...preprocessGreeceLocalTemperature(rawData),
       ...preprocessGreeceLocalWaterTemp(rawData),
     };
@@ -139,7 +141,7 @@ export async function preprocessLocalWeather(
     | null;
 
   const warningText = regionalXml
-    ? await extractDhmzWarning(regionalXml, position.sailingArea, anthropic)
+    ? await extractDhmzWarning(regionalXml, position.sailingArea, anthropic, signal)
     : null;
 
   const forecastText = regionalXml
@@ -147,6 +149,7 @@ export async function preprocessLocalWeather(
         regionalXml,
         position.sailingArea,
         anthropic,
+        signal,
       )
     : null;
 
@@ -156,6 +159,7 @@ export async function preprocessLocalWeather(
         position.city,
         position.sailingArea,
         anthropic,
+        signal,
       )
     : null;
 
