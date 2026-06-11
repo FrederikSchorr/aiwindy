@@ -507,7 +507,7 @@ export default function Home() {
 
     setMessages((prev) => [
       ...prev,
-      { id: userId, role: "user", content: "" },
+      { id: userId, role: "user", content: isVideo ? "[Video]" : "[Foto]" },
       { id: assistantId, role: "assistant" as const, content: "" },
     ]);
 

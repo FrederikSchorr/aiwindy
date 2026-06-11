@@ -1308,7 +1308,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         const chatHistory = (history || []).map(
           (m: { role: string; content: string }) => ({
             role: m.role as "user" | "assistant",
-            content: m.content,
+            content: m.content.trim().length > 0 ? m.content : "[Foto]",
           }),
         );
 
