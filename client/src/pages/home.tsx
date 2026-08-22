@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 
 const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
+const MAX_CHAT_HISTORY_CONTENT = 2000;
 
 interface AnalysisSources {
   windy: string[];
@@ -651,6 +652,21 @@ export default function Home() {
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.onprogress = () => processSseText(xhr.responseText, true);
     xhr.onloadend = () => {
+      if (xhr.status >= 400) {
+        let errorMessage = "Die Anfrage konnte nicht verarbeitet werden. Bitte versuche es erneut.";
+        try {
+          const errorData = JSON.parse(xhr.responseText) as { error?: unknown };
+          if (typeof errorData.error === "string" && errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {}
+        setMessages((prev) =>
+          prev.map((m) => m.id === assistantId ? { ...m, content: errorMessage } : m)
+        );
+        setLoadingStatus(null);
+        setIsStreaming(false);
+        return;
+      }
       lineBuffer += "\n";
       processSseText(xhr.responseText, true);
       if (session.xhr === xhr) session.xhr = null;
@@ -682,7 +698,16 @@ export default function Home() {
 
     const chatHistory = messages
       .filter((m) => m.id !== "welcome")
-      .map((m) => ({ role: m.role, content: m.content }));
+      .map((m) => {
+        if (m.content.length <= MAX_CHAT_HISTORY_CONTENT) {
+          return { role: m.role, content: m.content };
+        }
+        const suffix = "\n[… Verlauf gekürzt …]";
+        return {
+          role: m.role,
+          content: `${m.content.slice(0, MAX_CHAT_HISTORY_CONTENT - suffix.length)}${suffix}`,
+        };
+      });
 
     xhr.send(JSON.stringify({
       message: userMessage,

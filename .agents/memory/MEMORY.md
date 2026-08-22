@@ -2,3 +2,4 @@
 - [Dependency security overrides](dependency-security-overrides.md) — keep transitive security fixes pinned with npm overrides and require a clean full audit
 - [Background analysis jobs](background-analysis-jobs.md) — weather analyses are socket-independent capability-scoped jobs with replayable events
 - [Universal local forecasts](universal-local-forecasts.md) — Open-Meteo provides six-day baseline data; national detail and warnings remain distinct, higher-priority evidence
+- [Chat history limits](chat-history-limits.md) — trim long generated media analyses before reusing them as chat history, rather than weakening request limits
