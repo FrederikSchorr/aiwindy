@@ -58,16 +58,6 @@ function buildWindSystemsSummary(): string {
 const SAILING_AREAS_SUMMARY = buildSailingAreasSummary();
 const WIND_SYSTEMS_SUMMARY = buildWindSystemsSummary();
 
-let lastAnalysisContext: {
-  location: string;
-  date: string;
-  sections: Record<string, string>;
-  meta: string;
-  preprocessed: string;
-} | null = null;
-let lastAnalysisFilePath: string | null = null;
-let lastPhotoAnalysis: { text: string; date: string; locationName?: string } | null = null;
-
 const MAX_CONCURRENT_CHAT = 5;
 const MAX_CONCURRENT_UPLOAD = 3;
 let activeChatRequests = 0;
