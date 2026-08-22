@@ -753,7 +753,7 @@ WINDSYSTEME die du kennst:
 ${WIND_SYSTEMS_SUMMARY}
 
 LOKALE WETTERDATEN:
-Für folgende Länder sind lokale Wetterdienst-Daten angebunden: Österreich (GeoSphere Austria), Kroatien (DHMZ), Griechenland (EMY + OpenSkiron).
+Für folgende Länder sind lokale Wetterdienst-Daten angebunden: Österreich (GeoSphere Austria), Kroatien (DHMZ), Griechenland (HNMS + Open-Meteo).
 Für alle anderen europäischen Länder werden Windy-Karten und Europa-Übersichten (Meteonews, KNMI, Wetterzentrale) verwendet, aber keine nationalen Wetterdienst-Daten.
 
 STIL:
@@ -990,9 +990,6 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
     );
     Object.assign(analysis.data.weatherRaw, national.data);
     for (const url of national.sourceUrls) analysis.data.sources.national.push(url);
-    if (national.openskironMeta) {
-      analysis.data.position.openskiron_domain = national.openskironMeta;
-    }
     const nationalPre = await preprocessNationalWeather(
       analysis.data.weatherRaw,
       anthropic,

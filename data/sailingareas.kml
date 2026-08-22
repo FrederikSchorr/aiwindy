@@ -633,7 +633,7 @@ Orte: Southampton, Cowes, Portsmouth, Yarmouth, Lymington</description>
 <name>Ionisches Meer Nord (Griechenland)</name>
 <description>lat: 38.8, lon: 20
 Windy: iconEu
-OpenSkiron: Ionian_Islands_4km
+Open-Meteo: Forecast + Marine
 EMY: North Ionio
 Orte: Lefkada, Preveza, Korfu, Paxos, Sivota</description>
 <styleUrl>#style_2</styleUrl>
@@ -643,7 +643,7 @@ Orte: Lefkada, Preveza, Korfu, Paxos, Sivota</description>
 <name>Ionisches Meer Süd (Griechenland)</name>
 <description>lat: 37, lon: 21
 Windy: iconEu
-OpenSkiron: Ionian_Islands_4km
+Open-Meteo: Forecast + Marine
 EMY: South Ionio
 Orte: Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo</description>
 <styleUrl>#style_2</styleUrl>
@@ -653,7 +653,7 @@ Orte: Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo</description>
 <name>Patraikos</name>
 <description>lat: 38.260009, lon: 21.477871
 Windy: iconEu
-OpenSkiron: Ionian_Islands_4km
+Open-Meteo: Forecast + Marine
 EMY: Patraikos
 Orte: Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio</description>
 <styleUrl>#style_2</styleUrl>
@@ -663,7 +663,7 @@ Orte: Patras, Nafpaktos, Messolonghi, Galaxidi, Aigio</description>
 <name>Korinthiakos</name>
 <description>lat: 38.200691, lon: 22.539263
 Windy: iconEu
-OpenSkiron: Ionian_Islands_4km
+Open-Meteo: Forecast + Marine
 EMY: Korinthiakos
 Orte: Korinth, Galaxidi, Itea, Nafpaktos, Loutraki</description>
 <styleUrl>#style_2</styleUrl>
@@ -673,7 +673,7 @@ Orte: Korinth, Galaxidi, Itea, Nafpaktos, Loutraki</description>
 <name>Kythira-See</name>
 <description>lat: 36.5, lon: 22.8
 Windy: iconEu
-OpenSkiron: Ionian_Islands_4km
+Open-Meteo: Forecast + Marine
 EMY: Kithira Sea
 Orte: Kythira, Neapolis, Gythio, Monemvasia, Elafonisos</description>
 <styleUrl>#style_2</styleUrl>
@@ -683,7 +683,7 @@ Orte: Kythira, Neapolis, Gythio, Monemvasia, Elafonisos</description>
 <name>Kretisches Meer West</name>
 <description>lat: 35.209313, lon: 23.166541
 Windy: iconEu
-OpenSkiron: Aegean_SW_4km
+Open-Meteo: Forecast + Marine
 EMY: West Kritiko
 Orte: Chania, Rethymno, Heraklion, Kissamos, Paleochora</description>
 <styleUrl>#style_2</styleUrl>
@@ -693,7 +693,7 @@ Orte: Chania, Rethymno, Heraklion, Kissamos, Paleochora</description>
 <name>Kretisches Meer Ost</name>
 <description>lat: 35.095729, lon: 26.584788
 Windy: iconEu
-OpenSkiron: Aegean_SW_4km
+Open-Meteo: Forecast + Marine
 EMY: East Kritiko
 Orte: Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos</description>
 <styleUrl>#style_2</styleUrl>
@@ -703,7 +703,7 @@ Orte: Agios Nikolaos, Sitia, Ierapetra, Elounda, Makrigialos</description>
 <name>Saronischer Golf</name>
 <description>lat: 37.784805, lon: 23.289855
 Windy: iconEu
-OpenSkiron: Aegean_SW_4km
+Open-Meteo: Forecast + Marine
 EMY: Saronikos
 Orte: Athen/Piräus, Aegina, Poros, Hydra, Spetses</description>
 <styleUrl>#style_2</styleUrl>
@@ -713,7 +713,7 @@ Orte: Athen/Piräus, Aegina, Poros, Hydra, Spetses</description>
 <name>Ägäis Mitte</name>
 <description>lat: 37.5, lon: 25
 Windy: iconEu
-OpenSkiron: Aegean_SW_4km
+Open-Meteo: Forecast + Marine
 EMY: Central Aegean
 Orte: Mykonos, Naxos, Syros, Paros, Tinos</description>
 <styleUrl>#style_2</styleUrl>
@@ -723,7 +723,7 @@ Orte: Mykonos, Naxos, Syros, Paros, Tinos</description>
 <name>Ägäis Südwest</name>
 <description>lat: 36.870972, lon: 24.402883
 Windy: iconEu
-OpenSkiron: Aegean_SW_4km
+Open-Meteo: Forecast + Marine
 EMY: Southwest Aegean
 Orte: Milos, Santorini, Folegandros, Sifnos, Serifos</description>
 <styleUrl>#style_2</styleUrl>
@@ -733,7 +733,7 @@ Orte: Milos, Santorini, Folegandros, Sifnos, Serifos</description>
 <name>Ägäis Südost</name>
 <description>lat: 37.5, lon: 26.5
 Windy: iconEu
-OpenSkiron: Aegean_SW_4km
+Open-Meteo: Forecast + Marine
 EMY: Southeast Aegean
 Orte: Ikaria, Samos, Chios, Patmos, Kos</description>
 <styleUrl>#style_2</styleUrl>
@@ -743,7 +743,7 @@ Orte: Ikaria, Samos, Chios, Patmos, Kos</description>
 <name>Dodekanes</name>
 <description>lat: 36.5, lon: 27.5
 Windy: iconEu
-OpenSkiron: Aegean_SE_4km
+Open-Meteo: Forecast + Marine
 EMY: Rodos Sea
 Orte: Rhodos, Kos, Kalymnos, Leros, Symi</description>
 <styleUrl>#style_2</styleUrl>
@@ -753,7 +753,7 @@ Orte: Rhodos, Kos, Kalymnos, Leros, Symi</description>
 <name>Ägäis Nordwest</name>
 <description>lat: 39.5, lon: 24
 Windy: iconEu
-OpenSkiron: Aegean_NW_4km
+Open-Meteo: Forecast + Marine
 EMY: Northwest Aegean
 Orte: Skiathos, Skopelos, Volos, Alonissos, Skyros</description>
 <styleUrl>#style_2</styleUrl>
@@ -763,7 +763,7 @@ Orte: Skiathos, Skopelos, Volos, Alonissos, Skyros</description>
 <name>Ägäis Nordost</name>
 <description>lat: 39.5, lon: 26
 Windy: iconEu
-OpenSkiron: Aegean_NW_4km
+Open-Meteo: Forecast + Marine
 EMY: Northeast Aegean
 Orte: Lesbos, Chios, Limnos, Samothraki, Thassos</description>
 <styleUrl>#style_2</styleUrl>
@@ -773,7 +773,7 @@ Orte: Lesbos, Chios, Limnos, Samothraki, Thassos</description>
 <name>Thrakisches Meer</name>
 <description>lat: 40.594826, lon: 25.475261
 Windy: iconEu
-OpenSkiron: Aegean_NW_4km
+Open-Meteo: Forecast + Marine
 EMY: Thrakiko
 Orte: Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi</description>
 <styleUrl>#style_2</styleUrl>
@@ -783,7 +783,7 @@ Orte: Thassos, Kavala, Alexandroupoli, Keramoti, Xanthi</description>
 <name>Thermaikos Golf</name>
 <description>lat: 40.2, lon: 22.8
 Windy: iconEu
-OpenSkiron: Aegean_NW_4km
+Open-Meteo: Forecast + Marine
 EMY: Thermaikos
 Orte: Thessaloniki, Katerini, Halkidiki, Nea Moudania, Ierissos</description>
 <styleUrl>#style_2</styleUrl>

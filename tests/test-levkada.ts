@@ -1,5 +1,5 @@
 /**
- * AIWindy — Lefkada end-to-end test (OpenSkiron WRF 4km)
+ * AIWindy — Lefkada end-to-end test (Open-Meteo Forecast + Marine)
  * Ausführen: npx tsx --env-file=.env tests/test-levkada.ts
  */
 
@@ -33,7 +33,7 @@ const LOCATION: AnalysisPosition = {
   city: { name_de: "Lefkada", coordinates: { lat: 38.83, lon: 20.71 } },
 };
 
-console.log(`\n── AIWindy Lefkada Test (OpenSkiron WRF 4km) ────────────────────\n`);
+console.log(`\n── AIWindy Lefkada Test (Open-Meteo Forecast + Marine) ────────────\n`);
 
 // ── 1. Europe-Daten ───────────────────────────────────────────────────────────
 
@@ -87,9 +87,9 @@ analysis.data.weatherPreprocessed.europe["frontForecast"] = {
 };
 if (knmi || knmiForecast) analysis.data.sources.europe.push(`[Wetterfronten](${KNMI_BASE_URL}) von KNMI`);
 
-// ── 3. Nationale Daten (HNMS + OpenSkiron) ───────────────────────────────────
+// ── 3. Nationale Daten (HNMS + Open-Meteo) ────────────────────────────────────
 
-process.stdout.write("\n6. national weather (HNMS + OpenSkiron) … ");
+process.stdout.write("\n6. national weather (HNMS + Open-Meteo) … ");
 const national = await fetchNationalWeather(
   LOCATION.countryCode,
   LOCATION.sailingArea?.coordinates,
@@ -99,26 +99,28 @@ const national = await fetchNationalWeather(
 );
 Object.assign(analysis.data.weatherRaw, national.data);
 for (const u of national.sourceUrls) analysis.data.sources.national.push(u);
-if ((national as any).openskironMeta) {
-  (analysis.data.position as any).openskiron_domain = (national as any).openskironMeta;
-}
 const rawKeys = Object.keys(national.data);
 console.log(`✓  ${rawKeys.join(", ")}`);
 
 // Raw preview
-const wcr = national.data["greeceWindWaveCloudRain"] as any;
-if (wcr?.timestamps?.length) {
-  console.log(`   greeceWindCloudRain: ${wcr.timestamps.length} Zeitschritte`);
-  console.log(`   Wind[0]: ${wcr.windDir[0]} ${wcr.windSpeedKt[0]} kt, Böe ${wcr.gustKt[0]} kt`);
-  console.log(`   Wolken[0]: ${wcr.cloudCover[0]}%, Regen[0]: ${wcr.rainMm[0]}mm, CAPE[0]: ${wcr.cape[0]}`);
-  if (wcr.waterTempC?.[0] != null) console.log(`   Wassertemp[0]: ${wcr.waterTempC[0]}°C`);
+const forecast = national.data["greeceOpenMeteoForecast"] as any;
+const forecastHourly = forecast?.sailingArea?.hourly;
+if (forecastHourly?.timestamps?.length) {
+  console.log(`   greeceOpenMeteoForecast: ${forecastHourly.timestamps.length} Zeitschritte`);
+  console.log(`   Wind[0]: ${forecastHourly.windDirDeg[0]}° ${forecastHourly.windSpeedKt[0]} kt, Böe ${forecastHourly.gustKt[0]} kt`);
+  console.log(`   Wolken[0]: ${forecastHourly.cloudCoverPct[0]}%, Regen[0]: ${forecastHourly.rainMm[0]}mm, CAPE[0]: ${forecastHourly.capeJkg[0]}`);
 } else {
-  console.log("   greeceWindCloudRain: NULL (OpenSkiron nicht verfügbar oder kein sailingArea)");
+  console.log("   greeceOpenMeteoForecast: NULL");
 }
 
-const gt = national.data["greeceTemperature"] as any;
-if (gt?.temp2mC?.length) {
-  console.log(`   greeceTemperature: ${gt.temp2mC.length} Werte, t2m[0]=${gt.temp2mC[0]}°C`);
+const marine = national.data["greeceOpenMeteoMarine"] as any;
+const marineHourly = marine?.sailingArea?.hourly;
+if (marineHourly?.waveHeightM?.length) {
+  console.log(`   greeceOpenMeteoMarine: ${marineHourly.waveHeightM.length} Werte, Welle[0]=${marineHourly.waveHeightM[0]}m`);
+}
+const cityHourly = forecast?.city?.hourly;
+if (cityHourly?.temp2mC?.length) {
+  console.log(`   Stadttemperatur: ${cityHourly.temp2mC.length} Werte, t2m[0]=${cityHourly.temp2mC[0]}°C`);
 }
 
 const ggw = national.data["greeceGaleWarning"] as any;

@@ -19,13 +19,6 @@ export interface AnalysisPosition {
     name_de: string;                          // e.g. "Split"
     coordinates: { lat: number; lon: number }; // from Nominatim
   } | null;
-  openskiron_domain?: {
-    domain: string;
-    created: string;
-    gribFile: string;
-    sailingAreaData: string;
-    cityData: string;
-  };
 }
 
 export interface AnalysisSources {
@@ -218,6 +211,19 @@ function ensureDir() {
   }
 }
 
+function compactForecastData(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const sampled = value.length > 20 ? value.filter((_, index) => index % 3 === 0) : value;
+    return sampled.map(compactForecastData);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, compactForecastData(entry)]),
+    );
+  }
+  return value;
+}
+
 // ── Filename ───────────────────────────────────────────────────────────────
 
 function buildFilename(userInput: string, date: Date): string {
@@ -270,16 +276,9 @@ export function createAnalysis(position: AnalysisPosition): {
       }
       const replacer = (_key: string, value: unknown) => {
         if (_key.endsWith("Base64")) return undefined;
-        if ((_key === "austriaWindCloudRain" || _key === "greeceWindWaveCloudRain") && value && typeof value === "object") {
+        if ((_key === "austriaWindCloudRain" || _key === "greeceOpenMeteoForecast" || _key === "greeceOpenMeteoMarine") && value && typeof value === "object") {
+          if (_key.startsWith("greeceOpenMeteo")) return compactForecastData(value);
           const obj = { ...(value as Record<string, unknown>) };
-          for (const [k, v] of Object.entries(obj)) {
-            if (Array.isArray(v) && v.length > 20) obj[k] = v.filter((_, i) => i % 3 === 0);
-          }
-          return obj;
-        }
-        if (_key === "greeceTemperature" && value && typeof value === "object") {
-          const obj = { ...(value as Record<string, unknown>) };
-          delete obj["timestamps"];
           for (const [k, v] of Object.entries(obj)) {
             if (Array.isArray(v) && v.length > 20) obj[k] = v.filter((_, i) => i % 3 === 0);
           }
@@ -333,16 +332,9 @@ export function getSanitizedAnalysisExport(data: AnalysisJson): Record<string, u
 
   const replacer = (_key: string, value: unknown) => {
     if (_key.endsWith("Base64")) return undefined;
-    if ((_key === "austriaWindCloudRain" || _key === "greeceWindWaveCloudRain") && value && typeof value === "object") {
+    if ((_key === "austriaWindCloudRain" || _key === "greeceOpenMeteoForecast" || _key === "greeceOpenMeteoMarine") && value && typeof value === "object") {
+      if (_key.startsWith("greeceOpenMeteo")) return compactForecastData(value);
       const obj = { ...(value as Record<string, unknown>) };
-      for (const [key, entry] of Object.entries(obj)) {
-        if (Array.isArray(entry) && entry.length > 20) obj[key] = entry.filter((_, index) => index % 3 === 0);
-      }
-      return obj;
-    }
-    if (_key === "greeceTemperature" && value && typeof value === "object") {
-      const obj = { ...(value as Record<string, unknown>) };
-      delete obj["timestamps"];
       for (const [key, entry] of Object.entries(obj)) {
         if (Array.isArray(entry) && entry.length > 20) obj[key] = entry.filter((_, index) => index % 3 === 0);
       }

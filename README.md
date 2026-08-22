@@ -10,7 +10,7 @@ An AI-powered sailing weather analysis app for European waters. Each analysis pr
 4. **Wolken & Regen** — Cloud and precipitation overlay with thunderstorm risk
 5. **Temperatur** — Local meteogram with temperature summary
 
-The app combines data from European synoptic services (Meteonews, Wetterzentrale, KNMI), national weather APIs (GeoSphere Austria, DHMZ Croatia, EMY/OpenSkiron Greece), and multiple AI models to generate concise, sailor-relevant analysis. Users can also upload photos or videos for meteorological AI analysis.
+The app combines data from European synoptic services (Meteonews, Wetterzentrale, KNMI), national weather APIs (GeoSphere Austria, DHMZ Croatia, HNMS/Open-Meteo Greece), and multiple AI models to generate concise, sailor-relevant analysis. Users can also upload photos or videos for meteorological AI analysis.
 
 ---
 
@@ -28,7 +28,7 @@ Client (React + Vite)
         ├── National weather data (per country)
         │   ├── AT: GeoSphere Austria JSON APIs
         │   ├── HR: DHMZ XML feeds
-        │   └── GR: EMY gale warnings + OpenSkiron WRF 4km GRIB
+         │   └── GR: HNMS gale warnings + Open-Meteo Forecast & Marine APIs
         ├── LLM preprocessing (Claude Haiku/Sonnet)
         └── Weather output generation (5 sections, Claude/GPT)
   └── POST /api/upload (SSE)
@@ -86,27 +86,22 @@ Models: `aromeHd` (1.3km), `czeAladin` (2.3km), `ukv` (2km), `iconEu` (7km), `gf
 | 🇭🇷 Croatia | DHMZ | `prognoza.hr/pomorci.xml` | Maritime Warnungen, Wind, Seegang, Sicht (XML API) | `server/weather-national-croatia.ts` |
 | 🇭🇷 Croatia | DHMZ | `prognoza.hr/sedam/hrvatska/7d_meteogrami.xml` | Städte-Meteogramme, Temperatur (XML API) | `server/weather-national-croatia.ts` |
 | 🇬🇷 Greece | HNMS/EMY | `newportal.hnms.gr/emy/.../naftilia_deltio_thalasson_ektiposi` | Sturmwarnungen, Seewetter-Bulletin (HTML scrape) | `server/weather-national-greece.ts` |
-| 🇬🇷 Greece | OpenSkiron | `openskiron.org/en/openwrf` | WRF 4km GRIB: Wind, Welle (Douglas), Wolken, Temperatur, CAPE | `server/weather-national-greece.ts` + `openskiron_fetch.py` |
+| 🇬🇷 Greece | Open-Meteo Forecast API | `api.open-meteo.com/v1/forecast` | Wind, Böen, Wolken, Regen, Wettercode, CAPE, Temperatur (JSON) | `server/weather-national-greece.ts` |
+| 🇬🇷 Greece | Open-Meteo Marine API | `marine-api.open-meteo.com/v1/marine` | Wellenhöhe, Richtung, Periode, Windsee und Dünung (JSON) | `server/weather-national-greece.ts` |
 
 Other countries (20 total in sailingareas.json): analysis uses Europe-wide data + Windy maps. LLM preprocessing pipeline available for future integrations.
 
 ---
 
-## OpenSkiron WRF 4km (Greece)
+## Open-Meteo (Greece)
 
-Python subprocess (`scripts/openskiron_fetch.py`) handles GRIB1 fetch and extraction since GRIB parsing requires native ecCodes.
+The Greece integration keeps HNMS for national maritime bulletins and fetches hourly forecast data directly from Open-Meteo:
 
-```
-python scripts/openskiron_fetch.py <domain> <wind_lat> <wind_lon> <city_lat> <city_lon> [grib_url]
-```
+1. **Forecast API** at the sailing area provides wind in knots, gusts, cloud cover, rain, weather codes and CAPE.
+2. **Marine API** at the sailing area provides combined waves, wind sea and swell in meters, degrees and seconds.
+3. **Forecast API** at the city provides the local 2 m temperature.
 
-1. Node.js discovers current GRIB URL, checks DB cache (URL-based invalidation), passes URL as optional 7th arg
-2. Downloads + bz2-decompresses if not cached in `cache/openskiron/`; `.url` sidecar detects staleness
-3. Opens GRIB1 with `cfgrib` (non-standard WRF table → uses parameter IDs, not shortNames)
-4. Extracts 49-step hourly time series at nearest grid point → JSON to stdout; results cached in DB per coordinate pair
-
-4 domains cover all Greek sailing areas (`openskiron_domain` in sailingareas.json):
-`Ionian_Islands_4km`, `Aegean_SW_4km`, `Aegean_NW_4km`, `Aegean_SE_4km`
+The saved raw-data keys are `greeceOpenMeteoForecast` and `greeceOpenMeteoMarine`; preprocessing continues to provide the stable local keys for warnings, wind, wave, clouds/rain, temperature and water temperature.
 
 ---
 
@@ -117,7 +112,7 @@ Two-stage LLM preprocessing (`server/weather-national.ts`):
 1. **National synopsis** (`preprocessNationalWeather`) — extracts/translates the country-level weather overview (e.g. DHMZ Adria synopsis, EMY marine bulletin, Austrocontrol Wetterlage)
 2. **Local weather** (`preprocessLocalWeather`) — extracts area-specific data: warnings, wind, wave, cloud/rain/thunderstorm, temperature. Each country module has dedicated functions (e.g. `extractDhmzWarning`, `preprocessGreeceLocalWind`)
 
-LLM calls (Claude Sonnet / GPT-4.1-mini) extract and translate from raw XML/HTML into structured German text. Numeric data (GeoSphere JSON, OpenSkiron GRIB) is preprocessed without LLM.
+LLM calls (Claude Sonnet / GPT-4.1-mini) extract and translate from raw XML/HTML into structured German text. Numeric data (GeoSphere and Open-Meteo JSON) is preprocessed without LLM.
 
 ---
 
@@ -132,8 +127,6 @@ Single Claude Sonnet 4.6 call (`server/weather-output.ts`) with all preprocessed
 | Layer | Key Pattern | Storage | Invalidation | File |
 |---|---|---|---|---|
 | Location lookups | `loc:{normalized input}` | PostgreSQL `cache_store` | No TTL (permanent) | `server/cache-db.ts` |
-| OpenSkiron weather data | `openskiron:sa:{domain}:{coords}`, `openskiron:city:{domain}:{coords}` | PostgreSQL `cache_store` | URL-based (new GRIB URL → cache miss) | `server/cache-db.ts` |
-| OpenSkiron GRIB files | `cache/openskiron/{domain}.grb2` | Filesystem | `.url` sidecar file detects staleness | `scripts/openskiron_fetch.py` |
 | Analysis results | `analyses` table (JSONB) | PostgreSQL | Append-only (1 row per analysis) | `server/analysis-store.ts` |
 
 ---
@@ -164,20 +157,17 @@ server/
   weather-national.ts          National dispatch (AT/HR/GR) + preprocessing pipeline
   weather-national-austria.ts  GeoSphere Austria + Austrocontrol + LSZ Burgenland
   weather-national-croatia.ts  DHMZ Croatia integration
-  weather-national-greece.ts   EMY + OpenSkiron Greece integration
+  weather-national-greece.ts   HNMS + Open-Meteo Greece integration
   weather-output.ts            AI output generation (single Claude Sonnet call → 5 sections)
   analysis-store.ts            Analysis JSON persistence (filesystem + PostgreSQL)
   location.ts                  Location detection (sailing area + city via Claude Sonnet)
-  cache-db.ts                  PostgreSQL cache helpers (TTL, location cache, OpenSkiron cache)
+  cache-db.ts                  PostgreSQL cache helpers (TTL, location cache)
 
 data/
-  sailingareas.json            133 sailing areas with windyModel, coordinates, openskiron_domain, emy_name
+  sailingareas.json            133 sailing areas with windyModel, coordinates and emy_name
   countries.json               Country-level wind model fallback
   windymodels.json             Windy model definitions (key + label)
   windsystems.json             Local wind systems per country (Bora, Meltemi, etc.)
-
-scripts/
-  openskiron_fetch.py          Python: GRIB1 fetch + extraction for Greece
 
 client/src/pages/
   home.tsx                     Single-column chat UI with progressive section rendering
@@ -204,13 +194,11 @@ Chat mode (CHAT classification) uses GPT-4.1 with full last analysis context (me
 ### Requirements
 
 - Node.js 20+ with `npm`
-- Python 3.10+ with pip (for OpenSkiron/Greece only)
 
 ### Installation
 
 ```bash
 npm install
-pip install -r requirements.txt
 ```
 
 ### Environment Variables

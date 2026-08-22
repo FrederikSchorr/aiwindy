@@ -1,18 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { spawn } from "child_process";
-import fs from "fs";
-import path from "path";
-import sailingAreasJson from "../data/sailingareas.json" with { type: "json" };
-import { cacheGet, cacheSet } from "./cache-db.js";
-
-const OPENSKIRON_CACHE_DIR = path.join(process.cwd(), "cache", "openskiron");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 export const HNMS_BULLETIN_URL = "http://newportal.hnms.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
 export const HNMS_SOURCE_URL = "http://newportal.hnms.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
-export const OPENSKIRON_BASE_URL = "https://openskiron.org/gribs_wrf_4km/";
-export const OPENSKIRON_SOURCE_URL = "https://openskiron.org/";
+export const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+export const OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
+export const OPEN_METEO_FORECAST_SOURCE_URL = "https://open-meteo.com/en/docs";
+export const OPEN_METEO_MARINE_SOURCE_URL = "https://open-meteo.com/en/docs/marine-weather-api";
 
 // All HNMS area headings that act as block separators (superset of our sailingareas)
 const HNMS_AREA_HEADINGS = new Set([
@@ -75,299 +70,165 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
   }
 }
 
-// ── OpenSkiron Fetch ──────────────────────────────────────────────────────────
+// ── Open-Meteo Fetch ───────────────────────────────────────────────────────────
 
-function getOpenskironDomain(sailingAreaNameDe: string): string | null {
-  const reviere = (sailingAreasJson as any)["Griechenland"]?.reviere ?? [];
-  const found = reviere.find((r: any) => r.deutsch === sailingAreaNameDe);
-  return found?.openskiron_domain ?? null;
+type OpenMeteoTarget = {
+  name_de: string;
+  type: "sea" | "lake";
+  coordinates: { lat: number; lon: number };
+};
+
+const OPEN_METEO_FORECAST_HOURLY = [
+  "temperature_2m",
+  "precipitation_probability",
+  "rain",
+  "weather_code",
+  "cloud_cover",
+  "wind_speed_10m",
+  "wind_direction_10m",
+  "wind_gusts_10m",
+  "cape",
+];
+
+const OPEN_METEO_MARINE_HOURLY = [
+  "wave_height",
+  "wave_direction",
+  "wave_period",
+  "wind_wave_height",
+  "wind_wave_direction",
+  "wind_wave_period",
+  "swell_wave_height",
+  "swell_wave_direction",
+  "swell_wave_period",
+];
+
+function buildOpenMeteoUrl(
+  endpoint: string,
+  lat: number,
+  lon: number,
+  hourly: string[],
+  extra: Record<string, string> = {},
+): string {
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    timezone: "Europe/Athens",
+    forecast_days: "3",
+    hourly: hourly.join(","),
+    ...extra,
+  });
+  return `${endpoint}?${params.toString()}`;
 }
 
-const OPENSKIRON_WRF_PAGE = "https://openskiron.org/en/openwrf";
-
-async function discoverOpenskironUrl(domain: string): Promise<string | null> {
+async function fetchOpenMeteoJson(
+  url: string,
+  label: string,
+  onProgress?: (status: string) => void,
+): Promise<Record<string, any> | null> {
   try {
-    const res = await fetch(OPENSKIRON_WRF_PAGE, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+    onProgress?.(`Lade ${label} von Open-Meteo`);
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const escaped = domain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(
-      `https://openskiron\\.org/gribs_wrf_4km/(${escaped}_WRF_WAM_[^"'<>\\s]+\\.grb\\.bz2)`,
-    );
-    const m = html.match(pattern);
-    if (!m) return null;
-    return `${OPENSKIRON_BASE_URL}${m[1]}`;
+    if (!res.ok) {
+      console.error(`Open-Meteo ${label} failed (${res.status})`);
+      return null;
+    }
+    const data = await res.json() as Record<string, any>;
+    if (!Array.isArray(data.hourly?.time)) {
+      console.error(`Open-Meteo ${label} returned no hourly data`);
+      return null;
+    }
+    return data;
   } catch (e) {
-    console.warn("[openskiron-discover] URL check failed:", e instanceof Error ? e.message : e);
+    console.error(`Open-Meteo ${label} error:`, e instanceof Error ? e.message : e);
     return null;
   }
 }
 
-type OpenskironMeta = {
-  domain: string;
-  created: string;
-  gribFile: "downloaded" | "cached" | "not needed";
-  sailingAreaData: "extracted" | "cached";
-  cityData: "extracted" | "cached";
-};
+function arrayOrNull(hourly: Record<string, any> | undefined, key: string): unknown[] | null {
+  return Array.isArray(hourly?.[key]) ? hourly[key] : null;
+}
 
-async function fetchGreeceWindCloudRain(
-  sailingAreaObj: NonNullable<SailingAreaObj>,
-  cityObj: CityObj,
-  onProgress?: (status: string) => void,
-): Promise<{ windCloudRain: Record<string, unknown>; temperature: Record<string, unknown>; openskironMeta?: OpenskironMeta }> {
-  const nullWindCloudRain = {
-    source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
-    sailingArea: sailingAreaObj,
-    timestamps: null, windSpeedKt: null, windDir: null, gustKt: null,
-    rainMm: null, cape: null, cloudCover: null, waterTempC: null,
-    waveHeightM: null, wavePeriodS: null, waveDir: null, swellHeightM: null,
+function normalizeForecast(
+  raw: Record<string, any> | null,
+  url: string,
+  sailingArea: OpenMeteoTarget,
+  city: OpenMeteoTarget,
+  cityRaw: Record<string, any> | null,
+  cityUrl: string,
+): Record<string, unknown> {
+  const hourly = raw?.hourly;
+  const cityHourly = cityRaw?.hourly;
+  return {
+    source: "Open-Meteo Forecast API",
+    url,
+    available: Boolean(raw),
+    fetchedAt: new Date().toISOString(),
+    timezone: raw?.timezone ?? "Europe/Athens",
+    latitude: raw?.latitude ?? sailingArea.coordinates.lat,
+    longitude: raw?.longitude ?? sailingArea.coordinates.lon,
+    hourlyUnits: raw?.hourly_units ?? {},
+    sailingArea: {
+      name: sailingArea.name_de,
+      coordinates: sailingArea.coordinates,
+      hourly: raw ? {
+        timestamps: arrayOrNull(hourly, "time"),
+        windSpeedKt: arrayOrNull(hourly, "wind_speed_10m"),
+        windDirDeg: arrayOrNull(hourly, "wind_direction_10m"),
+        gustKt: arrayOrNull(hourly, "wind_gusts_10m"),
+        cloudCoverPct: arrayOrNull(hourly, "cloud_cover"),
+        rainMm: arrayOrNull(hourly, "rain"),
+        precipProbabilityPct: arrayOrNull(hourly, "precipitation_probability"),
+        weatherCode: arrayOrNull(hourly, "weather_code"),
+        capeJkg: arrayOrNull(hourly, "cape"),
+      } : null,
+    },
+    city: {
+      name: city.name_de,
+      coordinates: city.coordinates,
+      url: cityUrl,
+      hourly: cityRaw ? {
+        timestamps: arrayOrNull(cityHourly, "time"),
+        temp2mC: arrayOrNull(cityHourly, "temperature_2m"),
+      } : null,
+    },
   };
-  const nullTemperature = {
-    source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
-    city: cityObj ?? null,
-    timestamps: null, temp2mC: null,
+}
+
+function normalizeMarine(
+  raw: Record<string, any> | null,
+  url: string,
+  sailingArea: OpenMeteoTarget,
+): Record<string, unknown> {
+  const hourly = raw?.hourly;
+  return {
+    source: "Open-Meteo Marine API",
+    url,
+    available: Boolean(raw),
+    fetchedAt: new Date().toISOString(),
+    timezone: raw?.timezone ?? "Europe/Athens",
+    latitude: raw?.latitude ?? sailingArea.coordinates.lat,
+    longitude: raw?.longitude ?? sailingArea.coordinates.lon,
+    hourlyUnits: raw?.hourly_units ?? {},
+    sailingArea: {
+      name: sailingArea.name_de,
+      coordinates: sailingArea.coordinates,
+      hourly: raw ? {
+        timestamps: arrayOrNull(hourly, "time"),
+        waveHeightM: arrayOrNull(hourly, "wave_height"),
+        waveDirDeg: arrayOrNull(hourly, "wave_direction"),
+        wavePeriodS: arrayOrNull(hourly, "wave_period"),
+        windWaveHeightM: arrayOrNull(hourly, "wind_wave_height"),
+        windWaveDirDeg: arrayOrNull(hourly, "wind_wave_direction"),
+        windWavePeriodS: arrayOrNull(hourly, "wind_wave_period"),
+        swellHeightM: arrayOrNull(hourly, "swell_wave_height"),
+        swellDirDeg: arrayOrNull(hourly, "swell_wave_direction"),
+        swellPeriodS: arrayOrNull(hourly, "swell_wave_period"),
+      } : null,
+    },
   };
-  const nullResult = { windCloudRain: nullWindCloudRain, temperature: nullTemperature };
-
-  const domain = getOpenskironDomain(sailingAreaObj.name_de);
-  if (!domain) {
-    console.error(`No openskiron_domain for: ${sailingAreaObj.name_de}`);
-    return nullResult;
-  }
-
-  const windLat = sailingAreaObj.coordinates.lat;
-  const windLon = sailingAreaObj.coordinates.lon;
-  const cityLat = cityObj?.coordinates.lat ?? windLat;
-  const cityLon = cityObj?.coordinates.lon ?? windLon;
-
-  const sailingAreaCacheKey = `openskiron:sa:${domain}:${windLat.toFixed(4)}_${windLon.toFixed(4)}`;
-  const cityCacheKey = `openskiron:city:${domain}:${cityLat.toFixed(4)}_${cityLon.toFixed(4)}`;
-
-  const currentGribUrl = await discoverOpenskironUrl(domain);
-
-  let cachedSailingArea: Record<string, unknown> | null = null;
-  let cachedCity: Record<string, unknown> | null = null;
-  let cachedCreated = "";
-
-  if (currentGribUrl) {
-    try {
-      const [saRaw, cityRaw] = await Promise.all([
-        cacheGet(sailingAreaCacheKey),
-        cacheGet(cityCacheKey),
-      ]);
-      if (saRaw) {
-        const sa = JSON.parse(saRaw);
-        if (sa._gribUrl === currentGribUrl) {
-          cachedSailingArea = sa.data;
-          cachedCreated = sa.created ?? "";
-          console.log(`[openskiron-cache] sailingArea HIT for ${domain}`);
-        } else {
-          console.log(`[openskiron-cache] sailingArea STALE for ${domain}`);
-        }
-      }
-      if (cityRaw) {
-        const city = JSON.parse(cityRaw);
-        if (city._gribUrl === currentGribUrl) {
-          cachedCity = city.data;
-          if (!cachedCreated) cachedCreated = city.created ?? "";
-          console.log(`[openskiron-cache] city HIT for ${domain}`);
-        } else {
-          console.log(`[openskiron-cache] city STALE for ${domain}`);
-        }
-      }
-    } catch (e) {
-      console.warn("[openskiron-cache] DB read error:", e);
-    }
-  }
-
-  if (cachedSailingArea && cachedCity) {
-    if (onProgress) onProgress("OpenSkiron Daten aus Cache geladen");
-    if (currentGribUrl) {
-      try {
-        fs.mkdirSync(OPENSKIRON_CACHE_DIR, { recursive: true });
-        fs.writeFileSync(path.join(OPENSKIRON_CACHE_DIR, `${domain}.url`), currentGribUrl, "utf-8");
-      } catch {}
-    }
-    return {
-      windCloudRain: {
-        source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
-        sailingArea: sailingAreaObj,
-        ...cachedSailingArea,
-      },
-      temperature: {
-        source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
-        city: cityObj ?? null,
-        ...cachedCity,
-      },
-      openskironMeta: { domain, created: cachedCreated, gribFile: "not needed", sailingAreaData: "cached", cityData: "cached" },
-    };
-  }
-
-  return new Promise((resolve, reject) => {
-    const args = [
-      "scripts/openskiron_fetch.py",
-      domain,
-      String(windLat), String(windLon),
-      String(cityLat), String(cityLon),
-      ...(currentGribUrl ? [currentGribUrl] : []),
-    ];
-    const pythonCmd = process.platform === "win32" ? "python" : "python3";
-    const proc = spawn(pythonCmd, args, {
-      env: { ...process.env, ECCODES_LOG_LEVEL: "0" },
-    });
-    proc.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "ENOENT" && pythonCmd === "python3") {
-        console.warn("python3 not found, retrying with python");
-        const proc2 = spawn("python", args, {
-          env: { ...process.env, ECCODES_LOG_LEVEL: "0" },
-        });
-        let stdout2 = "";
-        let stderr2 = "";
-        proc2.stdout.on("data", (d: Buffer) => { stdout2 += d.toString(); });
-        proc2.stderr.on("data", (d: Buffer) => { stderr2 += d.toString(); });
-        proc2.on("close", (code2: number | null) => {
-          if (code2 === 0 && stdout2.trim()) {
-            try { resolve(JSON.parse(stdout2)); } catch { resolve(null); }
-          } else {
-            console.error("openskiron_fetch (python fallback) failed:", stderr2);
-            resolve(null);
-          }
-        });
-        proc2.on("error", (err2: NodeJS.ErrnoException) => {
-          if (err2.code === "ENOENT") {
-            reject(new Error("Python ist nicht installiert. OpenSkiron-Wetterdaten für Griechenland können nicht berechnet werden. Bitte Python 3 installieren (python3)."));
-          } else {
-            reject(new Error(`OpenSkiron-Fehler: ${err2.message}`));
-          }
-        });
-        return;
-      }
-      if (err.code === "ENOENT") {
-        reject(new Error("Python ist nicht installiert. OpenSkiron-Wetterdaten für Griechenland können nicht berechnet werden. Bitte Python 3 installieren (python3)."));
-      } else {
-        reject(new Error(`OpenSkiron-Fehler: ${err.message}`));
-      }
-    });
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => {
-      proc.kill("SIGTERM");
-      console.error("openskiron_fetch timed out after 60s");
-    }, 60000);
-
-    let downloadNotified = false;
-    proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-    proc.stderr.on("data", (d: Buffer) => {
-      const chunk = d.toString();
-      stderr += chunk;
-      if (!downloadNotified && chunk.includes("[download]") && onProgress) {
-        downloadNotified = true;
-        const urlMatch = chunk.match(/\[download\]\s+(\S+)/);
-        const filename = urlMatch ? urlMatch[1].split("/").pop() : domain;
-        onProgress(`Download der OpenSkiron Wetterdaten ${filename ?? domain}`);
-      }
-      if (chunk.includes("[extract]") && onProgress) {
-        const extractMatch = chunk.match(/\[extract\]\s+(\S+)\s*(.*)/);
-        const filename = extractMatch ? extractMatch[1] : domain;
-        const created = extractMatch?.[2]?.trim() || "";
-        onProgress(`Extrahiere lokale Daten aus ${filename}${created ? " " + created : ""}`);
-      }
-    });
-    proc.on("close", (code: number | null) => {
-      clearTimeout(timer);
-      const didDownload = stderr.includes("[download]");
-      const stderrClean = stderr
-        .split("\n")
-        .filter(l => !l.includes("missingValue") && !l.includes("Ignoring index file")
-          && !l.includes("FutureWarning") && !l.includes("xarray_store")
-          && !l.includes("RequestsDependencyWarning") && !l.includes("warnings.warn("))
-        .join("\n")
-        .trim();
-      if (stderrClean) console.error("openskiron_fetch:", stderrClean);
-      if (code !== 0 || !stdout.trim()) {
-        console.error(`openskiron_fetch exited with code ${code}`);
-        resolve(nullResult);
-        return;
-      }
-      try {
-        const jsonStart = stdout.indexOf('{');
-        if (jsonStart < 0) throw new Error("No JSON object in stdout");
-        const parsed = JSON.parse(stdout.slice(jsonStart));
-        const created = parsed.created ?? "";
-
-        const gribStatus: "downloaded" | "cached" = didDownload ? "downloaded" : "cached";
-        const saStatus: "extracted" | "cached" = cachedSailingArea ? "cached" : "extracted";
-        const cityStatus: "extracted" | "cached" = cachedCity ? "cached" : "extracted";
-
-        const freshSailingArea = {
-          timestamps: parsed.timestamps,
-          windSpeedKt: parsed.windSpeedKt,
-          windDir: parsed.windDir,
-          gustKt: parsed.gustKt,
-          rainMm: parsed.rainMm,
-          cape: parsed.cape,
-          cloudCover: parsed.cloudCover,
-          waterTempC: parsed.waterTempC,
-          waveHeightM: parsed.waveHeightM,
-          wavePeriodS: parsed.wavePeriodS,
-          waveDir: parsed.waveDir,
-          swellHeightM: parsed.swellHeightM,
-        };
-        const freshCity = {
-          timestamps: parsed.timestamps,
-          temp2mC: parsed.temp2mC,
-        };
-
-        const finalSailingArea = cachedSailingArea ?? freshSailingArea;
-        const finalCity = cachedCity ?? freshCity;
-
-        const result = {
-          windCloudRain: {
-            source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
-            sailingArea: sailingAreaObj,
-            ...finalSailingArea,
-          },
-          temperature: {
-            source: "OpenSkiron WRF 4km", url: OPENSKIRON_BASE_URL,
-            city: cityObj ?? null,
-            ...finalCity,
-          },
-          openskironMeta: { domain, created, gribFile: gribStatus, sailingAreaData: saStatus, cityData: cityStatus } as OpenskironMeta,
-        };
-
-        if (currentGribUrl) {
-          const saves: Promise<void>[] = [];
-          if (!cachedSailingArea) {
-            saves.push(
-              cacheSet(sailingAreaCacheKey, JSON.stringify({ _gribUrl: currentGribUrl, created, data: freshSailingArea }))
-                .then(() => console.log(`[openskiron-cache] sailingArea SAVED for ${domain}`)),
-            );
-          }
-          if (!cachedCity) {
-            saves.push(
-              cacheSet(cityCacheKey, JSON.stringify({ _gribUrl: currentGribUrl, created, data: freshCity }))
-                .then(() => console.log(`[openskiron-cache] city SAVED for ${domain}`)),
-            );
-          }
-          Promise.all(saves).catch((e) => console.warn("[openskiron-cache] DB write error:", e));
-        }
-
-        resolve(result);
-      } catch (e) {
-        console.error("openskiron_fetch JSON parse error:", e instanceof Error ? e.message : e);
-        resolve(nullResult);
-      }
-    });
-    proc.on("error", (e: Error) => {
-      clearTimeout(timer);
-      console.error("openskiron_fetch spawn error:", e.message);
-      resolve(nullResult);
-    });
-  });
 }
 
 // ── Main Fetch ────────────────────────────────────────────────────────────────
@@ -376,26 +237,65 @@ export async function fetchGreeceWeather(
   sailingAreaObj?: SailingAreaObj,
   cityObj?: CityObj,
   onProgress?: (status: string) => void,
-): Promise<{ data: Record<string, unknown>; sourceUrls: string[]; openskironMeta?: OpenskironMeta }> {
-  const [hnms, openskiron] = await Promise.all([
+): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
+  const area: OpenMeteoTarget | null = sailingAreaObj
+    ? sailingAreaObj
+    : cityObj
+      ? { name_de: cityObj.name_de, type: "sea", coordinates: cityObj.coordinates }
+      : null;
+  const city: OpenMeteoTarget | null = cityObj
+    ? { name_de: cityObj.name_de, type: "sea", coordinates: cityObj.coordinates }
+    : area;
+  const forecastUrl = area && city
+    ? buildOpenMeteoUrl(
+      OPEN_METEO_FORECAST_URL,
+      area.coordinates.lat,
+      area.coordinates.lon,
+      OPEN_METEO_FORECAST_HOURLY,
+      { wind_speed_unit: "kn" },
+    )
+    : `${OPEN_METEO_FORECAST_URL}?timezone=Europe%2FAthens`;
+  const cityForecastUrl = city
+    ? buildOpenMeteoUrl(
+      OPEN_METEO_FORECAST_URL,
+      city.coordinates.lat,
+      city.coordinates.lon,
+      ["temperature_2m"],
+    )
+    : forecastUrl;
+  const marineUrl = area
+    ? buildOpenMeteoUrl(
+      OPEN_METEO_MARINE_URL,
+      area.coordinates.lat,
+      area.coordinates.lon,
+      OPEN_METEO_MARINE_HOURLY,
+    )
+    : `${OPEN_METEO_MARINE_URL}?timezone=Europe%2FAthens`;
+
+  const [hnms, forecastRaw, cityForecastRaw, marineRaw] = await Promise.all([
     fetchHnmsGaleWarning(),
-    sailingAreaObj ? fetchGreeceWindCloudRain(sailingAreaObj, cityObj, onProgress) : null,
+    area ? fetchOpenMeteoJson(forecastUrl, "Wetterdaten", onProgress) : Promise.resolve(null),
+    city ? fetchOpenMeteoJson(cityForecastUrl, "Temperaturdaten", onProgress) : Promise.resolve(null),
+    area ? fetchOpenMeteoJson(marineUrl, "Wellendaten", onProgress) : Promise.resolve(null),
   ]);
 
-  const data: Record<string, unknown> = { greeceMarineForecast: hnms };
-  if (openskiron) {
-    data["greeceWindWaveCloudRain"] = openskiron.windCloudRain;
-    data["greeceTemperature"] = openskiron.temperature;
-  }
+  const data: Record<string, unknown> = {
+    greeceMarineForecast: hnms,
+    greeceOpenMeteoForecast: area && city
+      ? normalizeForecast(forecastRaw, forecastUrl, area, city, cityForecastRaw, cityForecastUrl)
+      : null,
+    greeceOpenMeteoMarine: area
+      ? normalizeMarine(marineRaw, marineUrl, area)
+      : null,
+  };
 
   const sourceUrls = [
     `Griechenland Wetterlage und Warnungen von [HNMS](${HNMS_SOURCE_URL})`,
+    `Wind, Wolken, Regen, Gewitter, Temperatur von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
+    `Wellen und Dünung von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`,
   ];
-  if (openskiron) {
-    sourceUrls.push(`Wind, Welle, Wolken, Regen, Gewitter, Temperatur von [OpenSkiron](${OPENSKIRON_SOURCE_URL}) API`);
-  }
 
-  return { data, sourceUrls, openskironMeta: openskiron?.openskironMeta };
+  return { data, sourceUrls };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -428,6 +328,15 @@ function isAreaHeading(line: string): boolean {
 
 /** Convert UTC timestamp string to local label + hour using Intl (DST-aware). */
 function toLocalDateHour(utcTs: string, tz: string): { label: string; hour: number } {
+  const localTimestamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):/.exec(utcTs);
+  if (localTimestamp && !/(Z|[+-]\d{2}:?\d{2})$/i.test(utcTs)) {
+    const [, year, month, day, hour] = localTimestamp;
+    const dow = new Date(`${year}-${month}-${day}T12:00:00Z`).getUTCDay();
+    return {
+      label: `${DAY_NAMES[dow]} ${day}.${month}`,
+      hour: Number(hour),
+    };
+  }
   const d = new Date(utcTs);
   const datePart = new Intl.DateTimeFormat("sv-SE", { timeZone: tz }).format(d);
   const hour = parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(d)) % 24;
@@ -519,37 +428,62 @@ ${text}`,
   }
 }
 
-// ── OpenSkiron Preprocessing ──────────────────────────────────────────────────
+// ── Open-Meteo Preprocessing ───────────────────────────────────────────────────
+
+function getForecastHourly(rawData: Record<string, unknown>): {
+  forecast: any;
+  hourly: any;
+} {
+  const forecast = rawData["greeceOpenMeteoForecast"] as any;
+  return { forecast, hourly: forecast?.sailingArea?.hourly ?? null };
+}
+
+function getMarineHourly(rawData: Record<string, unknown>): {
+  marine: any;
+  hourly: any;
+} {
+  const marine = rawData["greeceOpenMeteoMarine"] as any;
+  return { marine, hourly: marine?.sailingArea?.hourly ?? null };
+}
+
+function degreesToCompass(degrees: unknown): string | null {
+  if (typeof degrees !== "number" || !Number.isFinite(degrees)) return null;
+  const directions = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  return directions[Math.round(degrees / 22.5) % directions.length];
+}
 
 export async function preprocessGreeceLocalWind(
   rawData: Record<string, unknown>,
   anthropic: Anthropic,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["greeceWindWaveCloudRain"] as any;
+  const { forecast, hourly } = getForecastHourly(rawData);
   const url: string | null = forecast?.url ?? null;
-  if (!forecast?.timestamps || !forecast?.windSpeedKt) {
-    return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  const sailingArea = forecast?.sailingArea?.name ?? null;
+  if (!hourly?.timestamps || !hourly?.windSpeedKt) {
+    return { wind: { source: "Open-Meteo Forecast API", url, sailingArea, text_de: null } };
   }
 
   const TZ = "Europe/Athens";
   type Row = { time: string; dir: string; spd: number; gust: number };
   const byDate = new Map<string, Row[]>();
 
-  for (let i = 0; i < forecast.timestamps.length; i++) {
-    const { label, hour } = toLocalDateHour(forecast.timestamps[i], TZ);
+  for (let i = 0; i < hourly.timestamps.length; i++) {
+    const { label, hour } = toLocalDateHour(hourly.timestamps[i], TZ);
     if (hour < 6 || hour > 20) continue;
+    const speed = hourly.windSpeedKt[i];
+    if (typeof speed !== "number") continue;
     if (!byDate.has(label)) byDate.set(label, []);
     byDate.get(label)!.push({
       time: `${String(hour).padStart(2, "0")}:00`,
-      dir: forecast.windDir[i],
-      spd: Math.round(forecast.windSpeedKt[i]),
-      gust: Math.round(forecast.gustKt[i]),
+      dir: degreesToCompass(hourly.windDirDeg?.[i]) ?? "?",
+      spd: Math.round(speed),
+      gust: Math.round(typeof hourly.gustKt?.[i] === "number" ? hourly.gustKt[i] : speed),
     });
   }
 
   const days = Array.from(byDate.entries()).slice(0, 2);
-  if (!days.length) return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  if (!days.length) return { wind: { source: "Open-Meteo Forecast API", url, sailingArea, text_de: null } };
 
   const table = days
     .map(([label, rows]) => {
@@ -569,9 +503,9 @@ ${table}`;
       messages: [{ role: "user", content: prompt }],
     }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
-    return { wind: { source: "OpenSkiron WRF 4km", url, text_de: text } };
+    return { wind: { source: "Open-Meteo Forecast API", url, sailingArea, text_de: text } };
   } catch {
-    return { wind: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+    return { wind: { source: "Open-Meteo Forecast API", url, sailingArea, text_de: null } };
   }
 }
 
@@ -600,41 +534,40 @@ export async function preprocessGreeceLocalWave(
   anthropic: Anthropic,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["greeceWindWaveCloudRain"] as any;
-  const url: string | null = forecast?.url ?? null;
-  const src = "OpenSkiron WAM";
-  if (!forecast?.timestamps || !forecast?.waveHeightM) {
-    return { wave: { source: src, url, text_de: null } };
+  const { marine, hourly } = getMarineHourly(rawData);
+  const url: string | null = marine?.url ?? null;
+  const sailingArea = marine?.sailingArea?.name ?? null;
+  const src = "Open-Meteo Marine API";
+  if (!hourly?.timestamps || !hourly?.waveHeightM) {
+    return { wave: { source: src, url, sailingArea, text_de: null } };
   }
 
-  const hasAnyWave = (forecast.waveHeightM as (number | null)[]).some(
+  const hasAnyWave = (hourly.waveHeightM as (number | null)[]).some(
     (v: number | null) => v !== null && !isNaN(v),
   );
-  if (!hasAnyWave) {
-    return { wave: { source: src, url, text_de: null } };
-  }
+  if (!hasAnyWave) return { wave: { source: src, url, sailingArea, text_de: null } };
 
   const TZ = "Europe/Athens";
   type WaveRow = { hour: number; waveH: number; swellH: number | null; waveD: string | null; waveP: number | null };
   const byDate = new Map<string, WaveRow[]>();
 
-  for (let i = 0; i < forecast.timestamps.length; i++) {
-    const wh = forecast.waveHeightM[i];
+  for (let i = 0; i < hourly.timestamps.length; i++) {
+    const wh = hourly.waveHeightM[i];
     if (wh === null || isNaN(wh)) continue;
-    const { label, hour } = toLocalDateHour(forecast.timestamps[i], TZ);
+    const { label, hour } = toLocalDateHour(hourly.timestamps[i], TZ);
     if (hour < 6 || hour > 20) continue;
     if (!byDate.has(label)) byDate.set(label, []);
     byDate.get(label)!.push({
       hour,
       waveH: wh,
-      swellH: forecast.swellHeightM?.[i] ?? null,
-      waveD: forecast.waveDir?.[i] ?? null,
-      waveP: forecast.wavePeriodS?.[i] ?? null,
+      swellH: hourly.swellHeightM?.[i] ?? null,
+      waveD: degreesToCompass(hourly.waveDirDeg?.[i]),
+      waveP: hourly.wavePeriodS?.[i] ?? null,
     });
   }
 
   const days = Array.from(byDate.entries()).slice(0, 3);
-  if (!days.length) return { wave: { source: src, url, text_de: null } };
+  if (!days.length) return { wave: { source: src, url, sailingArea, text_de: null } };
 
   const table = days.map(([label, rows]) => {
     const rowStr = rows.map(r => {
@@ -658,9 +591,9 @@ ${table}`;
       messages: [{ role: "user", content: prompt }],
     }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
-    return { wave: { source: src, url, text_de: text } };
+    return { wave: { source: src, url, sailingArea, text_de: text } };
   } catch {
-    return { wave: { source: src, url, text_de: null } };
+    return { wave: { source: src, url, sailingArea, text_de: null } };
   }
 }
 
@@ -669,34 +602,33 @@ export async function preprocessGreeceLocalCloudRainThunderstorm(
   anthropic: Anthropic,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const forecast = rawData["greeceWindWaveCloudRain"] as any;
+  const { forecast, hourly } = getForecastHourly(rawData);
   const url: string | null = forecast?.url ?? null;
-  if (!forecast?.timestamps || !forecast?.rainMm || !forecast?.cloudCover) {
-    return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  if (!hourly?.timestamps || !hourly?.rainMm || !hourly?.cloudCoverPct) {
+    return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
   }
 
   const TZ = "Europe/Athens";
-  // rainMm in OpenSkiron is already delta (per-hour), not cumulative — use as-is
-  const rainMm: number[] = forecast.rainMm;
-  const cape: number[] = forecast.cape ?? new Array(forecast.timestamps.length).fill(0);
+  const rainMm: number[] = hourly.rainMm;
+  const cape: number[] = hourly.capeJkg ?? new Array(hourly.timestamps.length).fill(0);
 
   type Row = { time: string; cloud: number; rain: number; cape: number };
   const byDate = new Map<string, Row[]>();
 
-  for (let i = 0; i < forecast.timestamps.length; i++) {
-    const { label, hour } = toLocalDateHour(forecast.timestamps[i], TZ);
+  for (let i = 0; i < hourly.timestamps.length; i++) {
+    const { label, hour } = toLocalDateHour(hourly.timestamps[i], TZ);
     if (hour < 6 || hour > 20) continue;
     if (!byDate.has(label)) byDate.set(label, []);
     byDate.get(label)!.push({
       time: `${String(hour).padStart(2, "0")}:00`,
-      cloud: forecast.cloudCover[i],
+      cloud: hourly.cloudCoverPct[i],
       rain: Math.round(rainMm[i] * 10) / 10,
       cape: Math.round(cape[i]),
     });
   }
 
   const days = Array.from(byDate.entries()).slice(0, 2);
-  if (!days.length) return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+  if (!days.length) return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
 
   const hasThunderstorm = days.some(([, rows]) => rows.some(r => r.cape >= 1000));
 
@@ -722,19 +654,20 @@ ${table}`;
       messages: [{ role: "user", content: prompt }],
     }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
-    return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: text } };
+    return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: text } };
   } catch {
-    return { cloudRainThunderstorm: { source: "OpenSkiron WRF 4km", url, text_de: null } };
+    return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
   }
 }
 
 export function preprocessGreeceLocalTemperature(
   rawData: Record<string, unknown>,
 ): Record<string, unknown> {
-  const tempData = rawData["greeceTemperature"] as any;
-  const url: string | null = tempData?.url ?? null;
-  const city = tempData?.city ?? null;
-  const nullResult = { temperature: { source: "OpenSkiron WRF 4km", url, city, text_de: null } };
+  const forecast = rawData["greeceOpenMeteoForecast"] as any;
+  const tempData = forecast?.city?.hourly ?? null;
+  const url: string | null = forecast?.url ?? null;
+  const city = forecast?.city?.name ?? null;
+  const nullResult = { temperature: { source: "Open-Meteo Forecast API", url, city, text_de: null } };
 
   if (!tempData?.timestamps || !tempData?.temp2mC) return nullResult;
 
@@ -767,7 +700,7 @@ export function preprocessGreeceLocalTemperature(
 
   return {
     temperature: {
-      source: "OpenSkiron WRF 4km",
+      source: "Open-Meteo Forecast API",
       url,
       city,
       text_de: lines.length ? lines.join("\n") : null,
@@ -778,22 +711,12 @@ export function preprocessGreeceLocalTemperature(
 export function preprocessGreeceLocalWaterTemp(
   rawData: Record<string, unknown>,
 ): Record<string, unknown> {
-  const forecast = rawData["greeceWindWaveCloudRain"] as any;
-  const url: string | null = forecast?.url ?? null;
-  const nullResult = { waterTemp: { source: "OpenSkiron WRF 4km", url, text_de: null } };
-
-  const waterTempC: (number | null)[] | null = forecast?.waterTempC ?? null;
-  if (!waterTempC) return nullResult;
-
-  const valid = waterTempC.filter((v): v is number => v !== null && !isNaN(v));
-  if (!valid.length) return nullResult;
-
-  const avg = Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+  const marine = rawData["greeceOpenMeteoMarine"] as any;
   return {
     waterTemp: {
-      source: "OpenSkiron WRF 4km",
-      url,
-      text_de: `Wassertemperatur: ${avg}°C`,
+      source: "Open-Meteo Marine API",
+      url: marine?.url ?? null,
+      text_de: null,
     },
   };
 }
