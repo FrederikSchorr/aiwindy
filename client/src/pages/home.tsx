@@ -750,7 +750,29 @@ export default function Home() {
     xhr.open("POST", "/api/upload");
 
     let uploadStreamContent = "";
+    let uploadFinished = false;
     const getUploadStreamEl = () => document.getElementById(`stream-${assistantId}`);
+
+    const finishUpload = () => {
+      if (uploadFinished) return;
+      uploadFinished = true;
+      setMessages((prev) => {
+        if (!uploadStreamContent && !uploadHadError) return prev.filter(m => m.id !== assistantId);
+        if (!uploadStreamContent) return prev;
+        return prev.map((m) => m.id === assistantId ? { ...m, content: uploadStreamContent } : m);
+      });
+      if (photoExifMeta.locationName) {
+        const lastAnalysis = lastAnalysisLocationRef.current;
+        const isDifferentOrNone = !lastAnalysis || lastAnalysis !== photoExifMeta.locationName;
+        if (isDifferentOrNone) {
+          setPhotoLocationHints(prev => ({
+            ...prev,
+            [assistantId]: { locationName: photoExifMeta.locationName!, countryCode: photoExifMeta.countryCode }
+          }));
+        }
+      }
+      setIsStreaming(false);
+    };
 
     const processChunk = () => {
       const text = xhr.responseText.slice(processed);
@@ -759,6 +781,7 @@ export default function Home() {
       const lines = combined.split("\n");
       lineBuffer = lines.pop() || "";
       let hasError = false;
+      let hasDone = false;
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
@@ -799,6 +822,9 @@ export default function Home() {
               hasError = true;
               uploadHadError = true;
             }
+            if (data.done) {
+              hasDone = true;
+            }
           } catch {}
         }
       }
@@ -809,36 +835,25 @@ export default function Home() {
           )
         );
       }
+      if (hasDone) {
+        finishUpload();
+      }
     };
 
     xhr.onprogress = processChunk;
     xhr.onloadend = () => {
       lineBuffer += "\n";
       processChunk();
-      setMessages((prev) => {
-        if (!uploadStreamContent && !uploadHadError) return prev.filter(m => m.id !== assistantId);
-        if (!uploadStreamContent) return prev;
-        return prev.map((m) => m.id === assistantId ? { ...m, content: uploadStreamContent } : m);
-      });
-      if (photoExifMeta.locationName) {
-        const lastAnalysis = lastAnalysisLocationRef.current;
-        const isDifferentOrNone = !lastAnalysis || lastAnalysis !== photoExifMeta.locationName;
-        if (isDifferentOrNone) {
-          setPhotoLocationHints(prev => ({
-            ...prev,
-            [assistantId]: { locationName: photoExifMeta.locationName!, countryCode: photoExifMeta.countryCode }
-          }));
-        }
-      }
-      setIsStreaming(false);
+      finishUpload();
     };
     xhr.onerror = () => {
+      uploadHadError = true;
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
         )
       );
-      setIsStreaming(false);
+      finishUpload();
     };
 
     xhr.send(formData);
