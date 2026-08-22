@@ -42,6 +42,15 @@ interface AnalysisJobState {
   status: "pending" | "running" | "completed" | "failed";
 }
 
+interface UploadPreview {
+  url: string;
+  thumbnailUrl?: string;
+  time?: string | null;
+  locationName?: string | null;
+  countryCode?: string | null;
+  isVideo?: boolean;
+}
+
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker }: {
   lat: number; lon: number; overlay: string; product: string; level: string; zoom: number; forecast?: boolean; marker?: boolean;
 }) {
@@ -398,7 +407,7 @@ export default function Home() {
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
   const hasUploadedRef = useRef(false);
-  const [uploadPreviews, setUploadPreviews] = useState<Record<string, { url: string; time?: string | null; locationName?: string | null; countryCode?: string | null; isVideo?: boolean }>>({});
+  const [uploadPreviews, setUploadPreviews] = useState<Record<string, UploadPreview>>({});
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
@@ -427,6 +436,7 @@ export default function Home() {
   const analysisReconnectRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement>(null);
+  const uploadObjectUrlsRef = useRef(new Set<string>());
 
   const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
@@ -695,6 +705,12 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => () => {
+    for (const url of uploadObjectUrlsRef.current) {
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
   const handleFileUpload = useCallback((file: File) => {
     if (isStreaming) return;
     setIsStreaming(true);
@@ -709,11 +725,12 @@ export default function Home() {
 
     let photoExifMeta: { locationName: string | null; countryCode: string | null } = { locationName: null, countryCode: null };
 
+    const objectUrl = URL.createObjectURL(file);
+    uploadObjectUrlsRef.current.add(objectUrl);
     if (!isVideo) {
-      const objectUrl = URL.createObjectURL(file);
       setUploadPreviews(prev => ({ ...prev, [userId]: { url: objectUrl } }));
     } else {
-      setUploadPreviews(prev => ({ ...prev, [userId]: { url: "", isVideo: true } }));
+      setUploadPreviews(prev => ({ ...prev, [userId]: { url: objectUrl, isVideo: true } }));
     }
 
     setMessages((prev) => [
@@ -763,7 +780,14 @@ export default function Home() {
               photoExifMeta = { locationName: data.videoMeta.locationName ?? null, countryCode: data.videoMeta.countryCode ?? null };
               setUploadPreviews(prev => ({
                 ...prev,
-                [userId]: { url: thumbUrl, isVideo: true, time: data.videoMeta.time, locationName: data.videoMeta.locationName, countryCode: data.videoMeta.countryCode }
+                [userId]: {
+                  ...prev[userId],
+                  thumbnailUrl: thumbUrl || prev[userId]?.thumbnailUrl,
+                  isVideo: true,
+                  time: data.videoMeta.time,
+                  locationName: data.videoMeta.locationName,
+                  countryCode: data.videoMeta.countryCode,
+                }
               }));
             }
             if (data.content) {
@@ -963,15 +987,26 @@ export default function Home() {
                       <div>
                         {preview.isVideo ? (
                           <div className="relative">
-                            {preview.url ? (
-                              <img
+                            {preview.url.startsWith("blob:") ? (
+                              <video
                                 src={preview.url}
+                                poster={preview.thumbnailUrl}
+                                aria-label="Hochgeladenes Video"
+                                className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
+                                controls
+                                muted
+                                playsInline
+                                preload="metadata"
+                              />
+                            ) : preview.thumbnailUrl || preview.url ? (
+                              <img
+                                src={preview.thumbnailUrl || preview.url}
                                 alt="Standbild aus Video"
                                 className="rounded-2xl rounded-br-md max-w-full max-h-72 object-cover block"
                               />
                             ) : (
                               <div className="rounded-2xl rounded-br-md w-48 h-32 bg-muted flex items-center justify-center">
-                                <span className="text-muted-foreground text-sm">Lade...</span>
+                                <span className="text-muted-foreground text-sm">Videovorschau nicht verfügbar</span>
                               </div>
                             )}
                             <div className="absolute top-2 left-2 bg-black/60 rounded-md px-2 py-0.5 flex items-center gap-1">
