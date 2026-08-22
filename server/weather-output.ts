@@ -111,6 +111,11 @@ ${nationalSynopsis ?? "(nicht verfügbar)"}
 === LOKALE WETTERDATEN (weatherPreprocessed.local) ===
 ${JSON.stringify(local, null, 2)}
 
+=== QUELLEN-VORRANG FÜR LOKALE DATEN ===
+- wind, wave, cloudRainThunderstorm und temperature sind die Open-Meteo-Grundversorgung für bis zu sechs Tage.
+- nationalWind, nationalCloudRain, nationalTemperature und sailingareaForecast sind konkrete nationale Ergänzungen. Verwende deren Werte für die jeweils abgedeckten Zeiträume bevorzugt; Open-Meteo ergänzt ausschließlich fehlende Tage oder Wetterbereiche.
+- warnings ist ein separat geprüftes nationales Warnzentrum. Wenn vorhanden, seinen Text in Abschnitt 3 unverändert übernehmen.
+
 === WINDSYSTEME für ${position.country} ===
 ${windsystems || "(keine Daten)"}
 

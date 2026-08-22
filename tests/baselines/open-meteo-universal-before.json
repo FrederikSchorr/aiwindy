@@ -1,0 +1,50 @@
+{
+  "capturedAt": "2026-08-22T08:46:24.699Z",
+  "purpose": "Structural baseline before universal Open-Meteo local forecasts were introduced. Weather values are time-sensitive; compare data coverage, source attribution and warning behavior rather than numeric values.",
+  "browserEvidence": {
+    "morbiSch": {
+      "sections3to5": "eb1rvl",
+      "sources": "uv1gr8"
+    },
+    "punat": {
+      "analysis": "bij42y",
+      "sources": "w5ob7u"
+    }
+  },
+  "morbiSchAmSee": {
+    "analysisFile": "analyses/2026-08-22 10h45m08s Mörbisch am See.json",
+    "warningStatus": "Aktuell: Starkwindwarnung der LSZ Burgenland",
+    "sections": {
+      "windWaves": "- ⚠️ Aktuell: Starkwindwarnung der LSZ Burgenland\n- Heute (Sa 22.08.): 💨 NW 10-20 kt, ab 15:00 Uhr WNW 18-20 kt, danach abnehmend.\n- Morgen (So 23.08.): 💨 NNW 2-13 kt, ganztägig abnehmend, nachmittags Flaute.\n- Di–Do 25.–27.08.: 💨 Winddaten für diesen Zeitraum nicht verfügbar.",
+      "cloudsRain": "- Heute (Sa 22.08.): ☀️ Anfangs wolkenlos, ab 16:00 Uhr ☁️ zunehmend bewölkt bis vollständig (50–100%). 🌧️ Kein Regen.\n- Morgen (So 23.08.): ⛅ Morgens teilweise bewölkt (30–50%), danach ☀️ überwiegend wolkenlos. 🌧️ Kein Regen.\n- Mo–Do 24.–27.08.: ☀️ Überwiegend sonnig unter Hochdruckeinfluss, weitgehend trocken; ⛈️ geringes Gewitterrisiko.",
+      "temperature": "- 🌡️ Mörbisch am See: Heute max 26°C, morgen 17–25°C, übermorgen 15–26°C."
+    },
+    "sources": [
+      "Windy",
+      "Austrocontrol",
+      "GeoSphere Austria NWP API",
+      "LSZ Burgenland",
+      "Meteonews",
+      "Wetterzentrale",
+      "KNMI"
+    ]
+  },
+  "punat": {
+    "analysisFile": "analyses/2026-08-22 10h45m58s Punat.json",
+    "warningStatus": "Aktuell (22.08.2026, 08:00 MESZ): Am Abend und in der Nacht im nördlichen Adria stellenweise Böen aus NE mit 35–45 Knoten. Im nördlichen und mittleren Adria stellenweise Gewitter möglich.",
+    "sections": {
+      "windWaves": "- ⚠️ Am Abend und in der Nacht im nördlichen Adria stellenweise Böen aus NE mit 35–45 Knoten. Im nördlichen und mittleren Adria stellenweise Gewitter möglich.\n- Heute (Sa 22.08.): 💨 Jugo/Garbin SO–SW 6-16 kt, dann Flaute; nachmittags Maestral NW, abends/nachts ⚠️ Bura NO 6-16 kt, örtlich 20 kt, unter Velebit 35-45 kt 🌊 See 2-3 mäßig bewegt\n- Morgen (So 23.08.): 💨 Bura NO 6-16 kt, örtlich bis 20 kt; unter Velebit nachts bis 24 kt 🌊 See 2-3 mäßig bewegt\n- Übermorgen (Mo 24.08.): 💨 Winddaten für diesen Zeitraum nicht verfügbar.\n- Di–Do 25.–27.08.: 💨 Winddaten für diesen Zeitraum nicht verfügbar.",
+      "cloudsRain": "- Heute (Sa 22.08.): ⛅ Wechselnd bewölkt, 🌧️ örtlich Regen und Schauer, ⛈️ Gewitterrisiko vorhanden.\n- Morgen (So 23.08.): ⛅ Wechselnd bewölkt, 🌧️ örtlich Regen und Schauer, ⛈️ Gewitterrisiko möglich.\n- Mo–Do 24.–27.08.: ☁️ Keine regionalen Wolken- und Niederschlagsdaten für diesen Zeitraum verfügbar.",
+      "temperature": "- 🌡️ Krk: Heute 25–33°C (Daten aus Juniperiode — aktuelle Augustwerte nicht verfügbar)."
+    },
+    "sources": [
+      "Windy",
+      "DHMZ Jadran API",
+      "DHMZ Pomorci API",
+      "DHMZ Meteogrami API",
+      "Meteonews",
+      "Wetterzentrale",
+      "KNMI"
+    ]
+  }
+}

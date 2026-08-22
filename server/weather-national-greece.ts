@@ -47,13 +47,13 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
     });
     if (!res.ok) {
       console.error(`HNMS gale fetch failed (${res.status})`);
-      return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null };
+      return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null, available: false };
     }
     const html = await res.text();
 
     const printable = html.match(/id="printableArea">([\s\S]*?)<\/div>\s*<\/div>/i);
     if (!printable) {
-      return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null };
+      return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null, available: false };
     }
 
     const text = printable[1]
@@ -63,10 +63,10 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
       .filter(l => l !== "National Meteorological Center")
       .join("\n");
 
-    return { source: "HNMS", url: HNMS_BULLETIN_URL, text: text || null };
+    return { source: "HNMS", url: HNMS_BULLETIN_URL, text: text || null, available: Boolean(text) };
   } catch (e) {
     console.error("fetchHnmsGaleWarning error:", e instanceof Error ? e.message : e);
-    return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null };
+    return { source: "HNMS", url: HNMS_BULLETIN_URL, text: null, available: false };
   }
 }
 
@@ -293,11 +293,26 @@ export async function fetchGreeceWeather(
       : null,
   };
 
-  const sourceUrls = [
-    `Griechenland Wetterlage und Warnungen von [HNMS](${HNMS_SOURCE_URL})`,
-    `Wind, Wolken, Regen, Gewitter, Temperatur von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
-    `Wellen und Dünung von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`,
-  ];
+  const sourceUrls: string[] = [];
+  if ((hnms as any).available) {
+    sourceUrls.push(`Griechenland Wetterlage und Warnungen von [HNMS](${HNMS_SOURCE_URL})`);
+  }
+  if (forecastRaw) {
+    const provided = ["Wind", "Wolken", "Regen", "Gewitter"];
+    const hasCityTemperature = Array.isArray(cityForecastRaw?.hourly?.temperature_2m)
+      && cityForecastRaw.hourly.temperature_2m.some(
+        (value: unknown) => typeof value === "number" && Number.isFinite(value),
+      );
+    if (hasCityTemperature) provided.push("Temperatur");
+    sourceUrls.push(
+      `${provided.join(", ")} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
+    );
+  }
+  if (Array.isArray(marineRaw?.hourly?.wave_height) && marineRaw.hourly.wave_height.some(
+    (value: unknown) => typeof value === "number" && Number.isFinite(value),
+  )) {
+    sourceUrls.push(`Wellen und Dünung von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`);
+  }
 
   return { data, sourceUrls };
 }
@@ -397,13 +412,11 @@ export async function extractGreeceWarning(
   anthropic: Anthropic,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  if (!galeData || !emyName) {
-    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: "Aktuell: Keine Sturmwarnung von HNMS" } };
-  }
-
-  const text = galeData["text"] as string | null;
-  if (!text) {
-    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: "Aktuell: Keine Sturmwarnung von HNMS" } };
+  const text = galeData?.["text"] as string | null;
+  // An unreachable or malformed national bulletin must never be displayed as an
+  // all-clear. Its availability is shown separately in the source status.
+  if (!galeData?.["available"] || !text || !emyName) {
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null } };
   }
 
   const headerLine = text.split("\n").find(l => /ATHENS,.*\/\s*\d{4}\s+UTC/i.test(l)) ?? "";
@@ -658,7 +671,7 @@ export async function preprocessGreeceLocalCloudRainThunderstorm(
     });
   }
 
-  const days = Array.from(byDate.entries()).slice(0, 2);
+  const days = Array.from(byDate.entries()).slice(0, 6);
   if (!days.length) return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
 
   const hasThunderstorm = days.some(([, rows]) => rows.some(r => r.cape >= 1000));
@@ -685,7 +698,7 @@ ${table}`;
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
+      max_tokens: 350,
       messages: [{ role: "user", content: prompt }],
     }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;

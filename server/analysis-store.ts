@@ -25,6 +25,11 @@ export interface AnalysisSources {
   windy: string[];
   national: string[];
   europe: string[];
+  nationalWarningCenter?: {
+    status: "integrated" | "unavailable" | "unsupported";
+    label?: string;
+    url?: string;
+  };
 }
 
 export interface AnalysisMeta {
@@ -276,8 +281,8 @@ export function createAnalysis(position: AnalysisPosition): {
       }
       const replacer = (_key: string, value: unknown) => {
         if (_key.endsWith("Base64")) return undefined;
-        if ((_key === "austriaWindCloudRain" || _key === "greeceOpenMeteoForecast" || _key === "greeceOpenMeteoMarine") && value && typeof value === "object") {
-          if (_key.startsWith("greeceOpenMeteo")) return compactForecastData(value);
+        if ((_key === "austriaWindCloudRain" || _key === "greeceOpenMeteoForecast" || _key === "greeceOpenMeteoMarine" || _key === "openMeteoForecast" || _key === "openMeteoMarine") && value && typeof value === "object") {
+          if (_key.startsWith("greeceOpenMeteo") || _key.startsWith("openMeteo")) return compactForecastData(value);
           const obj = { ...(value as Record<string, unknown>) };
           for (const [k, v] of Object.entries(obj)) {
             if (Array.isArray(v) && v.length > 20) obj[k] = v.filter((_, i) => i % 3 === 0);

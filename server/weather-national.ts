@@ -25,6 +25,12 @@ import {
   preprocessGreeceLocalTemperature,
   preprocessGreeceLocalWaterTemp,
 } from "./weather-national-greece.js";
+import {
+  fetchOpenMeteoWeather,
+  getOpenMeteoTimezone,
+  preprocessOpenMeteoLocal,
+  type OpenMeteoTarget,
+} from "./weather-open-meteo.js";
 
 function getGreekEmyName(sailingAreaNameDe: string | null): string | null {
   if (!sailingAreaNameDe) return null;
@@ -46,6 +52,57 @@ type CityObj =
   | null
   | undefined;
 
+export type NationalWarningCenter = {
+  status: "integrated" | "unavailable" | "unsupported";
+  label?: string;
+  url?: string;
+};
+
+function warningCenterFor(
+  countryCode: string,
+  data: Record<string, unknown>,
+  sailingAreaName?: string | null,
+): NationalWarningCenter {
+  if (countryCode === "GR") {
+    const bulletin = data["greeceMarineForecast"] as any;
+    return bulletin?.available || bulletin?.text
+      ? { status: "integrated", label: "HNMS Griechenland", url: bulletin?.url }
+      : { status: "unavailable", label: "HNMS Griechenland", url: bulletin?.url };
+  }
+  if (countryCode === "HR") {
+    const report = data["croatiaAdriaRegional"] as any;
+    return report?.xml
+      ? { status: "integrated", label: "DHMZ Kroatien", url: report?.url }
+      : { status: "unavailable", label: "DHMZ Kroatien", url: report?.url };
+  }
+  if (countryCode === "AT" && sailingAreaName?.toLowerCase().includes("neusiedler")) {
+    const report = data["austriaNeusiedlerLakeWarnings"] as any;
+    return report?.text_de
+      ? { status: "integrated", label: "LSZ Burgenland", url: report?.url }
+      : { status: "unavailable", label: "LSZ Burgenland", url: report?.url };
+  }
+  return { status: "unsupported" };
+}
+
+function targetsFor(
+  coordinates: { lat: number; lon: number } | undefined,
+  sailingAreaObj: SailingAreaObj,
+  cityObj: CityObj,
+): { sailingArea: OpenMeteoTarget; city: OpenMeteoTarget } | null {
+  const fallback = coordinates ?? sailingAreaObj?.coordinates ?? cityObj?.coordinates;
+  if (!fallback) return null;
+  return {
+    sailingArea: {
+      name_de: sailingAreaObj?.name_de ?? cityObj?.name_de ?? "Lokale Prognose",
+      coordinates: sailingAreaObj?.coordinates ?? fallback,
+    },
+    city: {
+      name_de: cityObj?.name_de ?? sailingAreaObj?.name_de ?? "Lokale Prognose",
+      coordinates: cityObj?.coordinates ?? fallback,
+    },
+  };
+}
+
 export async function fetchNationalWeather(
   countryCode: string,
   coordinates?: { lat: number; lon: number },
@@ -57,22 +114,39 @@ export async function fetchNationalWeather(
 ): Promise<{
   data: Record<string, unknown>;
   sourceUrls: string[];
+  warningCenter: NationalWarningCenter;
 }> {
-  switch (countryCode) {
-    case "HR":
-      return fetchCroatiaWeather(sailingAreaName);
-    case "AT":
-      return fetchAustriaWeather(sailingAreaObj, cityObj);
-    case "GR":
-      return fetchGreeceWeather(sailingAreaObj, cityObj, onProgress);
-    default:
-      return {
-        data: {},
-        sourceUrls: [
-          `Keine lokalen Wetterdaten für ${country || countryCode} angebunden`,
-        ],
-      };
+  // Greece already has an Open-Meteo adapter paired with its HNMS bulletin.
+  // Keep that tested integration as-is and avoid duplicate API calls there.
+  if (countryCode === "GR") {
+    const greece = await fetchGreeceWeather(sailingAreaObj, cityObj, onProgress);
+    return {
+      ...greece,
+      warningCenter: warningCenterFor(countryCode, greece.data, sailingAreaName),
+    };
   }
+
+  const targets = targetsFor(coordinates, sailingAreaObj, cityObj);
+  const nationalPromise = countryCode === "HR"
+    ? fetchCroatiaWeather(sailingAreaName)
+    : countryCode === "AT"
+      ? fetchAustriaWeather(sailingAreaObj, cityObj)
+      : Promise.resolve({ data: {} as Record<string, unknown>, sourceUrls: [] as string[] });
+  const openMeteoPromise = targets
+    ? fetchOpenMeteoWeather(
+      targets.sailingArea,
+      targets.city,
+      getOpenMeteoTimezone(countryCode),
+      onProgress,
+    )
+    : Promise.resolve({ data: {} as Record<string, unknown>, sourceUrls: [] as string[] });
+  const [national, openMeteo] = await Promise.all([nationalPromise, openMeteoPromise]);
+
+  return {
+    data: { ...national.data, ...openMeteo.data },
+    sourceUrls: [...national.sourceUrls, ...openMeteo.sourceUrls],
+    warningCenter: warningCenterFor(countryCode, national.data, sailingAreaName),
+  };
 }
 
 export async function preprocessNationalWeather(
@@ -108,12 +182,21 @@ export async function preprocessLocalWeather(
   countryCode?: string,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
+  const genericLocal = preprocessOpenMeteoLocal(
+    rawData,
+    getOpenMeteoTimezone(countryCode ?? ""),
+  );
+
   if (countryCode === "AT") {
+    const nationalWind = await preprocessLocalWindAT(rawData, anthropic, signal);
+    const nationalCloudRain = await preprocessLocalCloudRainAT(rawData, anthropic, signal);
+    const nationalTemperature = preprocessLocalWeatherAT(rawData);
     return {
+      ...genericLocal,
       ...preprocessLocalWarningsNeusiedler(rawData, position.sailingArea),
-      ...(await preprocessLocalWindAT(rawData, anthropic, signal)),
-      ...(await preprocessLocalCloudRainAT(rawData, anthropic, signal)),
-      ...preprocessLocalWeatherAT(rawData),
+      nationalWind: nationalWind["wind"],
+      nationalCloudRain: nationalCloudRain["cloudRain"],
+      nationalTemperature: nationalTemperature["temperature"],
     };
   }
 
@@ -130,7 +213,7 @@ export async function preprocessLocalWeather(
     };
   }
 
-  if (countryCode !== "HR") return {};
+  if (countryCode !== "HR") return genericLocal;
 
   const regionalXml = (rawData["croatiaAdriaRegional"] as any)?.xml as
     | string
@@ -163,6 +246,7 @@ export async function preprocessLocalWeather(
     : null;
 
   return {
+    ...genericLocal,
     warnings: {
       source: "DHMZ",
       url: "https://prognoza.hr/pomorci.xml",
@@ -175,7 +259,7 @@ export async function preprocessLocalWeather(
       sailingArea: position.sailingArea ?? null,
       text_de: forecastText,
     },
-    temperature: {
+    nationalTemperature: {
       source: "DHMZ",
       url: "https://prognoza.hr/sedam/hrvatska/7d_meteogrami.xml",
       city: localResult?.city ?? null,

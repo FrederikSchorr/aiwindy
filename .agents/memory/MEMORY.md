@@ -1,3 +1,4 @@
 - [Weather output format](weather-output-format.md) — use section markers not JSON; Claude embeds ASCII quotes inside JSON strings (e.g. „Quella") that break parsers
 - [Dependency security overrides](dependency-security-overrides.md) — keep transitive security fixes pinned with npm overrides and require a clean full audit
 - [Background analysis jobs](background-analysis-jobs.md) — weather analyses are socket-independent capability-scoped jobs with replayable events
+- [Universal local forecasts](universal-local-forecasts.md) — Open-Meteo provides six-day baseline data; national detail and warnings remain distinct, higher-priority evidence
