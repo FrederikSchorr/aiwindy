@@ -25,6 +25,16 @@ interface SSEPayload {
   error?: string;
   done?: boolean;
   loadingStatus?: string;
+  analysisJobId?: string;
+  analysisToken?: string;
+  analysisEventId?: number;
+}
+
+interface AnalysisJobState {
+  jobId: string;
+  token: string;
+  messageId: string;
+  status: "pending" | "running" | "completed" | "failed";
 }
 
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker }: {
@@ -374,6 +384,7 @@ export default function Home() {
   const [messageAnalysisFileNames, setMessageAnalysisFileNames] = useState<Record<string, string>>({});
   const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, string | boolean>>({});
+  const [analysisJobs, setAnalysisJobs] = useState<Record<string, AnalysisJobState>>({});
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
   const lastAnalysisLocationRef = useRef<string | null>(null);
@@ -381,6 +392,17 @@ export default function Home() {
   const lastAnalysisOutputRef = useRef<WeatherOutputData | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const analysisSessionRef = useRef<{
+    jobId: string | null;
+    token: string | null;
+    assistantId: string;
+    xhr: XMLHttpRequest | null;
+    done: boolean;
+    failed: boolean;
+    reconnectTimer: number | null;
+    seenEventIds: Set<number>;
+  } | null>(null);
+  const analysisReconnectRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement>(null);
 
@@ -390,6 +412,17 @@ export default function Home() {
     let processed = 0;
     let lineBuffer = "";
     let isAnalyse = false;
+    let chatStreamContent = "";
+    const session = {
+      jobId: null as string | null,
+      token: null as string | null,
+      assistantId,
+      xhr: null as XMLHttpRequest | null,
+      done: false,
+      failed: false,
+      reconnectTimer: null as number | null,
+      seenEventIds: new Set<number>(),
+    };
 
     setMessages((prev) => [...prev, {
       id: assistantId,
@@ -397,16 +430,68 @@ export default function Home() {
       content: "",
     }]);
 
-    const xhr = new XMLHttpRequest();
-    abortRef.current = { abort: () => xhr.abort() } as AbortController;
-    xhr.open("POST", "/api/chat");
-    xhr.setRequestHeader("Content-Type", "application/json");
-
-    let chatStreamContent = "";
-
     const getChatStreamEl = () => document.getElementById(`stream-${assistantId}`);
+    const clearReconnectTimer = () => {
+      if (session.reconnectTimer !== null) {
+        window.clearTimeout(session.reconnectTimer);
+        session.reconnectTimer = null;
+      }
+    };
+    const finishAnalysis = () => {
+      if (session.done === false) return;
+      clearReconnectTimer();
+      setLoadingStatus(null);
+      setIsStreaming(false);
+      if (session.jobId) {
+        setAnalysisJobs(prev => ({
+          ...prev,
+          [assistantId]: {
+            jobId: session.jobId!,
+            token: session.token!,
+            messageId: assistantId,
+            status: session.failed ? "failed" : "completed",
+          },
+        }));
+      }
+      if (!uploadHintShownRef.current && !hasUploadedRef.current) {
+        uploadHintShownRef.current = true;
+        setUploadHintAfterMsgId(assistantId);
+      }
+      if (analysisSessionRef.current === session) {
+        analysisSessionRef.current = null;
+        analysisReconnectRef.current = null;
+      }
+    };
+
+    let connectResume: () => void;
+    const scheduleResume = () => {
+      if (session.done || !session.jobId || !session.token) return;
+      clearReconnectTimer();
+      session.reconnectTimer = window.setTimeout(() => {
+        session.reconnectTimer = null;
+        connectResume();
+      }, 800);
+    };
 
     const handleEvent = (data: SSEPayload) => {
+      if (typeof data.analysisEventId === "number") {
+        if (session.seenEventIds.has(data.analysisEventId)) return;
+        session.seenEventIds.add(data.analysisEventId);
+      }
+      if (data.analysisJobId && data.analysisToken) {
+        isAnalyse = true;
+        session.jobId = data.analysisJobId;
+        session.token = data.analysisToken;
+        setAnalysisJobs(prev => ({
+          ...prev,
+          [assistantId]: {
+            jobId: data.analysisJobId!,
+            token: data.analysisToken!,
+            messageId: assistantId,
+            status: "running",
+          },
+        }));
+      }
       if (data.loadingStatus) {
         setLoadingStatus(data.loadingStatus);
       }
@@ -433,12 +518,10 @@ export default function Home() {
       if (data.sources) {
         setMessageSources(prev => ({ ...prev, [assistantId]: data.sources! }));
       }
-      if (data.done) {
-        setLoadingStatus(null);
-      }
       if (data.error) {
         setLoadingStatus(null);
         if (isAnalyse) {
+          session.failed = true;
           setAnalysisErrors(prev => ({ ...prev, [assistantId]: data.error! }));
         } else {
           setMessages((prev) =>
@@ -448,49 +531,114 @@ export default function Home() {
           );
         }
       }
-    };
-
-    const processChunk = () => {
-      const text = xhr.responseText.slice(processed);
-      processed = xhr.responseText.length;
-      const combined = lineBuffer + text;
-      const lines = combined.split("\n");
-      lineBuffer = lines.pop() || "";
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.content && !isAnalyse) {
-              chatStreamContent += data.content;
-              const el = getChatStreamEl();
-              if (el) el.textContent = chatStreamContent;
-            } else if (!data.content) {
-              handleEvent(data);
-            }
-          } catch {}
+      if (data.done) {
+        setLoadingStatus(null);
+        if (isAnalyse) {
+          session.done = true;
+          finishAnalysis();
         }
       }
     };
 
-    xhr.onprogress = processChunk;
+    const processSseText = (text: string, isInitialRequest: boolean) => {
+      const previousProcessed = isInitialRequest ? processed : 0;
+      const previousBuffer = isInitialRequest ? lineBuffer : "";
+      const incoming = text.slice(previousProcessed);
+      if (isInitialRequest) processed = text.length;
+      const lines = (previousBuffer + incoming).split("\n");
+      if (isInitialRequest) lineBuffer = lines.pop() || "";
+      else lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const data = JSON.parse(line.slice(6)) as SSEPayload;
+          if (data.content && !isAnalyse) {
+            chatStreamContent += data.content;
+            const el = getChatStreamEl();
+            if (el) el.textContent = chatStreamContent;
+          } else {
+            handleEvent(data);
+          }
+        } catch {
+          // A partial SSE line is retained by the streaming connection.
+        }
+      }
+    };
+
+    connectResume = () => {
+      if (session.done || !session.jobId || !session.token) return;
+      if (session.xhr && session.xhr.readyState !== XMLHttpRequest.DONE) return;
+      const resumeXhr = new XMLHttpRequest();
+      let resumeProcessed = 0;
+      let resumeBuffer = "";
+      session.xhr = resumeXhr;
+      resumeXhr.open("GET", `/api/analysis/${encodeURIComponent(session.jobId)}/events`);
+      resumeXhr.setRequestHeader("X-Analysis-Token", session.token);
+      const processResume = () => {
+        const incoming = resumeXhr.responseText.slice(resumeProcessed);
+        resumeProcessed = resumeXhr.responseText.length;
+        const lines = (resumeBuffer + incoming).split("\n");
+        resumeBuffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            handleEvent(JSON.parse(line.slice(6)) as SSEPayload);
+          } catch {
+            // The next progress event will retry any incomplete payload.
+          }
+        }
+      };
+      resumeXhr.onprogress = processResume;
+      resumeXhr.onloadend = () => {
+        resumeBuffer += "\n";
+        processResume();
+        if (session.xhr === resumeXhr) session.xhr = null;
+        if (!session.done) scheduleResume();
+      };
+      resumeXhr.onerror = () => {
+        if (session.xhr === resumeXhr) session.xhr = null;
+        scheduleResume();
+      };
+      resumeXhr.send();
+    };
+
+    analysisSessionRef.current = session;
+    analysisReconnectRef.current = () => {
+      if (session.done || !session.jobId) return;
+      clearReconnectTimer();
+      const activeXhr = session.xhr;
+      session.xhr = null;
+      if (activeXhr && activeXhr.readyState !== XMLHttpRequest.DONE) activeXhr.abort();
+      window.setTimeout(connectResume, 0);
+    };
+
+    const xhr = new XMLHttpRequest();
+    session.xhr = xhr;
+    abortRef.current = { abort: () => xhr.abort() } as AbortController;
+    xhr.open("POST", "/api/chat");
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onprogress = () => processSseText(xhr.responseText, true);
     xhr.onloadend = () => {
       lineBuffer += "\n";
-      processChunk();
-      if (!isAnalyse) {
-        setMessages((prev) => {
-          const msg = prev.find(m => m.id === assistantId);
-          if (msg && !chatStreamContent) return prev.filter(m => m.id !== assistantId);
-          return prev.map((m) => m.id === assistantId ? { ...m, content: chatStreamContent } : m);
-        });
+      processSseText(xhr.responseText, true);
+      if (session.xhr === xhr) session.xhr = null;
+      if (isAnalyse) {
+        if (!session.done) scheduleResume();
+        return;
       }
-      if (isAnalyse && !uploadHintShownRef.current && !hasUploadedRef.current) {
-        uploadHintShownRef.current = true;
-        setUploadHintAfterMsgId(assistantId);
-      }
+      setMessages((prev) => {
+        const msg = prev.find(m => m.id === assistantId);
+        if (msg && !chatStreamContent) return prev.filter(m => m.id !== assistantId);
+        return prev.map((m) => m.id === assistantId ? { ...m, content: chatStreamContent } : m);
+      });
       setLoadingStatus(null);
       setIsStreaming(false);
     };
     xhr.onerror = () => {
+      if (isAnalyse || session.jobId) {
+        scheduleResume();
+        return;
+      }
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId ? { ...m, content: "Verbindungsfehler. Bitte versuche es erneut." } : m
@@ -510,6 +658,20 @@ export default function Home() {
       currentLocation: activeLocation,
     }));
   }, [messages, activeLocation]);
+
+  useEffect(() => {
+    const reconnectVisibleAnalysis = () => {
+      if (document.visibilityState === "visible") {
+        analysisReconnectRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", reconnectVisibleAnalysis);
+    window.addEventListener("online", reconnectVisibleAnalysis);
+    return () => {
+      document.removeEventListener("visibilitychange", reconnectVisibleAnalysis);
+      window.removeEventListener("online", reconnectVisibleAnalysis);
+    };
+  }, []);
 
   const handleFileUpload = useCallback((file: File) => {
     if (isStreaming) return;

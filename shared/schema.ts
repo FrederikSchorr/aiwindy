@@ -60,6 +60,13 @@ export interface WeatherOutputData {
   temperature: WeatherOutputSection;
 }
 
+export type AnalysisJobStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";

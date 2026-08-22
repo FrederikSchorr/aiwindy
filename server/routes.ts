@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { geocodeRequestSchema } from "@shared/schema";
+import { geocodeRequestSchema, type GeocodeResult } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
 import exifParser from "exif-parser";
@@ -24,7 +24,17 @@ import {
   setCachedLocation,
   getRegionalModelFallback,
 } from "./location.js";
-import { createAnalysis } from "./analysis-store.js";
+import {
+  completeAnalysisJob,
+  cancelAnalysisJob,
+  createAnalysis,
+  createAnalysisJob,
+  failAnalysisJob,
+  getAnalysisJobSnapshot,
+  publishAnalysisEvent,
+  subscribeToAnalysisJob,
+  type AnalysisPosition,
+} from "./analysis-store.js";
 
 import sailingAreasData from "../data/sailingareas.json" with { type: "json" };
 import windSystemsData from "../data/windsystems.json" with { type: "json" };
@@ -60,8 +70,11 @@ const WIND_SYSTEMS_SUMMARY = buildWindSystemsSummary();
 
 const MAX_CONCURRENT_CHAT = 5;
 const MAX_CONCURRENT_UPLOAD = 3;
+const MAX_CONCURRENT_ANALYSIS = 3;
 let activeChatRequests = 0;
 let activeUploadRequests = 0;
+let activeAnalysisJobs = 0;
+const activeAnalysisAbortControllers = new Map<string, AbortController>();
 import {
   fetchMeteonews,
   preprocessMeteonews,
@@ -822,6 +835,207 @@ Format: "- 🌡️ Heute: bis [Höchstwert]°C, nachts [Tiefstwert]°C, morgen b
 
 ${SECTION_STYLE}`;
 
+type AnalysisJobContext = {
+  jobId: string;
+  location: GeocodeResult;
+  userInput: string;
+  country: string;
+  countryCode: string;
+  sailingArea: NonNullable<AnalysisPosition["sailingArea"]> | null;
+  city: NonNullable<AnalysisPosition["city"]>;
+  regional: { model: string; label: string };
+  signal: AbortSignal;
+};
+
+/**
+ * Runs independently of the HTTP request that created the job. All progress
+ * is kept in the job store so a mobile browser can reconnect at any time.
+ */
+async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
+  const {
+    jobId,
+    location,
+    userInput,
+    country,
+    countryCode,
+    sailingArea,
+    city,
+    regional,
+    signal,
+  } = context;
+  const publish = (data: Record<string, unknown>) => publishAnalysisEvent(jobId, data);
+
+  try {
+    publish({ loadingStatus: "Lade Europa Wetterkarten" });
+
+    const analysis = createAnalysis({
+      userInput,
+      country,
+      countryCode,
+      windyModel: regional.label,
+      sailingArea,
+      city,
+    });
+
+    const lat = location.lat;
+    const lon = location.lon;
+    const saLat = sailingArea?.coordinates.lat ?? city.coordinates.lat;
+    const saLon = sailingArea?.coordinates.lon ?? city.coordinates.lon;
+    analysis.data.sources.windy.push(
+      ...getWindySources(
+        regional,
+        { lat: saLat, lon: saLon },
+        sailingArea?.name_de ?? city.name_de,
+      ),
+    );
+
+    const meteonewsText = await fetchMeteonews();
+    analysis.data.weatherRaw["generalWeather"] = {
+      source: "meteonews",
+      text_de: meteonewsText || null,
+    };
+    if (meteonewsText) {
+      const preprocessed = await preprocessMeteonews(meteonewsText, anthropic, signal);
+      analysis.data.weatherPreprocessed.europe["generalWeather"] = {
+        source: "meteonews",
+        text_de: preprocessed || null,
+      };
+    } else {
+      analysis.data.weatherPreprocessed.europe["generalWeather"] = {
+        source: "meteonews",
+        text_de: null,
+      };
+    }
+
+    const localTz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
+    const fmtLocal = (d: Date) =>
+      new Intl.DateTimeFormat("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: localTz,
+      }).format(d);
+    const runUtc = currentRunDate();
+    const fcTarget = nextForecastTarget();
+    const currentTs = `Aktuell ${fmtLocal(runUtc)} Ortszeit`;
+    const forecastTs = `Forecast ${fmtLocal(fcTarget)} Ortszeit`;
+
+    const wz850Current = await fetchWetterzentraleChart(
+      buildWetterzentraleCurrentUrl(),
+    );
+    analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
+      source: "Wetterzentrale",
+      url: wz850Current?.url ?? null,
+      imageBase64: wz850Current?.imageBase64 ?? null,
+      timestamp: currentTs,
+    };
+    const wz850Forecast = await fetchWetterzentraleChart(
+      buildWetterzentraleForecastUrl(),
+    );
+    analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
+      source: "Wetterzentrale",
+      url: wz850Forecast?.url ?? null,
+      imageBase64: wz850Forecast?.imageBase64 ?? null,
+      timestamp: forecastTs,
+    };
+    const knmi = await fetchKnmiChart();
+    analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
+      source: "KNMI",
+      url: knmi?.url ?? null,
+      imageBase64: knmi?.imageBase64 ?? null,
+      timestamp: currentTs,
+    };
+    const knmiForecast = await fetchKnmiForecast();
+    analysis.data.weatherPreprocessed.europe["frontForecast"] = {
+      source: "KNMI",
+      url: knmiForecast?.url ?? null,
+      imageBase64: knmiForecast?.imageBase64 ?? null,
+      timestamp: forecastTs,
+    };
+    analysis.data.sources.europe.push(...getEuropeSources());
+
+    const knmiUtcHour = Math.floor(new Date().getUTCHours() / 6) * 6;
+    const knmiUtcDate = new Date();
+    knmiUtcDate.setUTCHours(knmiUtcHour, 0, 0, 0);
+    const tz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
+    const frontCurrentLocalTime = new Intl.DateTimeFormat("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: tz,
+    }).format(knmiUtcDate);
+
+    publish({
+      weatherEurope: {
+        frontCurrentBase64: knmi?.imageBase64 ?? null,
+        frontCurrentUrl: knmi?.url ?? null,
+        frontCurrentLocalTime,
+      },
+    });
+    analysis.save();
+    publish({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
+
+    const national = await fetchNationalWeather(
+      countryCode,
+      { lat, lon },
+      sailingArea?.name_de ?? null,
+      sailingArea,
+      city,
+      country,
+      (status) => publish({ loadingStatus: status }),
+    );
+    Object.assign(analysis.data.weatherRaw, national.data);
+    for (const url of national.sourceUrls) analysis.data.sources.national.push(url);
+    if (national.openskironMeta) {
+      analysis.data.position.openskiron_domain = national.openskironMeta;
+    }
+    const nationalPre = await preprocessNationalWeather(
+      analysis.data.weatherRaw,
+      anthropic,
+      countryCode,
+      signal,
+    );
+    Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
+    const localPre = await preprocessLocalWeather(
+      analysis.data.weatherRaw,
+      {
+        userInput: analysis.data.position.userInput,
+        city: city.name_de,
+        sailingArea: sailingArea?.name_de ?? null,
+      },
+      anthropic,
+      countryCode,
+      signal,
+    );
+    Object.assign(analysis.data.weatherPreprocessed.local, localPre);
+    analysis.save();
+
+    publish({ loadingStatus: "Interpretieren der lokalen Wetterdaten" });
+    const weatherOutput = await generateWeatherOutput(analysis.data, anthropic, signal);
+    Object.assign(analysis.data.weatherOutput, weatherOutput);
+    analysis.save();
+    publish({
+      weatherOutput,
+      sources: analysis.data.sources,
+      analysisJson: analysis.getExportData(),
+      analysisFileName: path.basename(analysis.filePath),
+    });
+
+    const analysisLabel =
+      sailingArea?.name_de ?? city.name_de ?? location.displayName.split(",")[0].trim();
+    publish({ content: `Wetteranalyse für **${analysisLabel}** ${countryFlag(countryCode)}` });
+    completeAnalysisJob(jobId);
+  } catch (error) {
+    console.error("Background analysis error:", error);
+    const errMsg = error instanceof Error ? error.message : "Fehler bei der Wetteranalyse";
+    failAnalysisJob(jobId, errMsg);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
@@ -857,6 +1071,57 @@ export async function registerRoutes(
     } catch {
       return res.status(500).json({ error: "Failed to geocode location." });
     }
+  });
+
+  app.get("/api/analysis/:jobId", (req, res) => {
+    const token = req.get("x-analysis-token") || "";
+    const snapshot = getAnalysisJobSnapshot(req.params.jobId, token);
+    if (!snapshot) return res.status(404).json({ error: "Analyse nicht gefunden" });
+    return res.json(snapshot);
+  });
+
+  app.get("/api/analysis/:jobId/events", (req, res) => {
+    const token = req.get("x-analysis-token") || "";
+    const jobId = req.params.jobId;
+    let clientGone = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const snapshot = getAnalysisJobSnapshot(jobId, token);
+    if (!snapshot) return res.status(404).json({ error: "Analyse nicht gefunden" });
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-store");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    if (req.socket) req.socket.setNoDelay(true);
+
+    const sendEvent = (event: { id: number; data: Record<string, unknown> }) => {
+      if (clientGone || res.writableEnded) return;
+      res.write(`id: ${event.id}\ndata: ${JSON.stringify(event.data)}\n\n`);
+      if (event.data.done) {
+        unsubscribe?.();
+        res.end();
+      }
+    };
+
+    unsubscribe = subscribeToAnalysisJob(jobId, token, sendEvent);
+    if (!unsubscribe && !res.writableEnded) {
+      return res.status(404).json({ error: "Analyse nicht gefunden" });
+    }
+    req.on("close", () => {
+      clientGone = true;
+      unsubscribe?.();
+    });
+  });
+
+  app.delete("/api/analysis/:jobId", (req, res) => {
+    const token = req.get("x-analysis-token") || "";
+    const cancelled = cancelAnalysisJob(req.params.jobId, token);
+    if (!cancelled) return res.status(404).json({ error: "Analyse nicht gefunden oder bereits beendet" });
+    activeAnalysisAbortControllers.get(req.params.jobId)?.abort();
+    activeAnalysisAbortControllers.delete(req.params.jobId);
+    return res.status(204).end();
   });
 
 
@@ -1262,9 +1527,12 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
     const abortController = new AbortController();
     let clientGone = false;
+    let requestIsAnalysis = false;
     req.on("close", () => {
       clientGone = true;
-      abortController.abort();
+      // General chat still cancels with the request. Once an analysis job has
+      // been created, its work is deliberately independent of this socket.
+      if (!requestIsAnalysis) abortController.abort();
     });
 
     const sendSSE = (data: Record<string, unknown>) => {
@@ -1486,8 +1754,17 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         return;
       }
 
+      if (activeAnalysisJobs >= MAX_CONCURRENT_ANALYSIS) {
+        sendSSE({
+          content: "Es laufen bereits mehrere Wetteranalysen. Bitte warte kurz und versuche es erneut.",
+        });
+        sendSSE({ done: true });
+        res.end();
+        return;
+      }
+
       // SSE location object (frontend-compatible)
-      const geocoded = {
+      const geocoded: GeocodeResult = {
         lat,
         lon,
         displayName,
@@ -1507,180 +1784,52 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         userInput,
       };
 
-      sendSSE({ location: geocoded });
-      sendSSE({ loadingStatus: "Lade Europa Wetterkarten" });
-
-      // ── Analysis JSON ──────────────────────────────────────────────────────
-      const analysis = createAnalysis({
+      // From this point on the analysis is a background job. Closing this
+      // request only removes its subscriber; it never aborts the pipeline.
+      requestIsAnalysis = true;
+      activeAnalysisJobs++;
+      const job = createAnalysisJob();
+      const sendJobEvent = (event: { id: number; data: Record<string, unknown> }) => {
+        if (!clientGone && !res.writableEnded) {
+          res.write(`id: ${event.id}\ndata: ${JSON.stringify(event.data)}\n\n`);
+          if (event.data.done) res.end();
+        }
+      };
+      let unsubscribe: (() => void) | null = null;
+      unsubscribe = subscribeToAnalysisJob(job.id, job.token, sendJobEvent);
+      if (!unsubscribe) {
+        activeAnalysisJobs--;
+        return res.status(500).json({ error: "Analyse konnte nicht gestartet werden" });
+      }
+      req.once("close", () => unsubscribe?.());
+      publishAnalysisEvent(job.id, {
+        location: geocoded,
+        analysisJobId: job.id,
+        analysisToken: job.token,
+      });
+      const analysisAbortController = new AbortController();
+      activeAnalysisAbortControllers.set(job.id, analysisAbortController);
+      const timeout = setTimeout(() => {
+        failAnalysisJob(job.id, "Die Analyse hat zu lange gedauert. Bitte starte sie erneut.");
+        analysisAbortController.abort();
+      }, 30 * 60 * 1000);
+      timeout.unref();
+      void runAnalysisJob({
+        jobId: job.id,
+        location: geocoded,
         userInput,
         country,
         countryCode,
-        windyModel: regional.label,
         sailingArea: sailingAreaObj,
         city: cityObj,
+        regional,
+        signal: analysisAbortController.signal,
+      }).finally(() => {
+        clearTimeout(timeout);
+        activeAnalysisAbortControllers.delete(job.id);
+        activeAnalysisJobs--;
       });
-
-      // ── Wetterdaten scrapen ───────────────────────────────────────────────
-
-      const saLat = sailingAreaObj?.coordinates.lat ?? cityObj.coordinates.lat;
-      const saLon = sailingAreaObj?.coordinates.lon ?? cityObj.coordinates.lon;
-      analysis.data.sources.windy.push(...getWindySources(regional, { lat: saLat, lon: saLon }, sailingAreaObj?.name_de ?? cityObj.name_de));
-
-      const meteonewsText = await fetchMeteonews();
-      analysis.data.weatherRaw["generalWeather"] = {
-        source: "meteonews",
-        text_de: meteonewsText || null,
-      };
-      if (meteonewsText) {
-        const preprocessed = await preprocessMeteonews(
-          meteonewsText,
-          anthropic,
-          abortController.signal,
-        );
-        analysis.data.weatherPreprocessed.europe["generalWeather"] = {
-          source: "meteonews",
-          text_de: preprocessed || null,
-        };
-      } else {
-        analysis.data.weatherPreprocessed.europe["generalWeather"] = {
-          source: "meteonews",
-          text_de: null,
-        };
-      }
-      const localTz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
-      const fmtLocal = (d: Date) =>
-        new Intl.DateTimeFormat("de-DE", {
-          day: "2-digit", month: "2-digit", year: "numeric",
-          hour: "2-digit", minute: "2-digit",
-          timeZone: localTz,
-        }).format(d);
-      const runUtc = currentRunDate();
-      const fcTarget = nextForecastTarget();
-      const currentTs = `Aktuell ${fmtLocal(runUtc)} Ortszeit`;
-      const forecastTs = `Forecast ${fmtLocal(fcTarget)} Ortszeit`;
-
-      const wz850Current = await fetchWetterzentraleChart(
-        buildWetterzentraleCurrentUrl(),
-      );
-      analysis.data.weatherPreprocessed.europe["temp850hpaCurrent"] = {
-        source: "Wetterzentrale",
-        url: wz850Current?.url ?? null,
-        imageBase64: wz850Current?.imageBase64 ?? null,
-        timestamp: currentTs,
-      };
-      const wz850Forecast = await fetchWetterzentraleChart(
-        buildWetterzentraleForecastUrl(),
-      );
-      analysis.data.weatherPreprocessed.europe["temp850hpaForecast"] = {
-        source: "Wetterzentrale",
-        url: wz850Forecast?.url ?? null,
-        imageBase64: wz850Forecast?.imageBase64 ?? null,
-        timestamp: forecastTs,
-      };
-      const knmi = await fetchKnmiChart();
-      analysis.data.weatherPreprocessed.europe["frontCurrent"] = {
-        source: "KNMI",
-        url: knmi?.url ?? null,
-        imageBase64: knmi?.imageBase64 ?? null,
-        timestamp: currentTs,
-      };
-      const knmiForecast = await fetchKnmiForecast();
-      analysis.data.weatherPreprocessed.europe["frontForecast"] = {
-        source: "KNMI",
-        url: knmiForecast?.url ?? null,
-        imageBase64: knmiForecast?.imageBase64 ?? null,
-        timestamp: forecastTs,
-      };
-
-      analysis.data.sources.europe.push(...getEuropeSources());
-
-      const knmiUtcHour = Math.floor(new Date().getUTCHours() / 6) * 6;
-      const knmiUtcDate = new Date();
-      knmiUtcDate.setUTCHours(knmiUtcHour, 0, 0, 0);
-      const tz = COUNTRY_TIMEZONE[countryCode] || "Europe/Berlin";
-      const frontCurrentLocalTime = new Intl.DateTimeFormat("de-DE", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: tz,
-      }).format(knmiUtcDate);
-
-      sendSSE({
-        weatherEurope: {
-          frontCurrentBase64: knmi?.imageBase64 ?? null,
-          frontCurrentUrl: knmi?.url ?? null,
-          frontCurrentLocalTime,
-        },
-      });
-      analysis.save();
-      sendSSE({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
-
-      if (clientGone) return;
-      const national = await fetchNationalWeather(
-        countryCode,
-        { lat, lon },
-        sailingAreaObj?.name_de ?? null,
-        sailingAreaObj,
-        cityObj,
-        country,
-        (status) => sendSSE({ loadingStatus: status }),
-      );
-      Object.assign(analysis.data.weatherRaw, national.data);
-      for (const u of national.sourceUrls)
-        analysis.data.sources.national.push(u);
-      if (national.openskironMeta) {
-        analysis.data.position.openskiron_domain = national.openskironMeta;
-      }
-      const nationalPre = await preprocessNationalWeather(
-        analysis.data.weatherRaw,
-        anthropic,
-        countryCode,
-        abortController.signal,
-      );
-      Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
-      const localPre = await preprocessLocalWeather(
-        analysis.data.weatherRaw,
-        {
-          userInput: analysis.data.position.userInput,
-          city: cityObj.name_de,
-          sailingArea: sailingAreaObj?.name_de ?? null,
-        },
-        anthropic,
-        countryCode,
-        abortController.signal,
-      );
-      Object.assign(analysis.data.weatherPreprocessed.local, localPre);
-      analysis.save();
-
-      if (clientGone) return;
-      sendSSE({ loadingStatus: "Interpretieren der lokalen Wetterdaten" });
-      const weatherOutput = await generateWeatherOutput(
-        analysis.data,
-        anthropic,
-        abortController.signal,
-      );
-      Object.assign(analysis.data.weatherOutput, weatherOutput);
-      analysis.save();
-      sendSSE({
-        weatherOutput,
-        sources: analysis.data.sources,
-        analysisJson: analysis.getExportData(),
-        analysisFileName: path.basename(analysis.filePath),
-      });
-
-      const analysisLabel =
-        sailingAreaObj?.name_de ??
-        cityObj.name_de ??
-        displayName.split(",")[0].trim();
-
-      // ── Chat-Ausgabe ───────────────────────────────────────────────────────
-      const flag = countryFlag(countryCode);
-      sendSSE({ content: `Wetteranalyse für **${analysisLabel}** ${flag}` });
-
-      sendSSE({ done: true });
-      res.end();
+      return;
     } catch (error) {
       console.error("Chat error:", error);
       const errMsg = error instanceof Error ? error.message : "Fehler bei der Wetteranalyse";

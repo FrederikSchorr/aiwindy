@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "crypto";
 import { saveAnalysis } from "./cache-db.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -18,7 +19,13 @@ export interface AnalysisPosition {
     name_de: string;                          // e.g. "Split"
     coordinates: { lat: number; lon: number }; // from Nominatim
   } | null;
-  openskiron_domain?: { domain: string; created: string; status: "cached" | "downloaded" };
+  openskiron_domain?: {
+    domain: string;
+    created: string;
+    gribFile: string;
+    sailingAreaData: string;
+    cityData: string;
+  };
 }
 
 export interface AnalysisSources {
@@ -49,6 +56,156 @@ export interface AnalysisJson {
     local: Record<string, unknown>;
   };
   weatherOutput: Record<string, unknown>;
+}
+
+// ── Background job store ────────────────────────────────────────────────────
+
+export type AnalysisJobStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface AnalysisJobEvent {
+  id: number;
+  data: Record<string, unknown>;
+}
+
+export interface AnalysisJobSnapshot {
+  id: string;
+  status: AnalysisJobStatus;
+  progress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AnalysisJobRecord {
+  id: string;
+  token: string;
+  status: AnalysisJobStatus;
+  progress: string | null;
+  createdAt: number;
+  updatedAt: number;
+  nextEventId: number;
+  events: AnalysisJobEvent[];
+  subscribers: Set<(event: AnalysisJobEvent) => void>;
+}
+
+const ANALYSIS_JOB_TTL_MS = 30 * 60 * 1000;
+const analysisJobs = new Map<string, AnalysisJobRecord>();
+
+function cleanupAnalysisJobs(now = Date.now()): void {
+  for (const [id, job] of Array.from(analysisJobs.entries())) {
+    const terminal = job.status === "completed" || job.status === "failed" || job.status === "cancelled";
+    // Active jobs are finalized by the owning worker's timeout. Removing them
+    // here would strand a reconnecting client without a terminal SSE event.
+    if (terminal && now - job.updatedAt > ANALYSIS_JOB_TTL_MS) {
+      analysisJobs.delete(id);
+    }
+  }
+}
+
+const analysisCleanupTimer = setInterval(() => cleanupAnalysisJobs(), 5 * 60 * 1000);
+analysisCleanupTimer.unref();
+
+export function createAnalysisJob(): { id: string; token: string } {
+  cleanupAnalysisJobs();
+  const id = randomUUID();
+  const token = randomUUID();
+  const now = Date.now();
+  analysisJobs.set(id, {
+    id,
+    token,
+    status: "pending",
+    progress: null,
+    createdAt: now,
+    updatedAt: now,
+    nextEventId: 1,
+    events: [],
+    subscribers: new Set(),
+  });
+  return { id, token };
+}
+
+function getJobForToken(id: string, token: string): AnalysisJobRecord | null {
+  cleanupAnalysisJobs();
+  const job = analysisJobs.get(id);
+  if (!job || !token || job.token !== token) return null;
+  return job;
+}
+
+function isTerminal(job: AnalysisJobRecord): boolean {
+  return job.status === "completed" || job.status === "failed" || job.status === "cancelled";
+}
+
+export function getAnalysisJobSnapshot(id: string, token: string): AnalysisJobSnapshot | null {
+  const job = getJobForToken(id, token);
+  if (!job) return null;
+  return {
+    id: job.id,
+    status: job.status,
+    progress: job.progress,
+    createdAt: new Date(job.createdAt).toISOString(),
+    updatedAt: new Date(job.updatedAt).toISOString(),
+  };
+}
+
+export function publishAnalysisEvent(id: string, data: Record<string, unknown>): void {
+  const job = analysisJobs.get(id);
+  if (!job || isTerminal(job)) return;
+  job.updatedAt = Date.now();
+  if (typeof data.loadingStatus === "string") {
+    job.progress = data.loadingStatus;
+    if (job.status === "pending") job.status = "running";
+  }
+  const event: AnalysisJobEvent = {
+    id: job.nextEventId++,
+    data: { ...data, analysisEventId: job.nextEventId - 1 },
+  };
+  job.events.push(event);
+  for (const subscriber of Array.from(job.subscribers)) subscriber(event);
+}
+
+export function completeAnalysisJob(id: string): void {
+  const job = analysisJobs.get(id);
+  if (!job || isTerminal(job)) return;
+  publishAnalysisEvent(id, { done: true });
+  job.status = "completed";
+  job.progress = null;
+  job.updatedAt = Date.now();
+}
+
+export function failAnalysisJob(id: string, error: string): void {
+  const job = analysisJobs.get(id);
+  if (!job || isTerminal(job)) return;
+  publishAnalysisEvent(id, { error, done: true });
+  job.status = "failed";
+  job.progress = null;
+  job.updatedAt = Date.now();
+}
+
+export function cancelAnalysisJob(id: string, token: string): boolean {
+  const job = getJobForToken(id, token);
+  if (!job || isTerminal(job)) return false;
+  publishAnalysisEvent(id, { error: "Die Analyse wurde abgebrochen.", done: true });
+  job.status = "cancelled";
+  job.progress = null;
+  job.updatedAt = Date.now();
+  return true;
+}
+
+export function subscribeToAnalysisJob(
+  id: string,
+  token: string,
+  subscriber: (event: AnalysisJobEvent) => void,
+): (() => void) | null {
+  const job = getJobForToken(id, token);
+  if (!job) return null;
+  for (const event of job.events) subscriber(event);
+  if (isTerminal(job)) return () => {};
+  job.subscribers.add(subscriber);
+  return () => job.subscribers.delete(subscriber);
 }
 
 // ── Directory setup ────────────────────────────────────────────────────────
