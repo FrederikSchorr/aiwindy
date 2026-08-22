@@ -426,7 +426,7 @@ export async function extractGreeceWarning(
   // An unreachable or malformed national bulletin must never be displayed as an
   // all-clear. Its availability is shown separately in the source status.
   if (galeData?.["available"] !== true || !text || !emyName) {
-    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null } };
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null, checked: false } };
   }
 
   const headerLine = text.split("\n").find(l => /ATHENS,.*\/\s*\d{4}\s+UTC/i.test(l)) ?? "";
@@ -457,13 +457,13 @@ ${text}`,
     }, { signal });
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
     if (!translated || translated === "NONE") {
-      return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText } };
+      return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText, checked: true } };
     }
     const text_de = `Aktuell ${timeLabel ? timeLabel + " " : ""}Sturmwarnung von HNMS:\n${translated}`;
-    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de } };
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de, checked: true } };
   } catch (e) {
     console.error("extractGreeceWarning error:", e instanceof Error ? e.message : e);
-    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null } };
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null, checked: false } };
   }
 }
 

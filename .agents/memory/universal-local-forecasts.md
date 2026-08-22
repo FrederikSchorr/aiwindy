@@ -14,3 +14,9 @@ In the sources view, a connected provider must be named as the concrete forecast
 **Why:** A source list should explain the provenance of the displayed information. A bare connection status is redundant and can be mistaken for a weather observation or warning.
 
 **How to apply:** Keep each connected national source once, with a descriptive label. Continue showing neutral warning-center text only when that source is unavailable or not integrated.
+
+For section 3, show the current national or regional storm-warning result as the first bullet whenever that country has an integrated warning source. A confirmed all-clear is plain text without an alert icon; an unreachable integrated source receives an explicit alert status. Unsupported centers stay only in section 6.
+
+**Why:** Sailors need a visible confirmation that the relevant warning source was checked, while an unavailable service must be unmistakable and never be mistaken for an all-clear.
+
+**How to apply:** Insert this bullet deterministically ahead of the wind forecast after output generation. Use a checked flag to distinguish confirmed warnings/all-clears from an unreachable source; do not create it for unsupported countries.

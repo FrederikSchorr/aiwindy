@@ -339,15 +339,6 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <>
               <SectionTitle num={6} title="Quellen" />
               <ul className="mt-1 mb-2 space-y-0.5 list-disc pl-5" data-testid="section-sources">
-                {sources.nationalWarningCenter?.status === "unavailable" && (
-                  <li className="text-sm text-muted-foreground" data-testid="national-warning-status">
-                    Nationales Warnzentrum: {sources.nationalWarningCenter.url ? (
-                      <a href={sources.nationalWarningCenter.url} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">
-                        {sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"}
-                      </a>
-                    ) : sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"} derzeit nicht verfügbar
-                  </li>
-                )}
                 {sources.windy.map((md, i) => (
                   <li key={i} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{
                     __html: md.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,

@@ -138,8 +138,9 @@ Regeln pro Abschnitt:
 - KEINE Effekte (kein Regen, kein Wind) — nur Fronttyp, Position, Bewegungsrichtung
 
 #3 windWaves — Wind & Welle (Inputs: NUR weatherPreprocessed.local + Windsysteme — KEINE Europakarten, KEINE nationale Synopsis)
-- Erzeuge genau diese Reihenfolge von Bullets (sofern die jeweiligen Daten vorhanden): 1) Sturmwarnung, 2) Heute (${todayLabel}), 3) Morgen, 4) Übermorgen, 5) Danach (bis ${forecastEndLabel}). Insgesamt maximal 5 Bullets.
-- Bullet 1 ist die Sturmwarnung aus preprocessed.local.warnings. Wenn sie vorhanden ist, muss ihr Text INHALTLICH UNVERÄNDERT und vollständig übernommen werden; nur das ⚠️-Emoji davor ist erlaubt. Keine Umformulierung, keine Kürzung, keine zusätzlichen Angaben.
+- Erzeuge genau diese Reihenfolge von Bullets: 1) aktuelle nationale/regionale Sturmwarnung oder der Abrufstatus der grundsätzlich angebundenen Warnquelle, 2) Heute (${todayLabel}), 3) Morgen, 4) Übermorgen, 5) Danach (bis ${forecastEndLabel}). Insgesamt maximal 5 Bullets.
+- Die Warnzeile ist für eine grundsätzlich angebundene Warnquelle PFLICHT. Bei erfolgreicher Prüfung übernimm den Text aus preprocessed.local.warnings INHALTLICH UNVERÄNDERT und vollständig; auch "Keine Sturmwarnung" muss sichtbar sein, aber OHNE ⚠️-Emoji. Bei einer aktiven Sturmwarnung oder einem fehlgeschlagenen Abruf darf ⚠️ davorstehen. Keine Umformulierung, keine Kürzung und niemals eine falsche Entwarnung.
+- Wenn das nationale Warnzentrum nicht angebunden ist, keine Warnzeile erzeugen. Nicht angebundene Länder zeigen diesen Status ausschließlich in Abschnitt 6.
 - Jede Prognosezeile (Bullets 2–5) MUSS mit dem relativen Zeitbezug und der konkreten Tagesbezeichnung bzw. dem Datumsbereich beginnen, niemals mit einem Emoji. Erwartetes Schema: "Heute (Sa 22.08.): ...", "Morgen (So 23.08.): ...", "Übermorgen (Mo 24.08.): ...", "Di–Do 25.–27.08.: ...".
 - Bullet Heute und Bullet Morgen: jeweils Wind und — NUR WENN preprocessed.local.wave.text_de tatsächlich vorhanden und nicht leer ist — die passende Seegangsstärke im selben Bullet. Direkt nach dem Zeit-/Datumspräfix steht "💨" vor dem Windtext; falls Wellendaten vorhanden sind, steht "🌊" direkt vor der Welle. Wenn keine Wellendaten vorhanden sind, den Wellen-Teil vollständig weglassen: kein 🌊, kein Platzhalter und keine Erwähnung fehlender Wellendaten. Nenne zuerst das Windsystem (z.B. "Maïstrali") und höchstens die wichtigsten Windphasen als kompakte Bereiche. Kombiniere Mittelwind und Böe IMMER zu einem Bereich im Format "WNW 14-18 kt"; schreibe niemals "Böen", "mit Böen" oder "bis". Heute dürfen wichtige Änderungen zusätzlich mit konkreten Uhrzeiten genannt werden, auch nachts. Morgen dürfen höchstens grobe Tageszeiten wie "nachts", "morgens", "mittags", "nachmittags" oder "abends" genannt werden, aber keine exakten Uhrzeiten. Welle nur als Douglas-Skala (z.B. "See 2 schwach bewegt"), KEINE Richtung, Periode oder Dünung. Nur explizite Wellendaten verwenden, niemals schätzen.
 - Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨", danach nur minimale bis maximale Windstärke in Knoten und die vorherrschende Windrichtung; keine Stundenwerte und keine Wellendetails.
@@ -187,20 +188,20 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
     const parsed = parseSectionMarkers(raw);
     if (!parsed) {
       console.error("generateWeatherOutput: no section markers in response. Raw (first 200):", raw.slice(0, 200));
-      return emptyOutput();
+     return emptyOutput(analysis);
     }
 
     const source = "claude-sonnet-4-6";
     return {
       airPressureMasses: { source, text: parsed.airPressureMasses ?? null },
       weatherFront:      { source, text: parsed.weatherFront ?? null },
-      windWaves:         { source, text: parsed.windWaves ?? null },
+      windWaves:         { source, text: ensureWarningFirst(analysis, parsed.windWaves ?? null) },
       cloudsRain:        { source, text: parsed.cloudsRain ?? null },
       temperature:       { source, text: parsed.temperature ?? null },
     };
   } catch (e) {
     console.error("generateWeatherOutput error:", e instanceof Error ? e.message : e);
-    return emptyOutput();
+    return emptyOutput(analysis);
   }
 }
 
@@ -227,12 +228,67 @@ function parseSectionMarkers(raw: string): Record<string, string> | null {
   return found > 0 ? result : null;
 }
 
-function emptyOutput(): Record<string, unknown> {
+function ensureWarningFirst(analysis: AnalysisJson, windWavesText: string | null): string | null {
+  const warningCenter = analysis.sources.nationalWarningCenter;
+  if (!warningCenter) return windWavesText;
+
+  const output = typeof windWavesText === "string" ? windWavesText.trim() : "";
+  if (warningCenter.status === "unsupported") {
+    return removeNationalWarningLines(output) || null;
+  }
+  if (warningCenter.status !== "integrated" && warningCenter.status !== "unavailable") {
+    return windWavesText;
+  }
+
+  const warning = (analysis.weatherPreprocessed.local.warnings as {
+    text_de?: unknown;
+    source?: unknown;
+    checked?: unknown;
+  } | undefined);
+  const warningText = warning?.checked === true && typeof warning.text_de === "string" && warning.text_de.trim()
+    ? warning.text_de.trim()
+    : `Nationale Sturmwarnquelle ${warningCenter.label ?? "des Landes"} derzeit nicht erreichbar`;
+  const isNoWarning = /\bkeine\s+(?:aktive\s+)?(?:sturmwarnung|warnung)\b/i.test(warningText);
+  const warningPrefix = isNoWarning ? "" : "⚠️ ";
+  const warningFirstLine = warningText.split("\n")[0];
+
+  const hasExpectedPrefix = isNoWarning
+    ? output.startsWith("- ") && !output.startsWith("- ⚠️")
+    : output.startsWith("- ⚠️");
+  if (!isNoWarning && hasExpectedPrefix && output.includes(warningFirstLine)) {
+    return output;
+  }
+
+  const remainingLines = removeNationalWarningLines(output)
+    .split("\n")
+    .filter((line) => !line.includes(warningFirstLine));
+  return [`- ${warningPrefix}${warningText}`, ...remainingLines].filter(Boolean).join("\n");
+}
+
+function removeNationalWarningLines(text: string): string {
+  if (!text) return "";
+  const lines = text.split("\n");
+  const remaining: string[] = [];
+  let skippingContinuation = false;
+  for (const line of lines) {
+    const isWarningLine = /\b(?:sturmwarnung|starkwindwarnung|unwetterwarnung|warnquelle|warnzentrum|keine\s+(?:aktive\s+)?warnung|warnung\s+von\s+(?:hnms|dhmz|lsz))\b/i.test(line);
+    if (isWarningLine) {
+      skippingContinuation = true;
+      continue;
+    }
+    if (skippingContinuation && !/^\s*-\s+/.test(line)) continue;
+    skippingContinuation = false;
+    remaining.push(line);
+  }
+  return remaining.join("\n").trim();
+}
+
+function emptyOutput(analysis?: AnalysisJson): Record<string, unknown> {
   const source = "claude-sonnet-4-6";
   return {
     airPressureMasses: { source, text: null },
     weatherFront:      { source, text: null },
-    windWaves:         { source, text: null },
+    windWaves:         { source, text: analysis ? ensureWarningFirst(analysis, null) : null },
     cloudsRain:        { source, text: null },
     temperature:       { source, text: null },
   };

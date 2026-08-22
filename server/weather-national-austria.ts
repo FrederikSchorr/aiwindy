@@ -605,7 +605,14 @@ export function preprocessLocalWarningsNeusiedler(
   const text = warningData?.text_de as string | null;
   const url: string | null = warningData?.url ?? null;
   if (!warningData || !text) {
-    return { warnings: { source: "LSZ Burgenland", url, text_de: null } };
+    return {
+      warnings: {
+        source: "LSZ Burgenland",
+        url,
+        text_de: warningData ? "Aktuell: Keine Sturmwarnung der LSZ Burgenland" : null,
+        checked: Boolean(warningData),
+      },
+    };
   }
 
   let warning: string;
@@ -616,5 +623,5 @@ export function preprocessLocalWarningsNeusiedler(
   } else {
     warning = "Aktuell: Keine Sturmwarnung der LSZ Burgenland";
   }
-  return { warnings: { source: "LSZ Burgenland", url, text_de: warning } };
+  return { warnings: { source: "LSZ Burgenland", url, text_de: warning, checked: true } };
 }

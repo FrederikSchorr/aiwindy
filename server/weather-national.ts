@@ -248,6 +248,10 @@ export async function preprocessLocalWeather(
   const warningText = regionalXml
     ? await extractDhmzWarning(regionalXml, position.sailingArea, anthropic, signal)
     : null;
+  const warningSectionExists = regionalXml ? /<Upozorenje>[\s\S]*?<\/Upozorenje>/i.test(regionalXml) : false;
+  const warningChecked = Boolean(regionalXml) && (!warningSectionExists || warningText !== null);
+  const warningDisplayText = warningText ??
+    (warningChecked ? "Aktuell: Keine Sturmwarnung von DHMZ" : null);
 
   const forecastText = regionalXml
     ? await extractDhmzSailingAreaForecast(
@@ -274,7 +278,8 @@ export async function preprocessLocalWeather(
       source: "DHMZ",
       url: "https://prognoza.hr/pomorci.xml",
       sailingArea: position.sailingArea ?? null,
-      text_de: warningText,
+      text_de: warningDisplayText,
+      checked: warningChecked,
     },
     sailingareaForecast: {
       source: "DHMZ",
