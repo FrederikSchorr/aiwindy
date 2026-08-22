@@ -60,6 +60,8 @@ export async function generateWeatherOutput(
   const _d = new Date(analysis.meta.requestDate);
   const _days = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
   const todayLabel = `${_days[_d.getDay()]} ${String(_d.getDate()).padStart(2, "0")}.${String(_d.getMonth() + 1).padStart(2, "0")}.`;
+  const _endDate = new Date(_d.getTime() + 5 * 24 * 60 * 60 * 1000);
+  const forecastEndLabel = `${_days[_endDate.getDay()]} ${String(_endDate.getDate()).padStart(2, "0")}.${String(_endDate.getMonth() + 1).padStart(2, "0")}.`;
 
   // ── Build message content ─────────────────────────────────────────────────
 
@@ -128,9 +130,14 @@ Regeln pro Abschnitt:
 - KEINE Effekte (kein Regen, kein Wind) — nur Fronttyp, Position, Bewegungsrichtung
 
 #3 windWaves — Wind & Welle (Inputs: NUR weatherPreprocessed.local + Windsysteme — KEINE Europakarten, KEINE nationale Synopsis)
-- Wind: max 2 Bullets, max 40 Wörter je. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Wenn sowohl "warnings" (→ "Aktuell:") als auch "sailingareaForecast" (→ "Nächste 24h:") vorhanden sind, MÜSSEN beide als eigene Bullets erscheinen. Alle zeitlichen Nuancen aus preprocessed.local.wind VOLLSTÄNDIG übernehmen (z.B. "vormittags", "bis mittags", "ab Nachmittag"). Nationale Windsystemnamen verwenden wenn passend. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
-- Falls keine Winddaten: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
-- Welle: genau 1 Bullet (falls Daten vorhanden, sonst weglassen). Quelle: preprocessed.local.wave (Open-Meteo Marine API — Douglas-Skala, bereits als Fließtext aufbereitet) ODER preprocessed.local.warnings/sailingareaForecast. Text aus local.wave 1:1 übernehmen, NICHT umformulieren. Douglas-Skala (1=ruhig…6=sehr rau), KEINE Meter. NUR wenn explizite Wellendaten vorhanden — NIEMALS schätzen.
+- Erzeuge genau diese Reihenfolge von Bullets (sofern die jeweiligen Daten vorhanden): 1) Sturmwarnung, 2) Heute (${todayLabel}), 3) Morgen, 4) Übermorgen, 5) Danach (bis ${forecastEndLabel}). Insgesamt maximal 5 Bullets.
+- Bullet 1 ist die Sturmwarnung aus preprocessed.local.warnings. Wenn sie vorhanden ist, muss ihr Text INHALTLICH UNVERÄNDERT und vollständig übernommen werden; nur das ⚠️-Emoji davor ist erlaubt. Keine Umformulierung, keine Kürzung, keine zusätzlichen Angaben.
+- Bullet Heute und Bullet Morgen: jeweils Wind und die passende Welle/Dünung aus preprocessed.local.wave im selben Bullet. Wind detailliert mit zeitlichen Änderungen, Richtung, Stärke in Knoten und Böen. Welle in Douglas-Skala, KEINE Meter. Nur explizite Wellendaten verwenden, niemals schätzen.
+- Bullet Übermorgen: nur minimale bis maximale Windstärke in Knoten und die vorherrschende Windrichtung; keine Stundenwerte und keine Wellendetails.
+- Bullet Danach (bis ${forecastEndLabel}): fasse die Tage danach großflächig zusammen; nenne nur, ob es überwiegend stürmisch, kräftig, mäßig, schwach oder Flaute ist, plus Richtung nur wenn eindeutig. Keine Stundenwerte.
+- Der Bullet "Danach" ist PFLICHT und darf niemals fehlen oder durch das Ende der Antwort entfallen. Wenn für die Tage danach trotz der 6-Tage-Abfrage keine Winddaten vorliegen, gib trotzdem "Danach (bis ${forecastEndLabel}): Winddaten für diesen Zeitraum nicht verfügbar." aus.
+- Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
+- Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #4 cloudsRain — Wolken & Regen (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
 - max 2 Bullets, max 20 Wörter je: Bewölkung + Regen + Gewitterrisiko. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Bei Gewitterrisiko immer ⛈️ einfügen. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.

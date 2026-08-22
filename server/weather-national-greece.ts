@@ -113,7 +113,8 @@ function buildOpenMeteoUrl(
     latitude: String(lat),
     longitude: String(lon),
     timezone: "Europe/Athens",
-    forecast_days: "3",
+    // Section 3 needs the current day plus the following five days.
+    forecast_days: "6",
     hourly: hourly.join(","),
     ...extra,
   });
@@ -482,7 +483,7 @@ export async function preprocessGreeceLocalWind(
     });
   }
 
-  const days = Array.from(byDate.entries()).slice(0, 2);
+  const days = Array.from(byDate.entries()).slice(0, 6);
   if (!days.length) return { wind: { source: "Open-Meteo Forecast API", url, sailingArea, text_de: null } };
 
   const table = days
@@ -492,14 +493,21 @@ export async function preprocessGreeceLocalWind(
     })
     .join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Format: "Di 31.03: ...\nMi 01.04: ..."
+  const prompt = `Du bist ein Segelwetter-Experte. Bereite die Windprognose für sechs Tage auf Deutsch auf.
+Gib genau eine Zeile pro Tag aus, ohne Überschrift und ohne Bullet-Zeichen:
+- Tag 1 und Tag 2: detailliert mit Zeitverlauf, Richtung, Windstärke in Knoten, Böen und signifikanten Änderungen.
+- Tag 3: nur minimale und maximale Windstärke in Knoten sowie die vorherrschende Windrichtung.
+- Tag 4 bis Tag 6: nur eine großräumige Einstufung (Flaute, schwach, mäßig, kräftig oder stürmisch) und, falls eindeutig, die vorherrschende Richtung. Keine Stundenwerte.
+Übernimm ausschließlich Werte aus den Rohdaten. Verwende die Tagesbezeichnungen am Zeilenanfang unverändert.
+Format: "Sa 22.08.: ...\nSo 23.08.: ...\nMo 24.08.: ...\nDi 25.08.: ...\nMi 26.08.: ...\nDo 27.08.: ..."
 
 ${table}`;
 
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
+      // Six labeled day summaries need more room than the former two-day output.
+      max_tokens: 500,
       messages: [{ role: "user", content: prompt }],
     }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
@@ -566,7 +574,8 @@ export async function preprocessGreeceLocalWave(
     });
   }
 
-  const days = Array.from(byDate.entries()).slice(0, 3);
+  // Section 3 combines wave/swell details with the wind bullets for today and tomorrow.
+  const days = Array.from(byDate.entries()).slice(0, 2);
   if (!days.length) return { wave: { source: src, url, sailingArea, text_de: null } };
 
   const table = days.map(([label, rows]) => {
@@ -580,7 +589,10 @@ export async function preprocessGreeceLocalWave(
     return `${label}:\n${rowStr}`;
   }).join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe NUR den Seegang (KEIN Wind!) für alle Tage in EINEM einzigen Satz (max. 30 Wörter). Verwende Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne Wellenrichtung und ggf. Dünung. Fasse alle Tage zusammen, z.B.: "Heute See 3 leicht bewegt aus S, morgen abnehmend auf See 2, Dünung gering."
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe NUR den Seegang für die beiden Tage in den Rohdaten.
+Gib genau eine Zeile pro Tag aus, ohne Überschrift und ohne Bullet-Zeichen. Beginne jede Zeile mit der Tagesbezeichnung aus den Rohdaten.
+Verwende die Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne Wellenrichtung und ggf. Dünung. Erfinde keine Werte.
+Format: "Sa 22.08.: See 2 ...; Dünung ...\nSo 23.08.: See 3 ..."
 
 ${table}`;
 
