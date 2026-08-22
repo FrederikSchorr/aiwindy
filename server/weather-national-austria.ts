@@ -50,12 +50,21 @@ export async function fetchAustriaWeather(
     ...temperature,
     ...lakeWarnings,
   };
-  const sourceUrls = [
-    `Österreich Wetterlage von [Austrocontrol](${AUSTROCONTROL_URL})`,
-    `Wind, Wolken, Regen, Temperatur von [Geosphere Austria](${GEOSPHERE_SOURCE_URL}) NWP API`,
-  ];
+  const sourceUrls: string[] = [];
+  const flight = data.austriaFlightWeather as any;
+  if (flight?.today_de || flight?.tonight_de || flight?.tomorrow_de) {
+    sourceUrls.push(`Österreich Wetterlage und Flugwetter von [Austrocontrol](${AUSTROCONTROL_URL})`);
+  }
+  const windCloudRainData = data.austriaWindCloudRain as any;
+  if (Array.isArray(windCloudRainData?.timestamps) && windCloudRainData.timestamps.length > 0) {
+    sourceUrls.push(`Österreich lokale Wind-, Wolken- und Regenvorhersage von [GeoSphere Austria](${GEOSPHERE_SOURCE_URL}) NWP API`);
+  }
+  const temperatureData = data.austriaTemperature as any;
+  if (Array.isArray(temperatureData?.temp2mC) && temperatureData.temp2mC.length > 0) {
+    sourceUrls.push(`Österreich lokale Temperaturvorhersage von [GeoSphere Austria](${GEOSPHERE_SOURCE_URL}) NWP API`);
+  }
   if (Object.keys(lakeWarnings).length > 0) {
-    sourceUrls.push(`Sturmwarnung von [LSZ Burgenland](${LSZ_BURGENLAND_URL})`);
+    sourceUrls.push(`Österreich Sturmwarnungen von [LSZ Burgenland](${LSZ_BURGENLAND_URL})`);
   }
   return { data, sourceUrls };
 }

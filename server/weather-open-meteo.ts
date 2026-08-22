@@ -49,6 +49,12 @@ export function getOpenMeteoTimezone(countryCode: string): string {
   return COUNTRY_TIMEZONES[countryCode] ?? "Europe/Berlin";
 }
 
+function formatForecastSource(provided: string[]): string {
+  const last = provided[provided.length - 1] ?? "Wetter";
+  if (provided.length === 1) return `${last}vorhersage`;
+  return `${provided.slice(0, -1).map(label => `${label}-`).join(", ")} und ${last}vorhersage`;
+}
+
 function buildUrl(
   endpoint: string,
   coordinates: Coordinates,
@@ -227,12 +233,12 @@ export async function fetchOpenMeteoWeather(
     const provided = ["Wind", "Wolken", "Regen", "Gewitter"];
     if (hasUsableTemperature(cityRaw)) provided.push("Temperatur");
     sourceUrls.push(
-      `${provided.join(", ")} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
+      `Lokale ${formatForecastSource(provided)} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
     );
   }
   if (hasUsableWaves(marineRaw)) {
     sourceUrls.push(
-      `Wellen und Dünung von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`,
+      `Lokale Wellen- und Dünungsvorhersage von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`,
     );
   }
 

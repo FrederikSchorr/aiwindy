@@ -30,11 +30,17 @@ export async function fetchCroatiaWeather(sailingArea?: string | null): Promise<
       console.error(`Croatia "${key}" error:`, e instanceof Error ? e.message : e);
     }
   }
-  const sourceUrls = [
-    `Kroatien Seewetter von [DHMZ](${DHMZ_SOURCE_URL}) Jadran API`,
-    `Wind, Seegang, Wolken, Regen, Sicht von [DHMZ](https://meteo.hr/prognoze.php?section=prognoze_specp&param=pomorci) Pomorci API`,
-    `Temperatur von [DHMZ](https://meteo.hr/index.php) Meteogrami API`,
-  ];
+  const sourceUrls: string[] = [];
+  const hasXml = (key: string) => typeof (data[key] as any)?.xml === "string" && Boolean((data[key] as any).xml.trim());
+  if (hasXml("croatiaAdriaForecast")) {
+    sourceUrls.push(`Kroatien Marine Wettervorhersage (inkl. Sturmwarnung) von [DHMZ](${HR_ENDPOINTS_SAILING.croatiaAdriaForecast}) Jadran API`);
+  }
+  if (hasXml("croatiaAdriaRegional")) {
+    sourceUrls.push(`Kroatien regionale Marine Wettervorhersage von [DHMZ](${HR_ENDPOINTS_SAILING.croatiaAdriaRegional}) Pomorci API`);
+  }
+  if (hasXml("croatiaCityForecast")) {
+    sourceUrls.push(`Kroatien lokale Temperaturvorhersage von [DHMZ](${HR_ENDPOINTS_ALWAYS.croatiaCityForecast}) Meteogrami API`);
+  }
   return { data, sourceUrls };
 }
 

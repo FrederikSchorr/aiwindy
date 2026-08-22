@@ -339,27 +339,18 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <>
               <SectionTitle num={6} title="Quellen" />
               <ul className="mt-1 mb-2 space-y-0.5 list-disc pl-5" data-testid="section-sources">
-                {sources.nationalWarningCenter?.status === "integrated" && (
-                  <li className="text-sm text-muted-foreground" data-testid="national-warning-status">
-                    Aktuell: {sources.nationalWarningCenter.url ? (
-                      <a href={sources.nationalWarningCenter.url} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">
-                        {sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"} angebunden
-                      </a>
-                    ) : `${sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"} angebunden`}
-                  </li>
-                )}
                 {sources.nationalWarningCenter?.status === "unavailable" && (
                   <li className="text-sm text-muted-foreground" data-testid="national-warning-status">
-                    Aktuell: {sources.nationalWarningCenter.url ? (
+                    Nationales Warnzentrum: {sources.nationalWarningCenter.url ? (
                       <a href={sources.nationalWarningCenter.url} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">
                         {sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"}
                       </a>
-                    ) : sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"} vorübergehend nicht erreichbar
+                    ) : sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"} derzeit nicht verfügbar
                   </li>
                 )}
                 {sources.nationalWarningCenter?.status === "unsupported" && (
                   <li className="text-sm text-muted-foreground" data-testid="national-warning-status">
-                    Aktuell: Kein nationales Unwetterzentrum angebunden
+                    Nationales Warnzentrum: nicht angebunden
                   </li>
                 )}
                 {[...sources.windy, ...sources.national, ...sources.europe].map((md, i) => (

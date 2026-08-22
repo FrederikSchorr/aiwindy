@@ -34,6 +34,12 @@ const DAY_NAMES: Record<number, string> = {
   0: "So", 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa",
 };
 
+function formatForecastSource(provided: string[]): string {
+  const last = provided[provided.length - 1] ?? "Wetter";
+  if (provided.length === 1) return `${last}vorhersage`;
+  return `${provided.slice(0, -1).map(label => `${label}-`).join(", ")} und ${last}vorhersage`;
+}
+
 type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
 type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
 
@@ -295,7 +301,7 @@ export async function fetchGreeceWeather(
 
   const sourceUrls: string[] = [];
   if ((hnms as any).available) {
-    sourceUrls.push(`Griechenland Wetterlage und Warnungen von [HNMS](${HNMS_SOURCE_URL})`);
+    sourceUrls.push(`Griechenland Marine Wettervorhersage (inkl. Sturmwarnung) von [HNMS](${HNMS_SOURCE_URL})`);
   }
   if (forecastRaw) {
     const provided = ["Wind", "Wolken", "Regen", "Gewitter"];
@@ -305,13 +311,13 @@ export async function fetchGreeceWeather(
       );
     if (hasCityTemperature) provided.push("Temperatur");
     sourceUrls.push(
-      `${provided.join(", ")} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
+      `Griechenland lokale ${formatForecastSource(provided)} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
     );
   }
   if (Array.isArray(marineRaw?.hourly?.wave_height) && marineRaw.hourly.wave_height.some(
     (value: unknown) => typeof value === "number" && Number.isFinite(value),
   )) {
-    sourceUrls.push(`Wellen und Dünung von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`);
+    sourceUrls.push(`Griechenland lokale Wellen- und Dünungsvorhersage von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`);
   }
 
   return { data, sourceUrls };
