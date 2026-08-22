@@ -348,13 +348,24 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
                     ) : sources.nationalWarningCenter.label ?? "Nationales Unwetterzentrum"} derzeit nicht verfügbar
                   </li>
                 )}
-                {sources.nationalWarningCenter?.status === "unsupported" && (
+                {sources.windy.map((md, i) => (
+                  <li key={i} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{
+                    __html: md.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+                      (_, text, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`)
+                  }} />
+                ))}
+                {sources.nationalWarningCenter?.status === "unavailable" && (
                   <li className="text-sm text-muted-foreground" data-testid="national-warning-status">
-                    Nationales Warnzentrum: nicht angebunden
+                    Nationales Marine-Wetter-Warnzentrum für {sources.nationalWarningCenter.label ?? "dieses Land"} derzeit nicht verfügbar
                   </li>
                 )}
-                {[...sources.windy, ...sources.national, ...sources.europe].map((md, i) => (
-                  <li key={i} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{
+                {sources.nationalWarningCenter?.status === "unsupported" && (
+                  <li className="text-sm text-muted-foreground" data-testid="national-warning-status">
+                    Nationales Marine-Wetter-Warnzentrum für {sources.nationalWarningCenter.label ?? "dieses Land"} nicht angebunden
+                  </li>
+                )}
+                {[...sources.national, ...sources.europe].map((md, i) => (
+                  <li key={`additional-source-${i}`} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{
                     __html: md.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
                       (_, text, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`)
                   }} />

@@ -58,6 +58,29 @@ export type NationalWarningCenter = {
   url?: string;
 };
 
+const COUNTRY_NAMES: Record<string, string> = {
+  AT: "Österreich",
+  BE: "Belgien",
+  CH: "die Schweiz",
+  DE: "Deutschland",
+  DK: "Dänemark",
+  ES: "Spanien",
+  FR: "Frankreich",
+  GB: "Großbritannien",
+  GR: "Griechenland",
+  HR: "Kroatien",
+  IE: "Irland",
+  IT: "Italien",
+  ME: "Montenegro",
+  NL: "die Niederlande",
+  NO: "Norwegen",
+  PL: "Polen",
+  PT: "Portugal",
+  SE: "Schweden",
+  SI: "Slowenien",
+  TR: "die Türkei",
+};
+
 function warningCenterFor(
   countryCode: string,
   data: Record<string, unknown>,
@@ -81,7 +104,7 @@ function warningCenterFor(
       ? { status: "integrated", label: "LSZ Burgenland", url: report?.url }
       : { status: "unavailable", label: "LSZ Burgenland", url: report?.url };
   }
-  return { status: "unsupported" };
+  return { status: "unsupported", label: COUNTRY_NAMES[countryCode] ?? countryCode };
 }
 
 function targetsFor(
