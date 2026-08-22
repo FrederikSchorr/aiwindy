@@ -21,7 +21,7 @@ function getWindsystemsForCountry(country: string): string {
 const SYSTEM_PROMPT = `Du bist Meteorologe und Segelexperte.
 STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil, KURZ und PRÄGNANT.
 Verwende GROSSZÜGIG passende Emojis am Anfang jedes Bullets und im Text: 🌀 💨 🌊 ☀️ ⛅ ☁️ 🌥️ 🌧️ 🌦️ ⚠️ ⛈️ 🌡️ 🧭 🌬️ ❄️ 🔵 🔴 📍 ✅.
-Ausnahme für Abschnitt #3 Wind & Welle: 💨 und 🌊 stehen direkt vor dem jeweiligen Wind- bzw. Wellentext, nicht am Anfang des Bullets.
+Ausnahme für Abschnitt #3 Wind & Welle und Abschnitt #4 Wolken & Regen: Die passenden Emojis stehen direkt vor dem jeweiligen Inhalt, nicht am Anfang des Bullets.
 Konkrete Zahlen, KEINE halluzinierten Werte. KEINE Begrüßung, KEINE Floskeln.
 Schreibe KEINE Überschriften — nur die Bullet-Points. KEIN Fettdruck (kein **text**), nur normaler Text.`;
 
@@ -63,6 +63,8 @@ export async function generateWeatherOutput(
   const todayLabel = `${_days[_d.getDay()]} ${String(_d.getDate()).padStart(2, "0")}.${String(_d.getMonth() + 1).padStart(2, "0")}.`;
   const _endDate = new Date(_d.getTime() + 5 * 24 * 60 * 60 * 1000);
   const forecastEndLabel = `${_days[_endDate.getDay()]} ${String(_endDate.getDate()).padStart(2, "0")}.${String(_endDate.getMonth() + 1).padStart(2, "0")}.`;
+  const _overviewStartDate = new Date(_d.getTime() + 2 * 24 * 60 * 60 * 1000);
+  const forecastOverviewLabel = `${_days[_overviewStartDate.getDay()]}–${_days[_endDate.getDay()]} ${String(_overviewStartDate.getDate()).padStart(2, "0")}.–${String(_endDate.getDate()).padStart(2, "0")}.${String(_endDate.getMonth() + 1).padStart(2, "0")}.`;
 
   // ── Build message content ─────────────────────────────────────────────────
 
@@ -142,7 +144,9 @@ Regeln pro Abschnitt:
 - Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #4 cloudsRain — Wolken & Regen (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
-- max 2 Bullets, max 20 Wörter je: Bewölkung + Regen + Gewitterrisiko. Jeder Bullet beginnt mit dem passenden Zeitbezug — Reihenfolge: "Aktuell:", "Heute:", "Morgen:", "Übermorgen:", "Nächste 24h:". Bei Gewitterrisiko immer ⛈️ einfügen. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.
+- Erzeuge genau 3 Bullets: "Heute (${todayLabel})", "Morgen" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit dem Zeitbezug und Datum, niemals mit einem Emoji.
+- Bullet Heute und Bullet Morgen: inhaltlich wie bisher kurz und konkret mit Bewölkung + Regen + Gewitterrisiko. Setze ☁️/🌤️/☀️ direkt vor den Bewölkungstext, 🌧️ direkt vor Regen und ⛈️ direkt vor das Gewitterrisiko. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.
+- Bullet ${forecastOverviewLabel}: nur ein grober Überblick für die Tage ${_overviewStartDate.getDate()}. bis ${_endDate.getDate()}. (Bewölkung, überwiegend trocken/nass, grobes Gewitterrisiko), keine Stundenwerte und keine einzelnen Tagesdetails. Setze die passenden Wetter-Icons direkt vor den jeweiligen Text.
 - Falls keine Daten: "Wetterprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #5 temperature — Temperatur (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)

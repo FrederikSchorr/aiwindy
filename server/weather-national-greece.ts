@@ -594,7 +594,7 @@ export async function preprocessGreeceLocalWave(
   }
 
   // Section 3 combines wave/swell details with the wind bullets for today and tomorrow.
-  const days = Array.from(byDate.entries()).slice(0, 2);
+  const days = Array.from(byDate.entries()).slice(0, 6);
   if (!days.length) return { wave: { source: src, url, sailingArea, text_de: null } };
 
   const table = days.map(([label, rows]) => {
@@ -674,7 +674,11 @@ export async function preprocessGreeceLocalCloudRainThunderstorm(
     ? " Bei CAPE ≥ 1000 J/kg Gewitterrisiko erwähnen (⛈️)."
     : "";
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe Bewölkung, Niederschlag und Gewitterrisiko für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Bewölkungsgrad und ob/wann es regnet.${thunderNote} Format: "Di 31.03: ...\nMi 01.04: ..."
+  const prompt = `Du bist ein Segelwetter-Experte. Bereite Bewölkung, Niederschlag und Gewitterrisiko für sechs Tage auf Deutsch auf.
+Gib genau eine Zeile pro Tag aus, ohne Überschrift und ohne Bullet-Zeichen. Beginne jede Zeile mit der Tagesbezeichnung aus den Rohdaten.
+- Tag 1 und Tag 2: wie bisher konkret mit Bewölkungsgrad, Regen und Gewitterrisiko.
+- Tag 3 bis Tag 6: nur eine grobe Einstufung (klar, wechselnd bewölkt, bewölkt) sowie überwiegend trocken/nass und ein grobes Gewitterrisiko. Keine Stundenwerte.
+CAPE-Werte niemals nennen.${thunderNote} Format: "Sa 22.08.: ...\nSo 23.08.: ...\nMo 24.08.: ...\nDi 25.08.: ...\nMi 26.08.: ...\nDo 27.08.: ..."
 
 ${table}`;
 
