@@ -273,11 +273,14 @@ export async function fetchGreeceWeather(
     )
     : `${OPEN_METEO_MARINE_URL}?timezone=Europe%2FAthens`;
 
+  // The three Open-Meteo requests run in parallel. Emit one aggregate status
+  // instead of letting the last request ("Wellendaten") hide the others.
+  onProgress?.("Lade Wind- und Wetterdaten von Open-Meteo");
   const [hnms, forecastRaw, cityForecastRaw, marineRaw] = await Promise.all([
     fetchHnmsGaleWarning(),
-    area ? fetchOpenMeteoJson(forecastUrl, "Wetterdaten", onProgress) : Promise.resolve(null),
-    city ? fetchOpenMeteoJson(cityForecastUrl, "Temperaturdaten", onProgress) : Promise.resolve(null),
-    area ? fetchOpenMeteoJson(marineUrl, "Wellendaten", onProgress) : Promise.resolve(null),
+    area ? fetchOpenMeteoJson(forecastUrl, "Wind- und Wetterdaten") : Promise.resolve(null),
+    city ? fetchOpenMeteoJson(cityForecastUrl, "Temperaturdaten") : Promise.resolve(null),
+    area ? fetchOpenMeteoJson(marineUrl, "Wellen- und Dünungsdaten") : Promise.resolve(null),
   ]);
 
   const data: Record<string, unknown> = {

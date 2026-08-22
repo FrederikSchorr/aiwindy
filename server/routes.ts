@@ -977,7 +977,9 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
       },
     });
     analysis.save();
-    publish({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
+    if (countryCode !== "GR") {
+      publish({ loadingStatus: `Lade lokale Wetterdaten für ${country || "unbekanntes Land"}` });
+    }
 
     const national = await fetchNationalWeather(
       countryCode,
@@ -990,6 +992,7 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
     );
     Object.assign(analysis.data.weatherRaw, national.data);
     for (const url of national.sourceUrls) analysis.data.sources.national.push(url);
+    publish({ loadingStatus: "Bereite nationale Wetterlage auf" });
     const nationalPre = await preprocessNationalWeather(
       analysis.data.weatherRaw,
       anthropic,
@@ -997,6 +1000,7 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
       signal,
     );
     Object.assign(analysis.data.weatherPreprocessed.national, nationalPre);
+    publish({ loadingStatus: "Bereite lokale Wind-, Wellen- und Wetterdaten auf" });
     const localPre = await preprocessLocalWeather(
       analysis.data.weatherRaw,
       {
