@@ -150,7 +150,7 @@ Regeln pro Abschnitt:
 - Falls keine Daten: "Wetterprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #5 temperature — Temperatur (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
-- max 1 Bullet, max 20 Wörter: Temperatur heute + morgen
+- max 1 Bullet, max 24 Wörter: Temperatur heute + morgen + übermorgen, sofern die Daten vorhanden sind. Bestehendes kompaktes Format beibehalten, z.B. "Lefkada: Heute 26–30°C, morgen 25–32°C, übermorgen 24–31°C".
 - Falls keine Daten: leer lassen (leerer String)
 
 Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt mit dem Marker in einer eigenen Zeile):
