@@ -19,6 +19,7 @@ interface SSEPayload {
   weatherEurope?: WeatherEuropeSSE;
   weatherOutput?: WeatherOutputData;
   analysisJson?: Record<string, unknown>;
+  analysisFileName?: string;
   sources?: AnalysisSources;
   content?: string;
   error?: string;
@@ -195,11 +196,12 @@ function CountryFlag({ countryCode }: { countryCode: string }) {
   );
 }
 
-function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, sources, isStreaming, hasError, loadingStatus }: {
+function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, analysisFileName, sources, isStreaming, hasError, loadingStatus }: {
   location: GeocodeResult;
   weatherEurope: WeatherEuropeSSE | null;
   weatherOutput: WeatherOutputData | null;
   analysisJson: Record<string, unknown> | null;
+  analysisFileName: string | null;
   sources: AnalysisSources | null;
   isStreaming: boolean;
   hasError?: string | boolean;
@@ -332,7 +334,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, so
                     Daten als{" "}
                     <a
                       href={jsonDownloadUrl}
-                      download="aiwindy-analyse.json"
+                      download={analysisFileName || "aiwindy-analyse.json"}
                       className="text-primary underline hover:text-primary/80"
                     >
                       JSON
@@ -369,6 +371,7 @@ export default function Home() {
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
   const [messageAnalysisJson, setMessageAnalysisJson] = useState<Record<string, Record<string, unknown>>>({});
+  const [messageAnalysisFileNames, setMessageAnalysisFileNames] = useState<Record<string, string>>({});
   const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, string | boolean>>({});
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
@@ -423,6 +426,9 @@ export default function Home() {
       }
       if (data.analysisJson) {
         setMessageAnalysisJson(prev => ({ ...prev, [assistantId]: data.analysisJson! }));
+      }
+      if (data.analysisFileName) {
+        setMessageAnalysisFileNames(prev => ({ ...prev, [assistantId]: data.analysisFileName! }));
       }
       if (data.sources) {
         setMessageSources(prev => ({ ...prev, [assistantId]: data.sources! }));
@@ -831,6 +837,7 @@ export default function Home() {
                     weatherEurope={we || null}
                     weatherOutput={wo || null}
                     analysisJson={messageAnalysisJson[msg.id] || null}
+                    analysisFileName={messageAnalysisFileNames[msg.id] || null}
                     sources={srcs}
                     isStreaming={isStreaming && isLast}
                     hasError={hasAnalysisError}

@@ -1667,6 +1667,7 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
         weatherOutput,
         sources: analysis.data.sources,
         analysisJson: analysis.getExportData(),
+        analysisFileName: path.basename(analysis.filePath),
       });
 
       const analysisLabel =
