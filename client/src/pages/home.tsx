@@ -195,10 +195,11 @@ function CountryFlag({ countryCode }: { countryCode: string }) {
   );
 }
 
-function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStreaming, hasError, loadingStatus }: {
+function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, sources, isStreaming, hasError, loadingStatus }: {
   location: GeocodeResult;
   weatherEurope: WeatherEuropeSSE | null;
   weatherOutput: WeatherOutputData | null;
+  analysisJson: Record<string, unknown> | null;
   sources: AnalysisSources | null;
   isStreaming: boolean;
   hasError?: string | boolean;
@@ -219,6 +220,9 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
   const tempModel = "ecmwf";
   const tempModelLabel = "ECMWF 9km";
   const prognoseUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/?temp,${cityLat.toFixed(3)},${cityLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
+  const jsonDownloadUrl = analysisJson
+    ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(analysisJson, null, 2))}`
+    : null;
 
   return (
     <div data-testid="analysis-view">
@@ -323,6 +327,17 @@ function AnalysisView({ location, weatherEurope, weatherOutput, sources, isStrea
                       (_, text, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`)
                   }} />
                 ))}
+                {jsonDownloadUrl && (
+                  <li className="text-sm text-muted-foreground" data-testid="source-json">
+                    <a
+                      href={jsonDownloadUrl}
+                      download="aiwindy-analyse.json"
+                      className="text-primary underline hover:text-primary/80"
+                    >
+                      Daten als JSON
+                    </a>
+                  </li>
+                )}
               </ul>
             </>
           )}
@@ -352,6 +367,7 @@ export default function Home() {
   const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
   const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
   const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
+  const [messageAnalysisJson, setMessageAnalysisJson] = useState<Record<string, Record<string, unknown>>>({});
   const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, string | boolean>>({});
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
@@ -406,6 +422,7 @@ export default function Home() {
         lastAnalysisOutputRef.current = data.weatherOutput;
       }
       if (data.analysisJson) {
+        setMessageAnalysisJson(prev => ({ ...prev, [assistantId]: data.analysisJson! }));
         lastAnalysisJsonRef.current = data.analysisJson;
       }
       if (data.sources) {
@@ -818,6 +835,7 @@ export default function Home() {
                     location={loc}
                     weatherEurope={we || null}
                     weatherOutput={wo || null}
+                    analysisJson={messageAnalysisJson[msg.id] || null}
                     sources={srcs}
                     isStreaming={isStreaming && isLast}
                     hasError={hasAnalysisError}
