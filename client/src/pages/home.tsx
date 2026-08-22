@@ -329,12 +329,13 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, so
                 ))}
                 {jsonDownloadUrl && (
                   <li className="text-sm text-muted-foreground" data-testid="source-json">
+                    Daten als{" "}
                     <a
                       href={jsonDownloadUrl}
                       download="aiwindy-analyse.json"
                       className="text-primary underline hover:text-primary/80"
                     >
-                      Daten als JSON
+                      JSON
                     </a>
                   </li>
                 )}
@@ -375,7 +376,6 @@ export default function Home() {
   const lastAnalysisLocationRef = useRef<string | null>(null);
   const lastAnalysisTimeRef = useRef<string | null>(null);
   const lastAnalysisOutputRef = useRef<WeatherOutputData | null>(null);
-  const lastAnalysisJsonRef = useRef<Record<string, unknown> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -423,7 +423,6 @@ export default function Home() {
       }
       if (data.analysisJson) {
         setMessageAnalysisJson(prev => ({ ...prev, [assistantId]: data.analysisJson! }));
-        lastAnalysisJsonRef.current = data.analysisJson;
       }
       if (data.sources) {
         setMessageSources(prev => ({ ...prev, [assistantId]: data.sources! }));
@@ -728,10 +727,6 @@ export default function Home() {
                               body += `\n\n${label}\n${section.text}`;
                             }
                           }
-                        }
-                        const analysisJson = lastAnalysisJsonRef.current;
-                        if (analysisJson) {
-                          body += `\n\n---\nAnalyse-JSON:\n${JSON.stringify(analysisJson, null, 2)}`;
                         }
                         body = encodeURIComponent(body);
                       }
