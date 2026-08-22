@@ -82,6 +82,7 @@ export function createAnalysis(position: AnalysisPosition): {
   data: AnalysisJson;
   save: () => void;
   filePath: string;
+  getExportData: () => Record<string, unknown>;
 } {
   const now = new Date();
   const data: AnalysisJson = {
@@ -139,10 +140,10 @@ export function createAnalysis(position: AnalysisPosition): {
         const durationSec = Math.round((finalizedDate.getTime() - now.getTime()) / 1000);
         exportData.meta.finalizedDate = finalizedDate.toISOString();
         exportData.meta.durationSec = durationSec;
-        const finalJsonStr = JSON.stringify(exportData, null, 2);
-        fs.writeFileSync(filePath, finalJsonStr, "utf-8");
         data.meta.finalizedDate = finalizedDate.toISOString();
         data.meta.durationSec = durationSec;
+        const finalJsonStr = JSON.stringify(getSanitizedAnalysisExport(data), null, 2);
+        fs.writeFileSync(filePath, finalJsonStr, "utf-8");
         const dbData = JSON.parse(finalJsonStr);
         saveAnalysis(dbData).then(
           () => console.log(`[analysis-db] saved: ${position.userInput}`),
@@ -154,5 +155,45 @@ export function createAnalysis(position: AnalysisPosition): {
     }
   };
 
-  return { data, save, filePath };
+  return {
+    data,
+    save,
+    filePath,
+    getExportData: () => getSanitizedAnalysisExport(data),
+  };
+}
+
+/**
+ * Mirrors the persisted analysis JSON while leaving out large chart images and
+ * reducing long forecast arrays, so it can be included in feedback email text.
+ */
+export function getSanitizedAnalysisExport(data: AnalysisJson): Record<string, unknown> {
+  const exportData = JSON.parse(JSON.stringify(data));
+  const rawGw = exportData.weatherRaw?.["generalWeather"];
+  if (rawGw && typeof rawGw.text_de === "string" && rawGw.text_de.length > 100) {
+    rawGw.text_de = rawGw.text_de.slice(0, 100) + "...";
+  }
+
+  const replacer = (_key: string, value: unknown) => {
+    if (_key.endsWith("Base64")) return undefined;
+    if ((_key === "austriaWindCloudRain" || _key === "greeceWindWaveCloudRain") && value && typeof value === "object") {
+      const obj = { ...(value as Record<string, unknown>) };
+      for (const [key, entry] of Object.entries(obj)) {
+        if (Array.isArray(entry) && entry.length > 20) obj[key] = entry.filter((_, index) => index % 3 === 0);
+      }
+      return obj;
+    }
+    if (_key === "greeceTemperature" && value && typeof value === "object") {
+      const obj = { ...(value as Record<string, unknown>) };
+      delete obj["timestamps"];
+      for (const [key, entry] of Object.entries(obj)) {
+        if (Array.isArray(entry) && entry.length > 20) obj[key] = entry.filter((_, index) => index % 3 === 0);
+      }
+      return obj;
+    }
+    if (_key === "xml" && typeof value === "string" && value.length > 2000) return value.slice(0, 2000) + "...";
+    return value;
+  };
+
+  return JSON.parse(JSON.stringify(exportData, replacer));
 }

@@ -1673,7 +1673,11 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
       );
       Object.assign(analysis.data.weatherOutput, weatherOutput);
       analysis.save();
-      sendSSE({ weatherOutput, sources: analysis.data.sources });
+      sendSSE({
+        weatherOutput,
+        sources: analysis.data.sources,
+        analysisJson: analysis.getExportData(),
+      });
 
       const analysisLabel =
         sailingAreaObj?.name_de ??
