@@ -474,7 +474,6 @@ export async function preprocessGreeceLocalWind(
 
   for (let i = 0; i < hourly.timestamps.length; i++) {
     const { label, hour } = toLocalDateHour(hourly.timestamps[i], TZ);
-    if (hour < 6 || hour > 20) continue;
     const speed = hourly.windSpeedKt[i];
     if (typeof speed !== "number") continue;
     if (!byDate.has(label)) byDate.set(label, []);
@@ -498,7 +497,7 @@ export async function preprocessGreeceLocalWind(
 
   const prompt = `Du bist ein Segelwetter-Experte. Bereite die Windprognose für sechs Tage auf Deutsch auf.
 Gib genau eine Zeile pro Tag aus, ohne Überschrift und ohne Bullet-Zeichen:
-- Tag 1 und Tag 2: detailliert mit Zeitverlauf, Richtung, Windstärke in Knoten, Böen und signifikanten Änderungen.
+- Tag 1 und Tag 2: detailliert mit Zeitverlauf einschließlich Nacht, Richtung, Windstärke in Knoten, Böen und signifikanten Änderungen.
 - Tag 3: nur minimale und maximale Windstärke in Knoten sowie die vorherrschende Windrichtung.
 - Tag 4 bis Tag 6: nur eine großräumige Einstufung (Flaute, schwach, mäßig, kräftig oder stürmisch) und, falls eindeutig, die vorherrschende Richtung. Keine Stundenwerte.
 Übernimm ausschließlich Werte aus den Rohdaten. Verwende die Tagesbezeichnungen am Zeilenanfang unverändert.
