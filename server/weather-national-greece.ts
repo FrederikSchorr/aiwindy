@@ -592,10 +592,10 @@ export async function preprocessGreeceLocalWave(
     return `${label}:\n${rowStr}`;
   }).join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe NUR den Seegang für die beiden Tage in den Rohdaten.
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe NUR die vorherrschende Seegangsstärke für die beiden Tage in den Rohdaten.
 Gib genau eine Zeile pro Tag aus, ohne Überschrift und ohne Bullet-Zeichen. Beginne jede Zeile mit der Tagesbezeichnung aus den Rohdaten.
-Verwende die Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne Wellenrichtung und ggf. Dünung. Erfinde keine Werte.
-Format: "Sa 22.08.: See 2 ...; Dünung ...\nSo 23.08.: See 3 ..."
+Verwende nur die Douglas-Skala (z.B. "See 3 leicht bewegt"), KEINE Meter. Nenne KEINE Wellenrichtung, Periode oder Dünung. Erfinde keine Werte.
+Format: "Sa 22.08.: See 2 schwach bewegt\nSo 23.08.: See 3 leicht bewegt"
 
 ${table}`;
 
