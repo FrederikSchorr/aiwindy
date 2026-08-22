@@ -84,10 +84,17 @@
         "season": "Herbst, Winter"
       },
       {
-        "name": "Pannonischer Wind",
+        "name": "Leithagebirge NW Wind",
+        "importance": "primary",
+        "description": "Der bestimmende Wind am Neusiedler See. Kräftiger Nordwestwind, der bei Westwetterlagen durch Frontendurchzug bzw. Druckunterschiede zwischen Alpen und Pannonischer Tiefebene entsteht. Erreicht typischerweise 15-25 kn (4-7 Bft), in Böen deutlich mehr und oft ruppig/böig, besonders an schwülen Sommertagen mit Gewitterneigung.",
+        "location": "Neusiedler See, Podersdorf, Illmitz, Rust, Neusiedl am See",
+        "season": "Ganzjährig, häufiger Frühling, Herbst"
+      },
+      {
+        "name": "Ungarischer SO Wind",
         "importance": "secondary",
-        "description": "Warmer, trockener Ostwind aus der Pannonischen Tiefebene. Im Sommer heiß und trocken, begünstigt den Weinbau im Burgenland und der Oststeiermark.",
-        "location": "Burgenland, Neusiedler See, Oststeiermark, Niederösterreich",
+        "description": "Typischer Schönwetterwind am Neusiedler See bei stabilen Hochdrucklagen, weht aus Richtung der ungarischen Tiefebene heran. Deutlich schwächer als der Leithagebirge NW Wind, meist 8-15 kn.",
+        "location": "Neusiedler See, Seewinkel, östliches Ufer",
         "season": "Sommer"
       },
       {
