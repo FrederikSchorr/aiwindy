@@ -306,7 +306,7 @@ export function getWindySources(
 ): string[] {
   const url = `https://www.windy.com/-wind-${regional.model}?${regional.model},${coords.lat.toFixed(3)},${coords.lon.toFixed(3)},9`;
   return [
-    `Interaktive [Windy](${url}) Karten, Prognosemodell ${regional.label}`,
+    `Interaktive Windy Karten (eingebettet mit ECWMF Modell), empfohlenes Prognosemodell ${regional.label} in [windy.com](${url}) verfügbar`,
   ];
 }
 

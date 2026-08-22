@@ -56,7 +56,7 @@ function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker 
   );
 }
 
-function SourceLink({ label, url }: { label: string; url: string }) {
+function SourceLink({ label, provider, url }: { label: string; provider: string; url: string }) {
   return (
     <a
       href={url}
@@ -65,7 +65,7 @@ function SourceLink({ label, url }: { label: string; url: string }) {
       className="inline-block text-sm text-muted-foreground hover:text-primary transition-colors mt-1 mb-0.5"
       data-testid="source-link"
     >
-      Quelle: {label} ↗
+      {label} ↗ {provider}
     </a>
   );
 }
@@ -253,7 +253,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
       <SectionTitle num={1} title="Druck & Luftmassen" />
       <div className="my-3" data-testid="section-card-1">
         <WindyEmbed lat={48} lon={5} overlay="temp" product="ecmwf" level="850h" zoom={3} />
-        <SourceLink label="Windy Temperatur 1.500m ECMWF" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
+        <SourceLink label="Temperatur 1.500m Europa" provider="windy.com" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
       </div>
       {weatherOutput?.airPressureMasses?.text ? (
         <MarkdownContent content={weatherOutput.airPressureMasses.text} />
@@ -286,7 +286,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
               </div>
             )}
             <SourceLink
-              label={`KNMI Analyse ${weatherEurope.frontCurrentLocalTime}`}
+              label={`Fronten Europa ${weatherEurope.frontCurrentLocalTime}`}
+              provider="KNMI"
               url={weatherEurope.frontCurrentUrl || KNMI_SOURCE_URL}
             />
           </div>
@@ -299,7 +300,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
           <SectionTitle num={3} title="Wind & Welle" />
           <div className="my-3" data-testid="section-card-3">
             <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
-            <SourceLink label={`Wind ${sailingAreaShort} ${modelLabel} windy.com`} url={windUrl} />
+            <SourceLink label={`Wind ${sailingAreaShort}`} provider="windy.com" url={windUrl} />
           </div>
           {weatherOutput?.windWaves?.text ? (
             <MarkdownContent content={weatherOutput.windWaves.text} />
@@ -310,7 +311,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
           <SectionTitle num={4} title="Wolken & Regen" />
           <div className="my-3" data-testid="section-card-4">
             <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
-            <SourceLink label={`Wolken ${sailingAreaShort} ${modelLabel} windy.com`} url={cloudsUrl} />
+            <SourceLink label={`Wolken ${sailingAreaShort}`} provider="windy.com" url={cloudsUrl} />
           </div>
           {weatherOutput?.cloudsRain?.text ? (
             <MarkdownContent content={weatherOutput.cloudsRain.text} />
@@ -321,7 +322,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
           <SectionTitle num={5} title="Temperatur" />
           <div className="my-3" data-testid="section-card-5">
             <WindyEmbed lat={cityLat} lon={cityLon} overlay="temp" product={tempModel} level="surface" zoom={Math.max(zoom - 2, 4)} forecast marker />
-            <SourceLink label={`Prognose ${locationShort} ${tempModelLabel} windy.com`} url={prognoseUrl} />
+            <SourceLink label={`Prognose ${locationShort}`} provider="windy.com" url={prognoseUrl} />
           </div>
           {weatherOutput?.temperature?.text && (
             <MarkdownContent content={weatherOutput.temperature.text} />
