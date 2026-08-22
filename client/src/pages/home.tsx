@@ -258,7 +258,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
       <SectionTitle num={1} title="Druck & Luftmassen" />
       <div className="my-3" data-testid="section-card-1">
         <WindyEmbed lat={48} lon={5} overlay="temp" product="ecmwf" level="850h" zoom={3} />
-        <SourceLink label="Temperatur 1.500m Europa" provider="windy.com" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
+        <SourceLink label="Bodendruck und Temperatur 1.500m Europa" provider="windy.com" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
       </div>
       {weatherOutput?.airPressureMasses?.text ? (
         <MarkdownContent content={weatherOutput.airPressureMasses.text} />
