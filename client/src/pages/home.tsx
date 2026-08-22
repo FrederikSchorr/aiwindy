@@ -1037,7 +1037,7 @@ export default function Home() {
                   {showUploadHint && !isStreaming && (
                     <div className="flex items-center gap-2 mt-3 text-[14px] text-muted-foreground italic" data-testid="text-upload-hint">
                       <Camera className="w-4 h-4 shrink-0" />
-                      Lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse.
+                      Du kannst mich zu Wetter und Winden fragen. Oder lade ein aktuelles Wolken-Foto oder Video hoch für meteorologische Analyse.
                     </div>
                   )}
                 </div>
