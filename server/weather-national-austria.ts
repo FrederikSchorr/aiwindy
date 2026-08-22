@@ -601,11 +601,13 @@ export function preprocessLocalWarningsNeusiedler(
   sailingArea: string | null,
 ): Record<string, unknown> {
   if (!sailingArea?.toLowerCase().includes("neusiedler")) return {};
-  const text = (rawData["austriaNeusiedlerLakeWarnings"] as any)?.text_de as
-    | string
-    | null;
-  const url: string | null =
-    (rawData["austriaNeusiedlerLakeWarnings"] as any)?.url ?? null;
+  const warningData = rawData["austriaNeusiedlerLakeWarnings"] as any;
+  const text = warningData?.text_de as string | null;
+  const url: string | null = warningData?.url ?? null;
+  if (!warningData || !text) {
+    return { warnings: { source: "LSZ Burgenland", url, text_de: null } };
+  }
+
   let warning: string;
   if (text?.includes("Sturmwarnung")) {
     warning = "Aktuell: Sturmwarnung der LSZ Burgenland";

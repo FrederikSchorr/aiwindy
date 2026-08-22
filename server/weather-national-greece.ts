@@ -210,10 +210,14 @@ function normalizeMarine(
   sailingArea: OpenMeteoTarget,
 ): Record<string, unknown> {
   const hourly = raw?.hourly;
+  const available = Array.isArray(hourly?.wave_height)
+    && hourly.wave_height.some(
+      (value: unknown) => typeof value === "number" && Number.isFinite(value),
+    );
   return {
     source: "Open-Meteo Marine API",
     url,
-    available: Boolean(raw),
+    available,
     fetchedAt: new Date().toISOString(),
     timezone: raw?.timezone ?? "Europe/Athens",
     latitude: raw?.latitude ?? sailingArea.coordinates.lat,
@@ -222,7 +226,7 @@ function normalizeMarine(
     sailingArea: {
       name: sailingArea.name_de,
       coordinates: sailingArea.coordinates,
-      hourly: raw ? {
+      hourly: available ? {
         timestamps: arrayOrNull(hourly, "time"),
         waveHeightM: arrayOrNull(hourly, "wave_height"),
         waveDirDeg: arrayOrNull(hourly, "wave_direction"),
@@ -421,7 +425,7 @@ export async function extractGreeceWarning(
   const text = galeData?.["text"] as string | null;
   // An unreachable or malformed national bulletin must never be displayed as an
   // all-clear. Its availability is shown separately in the source status.
-  if (!galeData?.["available"] || !text || !emyName) {
+  if (galeData?.["available"] !== true || !text || !emyName) {
     return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null } };
   }
 
@@ -459,7 +463,7 @@ ${text}`,
     return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de } };
   } catch (e) {
     console.error("extractGreeceWarning error:", e instanceof Error ? e.message : e);
-    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText } };
+    return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null } };
   }
 }
 

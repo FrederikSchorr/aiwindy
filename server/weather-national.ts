@@ -65,7 +65,7 @@ function warningCenterFor(
 ): NationalWarningCenter {
   if (countryCode === "GR") {
     const bulletin = data["greeceMarineForecast"] as any;
-    return bulletin?.available || bulletin?.text
+    return bulletin?.available === true
       ? { status: "integrated", label: "HNMS Griechenland", url: bulletin?.url }
       : { status: "unavailable", label: "HNMS Griechenland", url: bulletin?.url };
   }
