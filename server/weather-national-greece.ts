@@ -350,6 +350,18 @@ function toLocalDateHour(utcTs: string, tz: string): { label: string; hour: numb
   return { label, hour };
 }
 
+function currentLocalDateHour(tz: string): { label: string; hour: number } {
+  const now = new Date();
+  const datePart = new Intl.DateTimeFormat("sv-SE", { timeZone: tz }).format(now);
+  const hour = parseInt(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(now),
+    10,
+  ) % 24;
+  const parts = datePart.split("-");
+  const dow = new Date(`${datePart}T12:00:00Z`).getUTCDay();
+  return { label: `${DAY_NAMES[dow]} ${parts[2]}.${parts[1]}`, hour };
+}
+
 // ── HNMS Preprocessing ────────────────────────────────────────────────────────
 
 export async function preprocessGreeceNationalSynopsis(
@@ -469,11 +481,15 @@ export async function preprocessGreeceLocalWind(
   }
 
   const TZ = "Europe/Athens";
+  const current = currentLocalDateHour(TZ);
   type Row = { time: string; dir: string; spd: number; gust: number };
   const byDate = new Map<string, Row[]>();
 
   for (let i = 0; i < hourly.timestamps.length; i++) {
     const { label, hour } = toLocalDateHour(hourly.timestamps[i], TZ);
+    // For today, omit hours that have already passed; mentioning last night
+    // in a current sailing forecast is misleading.
+    if (label === current.label && hour < current.hour) continue;
     const speed = hourly.windSpeedKt[i];
     if (typeof speed !== "number") continue;
     if (!byDate.has(label)) byDate.set(label, []);
@@ -497,7 +513,8 @@ export async function preprocessGreeceLocalWind(
 
   const prompt = `Du bist ein Segelwetter-Experte. Bereite die Windprognose für sechs Tage auf Deutsch auf.
 Gib genau eine Zeile pro Tag aus, ohne Überschrift und ohne Bullet-Zeichen:
-- Tag 1 und Tag 2: detailliert mit Zeitverlauf einschließlich Nacht, Richtung, Windstärke in Knoten, Böen und signifikanten Änderungen.
+- Tag 1: nur die noch bevorstehende Zeit ab jetzt; bereits vergangene Stunden und die vergangene Nacht dürfen nicht erwähnt werden. Detailliert mit Zeitverlauf einschließlich einer kommenden Nacht, Richtung, Windstärke in Knoten, Böen und signifikanten Änderungen.
+- Tag 2: detailliert mit Zeitverlauf einschließlich Nacht, Richtung, Windstärke in Knoten, Böen und signifikanten Änderungen.
 - Tag 3: nur minimale und maximale Windstärke in Knoten sowie die vorherrschende Windrichtung.
 - Tag 4 bis Tag 6: nur eine großräumige Einstufung (Flaute, schwach, mäßig, kräftig oder stürmisch) und, falls eindeutig, die vorherrschende Richtung. Keine Stundenwerte.
 Übernimm ausschließlich Werte aus den Rohdaten. Verwende die Tagesbezeichnungen am Zeilenanfang unverändert.
