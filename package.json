@@ -50,19 +50,19 @@
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
     "date-fns": "^3.6.0",
-    "drizzle-orm": "^0.39.3",
+    "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.7.1",
     "embla-carousel-react": "^8.6.0",
     "exif-parser": "^0.1.12",
     "express": "^5.0.1",
-    "express-rate-limit": "^8.5.2",
+    "express-rate-limit": "^8.6.2",
     "express-session": "^1.18.1",
     "flag-icons": "^7.5.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
-    "multer": "^2.0.2",
+    "multer": "^2.2.0",
     "next-themes": "^0.4.6",
     "openai": "^6.22.0",
     "p-limit": "^7.3.0",
@@ -105,7 +105,7 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.8",
     "esbuild": "^0.25.0",
-    "postcss": "^8.4.47",
+    "postcss": "^8.5.26",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
@@ -114,7 +114,11 @@
   "overrides": {
     "drizzle-kit": {
       "@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
-    }
+    },
+    "@babel/core": "7.29.7",
+    "body-parser": "2.3.0",
+    "brace-expansion": "2.1.4",
+    "protobufjs": "7.6.5"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

@@ -1,1 +1,2 @@
 - [Weather output format](weather-output-format.md) — use section markers not JSON; Claude embeds ASCII quotes inside JSON strings (e.g. „Quella") that break parsers
+- [Dependency security overrides](dependency-security-overrides.md) — keep transitive security fixes pinned with npm overrides and require a clean full audit
