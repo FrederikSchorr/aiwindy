@@ -93,7 +93,7 @@
       {
         "name": "Ungarischer SO Wind",
         "importance": "secondary",
-        "description": "Typischer Schönwetterwind am Neusiedler See bei stabilen Hochdrucklagen, weht aus Richtung der ungarischen Tiefebene heran. Deutlich schwächer als der Leithagebirge NW Wind, meist 8-15 kn.",
+        "description": "Weht bevorzugt bei stabilen Hochdrucklagen über Ost- und Südosteuropa, häufig im Zusammenhang mit großräumigen Südföhn-Wetterlagen (südliche bis südwestliche Höhenströmung über die Alpen). Kein lokaler thermischer Seebrisen-Effekt, sondern übergeordnete synoptische Strömung. Bringt warme, trockene und teils böige Luft aus Richtung Ungarn. Meist mäßig (8-15 kn), tagsüber stärker als nachts.",
         "location": "Neusiedler See, Seewinkel, östliches Ufer",
         "season": "Sommer"
       },
