@@ -288,13 +288,93 @@
   "Griechenland": {
     "reviere": [
       {
-        "deutsch": "Ionisches Meer Nord (Griechenland)",
+        "deutsch": "Ionisches Meer Nord Offshore (Griechenland)",
         "typ": "meer",
         "emy_name": "North Ionio",
         "emy_nr": 25,
         "lat": 38.8,
         "lon": 20,
-        "orte": "Lefkada, Preveza, Korfu, Paxos, Sivota",
+        "orte": "Offenes Ionisches Meer westlich Lefkada/Paxos",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Korfu",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 39.45,
+        "lon": 20.05,
+        "orte": "Korfu, Gouvia, Lefkimmi, Igoumenitsa, Kestrini",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Paxos",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 39.23,
+        "lon": 20.28,
+        "orte": "Gaios, Paxos, Antipaxos, Parga, Kanallaki",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Preveza",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 38.95,
+        "lon": 20.65,
+        "orte": "Preveza, Vonitsa",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Meganisi",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 38.66,
+        "lon": 20.78,
+        "orte": "Meganisi, Nydri, Vlicho, Nikiana, Kalamos, Kastos, Lefkas-Kanal",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Levkada Kefalonia",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 38.54,
+        "lon": 20.63,
+        "orte": "Kondarena, Vasiliki, Fiskardo, Exogi, Vathy (Ithaka)",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Atokos",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 38.44,
+        "lon": 20.90,
+        "orte": "Kioni, Atokos, Arkoudi, Petalas, Valti",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Kefalonia Patros",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 38.28,
+        "lon": 21.15,
+        "orte": "Argostoli, Sami, Ratzakli, Paralimni, Patras",
+        "windyModel": "iconEu"
+      },
+      {
+        "deutsch": "Ionisches Meer Zakynthos",
+        "typ": "meer",
+        "emy_name": "North Ionio",
+        "emy_nr": 25,
+        "lat": 37.85,
+        "lon": 21.00,
+        "orte": "Zakynthos, Katakolon, Kyllini, Arkoudi (Peloponnes)",
         "windyModel": "iconEu"
       },
       {
@@ -304,7 +384,7 @@
         "emy_nr": 26,
         "lat": 37,
         "lon": 21,
-        "orte": "Zakynthos, Kefalonia, Pylos, Katakolon, Fiskardo",
+        "orte": "Pylos, Methoni, Koroni, Kyparissia",
         "windyModel": "iconEu"
       },
       {
