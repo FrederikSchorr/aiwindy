@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import rateLimit from "express-rate-limit";
+import { purgeStaleIonianLocationCache } from "./cache-db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -93,6 +94,11 @@ app.use((req, res, next) => {
 (async () => {
   app.use("/api/chat", chatRateLimit);
   app.use("/api/upload", uploadRateLimit);
+
+  if (process.env.NODE_ENV === "production") {
+    const purgedCount = await purgeStaleIonianLocationCache();
+    log(`[production-maintenance] removed ${purgedCount} stale Ionian location cache entr${purgedCount === 1 ? "y" : "ies"}`);
+  }
 
   await registerRoutes(httpServer, app);
 

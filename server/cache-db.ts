@@ -81,6 +81,17 @@ export async function cacheDelete(key: string): Promise<void> {
   await pool.query(`DELETE FROM cache_store WHERE key = $1`, [key]);
 }
 
+export async function purgeStaleIonianLocationCache(): Promise<number> {
+  await ready();
+  const res = await pool.query(
+    `DELETE FROM cache_store
+     WHERE key LIKE 'loc:%'
+       AND value LIKE $1`,
+    ['%"sailingArea":"Ionisches Meer Nord (Griechenland)"%'],
+  );
+  return res.rowCount ?? 0;
+}
+
 export async function cacheCleanExpired(): Promise<number> {
   await ready();
   const res = await pool.query(
