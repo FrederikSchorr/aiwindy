@@ -84,16 +84,16 @@
         "season": "Herbst, Winter"
       },
       {
-        "name": "Leithagebirge NW Wind",
+        "name": "Leitha Wind",
         "importance": "primary",
         "description": "Der bestimmende Wind am Neusiedler See. Kräftiger Nordwestwind, der bei Westwetterlagen durch Frontendurchzug bzw. Druckunterschiede zwischen Alpen und Pannonischer Tiefebene entsteht. Erreicht typischerweise 15-25 kn (4-7 Bft), in Böen deutlich mehr und oft ruppig/böig, besonders an schwülen Sommertagen mit Gewitterneigung.",
         "location": "Neusiedler See, Podersdorf, Illmitz, Rust, Neusiedl am See",
         "season": "Ganzjährig, häufiger Frühling, Herbst"
       },
       {
-        "name": "Ungarischer SO Wind",
+        "name": "Puszta Wind",
         "importance": "secondary",
-        "description": "Weht bevorzugt bei stabilen Hochdrucklagen über Ost- und Südosteuropa, häufig im Zusammenhang mit großräumigen Südföhn-Wetterlagen (südliche bis südwestliche Höhenströmung über die Alpen). Kein lokaler thermischer Seebrisen-Effekt, sondern übergeordnete synoptische Strömung. Bringt warme, trockene und teils böige Luft aus Richtung Ungarn. Meist mäßig (8-15 kn), tagsüber stärker als nachts.",
+        "description": "Weht bevorzugt bei stabilen Hochdrucklagen über Ost- und Südosteuropa, häufig im Zusammenhang mit großräumigen Südföhn-Wetterlagen (südliche bis südwestliche Höhenströmung, die um die Alpen herum umgelenkt wird). Diese Wetterlage ist typischerweise böig. Bringt warme, trockene Luft aus Richtung Ungarn. Meist mäßig (8-15 kn), tagsüber stärker als nachts.",
         "location": "Neusiedler See, Seewinkel, östliches Ufer",
         "season": "Sommer"
       },
