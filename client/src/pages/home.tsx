@@ -242,7 +242,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
   const locationShort = location.cityName || location.displayName?.split(",")[0]?.trim() || "";
   const sailingAreaShort = location.sailingArea || locationShort;
   const mapZoom = Math.max(zoom - 2, 4);
-  const windUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
+  const isIconEu = model === "iconEu";
+  const windUrl = isIconEu
+    ? "https://www.windy.com/38.449/20.903/iconEuWaves/waves?iconEu,clouds,38.449,20.903,5,i:pressure,p:favs"
+    : `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
   const cloudsUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom}`;
   const tempModel = "ecmwf";
   const tempModelLabel = "ECMWF 9km";
