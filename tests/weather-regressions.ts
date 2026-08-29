@@ -523,11 +523,88 @@ function testCityMeteogramDewPointVisibility(): void {
   assert.match(partialMarkup, />12°<\/div>/, "the finite dew point should be rendered");
 }
 
+function testCityMeteogramMalformedArrays(): void {
+  const malformed = cityMeteogramAnalysis(
+    [12, 13],
+    [{ hpa: 300, heightM: 9000, pct: 20 }],
+  );
+  const city = (malformed.weatherRaw as any).openMeteoForecast.city;
+  city.hourly.timestamps = [
+    "2026-08-22T09:00:00+02:00",
+    null,
+    "2026-08-22T11:00:00+02:00",
+  ];
+  city.hourly.temp2mC = [20, 21, 22];
+  city.hourly.pressureMslHPa = [1013];
+  city.hourly.cloudCoverLevels = [
+    {
+      hpa: 300,
+      heightM: [9000, 9000, 9000],
+      pct: [20, 20, 20],
+    },
+    {
+      hpa: 300,
+      heightM: [9000, "malformed", 9000],
+      pct: [20, 20, 20],
+    },
+    {
+      hpa: "malformed",
+      heightM: [9000, 9000, 9000],
+      pct: [20, 20, 20],
+    },
+    null,
+  ];
+
+  let data: ReturnType<typeof extractCityMeteogram>;
+  assert.doesNotThrow(() => {
+    data = extractCityMeteogram(malformed);
+  }, "mismatched timestamps and value arrays must not throw");
+  assert.ok(data, "valid timestamp entries should still produce a meteogram");
+  assert.deepEqual(
+    data.points.map((point) => point.timestamp),
+    ["2026-08-22T09:00:00+02:00", "2026-08-22T11:00:00+02:00"],
+    "invalid timestamps should be skipped without shifting later array values",
+  );
+  assert.deepEqual(
+    data.points.map((point) => point.temperature),
+    [20, 22],
+    "values should stay aligned with their original timestamp indexes",
+  );
+  assert.deepEqual(
+    data.points.map((point) => point.pressure),
+    [1013, null],
+    "short value arrays should become missing values instead of throwing",
+  );
+  assert.deepEqual(
+    data.points.map((point) => point.cloudBands[0].sourceLevels),
+    [[300], [300]],
+    "invalid and duplicate cloud levels must not duplicate valid pressure surfaces",
+  );
+
+  const missingTimestamps = cityMeteogramAnalysis([12], []);
+  const missingCity = (missingTimestamps.weatherRaw as any).openMeteoForecast.city;
+  missingCity.hourly.timestamps = null;
+  assert.equal(
+    extractCityMeteogram(missingTimestamps),
+    null,
+    "missing core timestamp data should remain unavailable",
+  );
+  const unavailableMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: missingTimestamps }),
+  );
+  assert.match(
+    unavailableMarkup,
+    /data-meteogram-status="unavailable"/,
+    "missing core timestamp data should render the existing unavailable state",
+  );
+}
+
 async function main(): Promise<void> {
   testCloudTypeClassification();
   testCloudBaseEstimate();
   testCityMeteogramCloudBands();
   testCityMeteogramDewPointVisibility();
+  testCityMeteogramMalformedArrays();
   await withFixedDate(async () => {
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();

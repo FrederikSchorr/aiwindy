@@ -73,6 +73,10 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function isArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 function parseLocalTimestamp(timestamp: string): {
   dateKey: string;
   dayLabel: string;
@@ -115,8 +119,12 @@ export function extractCityMeteogram(analysisJson: Record<string, unknown> | nul
   const city = asRecord(forecast?.city);
   if (!forecast || !city) return null;
   const hourly = asRecord(city?.hourly);
-  const timestamps = asArray(hourly?.timestamps).filter((value): value is string => typeof value === "string");
-  if (!timestamps.length) return null;
+  const timestampEntries = asArray(hourly?.timestamps).flatMap((value, index) => {
+    const timestamp = asString(value);
+    const local = timestamp ? parseLocalTimestamp(timestamp) : null;
+    return timestamp && local ? [{ timestamp, index, local }] : [];
+  });
+  if (!timestampEntries.length) return null;
 
   const temperatures = asArray(hourly?.temp2mC);
   const dewPoints = asArray(hourly?.dewPoint2mC);
@@ -128,29 +136,33 @@ export function extractCityMeteogram(analysisJson: Record<string, unknown> | nul
   const rawLevels = asArray(hourly?.cloudCoverLevels)
     .map(asRecord)
     .filter((level): level is JsonRecord => Boolean(level))
-    .map((level) => ({
-      hpa: asNumber(level.hpa),
-      heights: asArray(level.heightM),
-      percentages: asArray(level.pct),
-    }))
-    .filter((level): level is { hpa: number; heights: unknown[]; percentages: unknown[] } =>
-      level.hpa !== null,
-    );
+    .flatMap((level) => {
+      const hpa = asNumber(level.hpa);
+      if (hpa === null || hpa <= 0 || !isArray(level.heightM) || !isArray(level.pct)) return [];
+      return [{ hpa, heights: level.heightM, percentages: level.pct }];
+    });
 
-  const points = timestamps.map((timestamp, index) => {
-    const local = parseLocalTimestamp(timestamp);
-    if (!local) return null;
+  const points = timestampEntries.map(({ timestamp, index, local }) => {
+    const sourceValuesByPressure = new Map<number, { hpa: number; heightM: number; pct: number }>();
+    for (const level of rawLevels) {
+      const heightM = asNumber(level.heights[index]);
+      const pct = asNumber(level.percentages[index]);
+      if (
+        heightM !== null
+        && pct !== null
+        && heightM >= 0
+        && pct >= 0
+        && pct <= 100
+        && !sourceValuesByPressure.has(level.hpa)
+      ) {
+        sourceValuesByPressure.set(level.hpa, { hpa: level.hpa, heightM, pct });
+      }
+    }
+
     const cloudBands = WINDY_CLOUD_BANDS.map((band) => {
-      const sourceValues = rawLevels
-        .map((level) => ({
-          hpa: level.hpa,
-          heightM: asNumber(level.heights[index]),
-          pct: asNumber(level.percentages[index]),
-        }))
-        .filter((value): value is { hpa: number; heightM: number; pct: number } =>
-          value.heightM !== null
-          && value.pct !== null
-          && value.heightM >= band.minHeightM
+      const sourceValues = Array.from(sourceValuesByPressure.values())
+        .filter((value) =>
+          value.heightM >= band.minHeightM
           && value.heightM < band.maxHeightM,
         );
       return {
