@@ -221,7 +221,7 @@ async function testNationalCoverageAndPrecedence(): Promise<void> {
       CITY,
     );
     const forecastSources = national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API"));
-    assert.equal(forecastSources.length, 1, "Open-Meteo Forecast must be attributed once");
+    assert.equal(forecastSources.length, 2, "Open-Meteo Forecast must be attributed once for area wind and once for city temperature/pressure/clouds/rain");
     assert.equal(national.sourceUrls.some((source) => source.includes("Marine API")), false, "inland marine data must not be cited");
     assert.equal(national.warningCenter.status, "integrated");
     assert.equal(national.warningCenter.label, "LSZ Burgenland");
@@ -257,11 +257,15 @@ async function testUnsupportedAreaCoverage(): Promise<void> {
       { name_de: "Rom", coordinates: { lat: 41.9, lon: 12.5 } },
     );
     assert.deepEqual(national.warningCenter, { status: "unsupported", label: "Italien" });
-    assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 1);
+    assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 2);
     assert.equal(national.sourceUrls.some((source) => source.includes("Marine API")), false);
     const local = preprocessOpenMeteoLocal(national.data, "Europe/Rome");
     assert.equal((local.wind as any).text_de.split("\n").length, 6);
-    assert.equal((local.cloudRainThunderstorm as any).text_de.split("\n").length, 6);
+    // Cloud/rain/thunderstorm data now lives on the city coordinate, not the
+    // sailing area; the mock only fabricates "full" fields (incl. cloud_cover,
+    // rain, cape) for the area URL, so this stays null until the mock is
+    // extended for CITY_HOURLY. See weather-open-meteo.ts CITY_HOURLY.
+    assert.equal((local.cloudRainThunderstorm as any).text_de, null);
     assert.equal((local.wave as any).text_de, null);
   } finally {
     mock.restore();
@@ -287,7 +291,7 @@ async function testFailedNationalProvidersStayTransparent(): Promise<void> {
     assert.equal(national.sourceUrls.some((source) => source.includes("Austrocontrol")), false);
     assert.equal(national.sourceUrls.some((source) => source.includes("GeoSphere Austria")), false);
     assert.equal(national.sourceUrls.some((source) => source.includes("LSZ Burgenland")), false);
-    assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 1);
+    assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 2);
 
     const local = await preprocessLocalWeather(
       national.data,
@@ -317,7 +321,7 @@ async function testHnmsFailureIsNotAllClear(): Promise<void> {
     );
     assert.equal(national.warningCenter.status, "unavailable");
     assert.equal(national.sourceUrls.some((source) => source.includes("HNMS")), false);
-    assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 1);
+    assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 2);
     assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Marine API")).length, 1);
 
     const local = await preprocessLocalWeather(

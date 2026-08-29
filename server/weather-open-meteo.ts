@@ -14,15 +14,23 @@ export type OpenMeteoTarget = {
 // purposes, so they're intentionally excluded.
 const CLOUD_PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250, 200];
 
+// Sailing-area forecast covers wind only — wind is highly local (sheltered
+// channels vs. open water can differ drastically), so it stays pinned to the
+// precise sailing-area/sub-region coordinate. Everything else (temperature,
+// pressure, clouds, rain, thunderstorm risk) is large-scale enough that the
+// city coordinate is representative, and is fetched via CITY_HOURLY instead.
 const FORECAST_HOURLY = [
+  "wind_speed_10m",
+  "wind_direction_10m",
+  "wind_gusts_10m",
+];
+
+const CITY_HOURLY = [
   "temperature_2m",
   "precipitation_probability",
   "rain",
   "weather_code",
   "cloud_cover",
-  "wind_speed_10m",
-  "wind_direction_10m",
-  "wind_gusts_10m",
   "cape",
   "pressure_msl",
   ...CLOUD_PRESSURE_LEVELS.map(level => `cloud_cover_${level}hPa`),
@@ -107,6 +115,14 @@ function values(hourly: Record<string, any> | undefined, key: string): unknown[]
   return Array.isArray(hourly?.[key]) ? hourly[key] : null;
 }
 
+function extractCloudLevels(hourly: Record<string, any> | undefined) {
+  return CLOUD_PRESSURE_LEVELS.map(hpa => ({
+    hpa,
+    heightM: values(hourly, `geopotential_height_${hpa}hPa`),
+    pct: values(hourly, `cloud_cover_${hpa}hPa`),
+  }));
+}
+
 function normalizeForecast(
   areaRaw: Record<string, any> | null,
   areaUrl: string,
@@ -135,17 +151,6 @@ function normalizeForecast(
         windSpeedKt: values(areaHourly, "wind_speed_10m"),
         windDirDeg: values(areaHourly, "wind_direction_10m"),
         gustKt: values(areaHourly, "wind_gusts_10m"),
-        cloudCoverPct: values(areaHourly, "cloud_cover"),
-        rainMm: values(areaHourly, "rain"),
-        precipProbabilityPct: values(areaHourly, "precipitation_probability"),
-        weatherCode: values(areaHourly, "weather_code"),
-        capeJkg: values(areaHourly, "cape"),
-        pressureMslHPa: values(areaHourly, "pressure_msl"),
-        cloudCoverLevels: CLOUD_PRESSURE_LEVELS.map(hpa => ({
-          hpa,
-          heightM: values(areaHourly, `geopotential_height_${hpa}hPa`),
-          pct: values(areaHourly, `cloud_cover_${hpa}hPa`),
-        })),
       } : null,
     },
     city: {
@@ -155,6 +160,13 @@ function normalizeForecast(
       hourly: cityRaw ? {
         timestamps: values(cityHourly, "time"),
         temp2mC: values(cityHourly, "temperature_2m"),
+        pressureMslHPa: values(cityHourly, "pressure_msl"),
+        cloudCoverPct: values(cityHourly, "cloud_cover"),
+        rainMm: values(cityHourly, "rain"),
+        precipProbabilityPct: values(cityHourly, "precipitation_probability"),
+        weatherCode: values(cityHourly, "weather_code"),
+        capeJkg: values(cityHourly, "cape"),
+        cloudCoverLevels: extractCloudLevels(cityHourly),
       } : null,
     },
   };
@@ -226,7 +238,7 @@ export async function fetchOpenMeteoWeather(
     OPEN_METEO_FORECAST_URL,
     city.coordinates,
     timezone,
-    ["temperature_2m"],
+    CITY_HOURLY,
   );
   const marineUrl = buildUrl(
     OPEN_METEO_MARINE_URL,
@@ -244,10 +256,14 @@ export async function fetchOpenMeteoWeather(
 
   const sourceUrls: string[] = [];
   if (forecastRaw) {
-    const provided = ["Wind", "Wolken", "Regen", "Gewitter"];
-    if (hasUsableTemperature(cityRaw)) provided.push("Temperatur");
     sourceUrls.push(
-      `Lokale ${formatForecastSource(provided)} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
+      `Lokale Windvorhersage von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
+    );
+  }
+  if (hasUsableTemperature(cityRaw)) {
+    const provided = ["Temperatur", "Druck", "Wolken", "Regen", "Gewitter"];
+    sourceUrls.push(
+      `Lokale ${formatForecastSource(provided)} für die Stadt von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
     );
   }
   if (hasUsableWaves(marineRaw)) {
