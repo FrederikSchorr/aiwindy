@@ -330,10 +330,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
               isLoading={isStreaming && !hasError}
             />
           </div>
-          {weatherOutput?.cloudsRain?.text ? (
+          {weatherOutput?.cloudsRain?.text && (
             <MarkdownContent content={weatherOutput.cloudsRain.text} />
-          ) : isStreaming && !hasError && (
-            <BounceLoader />
           )}
 
           {!weatherOutput && isStreaming && loadingStatus && <StatusLoader text={loadingStatus} />}
