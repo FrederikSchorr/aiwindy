@@ -75,6 +75,7 @@ function hourlyPayload(
     temperature_2m: timestamps.map((_, index) => 18 + (index % 12)),
   };
   if (fields === "full") {
+    hourly.is_day = timestamps.map((_, index) => index % 2);
     hourly.precipitation_probability = timestamps.map(() => 10);
     hourly.rain = timestamps.map(() => 0);
     hourly.weather_code = timestamps.map(() => 1);
@@ -230,6 +231,11 @@ async function testNationalCoverageAndPrecedence(): Promise<void> {
     assert.equal(national.warningCenter.label, "LSZ Burgenland");
     assert.ok(national.sourceUrls.some((source) => source.includes("GeoSphere Austria")));
     assert.ok(national.sourceUrls.some((source) => source.includes("LSZ Burgenland")));
+    assert.deepEqual(
+      (national.data.openMeteoForecast as any).city.hourly.isDay.slice(0, 4),
+      [0, 1, 0, 1],
+      "Open-Meteo is_day values must reach the city meteogram unchanged",
+    );
 
     const local = await preprocessLocalWeather(
       national.data,
@@ -430,11 +436,13 @@ function cityMeteogramAnalysis(
             timestamps,
             temp2mC: timestamps.map((_, index) => 20 + index),
             dewPoint2mC: dewPoints,
+            isDay: timestamps.map((_, index) => index % 2),
             pressureMslHPa: timestamps.map(() => 1013),
             rainMm: timestamps.map(() => 0),
             precipProbabilityPct: timestamps.map(() => 0),
             weatherCode: timestamps.map(() => 1),
             cloudBaseM: timestamps.map(() => null),
+            cloudType: timestamps.map((_, index) => index % 2 === 0 ? "cumulus" : "cirrus"),
             cloudCoverLevels: cloudLevels.map((level) => ({
               hpa: level.hpa,
               heightM: timestamps.map(() => level.heightM),
@@ -523,6 +531,65 @@ function testCityMeteogramDewPointVisibility(): void {
   assert.match(partialMarkup, />12°<\/div>/, "the finite dew point should be rendered");
 }
 
+function testCityMeteogramVisualLayers(): void {
+  const analysis = cityMeteogramAnalysis(
+    [12, 13],
+    [{ hpa: 850, heightM: 1800, pct: 65 }],
+  );
+  const hourly = (analysis.weatherRaw as any).openMeteoForecast.city.hourly;
+  hourly.cloudBaseM = [900, 1400];
+
+  const data = extractCityMeteogram(analysis);
+  assert.ok(data, "visual-layer fixture should produce a meteogram");
+  assert.deepEqual(
+    data.points.map((point) => point.isDay),
+    [false, true],
+    "numeric Open-Meteo is_day values must map to night/day booleans",
+  );
+  assert.deepEqual(
+    data.points.map((point) => point.cloudType),
+    ["cumulus", "cirrus"],
+    "heuristic cloud types must stay aligned with their timestamps",
+  );
+
+  const markup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: analysis }),
+  );
+  assert.match(markup, /data-night-shading="true"/, "nighttime must receive explicit chart shading");
+  assert.match(markup, /data-testid="meteogram-cloud-field"/, "cloud field must remain testable");
+  assert.match(markup, /data-testid="meteogram-lcl-line"/, "estimated LCL must be integrated in the cloud field");
+  assert.match(
+    markup,
+    /data-testid="meteogram-pressure-rain-overlay"/,
+    "pressure and rain must share one overlaid plot",
+  );
+  assert.match(markup, /heuristisch aus Modelldaten/, "cloud types must be described as heuristic model output");
+  assert.match(markup, /keine Beobachtung/, "the LCL must not be presented as an observed cloud base");
+}
+
+function testCityMeteogramDoesNotInventCloudsInEmptyBands(): void {
+  const analysis = cityMeteogramAnalysis(
+    [12, 13],
+    [{ hpa: 300, heightM: 9000, pct: 70 }],
+  );
+  const hourly = (analysis.weatherRaw as any).openMeteoForecast.city.hourly;
+  hourly.cloudType = ["cirrus", "cirrus"];
+
+  const markup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: analysis }),
+  );
+  assert.equal(
+    (markup.match(/data-cloud-shape-band="FL300"/g) ?? []).length,
+    2,
+    "high-cloud texture should render only where its source band has coverage",
+  );
+  assert.doesNotMatch(
+    markup,
+    /data-cloud-shape-band="(?:FL200|FL150|FL130|FL100|FL065|AGL)"/,
+    "the hourly cloud type must not invent clouds in empty lower bands",
+  );
+}
+
 function testCityMeteogramMalformedArrays(): void {
   const malformed = cityMeteogramAnalysis(
     [12, 13],
@@ -604,6 +671,8 @@ async function main(): Promise<void> {
   testCloudBaseEstimate();
   testCityMeteogramCloudBands();
   testCityMeteogramDewPointVisibility();
+  testCityMeteogramVisualLayers();
+  testCityMeteogramDoesNotInventCloudsInEmptyBands();
   testCityMeteogramMalformedArrays();
   await withFixedDate(async () => {
     await testNationalCoverageAndPrecedence();

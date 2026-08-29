@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Sailboat, Camera, MapPin, Image, Wind, Compass, Anchor, Waves, Sun, Cloud, CloudRain, Thermometer, Navigation, Flag, CloudSun, Droplets, Ship, Info, Mail, type LucideIcon } from "lucide-react";
-import { SiGithub, SiLinkedin } from "react-icons/si";
+import { SiGithub } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 import CityMeteogram from "@/components/city-meteogram";
@@ -936,7 +937,7 @@ export default function Home() {
                       <SiGithub className="w-3.5 h-3.5" />
                     </a>
                     <a href="https://www.linkedin.com/in/frederik-schorr-69ba971/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" aria-label="LinkedIn" data-testid="link-linkedin">
-                      <SiLinkedin className="w-3.5 h-3.5" />
+                      <FaLinkedin className="w-3.5 h-3.5" />
                     </a>
                   </div>
                   <a

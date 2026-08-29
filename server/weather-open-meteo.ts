@@ -28,6 +28,7 @@ const FORECAST_HOURLY = [
 const CITY_HOURLY = [
   "temperature_2m",
   "dew_point_2m",
+  "is_day",
   "precipitation_probability",
   "rain",
   "weather_code",
@@ -288,6 +289,7 @@ function normalizeForecast(
         timestamps: values(cityHourly, "time"),
         temp2mC: values(cityHourly, "temperature_2m"),
         dewPoint2mC: values(cityHourly, "dew_point_2m"),
+        isDay: values(cityHourly, "is_day"),
         cloudBaseM: buildCloudBaseSeries(cityHourly),
         pressureMslHPa: values(cityHourly, "pressure_msl"),
         cloudCoverPct: values(cityHourly, "cloud_cover"),
