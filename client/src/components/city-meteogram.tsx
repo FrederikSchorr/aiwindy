@@ -90,6 +90,25 @@ function weatherIcon(code: number | null) {
   if (code >= 51) return <CloudRain className="h-[13px] w-[13px] text-sky-500" aria-hidden="true" />;
   return <Cloud className="h-[13px] w-[13px] text-slate-500" aria-hidden="true" />;
 }
+const LOADING_ICONS = [Sun, CloudSun, Cloud, CloudRain, CloudLightning] as const;
+function MeteogramLoadingState() {
+  const [iconIndex, setIconIndex] = React.useState(0);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      setIconIndex((current) => (current + 1) % LOADING_ICONS.length);
+    }, 700);
+    return () => window.clearInterval(timer);
+  }, []);
+  const LoadingIcon = LOADING_ICONS[iconIndex];
+  return (
+    <span className="inline-flex items-center gap-2" role="status" aria-live="polite">
+      <span className="inline-flex h-4 w-4 items-center justify-center" data-testid="meteogram-loading-icon">
+        <LoadingIcon className="h-4 w-4 text-sky-500" aria-hidden="true" />
+      </span>
+      <span>Meteogramm wird vorbereitet …</span>
+    </span>
+  );
+}
 function smoothPath(points: Array<[number, number]>) {
   if (!points.length) return "";
   return points.reduce((path, [x, y], index) => {
@@ -218,7 +237,7 @@ function DayHeaders({ points }: { points: MeteogramPoint[] }) {
 function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps) {
   const data = extractCityMeteogram(analysisJson);
   if (!data) {
-    return <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status={isLoading ? "loading" : "unavailable"}>{isLoading ? "Meteogramm wird vorbereitet …" : "Meteogramm für die Stadtdaten nicht verfügbar."}</div>;
+    return <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status={isLoading ? "loading" : "unavailable"}>{isLoading ? <MeteogramLoadingState /> : "Meteogramm für die Stadtdaten nicht verfügbar."}</div>;
   }
   const chartWidth = data.points.length * POINT_WIDTH;
   const pressureValues = data.points.map((point) => point.pressure).filter((value): value is number => value !== null);

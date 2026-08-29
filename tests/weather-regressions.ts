@@ -531,6 +531,15 @@ function testCityMeteogramDewPointVisibility(): void {
   assert.match(partialMarkup, />12°<\/div>/, "the finite dew point should be rendered");
 }
 
+function testCityMeteogramLoadingState(): void {
+  const markup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: null, isLoading: true }),
+  );
+  assert.match(markup, /data-meteogram-status="loading"/, "loading state should be marked as loading");
+  assert.match(markup, /data-testid="meteogram-loading-icon"/, "loading state should show a weather icon");
+  assert.match(markup, /Meteogramm wird vorbereitet …/, "loading state should use the shortened message");
+}
+
 function testCityMeteogramVisualLayers(): void {
   const analysis = cityMeteogramAnalysis(
     [12, 13],
