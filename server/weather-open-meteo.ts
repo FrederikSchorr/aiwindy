@@ -27,6 +27,7 @@ const FORECAST_HOURLY = [
 
 const CITY_HOURLY = [
   "temperature_2m",
+  "dew_point_2m",
   "precipitation_probability",
   "rain",
   "weather_code",
@@ -211,6 +212,23 @@ function numberAt(arr: unknown[] | null, index: number): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+// Espy approximation for the lifting condensation level: the altitude at
+// which a surface air parcel cools to its dew point and condenses. Standard
+// meteorological estimate for convective cloud base, ~125m per °C of dew
+// point depression (Fahrenheit/1000ft equivalent: 228ft per °F).
+export function estimateCloudBaseM(tempC: number | null, dewPointC: number | null): number | null {
+  if (tempC === null || dewPointC === null) return null;
+  return Math.round(125 * (tempC - dewPointC));
+}
+
+function buildCloudBaseSeries(hourly: Record<string, any> | undefined): (number | null)[] | null {
+  const timestamps = values(hourly, "time");
+  if (!timestamps) return null;
+  const temp = values(hourly, "temperature_2m");
+  const dewPoint = values(hourly, "dew_point_2m");
+  return timestamps.map((_, index) => estimateCloudBaseM(numberAt(temp, index), numberAt(dewPoint, index)));
+}
+
 function buildCloudTypeSeries(hourly: Record<string, any> | undefined): CloudType[] | null {
   const timestamps = values(hourly, "time");
   if (!timestamps) return null;
@@ -269,6 +287,8 @@ function normalizeForecast(
       hourly: cityRaw ? {
         timestamps: values(cityHourly, "time"),
         temp2mC: values(cityHourly, "temperature_2m"),
+        dewPoint2mC: values(cityHourly, "dew_point_2m"),
+        cloudBaseM: buildCloudBaseSeries(cityHourly),
         pressureMslHPa: values(cityHourly, "pressure_msl"),
         cloudCoverPct: values(cityHourly, "cloud_cover"),
         cloudCoverLowPct: values(cityHourly, "cloud_cover_low"),

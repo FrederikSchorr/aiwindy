@@ -10,7 +10,7 @@ import {
   fetchNationalWeather,
   preprocessLocalWeather,
 } from "../server/weather-national.js";
-import { preprocessOpenMeteoLocal, classifyCloudType } from "../server/weather-open-meteo.js";
+import { preprocessOpenMeteoLocal, classifyCloudType, estimateCloudBaseM } from "../server/weather-open-meteo.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
 
 const REAL_DATE = globalThis.Date;
@@ -387,8 +387,16 @@ function testCloudTypeClassification(): void {
   );
 }
 
+function testCloudBaseEstimate(): void {
+  assert.equal(estimateCloudBaseM(30.7, 21.2), 1188, "125m per °C dew point depression");
+  assert.equal(estimateCloudBaseM(20, 20), 0, "saturated air has cloud base at the surface");
+  assert.equal(estimateCloudBaseM(null, 20), null, "missing temperature yields no estimate");
+  assert.equal(estimateCloudBaseM(20, null), null, "missing dew point yields no estimate");
+}
+
 async function main(): Promise<void> {
   testCloudTypeClassification();
+  testCloudBaseEstimate();
   await withFixedDate(async () => {
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();
