@@ -45,6 +45,7 @@ const ROW = {
 } as const;
 const CLOUD_CHART_HEIGHT = ROW.cloudBand * 7;
 const LOWER_CHART_HEIGHT = ROW.lower;
+const FORECAST_BLOCK_HEIGHT = ROW.icons + ROW.temperature;
 const WINDY_CLOUD_BANDS: CloudBand[] = [
   { label: "FL300", minHeightM: 8000, maxHeightM: 13000 },
   { label: "FL200", minHeightM: 5500, maxHeightM: 8000 },
@@ -230,11 +231,11 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const temperatureValues = data.points.map((point) => point.temperature).filter((value): value is number => value !== null);
   const temperatureMin = temperatureValues.length ? Math.floor(Math.min(...temperatureValues) - 2) : 0;
   const temperatureMax = temperatureValues.length ? Math.ceil(Math.max(...temperatureValues) + 2) : 30;
-  const temperatureY = (value: number) => 6 + (1 - (value - temperatureMin) / Math.max(1, temperatureMax - temperatureMin)) * 28;
+  const temperatureY = (value: number) => 5 + (1 - (value - temperatureMin) / Math.max(1, temperatureMax - temperatureMin)) * (FORECAST_BLOCK_HEIGHT - 10);
   const tempPoints = data.points.flatMap((point, index) => point.temperature === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]]);
   const temperaturePath = smoothPath(tempPoints);
   const temperatureArea = tempPoints.length
-    ? `${smoothPath([[0, tempPoints[0][1]], ...tempPoints, [chartWidth, tempPoints[tempPoints.length - 1][1]]])} L ${chartWidth} ${ROW.temperatureArea} L 0 ${ROW.temperatureArea} Z`
+    ? `${smoothPath([[0, tempPoints[0][1]], ...tempPoints, [chartWidth, tempPoints[tempPoints.length - 1][1]]])} L ${chartWidth} ${FORECAST_BLOCK_HEIGHT} L 0 ${FORECAST_BLOCK_HEIGHT} Z`
     : "";
   const pressurePoints = data.points.flatMap((point, index) => point.pressure === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, LOWER_CHART_HEIGHT - 12 - ((point.pressure - pressureMin) / Math.max(1, pressureMax - pressureMin)) * 42, point.pressure] as [number, number, number]]);
   const cityLabel = cityName || data.cityName;
@@ -254,7 +255,6 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
           <div style={{ height: ROW.hours }} className="flex items-center px-1.5 font-semibold">Zeit</div>
           <div style={{ height: ROW.icons }} className="flex items-center px-1.5">Wetter</div>
           <div style={{ height: ROW.temperature }} className="flex items-center px-1.5 text-[#bd5b2d]">Temp.</div>
-          <div style={{ height: ROW.temperatureArea }} className="flex items-center px-1.5 text-[#bd5b2d]">°C</div>
           {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center px-1.5">Taupunkt</div>}
           <div style={{ height: CLOUD_CHART_HEIGHT }} className="flex flex-col">
             {data.bands.map((band) => <div key={band.label} className="flex min-h-0 flex-1 items-center border-b border-slate-300/45 px-1.5 font-medium dark:border-slate-700/60">{band.label}</div>)}
@@ -271,13 +271,19 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
             <div className="relative z-10">
               <DayHeaders points={data.points} />
               <div className="grid border-b border-slate-300/50 text-[9px] text-slate-500 dark:border-slate-700/50 dark:text-slate-400" style={{ height: ROW.hours, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`hour-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.hourLabel}</div>)}</div>
-              <div className="grid border-b border-slate-300/50 dark:border-slate-700/50" style={{ height: ROW.icons, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`icon-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30" title={point.weatherCode === null ? "Wetterzustand nicht verfügbar" : `Wettercode ${point.weatherCode}`}>{weatherIcon(point.weatherCode)}</div>)}</div>
-              <div className="grid border-b border-slate-300/50 text-[10px] font-semibold text-[#bd5b2d] dark:border-slate-700/50" style={{ height: ROW.temperature, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`temp-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}</div>
-              <svg data-testid="meteogram-temperature-area" data-series="temperature-chart" viewBox={`0 0 ${chartWidth} ${ROW.temperatureArea}`} width={chartWidth} height={ROW.temperatureArea} className="block border-b border-slate-300/65 dark:border-slate-700" role="img" aria-label="Temperaturverlauf">
-                {[13, 26].map((y) => <line key={y} x1="0" x2={chartWidth} y1={y} y2={y} stroke="#b9c2cc" strokeOpacity=".3" strokeDasharray="2 4" />)}
-                {temperatureArea && <path data-series="temperature" d={temperatureArea} fill="#df7045" fillOpacity=".18" />}
-                {temperaturePath && <path data-series="temperature" d={temperaturePath} fill="none" stroke="#df7045" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
-              </svg>
+              <div className="relative border-b border-slate-300/50 dark:border-slate-700/50" style={{ height: FORECAST_BLOCK_HEIGHT }}>
+                <svg data-testid="meteogram-temperature-area" data-temperature-layer="behind-forecast-rows" viewBox={`0 0 ${chartWidth} ${FORECAST_BLOCK_HEIGHT}`} width={chartWidth} height={FORECAST_BLOCK_HEIGHT} className="pointer-events-none absolute inset-0 z-0 block" role="img" aria-label="Temperaturverlauf">
+                  {[12, 24].map((y) => <line key={y} x1="0" x2={chartWidth} y1={y} y2={y} stroke="#b9c2cc" strokeOpacity=".3" strokeDasharray="2 4" />)}
+                  {temperatureArea && <path data-series="temperature" d={temperatureArea} fill="#df7045" fillOpacity=".18" />}
+                  {temperaturePath && <path data-series="temperature" d={temperaturePath} fill="none" stroke="#df7045" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                </svg>
+                <div className="relative z-10 grid" style={{ height: ROW.icons, gridTemplateColumns: grid }}>
+                  {data.points.map((point, index) => <div key={`icon-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30" title={point.weatherCode === null ? "Wetterzustand nicht verfügbar" : `Wettercode ${point.weatherCode}`}>{weatherIcon(point.weatherCode)}</div>)}
+                </div>
+                <div className="relative z-10 grid text-[10px] font-semibold text-[#bd5b2d]" style={{ height: ROW.temperature, gridTemplateColumns: grid }}>
+                  {data.points.map((point, index) => <div key={`temp-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
+                </div>
+              </div>
               {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="grid border-b border-slate-300/60 text-[10px] text-slate-500 dark:border-slate-700" style={{ height: ROW.dewPoint, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`dew-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.dewPoint !== null ? `${Math.round(point.dewPoint)}°` : "—"}</div>)}</div>}
               <svg data-testid="meteogram-cloud-field" viewBox={`0 0 ${chartWidth} ${CLOUD_CHART_HEIGHT}`} width={chartWidth} height={CLOUD_CHART_HEIGHT} className="block border-b border-slate-300/65 bg-transparent dark:border-slate-700" role="img" aria-label="Mehrschichtige Wolkenbedeckung nach Höhe">
                 <defs><pattern id="cloud-hatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-2 10L4 4M3 15L15 3" stroke="#53616e" strokeOpacity=".12" strokeWidth="1" /></pattern></defs>

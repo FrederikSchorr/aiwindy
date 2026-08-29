@@ -562,8 +562,8 @@ function testCityMeteogramVisualLayers(): void {
   );
   assert.match(
     markup,
-    /data-testid="meteogram-temperature-area"/,
-    "the temperature must have a dedicated filled chart",
+    /data-testid="meteogram-temperature-area"[^>]*data-temperature-layer="behind-forecast-rows"/,
+    "the filled temperature chart must be the background layer behind icons and temperature values",
   );
   assert.equal(
     (markup.match(/data-series="temperature"/g) ?? []).length,
@@ -578,7 +578,7 @@ function testCityMeteogramVisualLayers(): void {
   assert.ok(
     markup.indexOf('data-testid="meteogram-temperature-area"')
       < markup.indexOf('data-testid="meteogram-dew-point-row"'),
-    "the temperature area must sit directly before the numeric dew-point row",
+    "the overlaid temperature area must remain above the numeric dew-point row",
   );
   assert.match(markup, /data-testid="meteogram-cloud-field"/, "cloud field must remain testable");
   assert.doesNotMatch(
