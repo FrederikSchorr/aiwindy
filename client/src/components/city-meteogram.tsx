@@ -348,29 +348,48 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const grid = `repeat(${data.points.length}, ${POINT_WIDTH}px)`;
   const rainGroups = rainDayGroups(data.points);
 
+  const firstRain = data.points.find((point) => (point.rain ?? 0) >= .05);
+  const stormRisk = data.points.some((point) => point.cloudType === "cumulonimbus");
+  const coordinateLabel = data.latitude !== null && data.longitude !== null
+    ? `${Math.abs(data.latitude).toFixed(3)}° ${data.latitude < 0 ? "S" : "N"} · ${Math.abs(data.longitude).toFixed(3)}° ${data.longitude < 0 ? "W" : "E"}`
+    : "Koordinaten nicht verfügbar";
+
   return (
-    <div className="meteogram-shell relative left-0 w-full translate-x-0 overflow-hidden border-y border-slate-300/55 bg-[#f8fafb] dark:border-slate-700 dark:bg-slate-950 md:left-1/2 md:w-[min(1120px,calc(100vw-48px))] md:-translate-x-1/2" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone}>
+    <section className="meteogram-shell relative left-0 w-full max-w-full translate-x-0 overflow-hidden border border-[#c7d2d3] bg-[#f5f7f4] text-[#33464c] shadow-[0_14px_38px_rgba(55,77,76,.11)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:left-1/2 md:w-[min(1120px,calc(100vw-48px))] md:-translate-x-1/2" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} aria-label={`Atmosphärische Wetterkarte für ${cityLabel}`}>
+      <header className="flex flex-col gap-4 border-b border-[#c7d2d3] bg-[#eef3ef] px-4 py-4 dark:border-slate-700 dark:bg-slate-900 sm:px-6 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#6b7e7a] dark:text-slate-400"><span className="h-2 w-2 shrink-0 rounded-full bg-[#7a9d82]" />Atmosphärische Karte · {dayCount} Tage</div>
+          <h3 className="truncate font-serif text-2xl tracking-[-.03em] text-[#263d42] dark:text-slate-100 sm:text-3xl">{cityLabel}</h3>
+          <p className="mt-1 text-xs text-[#70817e] dark:text-slate-400">{coordinateLabel} · Ortszeit {data.timezone}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[10px] font-semibold">
+          <span className="rounded-full border border-[#cbd9cd] bg-[#e0ece1] px-2.5 py-1 text-[#52735b] dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">Modellprognose</span>
+          {firstRain && <span className="rounded-full border border-[#c9dbe5] bg-[#e1edf3] px-2.5 py-1 text-[#42718a] dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200">Regen {firstRain.dayLabel} {firstRain.hourLabel}:00</span>}
+          {stormRisk && <span className="rounded-full border border-[#dfc1c1] bg-[#f3dfdf] px-2.5 py-1 text-[#9c4d4d] dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">Gewitterrisiko</span>}
+        </div>
+      </header>
+      <div className="border-b border-[#d5dddd] bg-[#f8faf7] px-4 py-2 text-[11px] leading-5 text-[#6d7c7c] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 sm:px-6"><strong className="text-[#405b5b] dark:text-slate-200">Lesart:</strong> Die Wolkenflächen bilden den Horizont — je dichter, desto bedeckter. Modellkarte für Muster, kein Beobachtungsbild.</div>
       <div className="flex min-w-0">
-        <div className="w-[116px] shrink-0 border-r border-slate-300/60 bg-[#edf1f2] text-[11px] leading-[13px] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 md:w-[176px]">
+        <aside className="w-[116px] shrink-0 border-r border-[#cbd5d5] bg-[#e9efec] text-[10px] leading-[13px] text-[#627371] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 md:w-[176px]" aria-label="Feste Legende">
           <div style={{ height: ROW.day }} className="flex min-w-0 flex-col justify-center border-b border-slate-300/50 px-3 dark:border-slate-700">
             <div className="truncate text-[13px] font-semibold tracking-tight text-slate-800 dark:text-slate-100">{cityLabel}</div>
             <div className="mt-0.5 truncate text-[9px] text-slate-500 dark:text-slate-400">{data.timezone} · {dayCount} Tage · {data.points.length} Punkte</div>
             {data.sourceUrl && <a href={data.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 w-fit text-[9px] font-semibold text-slate-600 underline-offset-2 hover:text-[#d55f32] hover:underline dark:text-slate-300" data-testid="meteogram-source-link">Open-Meteo ↗</a>}
           </div>
-          <div style={{ height: ROW.hours }} className="flex items-center justify-center px-2 font-semibold">Stunden</div>
-          <div style={{ height: ROW.icons }} className="flex items-center justify-center px-2">Wetter</div>
-          <div style={{ height: ROW.temperature }} className="flex items-center justify-center px-2 font-medium text-[#bd5b2d]">Temperatur</div>
+          <div style={{ height: ROW.hours }} className="flex items-center justify-center border-b border-[#d4dddd] px-2 font-semibold">Zeit · Wetter</div>
+          <div style={{ height: ROW.icons }} className="flex items-center justify-center border-b border-[#d4dddd] px-2">Wetter</div>
+          <div style={{ height: ROW.temperature }} className="flex items-center justify-center border-b border-[#d4dddd] px-2 font-medium text-[#ad6747]">Temperatur · °C</div>
           {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-center px-2">Taupunkt</div>}
           <div data-testid="meteogram-fixed-cloud-labels" style={{ height: CLOUD_CHART_HEIGHT }} className="relative">
             <div className="absolute inset-y-0 left-0 flex w-[52%] flex-col items-center justify-center px-1 text-center text-[10px] font-medium leading-[13px] text-slate-500 md:text-[12px]">
-              <span>Wolken, Regen</span><span className="mt-1 underline">mm</span>
+              <span>Wolken</span><span className="mt-1 text-[#457292]">Regen · Druck</span><span className="underline">mm · hPa</span>
             </div>
             <div className="absolute inset-y-0 right-0 flex w-[48%] flex-col">
               {data.bands.map((band) => <div key={band.key} data-fixed-cloud-band={band.key} className="flex min-h-0 flex-1 flex-col items-center justify-center px-1 text-center"><strong className="text-[10px] tracking-[.04em] text-slate-600 md:text-[11px]">{band.label}</strong><span className="text-[9px] text-slate-500 md:text-[10px]">{band.altitude}</span></div>)}
             </div>
           </div>
-          {hasCloudBase && <div data-testid="meteogram-cloud-base-label" style={{ height: ROW.cloudBase }} className="flex items-center justify-center gap-1 px-2 text-center">Wolkenuntergrenze <span className="underline">m</span></div>}
-        </div>
+          {hasCloudBase && <div data-testid="meteogram-cloud-base-label" style={{ height: ROW.cloudBase }} className="flex items-center justify-center gap-1 bg-[#e0ece1] px-2 text-center">Wolkenbasis <span className="underline">m</span></div>}
+        </aside>
         <div className="meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll">
           <div className="relative" style={{ minWidth: chartWidth }}>
             <div data-night-overlay-layer="true" className="pointer-events-none absolute inset-0 z-[15] flex">
@@ -425,13 +444,18 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
               </div>
                 {hasCloudBase && <div data-testid="meteogram-cloud-base-row" aria-label="Geschätzte Wolkenuntergrenze" className="grid border-b border-slate-300/45 bg-[#dff2e4] text-[16px] font-medium text-slate-700 dark:bg-emerald-950/35 dark:text-slate-200" style={{ height: ROW.cloudBase, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`base-${point.timestamp}-${index}`} data-cloud-base-level={point.cloudBase === null ? "unavailable" : point.cloudBase < 300 ? "very-low" : point.cloudBase < 600 ? "low" : point.cloudBase < 1000 ? "caution" : point.cloudBase < 2000 ? "moderate" : point.cloudBase < 5000 ? "high" : "very-high"} className={`flex items-center justify-center ${point.cloudBase === null ? "" : cloudBaseTone(point.cloudBase)}`} title={point.cloudBase === null ? "Keine gültige Schätzung der Wolkenuntergrenze" : `Geschätzte Wolkenuntergrenze: ${Math.round(point.cloudBase)} m, aus Temperatur und Taupunkt abgeleitet; keine Beobachtung`}>{point.cloudBase !== null ? formatCloudBase(point.cloudBase) : "—"}</div>)}</div>}
              </div>
-              <div data-testid="meteogram-current-column" aria-hidden="true" className="pointer-events-none absolute z-20 rounded-[5px] border-2 border-transparent bg-transparent" style={{ left: currentPointIndex * POINT_WIDTH, top: ROW.day, bottom: 0, width: POINT_WIDTH }}>
-                <span className="absolute inset-y-0 left-1/2 border-l border-dashed border-slate-600/55 dark:border-slate-300/55" />
+               <div data-testid="meteogram-current-column" role="img" aria-label={`Aktueller Prognosezeitpunkt: ${data.points[currentPointIndex].dayLabel} ${data.points[currentPointIndex].hourLabel}:00 Uhr`} className="pointer-events-none absolute z-20 rounded-[5px] border-2 border-transparent bg-transparent" style={{ left: currentPointIndex * POINT_WIDTH, top: ROW.day, bottom: 0, width: POINT_WIDTH }}>
+                <span className="absolute -top-4 left-1/2 -translate-x-1/2 rounded bg-[#58716d] px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-[#f5f7f4]">JETZT</span>
+                 <span aria-hidden="true" className="absolute inset-y-0 left-1/2 border-l border-dashed border-slate-600/55 dark:border-slate-300/55" />
               </div>
           </div>
         </div>
       </div>
-    </div>
+      <footer className="flex flex-col gap-2 border-t border-[#c7d2d3] bg-[#eef3ef] px-4 py-2.5 text-[10px] leading-4 text-[#71817e] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <span><strong className="text-[#526b68] dark:text-slate-200">Hinweis:</strong> Wolkentypen und Wolkenhöhen sind modellbasierte Heuristiken, keine Beobachtungen.</span>
+        <span className="flex items-center gap-2 whitespace-nowrap">Quelle: {data.sourceUrl ? <a href={data.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">Open-Meteo</a> : "Open-Meteo"}</span>
+      </footer>
+    </section>
   );
 }
 

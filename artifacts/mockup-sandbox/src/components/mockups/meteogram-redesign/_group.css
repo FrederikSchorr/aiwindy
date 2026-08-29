@@ -1,0 +1,9 @@
+.meteogram-current__scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, .55) transparent;
+}
+.meteogram-current__scroll::-webkit-scrollbar { height: 6px; }
+.meteogram-current__scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, .55);
+  border-radius: 999px;
+}

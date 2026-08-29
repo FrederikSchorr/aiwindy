@@ -597,6 +597,11 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(markup, /font-size="10"/, "pressure labels should be readable");
   assert.match(markup, /stroke="#587b90"/, "pressure should be blue-gray and distinct from cloud fill");
   assert.match(markup, /data-testid="meteogram-current-column"/, "the current forecast column should be highlighted");
+  assert.match(
+    markup,
+    /data-testid="meteogram-current-column"[^>]*role="img"[^>]*aria-label="Aktueller Prognosezeitpunkt:/,
+    "the current forecast column should expose its timestamp to assistive technology",
+  );
   assert.match(markup, /border-l border-dashed/, "the current column should use a subtle Windy-like dashed marker");
   assert.match(markup, /data-night-overlay-layer="true"[^>]*z-\[15\]/, "night shading should overlay opaque chart rows");
   assert.match(
@@ -611,6 +616,41 @@ function testCityMeteogramVisualLayers(): void {
   );
   assert.match(markup, /heuristisch aus Modelldaten/, "cloud types must be described as heuristic model output");
   assert.match(markup, /keine Beobachtung/, "the cloud-base estimate must not be presented as observed");
+
+  const southernWesternAnalysis = cityMeteogramAnalysis([12]);
+  const city = (southernWesternAnalysis.weatherRaw as any).openMeteoForecast.city;
+  city.coordinates = { lat: -33.869, lon: -151.209 };
+  const southernWesternMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: southernWesternAnalysis }),
+  );
+  assert.match(
+    southernWesternMarkup,
+    /33\.869° S · 151\.209° W/,
+    "coordinate labels should derive hemispheres from latitude and longitude signs",
+  );
+
+  const capeOnlyAnalysis = cityMeteogramAnalysis([12]);
+  const capeOnlyHourly = (capeOnlyAnalysis.weatherRaw as any).openMeteoForecast.city.hourly;
+  capeOnlyHourly.capeJkg = [900];
+  capeOnlyHourly.cloudType = ["cumulus"];
+  const capeOnlyMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: capeOnlyAnalysis }),
+  );
+  assert.doesNotMatch(
+    capeOnlyMarkup,
+    /Gewitterrisiko/,
+    "CAPE alone must not receive the warning-color treatment reserved for Cumulonimbus",
+  );
+
+  capeOnlyHourly.cloudType = ["cumulonimbus"];
+  const cumulonimbusMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: capeOnlyAnalysis }),
+  );
+  assert.match(
+    cumulonimbusMarkup,
+    /Gewitterrisiko/,
+    "Cumulonimbus should retain the critical warning treatment",
+  );
 }
 
 function testMeteogramFormatting(): void {

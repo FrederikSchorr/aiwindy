@@ -4,3 +4,4 @@
 - [Universal local forecasts](universal-local-forecasts.md) — Open-Meteo provides six-day baseline data; national detail and warnings remain distinct, higher-priority evidence
 - [Chat history limits](chat-history-limits.md) — trim long generated media analyses before reusing them as chat history, rather than weakening request limits
 - [Direct TSX regression tests](direct-tsx-regression-tests.md) — server-rendering TSX with tsx needs an explicit React runtime import when JSX is preserved
+- [Meteogram design direction](meteogram-design-direction.md) — favor a calm atmospheric map over cockpit or editorial framing for the city forecast
