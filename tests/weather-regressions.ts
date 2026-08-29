@@ -256,7 +256,7 @@ async function testUnsupportedAreaCoverage(): Promise<void> {
       null,
       { name_de: "Rom", coordinates: { lat: 41.9, lon: 12.5 } },
     );
-    assert.deepEqual(national.warningCenter, { status: "unsupported" });
+    assert.deepEqual(national.warningCenter, { status: "unsupported", label: "Italien" });
     assert.equal(national.sourceUrls.filter((source) => source.includes("Open-Meteo Forecast API")).length, 1);
     assert.equal(national.sourceUrls.some((source) => source.includes("Marine API")), false);
     const local = preprocessOpenMeteoLocal(national.data, "Europe/Rome");
