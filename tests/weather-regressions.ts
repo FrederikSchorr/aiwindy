@@ -14,7 +14,7 @@ import {
 } from "../server/weather-national.js";
 import { preprocessOpenMeteoLocal, classifyCloudType, estimateCloudBaseM } from "../server/weather-open-meteo.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
-import CityMeteogram, { extractCityMeteogram } from "../client/src/components/city-meteogram";
+import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
 
 const REAL_DATE = globalThis.Date;
 const FIXED_NOW = "2026-08-22T09:00:00.000Z";
@@ -264,6 +264,15 @@ async function testNationalCoverageAndPrecedence(): Promise<void> {
     assert.equal((local.wave as any).text_de, null, "absent lake waves must stay silent");
     assert.equal((local.wind as any).text_de.split("\n").length, 6, "national areas keep all six baseline days");
     assert.equal(mock.calls.filter((url) => url.startsWith("https://api.open-meteo.com/v1/forecast")).length, 2);
+    const cityForecastCall = mock.calls.find((url) =>
+      url.startsWith("https://api.open-meteo.com/v1/forecast")
+      && url.includes(`latitude=${CITY.coordinates.lat}`),
+    );
+    assert.ok(cityForecastCall?.includes("cloud_cover_low"), "city forecast must request aggregate low cloud cover");
+    assert.ok(cityForecastCall?.includes("cloud_cover_mid"), "city forecast must request aggregate middle cloud cover");
+    assert.ok(cityForecastCall?.includes("cloud_cover_high"), "city forecast must request aggregate high cloud cover");
+    assert.ok(!cityForecastCall?.includes("cloud_cover_550hPa"), "city forecast must not request unused pressure-level cloud data");
+    assert.ok(!cityForecastCall?.includes("geopotential_height_"), "city forecast must not request unused geopotential-height data");
   } finally {
     mock.restore();
   }
@@ -421,7 +430,7 @@ function testCloudBaseEstimate(): void {
 
 function cityMeteogramAnalysis(
   dewPoints: Array<number | null>,
-  cloudLevels: Array<{ hpa: number; heightM: number; pct: number }>,
+  clouds: { low?: Array<number | null>; mid?: Array<number | null>; high?: Array<number | null> } = {},
 ): Record<string, unknown> {
   const timestamps = dewPoints.map((_, index) => `2026-08-22T${String(9 + index).padStart(2, "0")}:00:00+02:00`);
   return {
@@ -443,11 +452,9 @@ function cityMeteogramAnalysis(
             weatherCode: timestamps.map(() => 1),
             cloudBaseM: timestamps.map(() => null),
             cloudType: timestamps.map((_, index) => index % 2 === 0 ? "cumulus" : "cirrus"),
-            cloudCoverLevels: cloudLevels.map((level) => ({
-              hpa: level.hpa,
-              heightM: timestamps.map(() => level.heightM),
-              pct: timestamps.map(() => level.pct),
-            })),
+            cloudCoverLowPct: clouds.low ?? timestamps.map(() => null),
+            cloudCoverMidPct: clouds.mid ?? timestamps.map(() => null),
+            cloudCoverHighPct: clouds.high ?? timestamps.map(() => null),
           },
         },
       },
@@ -456,57 +463,19 @@ function cityMeteogramAnalysis(
 }
 
 function testCityMeteogramCloudBands(): void {
-  const levels = [
-    { hpa: 300, heightM: 9000, pct: 10 },
-    { hpa: 250, heightM: 8000, pct: 20 },
-    { hpa: 200, heightM: 6000, pct: 30 },
-    { hpa: 175, heightM: 5500, pct: 40 },
-    { hpa: 150, heightM: 5000, pct: 50 },
-    { hpa: 125, heightM: 4500, pct: 60 },
-    { hpa: 100, heightM: 4000, pct: 70 },
-    { hpa: 75, heightM: 3500, pct: 80 },
-    { hpa: 50, heightM: 3000, pct: 90 },
-    { hpa: 25, heightM: 2500, pct: 15 },
-    { hpa: 20, heightM: 2000, pct: 25 },
-    { hpa: 15, heightM: 1500, pct: 35 },
-    { hpa: 10, heightM: 1000, pct: 45 },
-    { hpa: 5, heightM: 0, pct: 55 },
-    { hpa: 1, heightM: 13000, pct: 65 },
-  ];
-  const data = extractCityMeteogram(cityMeteogramAnalysis([12], levels));
+  const data = extractCityMeteogram(cityMeteogramAnalysis([12], { low: [70], mid: [40], high: [10] }));
   assert.ok(data, "meteogram data should be extracted");
   const point = data.points[0];
-  const bandsByLabel = new Map(point.cloudBands.map((band) => [band.label, band]));
-
-  const expectedBandSources = {
-    FL300: [300, 250],
-    FL200: [200, 175],
-    FL150: [150, 125],
-    FL130: [100, 75],
-    FL100: [50, 25],
-    FL065: [20, 15],
-    AGL: [10, 5],
-  };
-  for (const [label, expectedSources] of Object.entries(expectedBandSources)) {
-    assert.deepEqual(
-      bandsByLabel.get(label)?.sourceLevels,
-      expectedSources,
-      `${label} should contain only its half-open height interval`,
-    );
-  }
   assert.deepEqual(
-    point.cloudBands.flatMap((band) => band.sourceLevels),
-    levels.filter((level) => level.heightM < 13000).map((level) => level.hpa),
-    "every in-range pressure surface should be represented exactly once",
+    point.cloudBands.map((band) => ({ key: band.key, label: band.label, pct: band.pct })),
+    [
+      { key: "high", label: "HOCH", pct: 10 },
+      { key: "mid", label: "MITTEL", pct: 40 },
+      { key: "low", label: "TIEF", pct: 70 },
+    ],
+    "the meteogram should expose exactly the three aggregate cloud bands",
   );
-
-  const renderedSourceLevels = point.cloudBands.flatMap((band) => band.sourceLevels);
-  for (const level of levels) {
-    assert.ok(
-      renderedSourceLevels.filter((sourceLevel) => sourceLevel === level.hpa).length <= 1,
-      `${level.hpa} hPa must not render in two cloud bands`,
-    );
-  }
+  assert.equal(data.bands.length, 3, "the chart must render only three cloud bands");
 }
 
 function testCityMeteogramDewPointVisibility(): void {
@@ -543,10 +512,11 @@ function testCityMeteogramLoadingState(): void {
 function testCityMeteogramVisualLayers(): void {
   const analysis = cityMeteogramAnalysis(
     [12, 13],
-    [{ hpa: 850, heightM: 1800, pct: 65 }],
+    { low: [65, 45], mid: [20, 55], high: [5, 70] },
   );
   const hourly = (analysis.weatherRaw as any).openMeteoForecast.city.hourly;
   hourly.cloudBaseM = [900, 1400];
+  hourly.rainMm = [0.3, 2.2];
 
   const data = extractCityMeteogram(analysis);
   assert.ok(data, "visual-layer fixture should produce a meteogram");
@@ -590,12 +560,42 @@ function testCityMeteogramVisualLayers(): void {
     "the overlaid temperature area must remain above the numeric dew-point row",
   );
   assert.match(markup, /data-testid="meteogram-cloud-field"/, "cloud field must remain testable");
+  assert.equal((markup.match(/data-cloud-shape-band="(?:high|mid|low)"/g) ?? []).length, 6, "three cloud bands should render for each populated timestamp");
+  assert.doesNotMatch(markup, /data-testid="meteogram-cloud-type-row"/, "the separate cloud type row should be removed");
+  assert.equal((markup.match(/data-weather-cloud-type="/g) ?? []).length, 2, "each weather cell should carry the cloud type once");
+  assert.equal((markup.match(/data-cloud-type-icon="/g) ?? []).length, 2, "each weather cell should render one integrated cloud-type icon");
+  assert.match(markup, /data-weather-cloud-type="cumulus"/, "weather icons should expose the heuristic classification");
+  assert.match(markup, /data-weather-cloud-type="cirrus"/, "weather icons should retain neutral cloud types");
+  assert.match(markup, /Cumulus.*tief.*mittel.*hoch.*CAPE.*Regen/, "cloud icon tooltips should include type and underlying model values");
+  assert.match(markup, /#898781/, "non-warning cloud types should use the neutral axis gray");
+  assert.equal(cloudTypeColor("stratus"), "#fab219", "stratus should use the reserved warning color");
+  assert.equal(cloudTypeColor("cumulonimbus"), "#d03b3b", "cumulonimbus should use the reserved critical color");
+  assert.equal(cloudTypeColor("cirrus"), "#898781", "non-warning cloud types should remain neutral");
+  assert.match(markup, /data-rain-amount="0.3mm"/, "rain columns should show their measured amount");
+  assert.match(markup, /data-rain-amount="2.2mm"/, "larger rain columns should show their measured amount");
+  assert.match(markup, /data-testid="meteogram-daily-rain"[^>]*data-rain-total="2.5"[^>]*data-rain-pill-placement="cloud-chart"/, "the cloud chart should show the summed rain amount at the end of the day");
+  assert.ok(
+    markup.indexOf('data-testid="meteogram-daily-rain"') > markup.indexOf('data-testid="meteogram-cloud-field"'),
+    "the daily rain pill should be positioned inside the cloud/rain chart, not in the day header",
+  );
   assert.doesNotMatch(
     markup,
     /data-testid="meteogram-cloud-field"[^>]*bg-\[#/,
     "the cloud field must stay transparent so full-height night shading remains visible",
   );
-  assert.match(markup, /data-testid="meteogram-lcl-line"/, "estimated LCL must be integrated in the cloud field");
+  assert.doesNotMatch(markup, /data-testid="meteogram-lcl-line"/, "estimated LCL line must stay hidden");
+  assert.doesNotMatch(markup, /key="lcl-/, "estimated LCL point markers must stay hidden");
+  assert.match(markup, /linearGradient id="temperature-gradient"/, "temperature should use a stable horizontal SVG gradient");
+  assert.match(markup, /gradientUnits="userSpaceOnUse"/, "temperature colors should follow the actual timeline");
+  assert.match(markup, /data-temperature="20"/, "temperature gradient should include data-driven stops");
+  assert.notEqual(temperatureColor(19), temperatureColor(33), "cool and hot temperatures should use visibly different colors");
+  assert.match(temperatureColor(33), /^#(?:[a-f0-9]{6})$/i, "temperature colors should be valid SVG hex colors");
+  assert.match(markup, /linearGradient id="temperature-fade"/, "temperature fill should fade vertically");
+  assert.match(markup, /data-testid="meteogram-pressure-line"/, "pressure path should remain directly measurable");
+  assert.match(markup, /font-size="10"/, "pressure labels should be readable");
+  assert.match(markup, /stroke="#587b90"/, "pressure should be blue-gray and distinct from cloud fill");
+  assert.match(markup, /data-testid="meteogram-current-column"/, "the current forecast column should be highlighted");
+  assert.match(markup, /rounded-\[5px\] border-2/, "the current column should use a complete Windy-like outline");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,
@@ -607,13 +607,26 @@ function testCityMeteogramVisualLayers(): void {
     "the lower plot must stay transparent so full-height night shading remains visible",
   );
   assert.match(markup, /heuristisch aus Modelldaten/, "cloud types must be described as heuristic model output");
-  assert.match(markup, /keine Beobachtung/, "the LCL must not be presented as an observed cloud base");
+  assert.match(markup, /keine Beobachtung/, "the cloud-base estimate must not be presented as observed");
+}
+
+function testMeteogramFormatting(): void {
+  assert.equal(formatCloudBase(42), "50", "small bases should be rounded to useful 50 m increments");
+  assert.equal(formatCloudBase(688), "700", "sub-kilometre bases should round to useful 50 m increments");
+  assert.equal(formatCloudBase(1925), "1900", "higher bases should use compact hundreds");
+  assert.equal(formatCloudBase(7600), "7500", "high bases should round to 500 m increments");
+  assert.equal(formatCloudBase(12400), "12k", "very high bases should use compact kilometre notation");
+  assert.match(cloudBaseTone(120), /bg-rose/, "very low bases should have a red cell background");
+  assert.match(cloudBaseTone(500), /bg-orange/, "low bases should have an orange cell background");
+  assert.match(cloudBaseTone(800), /bg-amber/, "caution bases should have an amber cell background");
+  assert.match(cloudBaseTone(1200), /bg-lime/, "medium bases should have a yellow-green cell background");
+  assert.match(cloudBaseTone(2400), /bg-emerald/, "high bases should have a green cell background");
 }
 
 function testCityMeteogramDoesNotInventCloudsInEmptyBands(): void {
   const analysis = cityMeteogramAnalysis(
     [12, 13],
-    [{ hpa: 300, heightM: 9000, pct: 70 }],
+    { low: [0, 0], mid: [0, 0], high: [70, 70] },
   );
   const hourly = (analysis.weatherRaw as any).openMeteoForecast.city.hourly;
   hourly.cloudType = ["cirrus", "cirrus"];
@@ -622,13 +635,13 @@ function testCityMeteogramDoesNotInventCloudsInEmptyBands(): void {
     createElement(CityMeteogram, { analysisJson: analysis }),
   );
   assert.equal(
-    (markup.match(/data-cloud-shape-band="FL300"/g) ?? []).length,
+    (markup.match(/data-cloud-shape-band="high"/g) ?? []).length,
     2,
     "high-cloud texture should render only where its source band has coverage",
   );
   assert.doesNotMatch(
     markup,
-    /data-cloud-shape-band="(?:FL200|FL150|FL130|FL100|FL065|AGL)"/,
+    /data-cloud-shape-band="(?:mid|low)"/,
     "the hourly cloud type must not invent clouds in empty lower bands",
   );
 }
@@ -636,7 +649,7 @@ function testCityMeteogramDoesNotInventCloudsInEmptyBands(): void {
 function testCityMeteogramMalformedArrays(): void {
   const malformed = cityMeteogramAnalysis(
     [12, 13],
-    [{ hpa: 300, heightM: 9000, pct: 20 }],
+    { low: [20, 30], mid: [40, 50], high: [60, 70] },
   );
   const city = (malformed.weatherRaw as any).openMeteoForecast.city;
   city.hourly.timestamps = [
@@ -646,24 +659,7 @@ function testCityMeteogramMalformedArrays(): void {
   ];
   city.hourly.temp2mC = [20, 21, 22];
   city.hourly.pressureMslHPa = [1013];
-  city.hourly.cloudCoverLevels = [
-    {
-      hpa: 300,
-      heightM: [9000, 9000, 9000],
-      pct: [20, 20, 20],
-    },
-    {
-      hpa: 300,
-      heightM: [9000, "malformed", 9000],
-      pct: [20, 20, 20],
-    },
-    {
-      hpa: "malformed",
-      heightM: [9000, 9000, 9000],
-      pct: [20, 20, 20],
-    },
-    null,
-  ];
+  city.hourly.cloudCoverHighPct = [60, "malformed", 80];
 
   let data: ReturnType<typeof extractCityMeteogram>;
   assert.doesNotThrow(() => {
@@ -686,9 +682,9 @@ function testCityMeteogramMalformedArrays(): void {
     "short value arrays should become missing values instead of throwing",
   );
   assert.deepEqual(
-    data.points.map((point) => point.cloudBands[0].sourceLevels),
-    [[300], [300]],
-    "invalid and duplicate cloud levels must not duplicate valid pressure surfaces",
+    data.points.map((point) => point.cloudBands.map((band) => band.pct)),
+    [[60, 40, 20], [80, null, null]],
+    "aggregate cloud bands should stay aligned and malformed values should remain missing",
   );
 
   const missingTimestamps = cityMeteogramAnalysis([12], []);
@@ -715,6 +711,7 @@ async function main(): Promise<void> {
   testCityMeteogramCloudBands();
   testCityMeteogramDewPointVisibility();
   testCityMeteogramVisualLayers();
+  testMeteogramFormatting();
   testCityMeteogramDoesNotInventCloudsInEmptyBands();
   testCityMeteogramMalformedArrays();
   await withFixedDate(async () => {

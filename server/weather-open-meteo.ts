@@ -9,11 +9,6 @@ export type OpenMeteoTarget = {
   coordinates: Coordinates;
 };
 
-// Tropospheric pressure levels only (1000–200 hPa, ~0–12 km). The remaining
-// levels up to 30 hPa are stratospheric and read ~0% cloud cover for sailing
-// purposes, so they're intentionally excluded.
-const CLOUD_PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250, 200];
-
 // Sailing-area forecast covers wind only — wind is highly local (sheltered
 // channels vs. open water can differ drastically), so it stays pinned to the
 // precise sailing-area/sub-region coordinate. Everything else (temperature,
@@ -40,8 +35,6 @@ const CITY_HOURLY = [
   "lifted_index",
   "freezing_level_height",
   "pressure_msl",
-  ...CLOUD_PRESSURE_LEVELS.map(level => `cloud_cover_${level}hPa`),
-  ...CLOUD_PRESSURE_LEVELS.map(level => `geopotential_height_${level}hPa`),
 ];
 
 const MARINE_HOURLY = [
@@ -120,14 +113,6 @@ async function fetchJson(url: string, label: string): Promise<Record<string, any
 
 function values(hourly: Record<string, any> | undefined, key: string): unknown[] | null {
   return Array.isArray(hourly?.[key]) ? hourly[key] : null;
-}
-
-function extractCloudLevels(hourly: Record<string, any> | undefined) {
-  return CLOUD_PRESSURE_LEVELS.map(hpa => ({
-    hpa,
-    heightM: values(hourly, `geopotential_height_${hpa}hPa`),
-    pct: values(hourly, `cloud_cover_${hpa}hPa`),
-  }));
 }
 
 // ── Cloud type classification ───────────────────────────────────────────────
@@ -302,7 +287,6 @@ function normalizeForecast(
         capeJkg: values(cityHourly, "cape"),
         liftedIndex: values(cityHourly, "lifted_index"),
         freezingLevelM: values(cityHourly, "freezing_level_height"),
-        cloudCoverLevels: extractCloudLevels(cityHourly),
         cloudType: buildCloudTypeSeries(cityHourly),
       } : null,
     },
