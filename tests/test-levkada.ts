@@ -103,31 +103,31 @@ const rawKeys = Object.keys(national.data);
 console.log(`✓  ${rawKeys.join(", ")}`);
 
 // Raw preview
-const forecast = national.data["greeceOpenMeteoForecast"] as any;
+const forecast = national.data["openMeteoForecast"] as any;
 const forecastHourly = forecast?.sailingArea?.hourly;
 if (forecastHourly?.timestamps?.length) {
-  console.log(`   greeceOpenMeteoForecast: ${forecastHourly.timestamps.length} Zeitschritte`);
+  console.log(`   openMeteoForecast: ${forecastHourly.timestamps.length} Zeitschritte`);
   console.log(`   Wind[0]: ${forecastHourly.windDirDeg[0]}° ${forecastHourly.windSpeedKt[0]} kt, Böe ${forecastHourly.gustKt[0]} kt`);
   console.log(`   Wolken[0]: ${forecastHourly.cloudCoverPct[0]}%, Regen[0]: ${forecastHourly.rainMm[0]}mm, CAPE[0]: ${forecastHourly.capeJkg[0]}`);
 } else {
-  console.log("   greeceOpenMeteoForecast: NULL");
+  console.log("   openMeteoForecast: NULL");
 }
 
-const marine = national.data["greeceOpenMeteoMarine"] as any;
+const marine = national.data["openMeteoMarine"] as any;
 const marineHourly = marine?.sailingArea?.hourly;
 if (marineHourly?.waveHeightM?.length) {
-  console.log(`   greeceOpenMeteoMarine: ${marineHourly.waveHeightM.length} Werte, Welle[0]=${marineHourly.waveHeightM[0]}m`);
+  console.log(`   openMeteoMarine: ${marineHourly.waveHeightM.length} Werte, Welle[0]=${marineHourly.waveHeightM[0]}m`);
 }
 const cityHourly = forecast?.city?.hourly;
 if (cityHourly?.temp2mC?.length) {
   console.log(`   Stadttemperatur: ${cityHourly.temp2mC.length} Werte, t2m[0]=${cityHourly.temp2mC[0]}°C`);
 }
 
-const ggw = national.data["greeceGaleWarning"] as any;
+const ggw = national.data["greeceMarineForecast"] as any;
 if (ggw?.text) {
-  console.log(`   greeceGaleWarning: ${ggw.text.length} Zeichen`);
+  console.log(`   greeceMarineForecast: ${ggw.text.length} Zeichen`);
 } else {
-  console.log("   greeceGaleWarning: NULL");
+  console.log("   greeceMarineForecast: NULL");
 }
 
 // ── 4. Preprocessing ──────────────────────────────────────────────────────────

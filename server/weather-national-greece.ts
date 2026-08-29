@@ -4,10 +4,6 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const HNMS_BULLETIN_URL = "http://newportal.hnms.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
 export const HNMS_SOURCE_URL = "http://newportal.hnms.gr/emy/en/navigation/naftilia_deltio_thalasson_ektiposi";
-export const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
-export const OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
-export const OPEN_METEO_FORECAST_SOURCE_URL = "https://open-meteo.com/en/docs";
-export const OPEN_METEO_MARINE_SOURCE_URL = "https://open-meteo.com/en/docs/marine-weather-api";
 
 // All HNMS area headings that act as block separators (superset of our sailingareas)
 const HNMS_AREA_HEADINGS = new Set([
@@ -34,18 +30,9 @@ const DAY_NAMES: Record<number, string> = {
   0: "So", 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa",
 };
 
-function formatForecastSource(provided: string[]): string {
-  const last = provided[provided.length - 1] ?? "Wetter";
-  if (provided.length === 1) return `${last}vorhersage`;
-  return `${provided.slice(0, -1).map(label => `${label}-`).join(", ")} und ${last}vorhersage`;
-}
-
-type SailingAreaObj = { name_de: string; type: "sea" | "lake"; coordinates: { lat: number; lon: number } } | null | undefined;
-type CityObj = { name_de: string; coordinates: { lat: number; lon: number } } | null | undefined;
-
 // ── HNMS Fetch ────────────────────────────────────────────────────────────────
 
-async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
+export async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
   try {
     const res = await fetch(HNMS_BULLETIN_URL, {
       headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" },
@@ -76,255 +63,18 @@ async function fetchHnmsGaleWarning(): Promise<Record<string, unknown>> {
   }
 }
 
-// ── Open-Meteo Fetch ───────────────────────────────────────────────────────────
+// ── Gale Warning Fetch ─────────────────────────────────────────────────────────
 
-type OpenMeteoTarget = {
-  name_de: string;
-  type: "sea" | "lake";
-  coordinates: { lat: number; lon: number };
-};
-
-const OPEN_METEO_FORECAST_HOURLY = [
-  "temperature_2m",
-  "precipitation_probability",
-  "rain",
-  "weather_code",
-  "cloud_cover",
-  "wind_speed_10m",
-  "wind_direction_10m",
-  "wind_gusts_10m",
-  "cape",
-];
-
-const OPEN_METEO_MARINE_HOURLY = [
-  "wave_height",
-  "wave_direction",
-  "wave_period",
-  "wind_wave_height",
-  "wind_wave_direction",
-  "wind_wave_period",
-  "swell_wave_height",
-  "swell_wave_direction",
-  "swell_wave_period",
-];
-
-function buildOpenMeteoUrl(
-  endpoint: string,
-  lat: number,
-  lon: number,
-  hourly: string[],
-  extra: Record<string, string> = {},
-): string {
-  const params = new URLSearchParams({
-    latitude: String(lat),
-    longitude: String(lon),
-    timezone: "Europe/Athens",
-    // Section 3 needs the current day plus the following five days.
-    forecast_days: "6",
-    hourly: hourly.join(","),
-    ...extra,
-  });
-  return `${endpoint}?${params.toString()}`;
-}
-
-async function fetchOpenMeteoJson(
-  url: string,
-  label: string,
-  onProgress?: (status: string) => void,
-): Promise<Record<string, any> | null> {
-  try {
-    onProgress?.(`Lade ${label} von Open-Meteo`);
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) {
-      console.error(`Open-Meteo ${label} failed (${res.status})`);
-      return null;
-    }
-    const data = await res.json() as Record<string, any>;
-    if (!Array.isArray(data.hourly?.time)) {
-      console.error(`Open-Meteo ${label} returned no hourly data`);
-      return null;
-    }
-    return data;
-  } catch (e) {
-    console.error(`Open-Meteo ${label} error:`, e instanceof Error ? e.message : e);
-    return null;
-  }
-}
-
-function arrayOrNull(hourly: Record<string, any> | undefined, key: string): unknown[] | null {
-  return Array.isArray(hourly?.[key]) ? hourly[key] : null;
-}
-
-function normalizeForecast(
-  raw: Record<string, any> | null,
-  url: string,
-  sailingArea: OpenMeteoTarget,
-  city: OpenMeteoTarget,
-  cityRaw: Record<string, any> | null,
-  cityUrl: string,
-): Record<string, unknown> {
-  const hourly = raw?.hourly;
-  const cityHourly = cityRaw?.hourly;
-  return {
-    source: "Open-Meteo Forecast API",
-    url,
-    available: Boolean(raw),
-    fetchedAt: new Date().toISOString(),
-    timezone: raw?.timezone ?? "Europe/Athens",
-    latitude: raw?.latitude ?? sailingArea.coordinates.lat,
-    longitude: raw?.longitude ?? sailingArea.coordinates.lon,
-    hourlyUnits: raw?.hourly_units ?? {},
-    sailingArea: {
-      name: sailingArea.name_de,
-      coordinates: sailingArea.coordinates,
-      hourly: raw ? {
-        timestamps: arrayOrNull(hourly, "time"),
-        windSpeedKt: arrayOrNull(hourly, "wind_speed_10m"),
-        windDirDeg: arrayOrNull(hourly, "wind_direction_10m"),
-        gustKt: arrayOrNull(hourly, "wind_gusts_10m"),
-        cloudCoverPct: arrayOrNull(hourly, "cloud_cover"),
-        rainMm: arrayOrNull(hourly, "rain"),
-        precipProbabilityPct: arrayOrNull(hourly, "precipitation_probability"),
-        weatherCode: arrayOrNull(hourly, "weather_code"),
-        capeJkg: arrayOrNull(hourly, "cape"),
-      } : null,
-    },
-    city: {
-      name: city.name_de,
-      coordinates: city.coordinates,
-      url: cityUrl,
-      hourly: cityRaw ? {
-        timestamps: arrayOrNull(cityHourly, "time"),
-        temp2mC: arrayOrNull(cityHourly, "temperature_2m"),
-      } : null,
-    },
-  };
-}
-
-function normalizeMarine(
-  raw: Record<string, any> | null,
-  url: string,
-  sailingArea: OpenMeteoTarget,
-): Record<string, unknown> {
-  const hourly = raw?.hourly;
-  const available = Array.isArray(hourly?.wave_height)
-    && hourly.wave_height.some(
-      (value: unknown) => typeof value === "number" && Number.isFinite(value),
-    );
-  return {
-    source: "Open-Meteo Marine API",
-    url,
-    available,
-    fetchedAt: new Date().toISOString(),
-    timezone: raw?.timezone ?? "Europe/Athens",
-    latitude: raw?.latitude ?? sailingArea.coordinates.lat,
-    longitude: raw?.longitude ?? sailingArea.coordinates.lon,
-    hourlyUnits: raw?.hourly_units ?? {},
-    sailingArea: {
-      name: sailingArea.name_de,
-      coordinates: sailingArea.coordinates,
-      hourly: available ? {
-        timestamps: arrayOrNull(hourly, "time"),
-        waveHeightM: arrayOrNull(hourly, "wave_height"),
-        waveDirDeg: arrayOrNull(hourly, "wave_direction"),
-        wavePeriodS: arrayOrNull(hourly, "wave_period"),
-        windWaveHeightM: arrayOrNull(hourly, "wind_wave_height"),
-        windWaveDirDeg: arrayOrNull(hourly, "wind_wave_direction"),
-        windWavePeriodS: arrayOrNull(hourly, "wind_wave_period"),
-        swellHeightM: arrayOrNull(hourly, "swell_wave_height"),
-        swellDirDeg: arrayOrNull(hourly, "swell_wave_direction"),
-        swellPeriodS: arrayOrNull(hourly, "swell_wave_period"),
-      } : null,
-    },
-  };
-}
-
-// ── Main Fetch ────────────────────────────────────────────────────────────────
-
-export async function fetchGreeceWeather(
-  sailingAreaObj?: SailingAreaObj,
-  cityObj?: CityObj,
+export async function fetchGreeceGaleWarning(
   onProgress?: (status: string) => void,
 ): Promise<{ data: Record<string, unknown>; sourceUrls: string[] }> {
-  const area: OpenMeteoTarget | null = sailingAreaObj
-    ? sailingAreaObj
-    : cityObj
-      ? { name_de: cityObj.name_de, type: "sea", coordinates: cityObj.coordinates }
-      : null;
-  const city: OpenMeteoTarget | null = cityObj
-    ? { name_de: cityObj.name_de, type: "sea", coordinates: cityObj.coordinates }
-    : area;
-  const forecastUrl = area && city
-    ? buildOpenMeteoUrl(
-      OPEN_METEO_FORECAST_URL,
-      area.coordinates.lat,
-      area.coordinates.lon,
-      OPEN_METEO_FORECAST_HOURLY,
-      { wind_speed_unit: "kn" },
-    )
-    : `${OPEN_METEO_FORECAST_URL}?timezone=Europe%2FAthens`;
-  const cityForecastUrl = city
-    ? buildOpenMeteoUrl(
-      OPEN_METEO_FORECAST_URL,
-      city.coordinates.lat,
-      city.coordinates.lon,
-      ["temperature_2m"],
-    )
-    : forecastUrl;
-  const marineUrl = area
-    ? buildOpenMeteoUrl(
-      OPEN_METEO_MARINE_URL,
-      area.coordinates.lat,
-      area.coordinates.lon,
-      OPEN_METEO_MARINE_HOURLY,
-    )
-    : `${OPEN_METEO_MARINE_URL}?timezone=Europe%2FAthens`;
-
-  // The three Open-Meteo requests run in parallel. Emit one aggregate status
-  // instead of letting the last request ("Wellendaten") hide the others.
-  onProgress?.("Lade Wind- und Wetterdaten von Open-Meteo");
-  const [hnms, forecastRaw, cityForecastRaw, marineRaw] = await Promise.all([
-    fetchHnmsGaleWarning(),
-    area ? fetchOpenMeteoJson(forecastUrl, "Wind- und Wetterdaten") : Promise.resolve(null),
-    city ? fetchOpenMeteoJson(cityForecastUrl, "Temperaturdaten") : Promise.resolve(null),
-    area ? fetchOpenMeteoJson(marineUrl, "Wellen- und Dünungsdaten") : Promise.resolve(null),
-  ]);
-
-  const data: Record<string, unknown> = {
-    greeceMarineForecast: hnms,
-    greeceOpenMeteoForecast: area && city
-      ? normalizeForecast(forecastRaw, forecastUrl, area, city, cityForecastRaw, cityForecastUrl)
-      : null,
-    greeceOpenMeteoMarine: area
-      ? normalizeMarine(marineRaw, marineUrl, area)
-      : null,
-  };
-
+  onProgress?.("Lade HNMS Sturmwarnung");
+  const hnms = await fetchHnmsGaleWarning();
   const sourceUrls: string[] = [];
   if ((hnms as any).available) {
     sourceUrls.push(`Griechenland Marine Wettervorhersage (inkl. Sturmwarnung) von [HNMS](${HNMS_SOURCE_URL})`);
   }
-  if (forecastRaw) {
-    const provided = ["Wind", "Wolken", "Regen", "Gewitter"];
-    const hasCityTemperature = Array.isArray(cityForecastRaw?.hourly?.temperature_2m)
-      && cityForecastRaw.hourly.temperature_2m.some(
-        (value: unknown) => typeof value === "number" && Number.isFinite(value),
-      );
-    if (hasCityTemperature) provided.push("Temperatur");
-    sourceUrls.push(
-      `Griechenland lokale ${formatForecastSource(provided)} von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
-    );
-  }
-  if (Array.isArray(marineRaw?.hourly?.wave_height) && marineRaw.hourly.wave_height.some(
-    (value: unknown) => typeof value === "number" && Number.isFinite(value),
-  )) {
-    sourceUrls.push(`Griechenland lokale Wellen- und Dünungsvorhersage von [Open-Meteo Marine API](${OPEN_METEO_MARINE_SOURCE_URL})`);
-  }
-
-  return { data, sourceUrls };
+  return { data: { greeceMarineForecast: hnms }, sourceUrls };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -473,7 +223,7 @@ function getForecastHourly(rawData: Record<string, unknown>): {
   forecast: any;
   hourly: any;
 } {
-  const forecast = rawData["greeceOpenMeteoForecast"] as any;
+  const forecast = rawData["openMeteoForecast"] as any;
   return { forecast, hourly: forecast?.sailingArea?.hourly ?? null };
 }
 
@@ -481,7 +231,7 @@ function getMarineHourly(rawData: Record<string, unknown>): {
   marine: any;
   hourly: any;
 } {
-  const marine = rawData["greeceOpenMeteoMarine"] as any;
+  const marine = rawData["openMeteoMarine"] as any;
   return { marine, hourly: marine?.sailingArea?.hourly ?? null };
 }
 
@@ -721,7 +471,7 @@ ${table}`;
 export function preprocessGreeceLocalTemperature(
   rawData: Record<string, unknown>,
 ): Record<string, unknown> {
-  const forecast = rawData["greeceOpenMeteoForecast"] as any;
+  const forecast = rawData["openMeteoForecast"] as any;
   const tempData = forecast?.city?.hourly ?? null;
   const url: string | null = forecast?.url ?? null;
   const city = forecast?.city?.name ?? null;
@@ -769,7 +519,7 @@ export function preprocessGreeceLocalTemperature(
 export function preprocessGreeceLocalWaterTemp(
   rawData: Record<string, unknown>,
 ): Record<string, unknown> {
-  const marine = rawData["greeceOpenMeteoMarine"] as any;
+  const marine = rawData["openMeteoMarine"] as any;
   return {
     waterTemp: {
       source: "Open-Meteo Marine API",

@@ -9,6 +9,11 @@ export type OpenMeteoTarget = {
   coordinates: Coordinates;
 };
 
+// Tropospheric pressure levels only (1000–200 hPa, ~0–12 km). The remaining
+// levels up to 30 hPa are stratospheric and read ~0% cloud cover for sailing
+// purposes, so they're intentionally excluded.
+const CLOUD_PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250, 200];
+
 const FORECAST_HOURLY = [
   "temperature_2m",
   "precipitation_probability",
@@ -19,6 +24,9 @@ const FORECAST_HOURLY = [
   "wind_direction_10m",
   "wind_gusts_10m",
   "cape",
+  "pressure_msl",
+  ...CLOUD_PRESSURE_LEVELS.map(level => `cloud_cover_${level}hPa`),
+  ...CLOUD_PRESSURE_LEVELS.map(level => `geopotential_height_${level}hPa`),
 ];
 
 const MARINE_HOURLY = [
@@ -132,6 +140,12 @@ function normalizeForecast(
         precipProbabilityPct: values(areaHourly, "precipitation_probability"),
         weatherCode: values(areaHourly, "weather_code"),
         capeJkg: values(areaHourly, "cape"),
+        pressureMslHPa: values(areaHourly, "pressure_msl"),
+        cloudCoverLevels: CLOUD_PRESSURE_LEVELS.map(hpa => ({
+          hpa,
+          heightM: values(areaHourly, `geopotential_height_${hpa}hPa`),
+          pct: values(areaHourly, `cloud_cover_${hpa}hPa`),
+        })),
       } : null,
     },
     city: {

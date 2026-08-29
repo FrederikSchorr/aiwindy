@@ -16,7 +16,7 @@ import {
   preprocessDhmzLocalTemperature,
 } from "./weather-national-croatia.js";
 import {
-  fetchGreeceWeather,
+  fetchGreeceGaleWarning,
   preprocessGreeceNationalSynopsis,
   extractGreeceWarning,
   preprocessGreeceLocalWind,
@@ -139,22 +139,14 @@ export async function fetchNationalWeather(
   sourceUrls: string[];
   warningCenter: NationalWarningCenter;
 }> {
-  // Greece already has an Open-Meteo adapter paired with its HNMS bulletin.
-  // Keep that tested integration as-is and avoid duplicate API calls there.
-  if (countryCode === "GR") {
-    const greece = await fetchGreeceWeather(sailingAreaObj, cityObj, onProgress);
-    return {
-      ...greece,
-      warningCenter: warningCenterFor(countryCode, greece.data, sailingAreaName),
-    };
-  }
-
   const targets = targetsFor(coordinates, sailingAreaObj, cityObj);
   const nationalPromise = countryCode === "HR"
     ? fetchCroatiaWeather(sailingAreaName)
     : countryCode === "AT"
       ? fetchAustriaWeather(sailingAreaObj, cityObj)
-      : Promise.resolve({ data: {} as Record<string, unknown>, sourceUrls: [] as string[] });
+      : countryCode === "GR"
+        ? fetchGreeceGaleWarning(onProgress)
+        : Promise.resolve({ data: {} as Record<string, unknown>, sourceUrls: [] as string[] });
   const openMeteoPromise = targets
     ? fetchOpenMeteoWeather(
       targets.sailingArea,
