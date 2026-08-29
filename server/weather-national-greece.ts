@@ -406,10 +406,22 @@ export async function preprocessGreeceLocalCloudRainThunderstorm(
   anthropic: Anthropic,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const { forecast, hourly } = getForecastHourly(rawData);
-  const url: string | null = forecast?.url ?? null;
+  const forecast = rawData["openMeteoForecast"] as any;
+  const hourly = forecast?.city?.hourly ?? null;
+  const url: string | null = forecast?.city?.url ?? forecast?.url ?? null;
+  const city = forecast?.city?.name ?? null;
+  const coordinates = forecast?.city?.coordinates ?? null;
+  const result = (text_de: string | null) => ({
+    cloudRainThunderstorm: {
+      source: "Open-Meteo Forecast API",
+      url,
+      city,
+      coordinates,
+      text_de,
+    },
+  });
   if (!hourly?.timestamps || !hourly?.rainMm || !hourly?.cloudCoverPct) {
-    return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
+    return result(null);
   }
 
   const TZ = "Europe/Athens";
@@ -432,7 +444,7 @@ export async function preprocessGreeceLocalCloudRainThunderstorm(
   }
 
   const days = Array.from(byDate.entries()).slice(0, 6);
-  if (!days.length) return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
+  if (!days.length) return result(null);
 
   const hasThunderstorm = days.some(([, rows]) => rows.some(r => r.cape >= 1000));
 
@@ -462,9 +474,9 @@ ${table}`;
       messages: [{ role: "user", content: prompt }],
     }, { signal });
     const text = (msg.content[0] as any)?.text?.trim() ?? null;
-    return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: text } };
+    return result(text);
   } catch {
-    return { cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url, text_de: null } };
+    return result(null);
   }
 }
 

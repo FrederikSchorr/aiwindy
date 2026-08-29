@@ -237,6 +237,20 @@ async function testNationalCoverageAndPrecedence(): Promise<void> {
     assert.equal((local.wind as any).source, "Open-Meteo Forecast API");
     assert.equal((local.nationalWind as any).text_de, "Nationale Winddetails");
     assert.equal((local.nationalCloudRain as any).text_de, "Nationale Wolken- und Regendetails");
+    assert.deepEqual(
+      (local.nationalCloudRain as any).coordinates,
+      CITY.coordinates,
+      "national cloud/rain data must use city coordinates",
+    );
+    const geoSphereCalls = mock.calls.filter((url) => url.includes("geosphere.at"));
+    assert.ok(
+      geoSphereCalls.some((url) => url.includes(`lat_lon=${AREA.coordinates.lat},${AREA.coordinates.lon}`)),
+      "national wind must stay on sailing-area coordinates",
+    );
+    assert.ok(
+      geoSphereCalls.some((url) => url.includes(`lat_lon=${CITY.coordinates.lat},${CITY.coordinates.lon}`)),
+      "national cloud/rain must be fetched on city coordinates",
+    );
     assert.match((local.warnings as any).text_de, /Starkwindwarnung/);
     assert.equal((local.wave as any).text_de, null, "absent lake waves must stay silent");
     assert.equal((local.wind as any).text_de.split("\n").length, 6, "national areas keep all six baseline days");
@@ -261,11 +275,13 @@ async function testUnsupportedAreaCoverage(): Promise<void> {
     assert.equal(national.sourceUrls.some((source) => source.includes("Marine API")), false);
     const local = preprocessOpenMeteoLocal(national.data, "Europe/Rome");
     assert.equal((local.wind as any).text_de.split("\n").length, 6);
-    // Cloud/rain/thunderstorm data now lives on the city coordinate, not the
-    // sailing area; the mock only fabricates "full" fields (incl. cloud_cover,
-    // rain, cape) for the area URL, so this stays null until the mock is
-    // extended for CITY_HOURLY. See weather-open-meteo.ts CITY_HOURLY.
-    assert.equal((local.cloudRainThunderstorm as any).text_de, null);
+    assert.equal((local.cloudRainThunderstorm as any).text_de.split("\n").length, 6);
+    assert.deepEqual(
+      (local.cloudRainThunderstorm as any).coordinates,
+      { lat: 41.9, lon: 12.5 },
+      "cloud/rain summary must carry city coordinates, never sailing-area coordinates",
+    );
+    assert.equal((local.cloudRainThunderstorm as any).city, "Rom");
     assert.equal((local.wave as any).text_de, null);
   } finally {
     mock.restore();

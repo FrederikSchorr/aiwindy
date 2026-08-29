@@ -168,6 +168,10 @@ export async function generateWeatherOutput(
   // Text context
   const generalWeather = (europe["generalWeather"] as any)?.text_de ?? null;
   const nationalSynopsis = (national["synopsis"] as any)?.text_de ?? null;
+  const cityCloudContext = {
+    cloudRainThunderstorm: local["cloudRainThunderstorm"] ?? null,
+    nationalCloudRain: local["nationalCloudRain"] ?? null,
+  };
 
   content.push({
     type: "text",
@@ -184,19 +188,23 @@ ${generalWeather ?? "(nicht verfügbar)"}
 === NATIONALE SYNOPSIS ===
 ${nationalSynopsis ?? "(nicht verfügbar)"}
 
-=== LOKALE WETTERDATEN (weatherPreprocessed.local) ===
+=== LOKALE WETTERDATEN FÜR ABSCHNITT 3 (weatherPreprocessed.local) ===
 ${JSON.stringify(local, null, 2)}
 
+=== STADTDATEN FÜR ABSCHNITT 4 ===
+${JSON.stringify(cityCloudContext, null, 2)}
+
 === QUELLEN-VORRANG FÜR LOKALE DATEN ===
-- wind, wave, cloudRainThunderstorm und temperature sind die Open-Meteo-Grundversorgung für bis zu sechs Tage.
-- nationalWind, nationalCloudRain, nationalTemperature und sailingareaForecast sind konkrete nationale Ergänzungen. Verwende deren Werte für die jeweils abgedeckten Zeiträume bevorzugt; Open-Meteo ergänzt ausschließlich fehlende Tage oder Wetterbereiche.
+- wind und wave sind die Open-Meteo-Grundversorgung für Abschnitt 3.
+- cloudRainThunderstorm enthält ausschließlich Stadtdaten und ist die Open-Meteo-Grundversorgung für Abschnitt 4.
+- nationalWind und sailingareaForecast sind konkrete nationale Ergänzungen für Abschnitt 3; nationalCloudRain ist eine konkrete nationale Stadtdaten-Ergänzung für Abschnitt 4. Verwende nationale Werte für die jeweils abgedeckten Zeiträume bevorzugt; Open-Meteo ergänzt ausschließlich fehlende Tage.
 - warnings ist ein separat geprüftes nationales Warnzentrum. Wenn vorhanden, seinen Text in Abschnitt 3 unverändert übernehmen.
 
 === WINDSYSTEME für ${position.country} ===
 ${windsystems || "(keine Daten)"}
 
 === AUFGABE ===
-Erstelle genau 5 Abschnitte als JSON. Jeder Abschnitt enthält einen "text"-Schlüssel mit den Bullet-Points als String (Zeilenumbrüche mit \\n).
+Erstelle genau 4 Abschnitte mit den Bullet-Points als String.
 
 Regeln pro Abschnitt:
 
@@ -216,7 +224,7 @@ Regeln pro Abschnitt:
 #3 windWaves — Wind & Welle (Inputs: NUR weatherPreprocessed.local + Windsysteme — KEINE Europakarten, KEINE nationale Synopsis)
 - Erzeuge genau diese Reihenfolge von Bullets: 1) aktuelle nationale/regionale Sturmwarnung oder der Abrufstatus der grundsätzlich angebundenen Warnquelle, 2) Heute (${todayLabel}), 3) Morgen (${tomorrowLabel}), 4) Übermorgen (${dayAfterTomorrowLabel}), 5) Danach (${forecastTailLabel}). Insgesamt maximal 5 Bullets.
 - Die Warnzeile ist für eine grundsätzlich angebundene Warnquelle PFLICHT. Bei erfolgreicher Prüfung übernimm den Text aus preprocessed.local.warnings INHALTLICH UNVERÄNDERT und vollständig; auch "Keine Sturmwarnung" muss sichtbar sein, aber OHNE ⚠️-Emoji. Bei einer aktiven Sturmwarnung oder einem fehlgeschlagenen Abruf darf ⚠️ davorstehen. Keine Umformulierung, keine Kürzung und niemals eine falsche Entwarnung.
-- Wenn das nationale Warnzentrum nicht angebunden ist, keine Warnzeile erzeugen. Nicht angebundene Länder zeigen diesen Status ausschließlich in Abschnitt 6.
+- Wenn das nationale Warnzentrum nicht angebunden ist, keine Warnzeile erzeugen. Nicht angebundene Länder zeigen diesen Status ausschließlich in der Quellenübersicht.
 - Jede Prognosezeile (Bullets 2–5) MUSS mit dem relativen Zeitbezug und der konkreten Tagesbezeichnung bzw. dem Datumsbereich beginnen, niemals mit einem Emoji. Erwartetes Schema: "Heute (Sa 22.08.): ...", "Morgen (So 23.08.): ...", "Übermorgen (Mo 24.08.): ...", "Di–Do 25.–27.08.: ...".
 - Bullet Heute und Bullet Morgen: jeweils Wind und — NUR WENN preprocessed.local.wave.text_de tatsächlich vorhanden und nicht leer ist — die passende Seegangsstärke im selben Bullet. Direkt nach dem Zeit-/Datumspräfix steht "💨" vor dem Windtext; falls Wellendaten vorhanden sind, steht "🌊" direkt vor der Welle. Wenn keine Wellendaten vorhanden sind, den Wellen-Teil vollständig weglassen: kein 🌊, kein Platzhalter und keine Erwähnung fehlender Wellendaten. Nenne zuerst das Windsystem (z.B. "Maïstrali") und höchstens die wichtigsten Windphasen als kompakte Bereiche. Kombiniere Mittelwind und Böe IMMER zu einem Bereich im Format "WNW 14-18 kt"; schreibe niemals "Böen", "mit Böen" oder "bis". Heute dürfen wichtige Änderungen zusätzlich mit konkreten Uhrzeiten genannt werden, auch nachts. Morgen dürfen höchstens grobe Tageszeiten wie "nachts", "morgens", "mittags", "nachmittags" oder "abends" genannt werden, aber keine exakten Uhrzeiten. Welle nur als Douglas-Skala (z.B. "See 2 schwach bewegt"), KEINE Richtung, Periode oder Dünung. Nur explizite Wellendaten verwenden, niemals schätzen.
 - Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨", danach nur minimale bis maximale Windstärke in Knoten und die vorherrschende Windrichtung; keine Stundenwerte und keine Wellendetails.
@@ -225,15 +233,11 @@ Regeln pro Abschnitt:
 - Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
 - Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
-#4 cloudsRain — Wolken & Regen (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
+#4 cloudsRain — Wolken & Regen (Inputs: NUR "STADTDATEN FÜR ABSCHNITT 4" — KEINE Seegebietsdaten, KEINE Wind-/Wellendaten, KEINE Europakarten, KEINE nationale Synopsis)
 - Erzeuge genau 3 Bullets: "Heute (${todayLabel})", "Morgen" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit dem Zeitbezug und Datum, niemals mit einem Emoji.
 - Bullet Heute und Bullet Morgen: inhaltlich wie bisher kurz und konkret mit Bewölkung + Regen + Gewitterrisiko. Setze ☁️/🌤️/☀️ direkt vor den Bewölkungstext, 🌧️ direkt vor Regen und ⛈️ direkt vor das Gewitterrisiko. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.
 - Bullet ${forecastOverviewLabel}: nur ein grober Überblick für die Tage ${overviewStartDay}. bis ${forecastEndDay}. (Bewölkung, überwiegend trocken/nass, grobes Gewitterrisiko), keine Stundenwerte und keine einzelnen Tagesdetails. Setze die passenden Wetter-Icons direkt vor den jeweiligen Text.
 - Falls keine Daten: "Wetterprognose aus regionalem Wetterbericht nicht verfügbar."
-
-#5 temperature — Temperatur (Inputs: NUR weatherPreprocessed.local — KEINE Europakarten, KEINE nationale Synopsis)
-- max 1 Bullet, max 24 Wörter: Temperatur heute + morgen + übermorgen, sofern die Daten vorhanden sind. Bestehendes kompaktes Format beibehalten, z.B. "Lefkada: Heute 26–30°C, morgen 25–32°C, übermorgen 24–31°C".
-- Falls keine Daten: leer lassen (leerer String)
 
 Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt mit dem Marker in einer eigenen Zeile):
 ===airPressureMasses===
@@ -244,8 +248,6 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
 - 💨 ...
 ===cloudsRain===
 - ☁️ ...
-===temperature===
-- 🌡️ ...
 ===END===
 `,
   });
@@ -283,7 +285,6 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
           { todayLabel, tomorrowLabel, forecastOverviewLabel },
         ),
       },
-      temperature:       { source, text: parsed.temperature ?? null },
     };
   } catch (e) {
     console.error("generateWeatherOutput error:", e instanceof Error ? e.message : e);
@@ -291,7 +292,7 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
   }
 }
 
-const SECTION_KEYS = ["airPressureMasses", "weatherFront", "windWaves", "cloudsRain", "temperature"] as const;
+const SECTION_KEYS = ["airPressureMasses", "weatherFront", "windWaves", "cloudsRain"] as const;
 
 function parseSectionMarkers(raw: string): Record<string, string> | null {
   const result: Record<string, string> = {};
@@ -438,6 +439,5 @@ function emptyOutput(analysis?: AnalysisJson): Record<string, unknown> {
     weatherFront:      { source, text: null },
     windWaves:         { source, text: analysis ? ensureWarningFirst(analysis, null) : null },
     cloudsRain:        { source, text: null },
-    temperature:       { source, text: null },
   };
 }

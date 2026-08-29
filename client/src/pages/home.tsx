@@ -5,6 +5,7 @@ import { Send, Sailboat, Camera, MapPin, Image, Wind, Compass, Anchor, Waves, Su
 import { SiGithub, SiLinkedin } from "react-icons/si";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
+import CityMeteogram from "@/components/city-meteogram";
 
 const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
 const MAX_CHAT_HISTORY_CONTENT = 2000;
@@ -234,8 +235,6 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
 }) {
   const saLat = location.lat;
   const saLon = location.lon;
-  const cityLat = location.cityLat ?? location.lat;
-  const cityLon = location.cityLon ?? location.lon;
   const model = location.regionalModel;
   const modelLabel = location.regionalModelLabel;
   const zoom = 7;
@@ -246,10 +245,6 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
   const windUrl = isIconEu
     ? "https://www.windy.com/38.449/20.903/iconEuWaves/waves?iconEu,clouds,38.449,20.903,5,i:pressure,p:favs"
     : `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
-  const cloudsUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom}`;
-  const tempModel = "ecmwf";
-  const tempModelLabel = "ECMWF 9km";
-  const prognoseUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/?temp,${cityLat.toFixed(3)},${cityLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
   const jsonDownloadUrl = analysisJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(analysisJson, null, 2))}`
     : null;
@@ -328,8 +323,11 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
 
           <SectionTitle num={4} title="Wolken & Regen" />
           <div className="my-3" data-testid="section-card-4">
-            <WindyEmbed lat={saLat} lon={saLon} overlay="clouds" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
-            <SourceLink label={`Wolken ${sailingAreaShort}`} provider="windy.com" url={cloudsUrl} />
+            <CityMeteogram
+              analysisJson={analysisJson}
+              cityName={locationShort}
+              isLoading={isStreaming && !hasError}
+            />
           </div>
           {weatherOutput?.cloudsRain?.text ? (
             <MarkdownContent content={weatherOutput.cloudsRain.text} />
@@ -337,20 +335,11 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <BounceLoader />
           )}
 
-          <SectionTitle num={5} title="Temperatur" />
-          <div className="my-3" data-testid="section-card-5">
-            <WindyEmbed lat={cityLat} lon={cityLon} overlay="temp" product={tempModel} level="surface" zoom={Math.max(zoom - 2, 4)} forecast marker />
-            <SourceLink label={`Prognose ${locationShort}`} provider="windy.com" url={prognoseUrl} />
-          </div>
-          {weatherOutput?.temperature?.text && (
-            <MarkdownContent content={weatherOutput.temperature.text} />
-          )}
-
           {!weatherOutput && isStreaming && loadingStatus && <StatusLoader text={loadingStatus} />}
 
           {weatherOutput && sources && (
             <>
-              <SectionTitle num={6} title="Quellen" />
+              <SectionTitle num={5} title="Quellen" />
               <ul className="mt-1 mb-2 space-y-0.5 list-disc pl-5" data-testid="section-sources">
                 {sources.windy.map((md, i) => (
                   <li key={i} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{
@@ -960,7 +949,6 @@ export default function Home() {
                           weatherFront: "🌊 Fronten",
                           windWaves: "💨 Wind & Welle",
                           cloudsRain: "☁️ Wolken & Regen",
-                          temperature: "🌡️ Temperatur",
                         };
                         const saCoords = activeLocation.lat != null && activeLocation.lon != null
                           ? ` (${activeLocation.lat.toFixed(4)}, ${activeLocation.lon.toFixed(4)})`

@@ -57,7 +57,6 @@ export interface WeatherOutputData {
   weatherFront: WeatherOutputSection;
   windWaves: WeatherOutputSection;
   cloudsRain: WeatherOutputSection;
-  temperature: WeatherOutputSection;
 }
 
 export type AnalysisJobStatus =

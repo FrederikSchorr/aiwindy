@@ -281,7 +281,7 @@ export function createAnalysis(position: AnalysisPosition): {
       }
       const replacer = (_key: string, value: unknown) => {
         if (_key.endsWith("Base64")) return undefined;
-        if ((_key === "austriaWindCloudRain" || _key === "openMeteoForecast" || _key === "openMeteoMarine") && value && typeof value === "object") {
+        if ((_key === "austriaWindCloudRain" || _key === "austriaCityCloudRain" || _key === "openMeteoForecast" || _key === "openMeteoMarine") && value && typeof value === "object") {
           if (_key.startsWith("openMeteo")) return compactForecastData(value);
           const obj = { ...(value as Record<string, unknown>) };
           for (const [k, v] of Object.entries(obj)) {
@@ -337,7 +337,7 @@ export function getSanitizedAnalysisExport(data: AnalysisJson): Record<string, u
 
   const replacer = (_key: string, value: unknown) => {
     if (_key.endsWith("Base64")) return undefined;
-    if ((_key === "austriaWindCloudRain" || _key === "openMeteoForecast" || _key === "openMeteoMarine") && value && typeof value === "object") {
+    if ((_key === "austriaWindCloudRain" || _key === "austriaCityCloudRain" || _key === "openMeteoForecast" || _key === "openMeteoMarine") && value && typeof value === "object") {
       if (_key.startsWith("openMeteo")) return compactForecastData(value);
       const obj = { ...(value as Record<string, unknown>) };
       for (const [key, entry] of Object.entries(obj)) {

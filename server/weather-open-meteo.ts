@@ -396,7 +396,7 @@ export async function fetchOpenMeteoWeather(
     );
   }
   if (hasUsableTemperature(cityRaw)) {
-    const provided = ["Temperatur", "Druck", "Wolken", "Regen", "Gewitter"];
+    const provided = ["Temperatur", "Taupunkt", "Druck", "Wolken", "Regen", "Gewitter"];
     sourceUrls.push(
       `Lokale ${formatForecastSource(provided)} für die Stadt von [Open-Meteo Forecast API](${OPEN_METEO_FORECAST_SOURCE_URL})`,
     );
@@ -521,16 +521,24 @@ export function preprocessOpenMeteoLocal(
   const hourly = forecast?.sailingArea?.hourly;
   const cityHourly = forecast?.city?.hourly;
   const forecastUrl = forecast?.url ?? null;
+  const cityForecastUrl = forecast?.city?.url ?? forecastUrl;
   const marineUrl = marine?.url ?? null;
   const sailingArea = forecast?.sailingArea?.name ?? null;
   const city = forecast?.city?.name ?? null;
+  const cityCoordinates = forecast?.city?.coordinates ?? null;
   const empty = {
     wind: { source: "Open-Meteo Forecast API", url: forecastUrl, sailingArea, text_de: null },
     wave: { source: "Open-Meteo Marine API", url: marineUrl, sailingArea, text_de: null },
-    cloudRainThunderstorm: { source: "Open-Meteo Forecast API", url: forecastUrl, text_de: null },
+    cloudRainThunderstorm: {
+      source: "Open-Meteo Forecast API",
+      url: cityForecastUrl,
+      city,
+      coordinates: cityCoordinates,
+      text_de: null,
+    },
     temperature: { source: "Open-Meteo Forecast API", url: forecastUrl, city, text_de: null },
   };
-  if (!Array.isArray(hourly?.timestamps)) return empty;
+  if (!Array.isArray(hourly?.timestamps) && !Array.isArray(cityHourly?.timestamps)) return empty;
 
   const now = currentLocalDateHour(timezone);
   type WindRow = { label: string; dateKey: string; hour: number; speed: number; gust: number; direction: string };
@@ -538,7 +546,7 @@ export function preprocessOpenMeteoLocal(
   const windDays = new Map<string, WindRow[]>();
   const weatherDays = new Map<string, WeatherRow[]>();
 
-  for (let index = 0; index < hourly.timestamps.length; index++) {
+  if (Array.isArray(hourly?.timestamps)) for (let index = 0; index < hourly.timestamps.length; index++) {
     const timestamp = hourly.timestamps[index];
     if (typeof timestamp !== "string") continue;
     const local = localDateHour(timestamp, timezone);
@@ -557,8 +565,14 @@ export function preprocessOpenMeteoLocal(
         windDays.set(local.dateKey, rows);
       }
     }
-    const cloud = hourly.cloudCoverPct?.[index];
-    const rain = hourly.rainMm?.[index];
+  }
+
+  if (Array.isArray(cityHourly?.timestamps)) for (let index = 0; index < cityHourly.timestamps.length; index++) {
+    const timestamp = cityHourly.timestamps[index];
+    if (typeof timestamp !== "string") continue;
+    const local = localDateHour(timestamp, timezone);
+    const cloud = cityHourly.cloudCoverPct?.[index];
+    const rain = cityHourly.rainMm?.[index];
     if (typeof cloud === "number" && typeof rain === "number") {
       const rows = weatherDays.get(local.dateKey) ?? [];
       rows.push({
@@ -566,8 +580,8 @@ export function preprocessOpenMeteoLocal(
         dateKey: local.dateKey,
         cloud,
         rain,
-        cape: typeof hourly.capeJkg?.[index] === "number" ? hourly.capeJkg[index] : 0,
-        weatherCode: typeof hourly.weatherCode?.[index] === "number" ? hourly.weatherCode[index] : null,
+        cape: typeof cityHourly.capeJkg?.[index] === "number" ? cityHourly.capeJkg[index] : 0,
+        weatherCode: typeof cityHourly.weatherCode?.[index] === "number" ? cityHourly.weatherCode[index] : null,
       });
       weatherDays.set(local.dateKey, rows);
     }
@@ -631,7 +645,10 @@ export function preprocessOpenMeteoLocal(
   return {
     wind: { ...empty.wind, text_de: windText || null },
     wave: { ...empty.wave, text_de: waveText || null },
-    cloudRainThunderstorm: { ...empty.cloudRainThunderstorm, text_de: cloudText || null },
+    cloudRainThunderstorm: {
+      ...empty.cloudRainThunderstorm,
+      text_de: cloudText || null,
+    },
     temperature: { ...empty.temperature, text_de: temperatureText || null },
   };
 }
