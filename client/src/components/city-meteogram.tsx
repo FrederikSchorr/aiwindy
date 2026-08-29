@@ -1,4 +1,5 @@
 import { Cloud, CloudLightning, CloudRain, CloudSun, Droplets, Sun } from "lucide-react";
+import React from "react";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -108,7 +109,7 @@ function makeSmoothPath(points: Array<[number, number]>) {
   }, "");
 }
 
-function extractCityMeteogram(analysisJson: Record<string, unknown> | null): CityMeteogramData | null {
+export function extractCityMeteogram(analysisJson: Record<string, unknown> | null): CityMeteogramData | null {
   const weatherRaw = asRecord(analysisJson?.weatherRaw);
   const forecast = asRecord(weatherRaw?.openMeteoForecast);
   const city = asRecord(forecast?.city);

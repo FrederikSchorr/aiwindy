@@ -6,12 +6,15 @@
 
 import assert from "node:assert/strict";
 import Anthropic from "@anthropic-ai/sdk";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   fetchNationalWeather,
   preprocessLocalWeather,
 } from "../server/weather-national.js";
 import { preprocessOpenMeteoLocal, classifyCloudType, estimateCloudBaseM } from "../server/weather-open-meteo.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
+import CityMeteogram, { extractCityMeteogram } from "../client/src/components/city-meteogram";
 
 const REAL_DATE = globalThis.Date;
 const FIXED_NOW = "2026-08-22T09:00:00.000Z";
@@ -410,9 +413,121 @@ function testCloudBaseEstimate(): void {
   assert.equal(estimateCloudBaseM(20, null), null, "missing dew point yields no estimate");
 }
 
+function cityMeteogramAnalysis(
+  dewPoints: Array<number | null>,
+  cloudLevels: Array<{ hpa: number; heightM: number; pct: number }>,
+): Record<string, unknown> {
+  const timestamps = dewPoints.map((_, index) => `2026-08-22T${String(9 + index).padStart(2, "0")}:00:00+02:00`);
+  return {
+    weatherRaw: {
+      openMeteoForecast: {
+        timezone: "Europe/Vienna",
+        city: {
+          name: "Teststadt",
+          coordinates: { lat: 47.95, lon: 16.84 },
+          url: "https://open-meteo.com/",
+          hourly: {
+            timestamps,
+            temp2mC: timestamps.map((_, index) => 20 + index),
+            dewPoint2mC: dewPoints,
+            pressureMslHPa: timestamps.map(() => 1013),
+            rainMm: timestamps.map(() => 0),
+            precipProbabilityPct: timestamps.map(() => 0),
+            weatherCode: timestamps.map(() => 1),
+            cloudBaseM: timestamps.map(() => null),
+            cloudCoverLevels: cloudLevels.map((level) => ({
+              hpa: level.hpa,
+              heightM: timestamps.map(() => level.heightM),
+              pct: timestamps.map(() => level.pct),
+            })),
+          },
+        },
+      },
+    },
+  };
+}
+
+function testCityMeteogramCloudBands(): void {
+  const levels = [
+    { hpa: 300, heightM: 9000, pct: 10 },
+    { hpa: 250, heightM: 8000, pct: 20 },
+    { hpa: 200, heightM: 6000, pct: 30 },
+    { hpa: 175, heightM: 5500, pct: 40 },
+    { hpa: 150, heightM: 5000, pct: 50 },
+    { hpa: 125, heightM: 4500, pct: 60 },
+    { hpa: 100, heightM: 4000, pct: 70 },
+    { hpa: 75, heightM: 3500, pct: 80 },
+    { hpa: 50, heightM: 3000, pct: 90 },
+    { hpa: 25, heightM: 2500, pct: 15 },
+    { hpa: 20, heightM: 2000, pct: 25 },
+    { hpa: 15, heightM: 1500, pct: 35 },
+    { hpa: 10, heightM: 1000, pct: 45 },
+    { hpa: 5, heightM: 0, pct: 55 },
+    { hpa: 1, heightM: 13000, pct: 65 },
+  ];
+  const data = extractCityMeteogram(cityMeteogramAnalysis([12], levels));
+  assert.ok(data, "meteogram data should be extracted");
+  const point = data.points[0];
+  const bandsByLabel = new Map(point.cloudBands.map((band) => [band.label, band]));
+
+  const expectedBandSources = {
+    FL300: [300, 250],
+    FL200: [200, 175],
+    FL150: [150, 125],
+    FL130: [100, 75],
+    FL100: [50, 25],
+    FL065: [20, 15],
+    AGL: [10, 5],
+  };
+  for (const [label, expectedSources] of Object.entries(expectedBandSources)) {
+    assert.deepEqual(
+      bandsByLabel.get(label)?.sourceLevels,
+      expectedSources,
+      `${label} should contain only its half-open height interval`,
+    );
+  }
+  assert.deepEqual(
+    point.cloudBands.flatMap((band) => band.sourceLevels),
+    levels.filter((level) => level.heightM < 13000).map((level) => level.hpa),
+    "every in-range pressure surface should be represented exactly once",
+  );
+
+  const renderedSourceLevels = point.cloudBands.flatMap((band) => band.sourceLevels);
+  for (const level of levels) {
+    assert.ok(
+      renderedSourceLevels.filter((sourceLevel) => sourceLevel === level.hpa).length <= 1,
+      `${level.hpa} hPa must not render in two cloud bands`,
+    );
+  }
+}
+
+function testCityMeteogramDewPointVisibility(): void {
+  const noDewPoint = cityMeteogramAnalysis([null, Number.NaN], []);
+  const noDewPointMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: noDewPoint }),
+  );
+  assert.doesNotMatch(noDewPointMarkup, /Taupunkt/, "the complete Taupunkt legend, label and row should be absent");
+
+  const partialDewPoint = cityMeteogramAnalysis([null, 12.4], []);
+  const partialData = extractCityMeteogram(partialDewPoint);
+  assert.ok(partialData, "partial dew point data should still produce a meteogram");
+  assert.deepEqual(
+    partialData.points.map((point) => point.dewPoint),
+    [null, 12.4],
+    "missing dew point values must stay missing instead of being estimated",
+  );
+  const partialMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: partialDewPoint }),
+  );
+  assert.equal((partialMarkup.match(/Taupunkt/g) ?? []).length, 2, "partial data should show the Taupunkt legend and row label");
+  assert.match(partialMarkup, />12°<\/div>/, "the finite dew point should be rendered");
+}
+
 async function main(): Promise<void> {
   testCloudTypeClassification();
   testCloudBaseEstimate();
+  testCityMeteogramCloudBands();
+  testCityMeteogramDewPointVisibility();
   await withFixedDate(async () => {
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();
