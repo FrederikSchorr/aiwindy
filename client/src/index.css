@@ -197,6 +197,24 @@
  */
 @layer utilities {
 
+  .meteogram-scroller {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, .55) transparent;
+  }
+
+  .meteogram-scroller::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .meteogram-scroller::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .meteogram-scroller::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, .55);
+    border-radius: 999px;
+  }
+
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

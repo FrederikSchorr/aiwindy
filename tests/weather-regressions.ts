@@ -555,13 +555,47 @@ function testCityMeteogramVisualLayers(): void {
   const markup = renderToStaticMarkup(
     createElement(CityMeteogram, { analysisJson: analysis }),
   );
-  assert.match(markup, /data-night-shading="true"/, "nighttime must receive explicit chart shading");
+  assert.match(
+    markup,
+    /data-chart-night-column="true"[^>]*data-night-shading="true"/,
+    "nighttime must use the full-height chart background column",
+  );
+  assert.match(
+    markup,
+    /data-testid="meteogram-temperature-area"/,
+    "the temperature must have a dedicated filled chart",
+  );
+  assert.equal(
+    (markup.match(/data-series="temperature"/g) ?? []).length,
+    2,
+    "the temperature chart must contain one filled area and one line",
+  );
+  assert.doesNotMatch(
+    markup,
+    /data-series="dew-point"/,
+    "dew point must never be rendered as an SVG curve",
+  );
+  assert.ok(
+    markup.indexOf('data-testid="meteogram-temperature-area"')
+      < markup.indexOf('data-testid="meteogram-dew-point-row"'),
+    "the temperature area must sit directly before the numeric dew-point row",
+  );
   assert.match(markup, /data-testid="meteogram-cloud-field"/, "cloud field must remain testable");
+  assert.doesNotMatch(
+    markup,
+    /data-testid="meteogram-cloud-field"[^>]*bg-\[#/,
+    "the cloud field must stay transparent so full-height night shading remains visible",
+  );
   assert.match(markup, /data-testid="meteogram-lcl-line"/, "estimated LCL must be integrated in the cloud field");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,
     "pressure and rain must share one overlaid plot",
+  );
+  assert.doesNotMatch(
+    markup,
+    /data-testid="meteogram-pressure-rain-overlay"[^>]*bg-\[#/,
+    "the lower plot must stay transparent so full-height night shading remains visible",
   );
   assert.match(markup, /heuristisch aus Modelldaten/, "cloud types must be described as heuristic model output");
   assert.match(markup, /keine Beobachtung/, "the LCL must not be presented as an observed cloud base");
