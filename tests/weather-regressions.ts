@@ -10,7 +10,7 @@ import {
   fetchNationalWeather,
   preprocessLocalWeather,
 } from "../server/weather-national.js";
-import { preprocessOpenMeteoLocal } from "../server/weather-open-meteo.js";
+import { preprocessOpenMeteoLocal, classifyCloudType } from "../server/weather-open-meteo.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
 
 const REAL_DATE = globalThis.Date;
@@ -339,7 +339,56 @@ async function testHnmsFailureIsNotAllClear(): Promise<void> {
   }
 }
 
+function testCloudTypeClassification(): void {
+  const base = {
+    totalPct: 0, lowPct: 0, midPct: 0, highPct: 0,
+    capeJkg: 0, weatherCode: 1, rainMm: 0,
+  };
+  assert.equal(classifyCloudType({ ...base, totalPct: 5 }), "clear", "near-zero cover reads as clear");
+  assert.equal(
+    classifyCloudType({ ...base, weatherCode: 95, totalPct: 80, lowPct: 50, highPct: 50 }),
+    "cumulonimbus",
+    "explicit thunderstorm code always wins",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 70, lowPct: 40, highPct: 40, capeJkg: 1200 }),
+    "cumulonimbus",
+    "tall convective column (low+high cover, high CAPE) without a weather code",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 30, lowPct: 30, midPct: 10, capeJkg: 700 }),
+    "cumulus",
+    "growing convective cloud with real CAPE but not yet a full storm",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 90, lowPct: 80, capeJkg: 50, rainMm: 2 }),
+    "stratus",
+    "widespread low deck with steady rain and little instability",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 30, lowPct: 30, capeJkg: 100 }),
+    "cumulus",
+    "fair-weather cumulus: modest low cover, clear aloft, no rain",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 60, midPct: 60 }),
+    "altostratus",
+    "mid-level-dominant deck",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 30, highPct: 30 }),
+    "cirrus",
+    "high-only thin cover",
+  );
+  assert.equal(
+    classifyCloudType({ ...base, totalPct: 50, lowPct: 25, midPct: 25, highPct: 25 }),
+    "mixed",
+    "cover spread across levels without a clear dominant pattern falls back to mixed",
+  );
+}
+
 async function main(): Promise<void> {
+  testCloudTypeClassification();
   await withFixedDate(async () => {
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();

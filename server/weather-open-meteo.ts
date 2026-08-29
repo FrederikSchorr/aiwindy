@@ -31,7 +31,12 @@ const CITY_HOURLY = [
   "rain",
   "weather_code",
   "cloud_cover",
+  "cloud_cover_low",
+  "cloud_cover_mid",
+  "cloud_cover_high",
   "cape",
+  "lifted_index",
+  "freezing_level_height",
   "pressure_msl",
   ...CLOUD_PRESSURE_LEVELS.map(level => `cloud_cover_${level}hPa`),
   ...CLOUD_PRESSURE_LEVELS.map(level => `geopotential_height_${level}hPa`),
@@ -123,6 +128,110 @@ function extractCloudLevels(hourly: Record<string, any> | undefined) {
   }));
 }
 
+// ── Cloud type classification ───────────────────────────────────────────────
+//
+// Open-Meteo has no direct cloud-genus field (confirmed against their docs).
+// This derives a coarse type per hour from what we do have: the low/mid/high
+// cloud-cover split, thunderstorm signals (weather_code, CAPE), and rain.
+// Deliberately a deterministic rule table, not an LLM call — the underlying
+// cloud_cover values are themselves approximated from relative humidity, so
+// an LLM sees the same coarse numbers and would just add hallucination risk
+// naming specific genera it can't actually verify. Any narrative text about
+// sky conditions should be generated downstream from this label, the same
+// way DOUGLAS_SCALE feeds the wave narrative.
+export type CloudType =
+  | "clear"
+  | "cirrus"
+  | "altostratus"
+  | "cumulus"
+  | "stratus"
+  | "cumulonimbus"
+  | "mixed";
+
+const THUNDERSTORM_WEATHER_CODES = new Set([95, 96, 99]);
+
+export function classifyCloudType(input: {
+  totalPct: number | null;
+  lowPct: number | null;
+  midPct: number | null;
+  highPct: number | null;
+  capeJkg: number | null;
+  weatherCode: number | null;
+  rainMm: number | null;
+}): CloudType {
+  const total = input.totalPct ?? 0;
+  const low = input.lowPct ?? 0;
+  const mid = input.midPct ?? 0;
+  const high = input.highPct ?? 0;
+  const cape = input.capeJkg ?? 0;
+  const rain = input.rainMm ?? 0;
+
+  if (total < 10) return "clear";
+
+  // Cumulonimbus: an explicit thunderstorm code, or a convective column tall
+  // enough to span low and high levels at once with strong instability.
+  if (
+    (input.weatherCode !== null && THUNDERSTORM_WEATHER_CODES.has(input.weatherCode))
+    || (cape >= 1000 && low > 30 && high > 30)
+  ) {
+    return "cumulonimbus";
+  }
+
+  // Growing convective cloud that hasn't (yet) built into a full storm.
+  if (cape >= 500 && low > 20 && mid < 40 && high < 20) {
+    return "cumulus";
+  }
+
+  // Widespread single low layer with little instability and real rain —
+  // typical frontal/layered rain rather than showers.
+  if (low > 60 && mid < 30 && high < 20 && cape < 300 && rain > 0.2) {
+    return "stratus";
+  }
+
+  // Fair-weather cumulus: modest low cover, clear aloft, no rain.
+  if (low >= 10 && low <= 60 && mid < 15 && high < 15 && cape < 500) {
+    return "cumulus";
+  }
+
+  // Mid-level-dominant deck (altocumulus/altostratus), little at other levels.
+  if (mid > 40 && low < 20 && high < 20) {
+    return "altostratus";
+  }
+
+  // High-only thin cover, nothing lower.
+  if (high > 20 && low < 10 && mid < 10) {
+    return "cirrus";
+  }
+
+  return "mixed";
+}
+
+function numberAt(arr: unknown[] | null, index: number): number | null {
+  const value = arr?.[index];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function buildCloudTypeSeries(hourly: Record<string, any> | undefined): CloudType[] | null {
+  const timestamps = values(hourly, "time");
+  if (!timestamps) return null;
+  const totalPct = values(hourly, "cloud_cover");
+  const lowPct = values(hourly, "cloud_cover_low");
+  const midPct = values(hourly, "cloud_cover_mid");
+  const highPct = values(hourly, "cloud_cover_high");
+  const capeJkg = values(hourly, "cape");
+  const weatherCode = values(hourly, "weather_code");
+  const rainMm = values(hourly, "rain");
+  return timestamps.map((_, index) => classifyCloudType({
+    totalPct: numberAt(totalPct, index),
+    lowPct: numberAt(lowPct, index),
+    midPct: numberAt(midPct, index),
+    highPct: numberAt(highPct, index),
+    capeJkg: numberAt(capeJkg, index),
+    weatherCode: numberAt(weatherCode, index),
+    rainMm: numberAt(rainMm, index),
+  }));
+}
+
 function normalizeForecast(
   areaRaw: Record<string, any> | null,
   areaUrl: string,
@@ -162,11 +271,17 @@ function normalizeForecast(
         temp2mC: values(cityHourly, "temperature_2m"),
         pressureMslHPa: values(cityHourly, "pressure_msl"),
         cloudCoverPct: values(cityHourly, "cloud_cover"),
+        cloudCoverLowPct: values(cityHourly, "cloud_cover_low"),
+        cloudCoverMidPct: values(cityHourly, "cloud_cover_mid"),
+        cloudCoverHighPct: values(cityHourly, "cloud_cover_high"),
         rainMm: values(cityHourly, "rain"),
         precipProbabilityPct: values(cityHourly, "precipitation_probability"),
         weatherCode: values(cityHourly, "weather_code"),
         capeJkg: values(cityHourly, "cape"),
+        liftedIndex: values(cityHourly, "lifted_index"),
+        freezingLevelM: values(cityHourly, "freezing_level_height"),
         cloudCoverLevels: extractCloudLevels(cityHourly),
+        cloudType: buildCloudTypeSeries(cityHourly),
       } : null,
     },
   };
