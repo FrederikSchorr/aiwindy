@@ -564,6 +564,8 @@ function testCityMeteogramVisualLayers(): void {
   assert.doesNotMatch(markup, /data-testid="meteogram-cloud-type-row"/, "the separate cloud type row should be removed");
   assert.equal((markup.match(/data-weather-cloud-type="/g) ?? []).length, 2, "each weather cell should carry the cloud type once");
   assert.equal((markup.match(/data-cloud-type-icon="/g) ?? []).length, 2, "each weather cell should render one integrated cloud-type icon");
+  assert.equal((markup.match(/data-fixed-cloud-band="(?:high|mid|low)"/g) ?? []).length, 3, "all three cloud-band labels should remain in the fixed rail");
+  assert.equal((markup.match(/data-weather-cloud-type="[^"]+"[^>]*role="img"[^>]*aria-label="/g) ?? []).length, 2, "each integrated weather icon should have an accessible description");
   assert.match(markup, /data-weather-cloud-type="cumulus"/, "weather icons should expose the heuristic classification");
   assert.match(markup, /data-weather-cloud-type="cirrus"/, "weather icons should retain neutral cloud types");
   assert.match(markup, /Cumulus.*tief.*mittel.*hoch.*CAPE.*Regen/, "cloud icon tooltips should include type and underlying model values");
@@ -595,7 +597,8 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(markup, /font-size="10"/, "pressure labels should be readable");
   assert.match(markup, /stroke="#587b90"/, "pressure should be blue-gray and distinct from cloud fill");
   assert.match(markup, /data-testid="meteogram-current-column"/, "the current forecast column should be highlighted");
-  assert.match(markup, /rounded-\[5px\] border-2/, "the current column should use a complete Windy-like outline");
+  assert.match(markup, /border-l border-dashed/, "the current column should use a subtle Windy-like dashed marker");
+  assert.match(markup, /data-night-overlay-layer="true"[^>]*z-\[15\]/, "night shading should overlay opaque chart rows");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,

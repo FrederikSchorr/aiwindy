@@ -5,11 +5,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import MeteogramReference from "@/pages/meteogram-reference";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      {import.meta.env.DEV && <Route path="/dev/meteogram-reference" component={MeteogramReference} />}
       <Route component={NotFound} />
     </Switch>
   );
