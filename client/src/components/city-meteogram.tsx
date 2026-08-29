@@ -1,4 +1,4 @@
-import { Cloud, CloudLightning, CloudRain, CloudSun, Droplets, Sun } from "lucide-react";
+import { Cloud, CloudLightning, CloudRain, CloudSun, Sun } from "lucide-react";
 import React from "react";
 
 type JsonRecord = Record<string, unknown>;
@@ -31,21 +31,21 @@ type CityMeteogramData = {
 };
 type CityMeteogramProps = { analysisJson: Record<string, unknown> | null; cityName?: string; isLoading?: boolean };
 
-const DAY_NAMES = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-const POINT_WIDTH = 24;
+const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
+const POINT_WIDTH = 56;
 const ROW = {
-  day: 16,
-  hours: 14,
-  icons: 22,
-  temperature: 14,
-  temperatureArea: 34,
-  dewPoint: 14,
-  cloudBand: 9,
-  lower: 36,
+  day: 42,
+  hours: 32,
+  icons: 44,
+  temperature: 29,
+  temperatureArea: 73,
+  dewPoint: 28,
+  cloudBand: 28,
+  cloudBase: 29,
 } as const;
 const CLOUD_CHART_HEIGHT = ROW.cloudBand * 7;
-const LOWER_CHART_HEIGHT = ROW.lower;
-const FORECAST_BLOCK_HEIGHT = ROW.icons + ROW.temperature;
+const PRESSURE_RAIN_HEIGHT = CLOUD_CHART_HEIGHT;
+const FORECAST_BLOCK_HEIGHT = ROW.temperatureArea;
 const WINDY_CLOUD_BANDS: CloudBand[] = [
   { label: "FL300", minHeightM: 8000, maxHeightM: 13000 },
   { label: "FL200", minHeightM: 5500, maxHeightM: 8000 },
@@ -80,15 +80,18 @@ function parseLocalTimestamp(timestamp: string) {
   if (!match) return null;
   const [, year, month, day, hour] = match;
   const date = new Date(`${year}-${month}-${day}T12:00:00Z`);
-  return { dateKey: `${year}-${month}-${day}`, dayLabel: `${DAY_NAMES[date.getUTCDay()]} ${day}.${month}.`, hourLabel: `${hour}:00` };
+  return { dateKey: `${year}-${month}-${day}`, dayLabel: `${DAY_NAMES[date.getUTCDay()]} ${day}`, hourLabel: hour };
 }
 function weatherIcon(code: number | null) {
-  if (code === null || code <= 1) return <Sun className="h-[13px] w-[13px] text-amber-500" aria-hidden="true" />;
-  if (code <= 3) return <CloudSun className="h-[13px] w-[13px] text-amber-500" aria-hidden="true" />;
-  if (code <= 48) return <Cloud className="h-[13px] w-[13px] text-slate-500" aria-hidden="true" />;
-  if (code >= 95) return <CloudLightning className="h-[13px] w-[13px] text-violet-500" aria-hidden="true" />;
-  if (code >= 51) return <CloudRain className="h-[13px] w-[13px] text-sky-500" aria-hidden="true" />;
-  return <Cloud className="h-[13px] w-[13px] text-slate-500" aria-hidden="true" />;
+  const isSun = code === null || code <= 1;
+  const isPartlyCloudy = code !== null && code <= 3;
+  const isRain = code !== null && code >= 51 && code < 95;
+  const isStorm = code !== null && code >= 95;
+  if (isSun) return <svg viewBox="0 0 32 32" className="h-8 w-8" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#f4b400" /><g stroke="#e7a600" strokeWidth="2" strokeLinecap="round"><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M25.2 6.8l-2.8 2.8M9.6 22.4l-2.8 2.8" /></g></svg>;
+  if (isPartlyCloudy) return <svg viewBox="0 0 36 32" className="h-8 w-9" aria-hidden="true"><circle cx="13" cy="11" r="6" fill="#f4b400" /><path d="M10 25h18a6 6 0 0 0 0-12 8 8 0 0 0-15.5 2A5.5 5.5 0 0 0 10 25Z" fill="#88939b" /><path d="M10 25h18a6 6 0 0 0 0-12 8 8 0 0 0-15.5 2A5.5 5.5 0 0 0 10 25Z" fill="#aeb7bc" opacity=".72" /></svg>;
+  if (isRain) return <svg viewBox="0 0 36 32" className="h-8 w-9" aria-hidden="true"><path d="M8 21h20a5.5 5.5 0 0 0 0-11 7.5 7.5 0 0 0-14.6 2A4.8 4.8 0 0 0 8 21Z" fill="#7d8991" /><path d="M13 25l-2 4M20 25l-2 4M27 25l-2 4" stroke="#6e9db4" strokeWidth="2.2" strokeLinecap="round" /></svg>;
+  if (isStorm) return <svg viewBox="0 0 36 32" className="h-8 w-9" aria-hidden="true"><path d="M8 19h20a5.5 5.5 0 0 0 0-11 7.5 7.5 0 0 0-14.6 2A4.8 4.8 0 0 0 8 19Z" fill="#737e87" /><path d="m19 18-5 8h4l-2 6 7-10h-4l3-4Z" fill="#d2a400" /></svg>;
+  return <svg viewBox="0 0 36 32" className="h-8 w-9" aria-hidden="true"><path d="M8 22h20a6 6 0 0 0 0-12 8 8 0 0 0-15.5 2A5.5 5.5 0 0 0 8 22Z" fill="#8b969d" /></svg>;
 }
 const LOADING_ICONS = [Sun, CloudSun, Cloud, CloudRain, CloudLightning] as const;
 function MeteogramLoadingState() {
@@ -219,6 +222,18 @@ function cloudBaseY(heightM: number, chartHeight: number): number {
   const band = WINDY_CLOUD_BANDS[bandIndex];
   return bandIndex * layerHeight + ((band.maxHeightM - clamped) / (band.maxHeightM - band.minHeightM)) * layerHeight;
 }
+function formatCloudBase(heightM: number): string {
+  return heightM >= 10000 ? `${Math.round(heightM / 1000)}k` : `${Math.round(heightM)}`;
+}
+function altitudeLabel(band: CloudBand): string {
+  return band.label === "FL300" ? "9 km FL300"
+    : band.label === "FL200" ? "6 km FL200"
+      : band.label === "FL150" ? "4.5 km FL150"
+        : band.label === "FL130" ? "3.5 km FL130"
+          : band.label === "FL100" ? "2.5 km FL100"
+            : band.label === "FL065" ? "1.5 km FL065"
+              : "300 m / 1000 ft AGL";
+}
 
 function DayHeaders({ points }: { points: MeteogramPoint[] }) {
   const groups: Array<{ label: string; count: number }> = [];
@@ -228,8 +243,8 @@ function DayHeaders({ points }: { points: MeteogramPoint[] }) {
     else groups.push({ label: point.dayLabel, count: 1 });
   });
   return (
-    <div className="grid border-b border-slate-300/55 bg-slate-900/[.025] text-[9px] font-semibold tracking-wide text-slate-600 dark:border-slate-700/50 dark:bg-white/[.025] dark:text-slate-300" style={{ height: ROW.day, gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` }}>
-      {groups.map((group, index) => <div key={`${group.label}-${index}`} className="flex items-center justify-center border-r border-slate-300/35 dark:border-slate-700/40" style={{ gridColumn: `span ${group.count}` }}>{group.label}</div>)}
+    <div className="grid border-b border-slate-300/55 bg-slate-900/[.025] text-[16px] font-semibold tracking-[.02em] text-slate-700 dark:border-slate-700/50 dark:bg-white/[.025] dark:text-slate-200" style={{ height: ROW.day, gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` }}>
+      {groups.map((group, index) => <div key={`${group.label}-${index}`} className="flex items-center justify-start border-r border-slate-300/50 pl-3 dark:border-slate-700/50" style={{ gridColumn: `span ${group.count}` }}>{group.label}</div>)}
     </div>
   );
 }
@@ -246,6 +261,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const maxRain = Math.max(1, ...data.points.map((point) => point.rain ?? 0));
   const layerHeight = CLOUD_CHART_HEIGHT / data.bands.length;
   const hasDewPoint = data.points.some((point) => point.dewPoint !== null);
+  const hasCloudBase = data.points.some((point) => point.cloudBase !== null);
   const dayCount = new Set(data.points.map((point) => point.dateKey)).size;
   const temperatureValues = data.points.map((point) => point.temperature).filter((value): value is number => value !== null);
   const temperatureMin = temperatureValues.length ? Math.floor(Math.min(...temperatureValues) - 2) : 0;
@@ -256,40 +272,41 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const temperatureArea = tempPoints.length
     ? `${smoothPath([[0, tempPoints[0][1]], ...tempPoints, [chartWidth, tempPoints[tempPoints.length - 1][1]]])} L ${chartWidth} ${FORECAST_BLOCK_HEIGHT} L 0 ${FORECAST_BLOCK_HEIGHT} Z`
     : "";
-  const pressurePoints = data.points.flatMap((point, index) => point.pressure === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, LOWER_CHART_HEIGHT - 12 - ((point.pressure - pressureMin) / Math.max(1, pressureMax - pressureMin)) * 42, point.pressure] as [number, number, number]]);
+  const pressurePoints = data.points.flatMap((point, index) => point.pressure === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, PRESSURE_RAIN_HEIGHT - 24 - ((point.pressure - pressureMin) / Math.max(1, pressureMax - pressureMin)) * 46, point.pressure] as [number, number, number]]);
   const cityLabel = cityName || data.cityName;
   const grid = `repeat(${data.points.length}, ${POINT_WIDTH}px)`;
 
   return (
     <div className="meteogram-shell relative left-0 w-full translate-x-0 overflow-hidden border border-slate-300/75 bg-[#fafbfc] dark:border-slate-700 dark:bg-slate-950 md:left-1/2 md:w-[min(960px,calc(100vw-48px))] md:-translate-x-1/2" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone}>
-      <div className="flex h-[27px] items-center justify-between gap-3 border-b border-slate-300/70 bg-[#f3f5f6] px-2.5 dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex min-w-0 items-baseline gap-2">
-          <div className="truncate text-[12px] font-semibold tracking-tight text-slate-800 dark:text-slate-100">{cityLabel}</div>
-          <div className="truncate text-[8px] text-slate-500 dark:text-slate-400">{data.timezone} · {dayCount} Tage · {data.points.length} Punkte · 7 Ebenen</div>
-        </div>
-      </div>
       <div className="flex min-w-0">
-        <div className="w-[64px] shrink-0 border-r border-slate-300/75 bg-[#f3f5f6] text-[8px] leading-[9px] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-          <div style={{ height: ROW.day }} className="border-b border-slate-300/60 dark:border-slate-700" />
-          <div style={{ height: ROW.hours }} className="flex items-center px-1.5 font-semibold">Zeit</div>
-          <div style={{ height: ROW.icons }} className="flex items-center px-1.5">Wetter</div>
-          <div style={{ height: ROW.temperature }} className="flex items-center px-1.5 text-[#bd5b2d]">Temp.</div>
-          {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center px-1.5">Taupunkt</div>}
-          <div style={{ height: CLOUD_CHART_HEIGHT }} className="flex flex-col">
-            {data.bands.map((band) => <div key={band.label} className="flex min-h-0 flex-1 items-center border-b border-slate-300/45 px-1.5 font-medium dark:border-slate-700/60">{band.label}</div>)}
+        <div className="w-[112px] shrink-0 border-r border-slate-300/75 bg-[#f3f5f6] text-[10px] leading-[11px] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 md:w-[168px]">
+          <div style={{ height: ROW.day }} className="flex min-w-0 flex-col justify-center border-b border-slate-300/60 px-2 dark:border-slate-700">
+            <div className="truncate text-[11px] font-semibold tracking-tight text-slate-800 dark:text-slate-100">{cityLabel}</div>
+            <div className="truncate text-[7px] text-slate-500 dark:text-slate-400">{data.timezone} · {dayCount} Tage · {data.points.length} Punkte</div>
+            {data.sourceUrl && <a href={data.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-0.5 w-fit text-[8px] font-semibold text-slate-600 underline-offset-2 hover:text-[#d55f32] hover:underline dark:text-slate-300" data-testid="meteogram-source-link">Open-Meteo ↗</a>}
           </div>
-          <div style={{ height: LOWER_CHART_HEIGHT }} className="flex items-center px-1.5">Druck<br />Regen</div>
+          <div style={{ height: ROW.hours }} className="flex items-center justify-center px-2 font-semibold">Stunden</div>
+          <div style={{ height: ROW.icons }} className="flex items-center justify-center px-2">Wetter</div>
+          <div style={{ height: ROW.temperature }} className="flex items-center justify-center px-2 text-[#bd5b2d]">Temperatur</div>
+          {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-center px-2">Taupunkt</div>}
+          <div style={{ height: CLOUD_CHART_HEIGHT }} className="grid grid-cols-[.85fr_1.6fr]">
+            <div className="flex flex-col items-center justify-center border-r border-slate-300/35 px-1 text-center text-[9px] font-semibold leading-[10px] text-slate-600 dark:border-slate-700/50"><span>Wolken,</span><span>Regen</span><span className="mt-1 underline">mm</span></div>
+            <div className="flex flex-col">
+              {data.bands.map((band) => <div key={band.label} className="flex min-h-0 flex-1 items-center justify-center border-b border-slate-300/45 px-1 text-center font-medium dark:border-slate-700/60">{altitudeLabel(band)}</div>)}
+            </div>
+          </div>
+          {hasCloudBase && <div data-testid="meteogram-cloud-base-label" style={{ height: ROW.cloudBase }} className="flex items-center justify-center gap-1 px-2 text-center">Wolkenuntergrenze <span className="underline">m</span></div>}
         </div>
         <div className="meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll">
           <div className="relative" style={{ minWidth: chartWidth }}>
             <div className="pointer-events-none absolute inset-0 z-0 flex">
               {data.points.map((point, index) => point.isDay === false
-                ? <div key={`night-${point.timestamp}`} data-chart-night-column="true" data-night-shading="true" data-night-index={index} className="h-full shrink-0 border-x border-slate-300/25 bg-[#ececf6] dark:border-slate-700/25 dark:bg-[#2b2a3b]" style={{ width: POINT_WIDTH }}><title>Nacht</title></div>
+                ? <div key={`night-${point.timestamp}`} data-chart-night-column="true" data-night-shading="true" data-night-index={index} className="h-full shrink-0 border-x border-slate-300/10 bg-[#ececf6] dark:border-slate-700/15 dark:bg-[#2b2a3b]" style={{ width: POINT_WIDTH }}><title>Nacht</title></div>
                 : <div key={`day-${point.timestamp}`} className="h-full shrink-0" style={{ width: POINT_WIDTH }} />)}
             </div>
             <div className="relative z-10">
               <DayHeaders points={data.points} />
-              <div className="grid border-b border-slate-300/50 text-[9px] text-slate-500 dark:border-slate-700/50 dark:text-slate-400" style={{ height: ROW.hours, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`hour-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.hourLabel}</div>)}</div>
+                <div className="grid border-b border-slate-300/50 text-[13px] text-slate-500 dark:border-slate-700/50 dark:text-slate-400" style={{ height: ROW.hours, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`hour-${point.timestamp}-${index}`} title={point.timestamp} className="flex items-center justify-center border-r border-slate-300/15">{point.hourLabel}</div>)}</div>
               <div className="relative border-b border-slate-300/50 dark:border-slate-700/50" style={{ height: FORECAST_BLOCK_HEIGHT }}>
                 <svg data-testid="meteogram-temperature-area" data-temperature-layer="behind-forecast-rows" viewBox={`0 0 ${chartWidth} ${FORECAST_BLOCK_HEIGHT}`} width={chartWidth} height={FORECAST_BLOCK_HEIGHT} className="pointer-events-none absolute inset-0 z-0 block" role="img" aria-label="Temperaturverlauf">
                   {[12, 24].map((y) => <line key={y} x1="0" x2={chartWidth} y1={y} y2={y} stroke="#b9c2cc" strokeOpacity=".3" strokeDasharray="2 4" />)}
@@ -297,40 +314,45 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                   {temperaturePath && <path data-series="temperature" d={temperaturePath} fill="none" stroke="#df7045" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
                 </svg>
                 <div className="relative z-10 grid" style={{ height: ROW.icons, gridTemplateColumns: grid }}>
-                  {data.points.map((point, index) => <div key={`icon-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30" title={point.weatherCode === null ? "Wetterzustand nicht verfügbar" : `Wettercode ${point.weatherCode}`}>{weatherIcon(point.weatherCode)}</div>)}
+                  {data.points.map((point, index) => <div key={`icon-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/15" title={point.weatherCode === null ? "Wetterzustand nicht verfügbar" : `Wettercode ${point.weatherCode}`}>{weatherIcon(point.weatherCode)}</div>)}
                 </div>
-                <div className="relative z-10 grid text-[10px] font-semibold text-[#bd5b2d]" style={{ height: ROW.temperature, gridTemplateColumns: grid }}>
-                  {data.points.map((point, index) => <div key={`temp-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
+                <div className="relative z-10 grid text-[17px] font-semibold text-slate-800 dark:text-slate-100" style={{ height: ROW.temperature, gridTemplateColumns: grid }}>
+                  {data.points.map((point, index) => <div key={`temp-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/15">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
                 </div>
               </div>
-              {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="grid border-b border-slate-300/60 text-[10px] text-slate-500 dark:border-slate-700" style={{ height: ROW.dewPoint, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`dew-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30">{point.dewPoint !== null ? `${Math.round(point.dewPoint)}°` : "—"}</div>)}</div>}
-              <svg data-testid="meteogram-cloud-field" viewBox={`0 0 ${chartWidth} ${CLOUD_CHART_HEIGHT}`} width={chartWidth} height={CLOUD_CHART_HEIGHT} className="block border-b border-slate-300/65 bg-transparent dark:border-slate-700" role="img" aria-label="Mehrschichtige Wolkenbedeckung nach Höhe">
-                <defs><pattern id="cloud-hatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-2 10L4 4M3 15L15 3" stroke="#53616e" strokeOpacity=".12" strokeWidth="1" /></pattern></defs>
-                {data.bands.map((band, bandIndex) => <path key={`cloud-area-${band.label}`} d={cloudAreaPath(data.points, bandIndex, layerHeight)} fill="#64717c" fillOpacity=".17" stroke="#65727d" strokeOpacity=".12" strokeWidth="1" />)}
+              {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="grid border-b border-slate-300/60 text-[13px] text-slate-500 dark:border-slate-700" style={{ height: ROW.dewPoint, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`dew-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/15">{point.dewPoint !== null ? `${Math.round(point.dewPoint)}°` : "—"}</div>)}</div>}
+              <div className="relative border-b border-slate-300/65" style={{ height: CLOUD_CHART_HEIGHT }}>
+              <svg data-testid="meteogram-cloud-field" viewBox={`0 0 ${chartWidth} ${CLOUD_CHART_HEIGHT}`} width={chartWidth} height={CLOUD_CHART_HEIGHT} className="pointer-events-none absolute inset-0 z-[1] block bg-transparent dark:border-slate-700" role="img" aria-label="Mehrschichtige Wolkenbedeckung nach Höhe">
+                 <defs>
+                   <pattern id="cloud-hatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-2 10L4 4M3 15L15 3" stroke="#53616e" strokeOpacity=".12" strokeWidth="1" /></pattern>
+                   <filter id="meteogram-cloud-soften" x="-30%" y="-35%" width="160%" height="170%"><feGaussianBlur stdDeviation="4.1" /></filter>
+                   {data.bands.map((band, index) => <clipPath key={`cloud-clip-${band.label}`} id={`meteogram-cloud-band-${index}`}><rect x="0" y={index * layerHeight} width={chartWidth} height={layerHeight} /></clipPath>)}
+                 </defs>
+                 {data.bands.map((band, bandIndex) => { const path = cloudAreaPath(data.points, bandIndex, layerHeight); return path ? <g key={`cloud-area-${band.label}`} opacity=".9"><path d={path} fill="#6c7880" fillOpacity=".24" filter="url(#meteogram-cloud-soften)" /><path d={path} fill="#6c7880" fillOpacity=".17" stroke="#65727d" strokeOpacity=".15" strokeWidth="1" /></g> : null; })}
                 {data.bands.map((band, bandIndex) => <g key={band.label}><line x1="0" x2={chartWidth} y1={bandIndex * layerHeight} y2={bandIndex * layerHeight} stroke="#7c8791" strokeOpacity=".24" />{data.points.map((point, pointIndex) => {
                   const pct = point.cloudBands[bandIndex]?.pct;
                   if (pct === null || pct === undefined || pct <= 0) return null;
-                  return <g key={`cloud-${band.label}-${point.timestamp}`} data-cloud-shape-band={band.label}>{pct > 65 && <rect x={pointIndex * POINT_WIDTH} y={bandIndex * layerHeight} width={POINT_WIDTH} height={layerHeight} fill="url(#cloud-hatch)" opacity=".4" />}</g>;
+                    const typeScale = point.cloudType === "cumulonimbus" ? 1.2 : point.cloudType === "cirrus" ? .72 : point.cloudType === "stratus" ? 1.12 : 1;
+                    const blobHeight = Math.max(5, Math.min(layerHeight * .82, layerHeight * (.28 + pct / 150) * typeScale));
+                    const blobWidth = Math.max(22, Math.min(POINT_WIDTH * 1.72, POINT_WIDTH * (.64 + pct / 104) * typeScale));
+                    const blobY = bandIndex * layerHeight + layerHeight - blobHeight * .55;
+                    return <g key={`cloud-${band.label}-${point.timestamp}`} data-cloud-shape-band={band.label} clipPath={`url(#meteogram-cloud-band-${bandIndex})`}><ellipse cx={pointIndex * POINT_WIDTH + POINT_WIDTH / 2} cy={blobY} rx={blobWidth / 2} ry={blobHeight / 2} fill="#66737b" opacity={.18 + pct / 420} filter="url(#meteogram-cloud-soften)" /><ellipse cx={pointIndex * POINT_WIDTH + POINT_WIDTH / 2 - blobWidth * .12} cy={blobY - blobHeight * .08} rx={blobWidth * .34} ry={blobHeight * .38} fill="#78848b" opacity={.12 + pct / 500} />{pct > 35 && <rect x={pointIndex * POINT_WIDTH} y={bandIndex * layerHeight} width={POINT_WIDTH} height={layerHeight} fill="url(#cloud-hatch)" opacity=".26" />}</g>;
                 })}</g>)}
                 {data.points.map((point, pointIndex) => <rect key={`cloud-column-${point.timestamp}`} x={pointIndex * POINT_WIDTH} y="0" width={POINT_WIDTH} height={CLOUD_CHART_HEIGHT} fill="transparent"><title>{`${cloudTypeLabel(point.cloudType)} (heuristisch aus Modelldaten) · ${data.bands.map((band, bandIndex) => `${band.label}: ${point.cloudBands[bandIndex]?.pct == null ? "k. A." : `${Math.round(point.cloudBands[bandIndex].pct)}%`} · Quellen: ${point.cloudBands[bandIndex]?.sourceLevels.length ? `${point.cloudBands[bandIndex].sourceLevels.join(", ")} hPa` : "keine"}`).join(" · ")}`}</title></rect>)}
-                <path data-testid="meteogram-lcl-line" d={smoothPath(data.points.flatMap((point, index) => point.cloudBase === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, cloudBaseY(point.cloudBase, CLOUD_CHART_HEIGHT)] as [number, number]]))} fill="none" stroke="#8b9299" strokeWidth="1" strokeDasharray="3 3" strokeLinecap="round" />
-                {data.points.map((point, index) => point.cloudBase === null ? null : <circle key={`lcl-${point.timestamp}`} cx={index * POINT_WIDTH + POINT_WIDTH / 2} cy={cloudBaseY(point.cloudBase, CLOUD_CHART_HEIGHT)} r="1.5" fill="#fafbfc" stroke="#8b9299" strokeWidth=".8"><title>{`geschätzte Wolkenuntergrenze (LCL): ${Math.round(point.cloudBase)} m, aus Temperatur und Taupunkt abgeleitet; keine Beobachtung`}</title></circle>)}
-              </svg>
-              <svg data-testid="meteogram-pressure-rain-overlay" viewBox={`0 0 ${chartWidth} ${LOWER_CHART_HEIGHT}`} width={chartWidth} height={LOWER_CHART_HEIGHT} className="block border-b border-slate-300/65 bg-transparent dark:border-slate-700" role="img" aria-label="Luftdruck und Regen">
-                {[.25, .5, .75].map((fraction) => <line key={fraction} x1="0" x2={chartWidth} y1={fraction * LOWER_CHART_HEIGHT} y2={fraction * LOWER_CHART_HEIGHT} stroke="#94a3b8" strokeOpacity=".16" strokeDasharray="2 4" />)}
-                {data.points.map((point, index) => { const rainValue = point.rain ?? 0; const barHeight = Math.min(20, Math.max(rainValue > 0 ? 2 : 0, rainValue / maxRain * 20)); return <g key={`lower-${point.timestamp}`}><line x1={index * POINT_WIDTH} x2={index * POINT_WIDTH} y1="0" y2={LOWER_CHART_HEIGHT} stroke="#94a3b8" strokeOpacity=".08" /><rect x={index * POINT_WIDTH + 9} y={LOWER_CHART_HEIGHT - 5 - barHeight} width="9" height={barHeight} fill="#6f79bb" opacity=".66"><title>{`${rainValue.toFixed(1)} mm Regen${point.precipProbability !== null ? ` · ${Math.round(point.precipProbability)}%` : ""}`}</title></rect></g>; })}
+                 {hasCloudBase && <path data-testid="meteogram-lcl-line" d={smoothPath(data.points.flatMap((point, index) => point.cloudBase === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, cloudBaseY(point.cloudBase, CLOUD_CHART_HEIGHT)] as [number, number]]))} fill="none" stroke="#9ca5ab" strokeOpacity=".38" strokeWidth="1" strokeDasharray="3 3" strokeLinecap="round"><title>Geschätzte Wolkenuntergrenze (LCL), aus Temperatur und Taupunkt abgeleitet; keine Beobachtung</title></path>}
+                 {data.points.map((point, index) => point.cloudBase === null ? null : <circle key={`lcl-${point.timestamp}`} cx={index * POINT_WIDTH + POINT_WIDTH / 2} cy={cloudBaseY(point.cloudBase, CLOUD_CHART_HEIGHT)} r="1" fill="#fafbfc" fillOpacity=".28" stroke="#9ca5ab" strokeOpacity=".24" strokeWidth=".7"><title>{`geschätzte Wolkenuntergrenze (LCL): ${Math.round(point.cloudBase)} m, aus Temperatur und Taupunkt abgeleitet; keine Beobachtung`}</title></circle>)}
+               </svg>
+               <svg data-testid="meteogram-pressure-rain-overlay" viewBox={`0 0 ${chartWidth} ${PRESSURE_RAIN_HEIGHT}`} width={chartWidth} height={PRESSURE_RAIN_HEIGHT} className="pointer-events-none absolute inset-0 z-[2] block bg-transparent dark:border-slate-700" role="img" aria-label="Luftdruck und Regen">
+                 {[.25, .5, .75].map((fraction) => <line key={fraction} x1="0" x2={chartWidth} y1={fraction * PRESSURE_RAIN_HEIGHT} y2={fraction * PRESSURE_RAIN_HEIGHT} stroke="#94a3b8" strokeOpacity=".12" strokeDasharray="2 4" />)}
+                 {data.points.map((point, index) => { const rainValue = point.rain ?? 0; const barHeight = Math.min(24, Math.max(rainValue > 0 ? 2 : 0, rainValue / maxRain * 24)); return <g key={`lower-${point.timestamp}`}><line x1={index * POINT_WIDTH} x2={index * POINT_WIDTH} y1="0" y2={PRESSURE_RAIN_HEIGHT} stroke="#94a3b8" strokeOpacity=".035" /><rect x={index * POINT_WIDTH + 20} y={PRESSURE_RAIN_HEIGHT - 7 - barHeight} width="16" height={barHeight} fill="#6f79bb" opacity=".55"><title>{`${rainValue.toFixed(1)} mm Regen${point.precipProbability !== null ? ` · ${Math.round(point.precipProbability)}%` : ""}`}</title></rect></g>; })}
                 <path d={smoothPath(pressurePoints.map(([x, y]) => [x, y]))} fill="none" stroke="#7b858d" strokeWidth="1.1" strokeLinecap="round" />
-                {pressurePoints.map(([x, y, pressure], index) => <g key={`pressure-${index}`}><circle cx={x} cy={y} r="1.2" fill="#fafbfc" stroke="#7b858d" strokeWidth=".8" /><text x={x} y={Math.max(8, y - 3)} textAnchor="middle" fontSize="6" fill="#7b858d">{Math.round(pressure)}</text></g>)}
-              </svg>
+                {pressurePoints.map(([x, y, pressure], index) => <g key={`pressure-${index}`}><circle cx={x} cy={y} r="1.2" fill="#fafbfc" stroke="#7b858d" strokeWidth=".8" />{index % 4 === 0 && <text x={x} y={Math.max(8, y - 4)} textAnchor="middle" fontSize="7" fill="#7b858d">{Math.round(pressure)} hPa</text>}</g>)}
+               </svg>
+              </div>
+              {hasCloudBase && <div data-testid="meteogram-cloud-base-row" aria-label="Geschätzte Wolkenuntergrenze" className="grid border-b border-slate-300/60 text-[13px] font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300" style={{ height: ROW.cloudBase, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`base-${point.timestamp}-${index}`} className="flex items-center justify-center border-r border-slate-300/30" title={point.cloudBase === null ? "Keine gültige Schätzung der Wolkenuntergrenze" : "Geschätzte Wolkenuntergrenze, aus Temperatur und Taupunkt abgeleitet; keine Beobachtung"}>{point.cloudBase !== null ? formatCloudBase(point.cloudBase) : "—"}</div>)}</div>}
             </div>
           </div>
         </div>
-      </div>
-      <div className="flex h-[19px] items-center gap-3 border-t border-slate-300/60 px-2.5 text-[8px] text-slate-500 dark:border-slate-700/70 dark:text-slate-400">
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-4 bg-slate-500/45" /> Wolken</span>
-        <span className="inline-flex items-center gap-1"><span className="h-0.5 w-3 bg-slate-500" /> Druck</span>
-        <span className="inline-flex items-center gap-1"><Droplets className="h-3 w-3 text-[#5967ae]" /> Regen</span>
-        {data.sourceUrl && <a href={data.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto font-semibold text-slate-600 underline-offset-2 hover:text-[#d55f32] hover:underline dark:text-slate-300" data-testid="meteogram-source-link">Open-Meteo ↗</a>}
       </div>
     </div>
   );
