@@ -692,9 +692,9 @@ export function buildSection4WeatherContext(
 }
 
 function compass(degrees: unknown): string {
-  const directions = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const directions = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
   return typeof degrees === "number" && Number.isFinite(degrees)
-    ? directions[Math.round(degrees / 22.5) % directions.length]
+    ? directions[Math.round(degrees / 45) % directions.length]
     : "?";
 }
 
@@ -713,6 +713,14 @@ function mostFrequent(values: string[]): string {
   const counts = new Map<string, number>();
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "?";
+}
+
+function windDayPeriod(hour: number): string {
+  if (hour < 6 || hour >= 22) return "nachts";
+  if (hour < 10) return "morgens";
+  if (hour < 14) return "mittags";
+  if (hour < 18) return "nachmittags";
+  return "abends";
 }
 
 const DOUGLAS_SCALE: Array<{ max: number; label: string }> = [
@@ -825,14 +833,33 @@ export function preprocessOpenMeteoLocal(
   }
 
   const windText = Array.from(windDays.values()).slice(0, 6).map(rows => {
-    const samples = rows.filter((_, index) =>
-      index === 0 || index === rows.length - 1 || index % Math.max(1, Math.round(rows.length / 3)) === 0,
-    ).slice(0, 4).map(row =>
+    const strongestGustIndex = rows.reduce(
+      (strongestIndex, row, index) =>
+        row.gust > rows[strongestIndex].gust ? index : strongestIndex,
+      0,
+    );
+    const strongestWindIndex = rows.reduce(
+      (strongestIndex, row, index) =>
+        row.speed > rows[strongestIndex].speed ? index : strongestIndex,
+      0,
+    );
+    const sampleIndexes = new Set([
+      0,
+      rows.length - 1,
+      strongestGustIndex,
+      strongestWindIndex,
+    ]);
+    const sampleStep = Math.max(1, Math.round(rows.length / 3));
+    for (let index = sampleStep; index < rows.length - 1; index += sampleStep) {
+      sampleIndexes.add(index);
+    }
+    const samples = rows.filter((_, index) => sampleIndexes.has(index)).slice(0, 6).map(row =>
       `${String(row.hour).padStart(2, "0")}:00 ${row.direction} ${Math.round(row.speed)}-${Math.round(row.gust)} kt`,
     );
     const speeds = finiteNumbers(rows.map(row => row.speed));
     const gusts = finiteNumbers(rows.map(row => row.gust));
-    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, Böen ${range(gusts) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}.`;
+    const strongestGust = rows[strongestGustIndex];
+    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, Böen ${range(gusts) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}; stärkste Böe ${Math.round(strongestGust.gust)} kt exakt um ${String(strongestGust.hour).padStart(2, "0")}:00 (${windDayPeriod(strongestGust.hour)}).`;
   }).join("\n");
 
   const cloudText = Array.from(weatherDays.values()).slice(0, 6).map(rows => {

@@ -237,8 +237,8 @@ function getMarineHourly(rawData: Record<string, unknown>): {
 
 function degreesToCompass(degrees: unknown): string | null {
   if (typeof degrees !== "number" || !Number.isFinite(degrees)) return null;
-  const directions = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
-  return directions[Math.round(degrees / 22.5) % directions.length];
+  const directions = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
+  return directions[Math.round(degrees / 45) % directions.length];
 }
 
 export async function preprocessGreeceLocalWind(

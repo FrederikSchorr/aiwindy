@@ -21,19 +21,30 @@ function getWindsystemsForCountry(country: string): string {
 }
 
 const SHORT_DAY_NAMES = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-const WIND_DIRECTIONS = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"] as const;
-const WIND_DIRECTION_TOKEN = WIND_DIRECTIONS.slice().sort((a, b) => b.length - a.length).join("|");
+const WIND_DIRECTIONS_16 = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"] as const;
+const WIND_DIRECTIONS_8 = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"] as const;
+const WIND_DIRECTION_TOKEN = WIND_DIRECTIONS_16.slice().sort((a, b) => b.length - a.length).join("|");
+
+function normalizeWindDirection(direction: string): typeof WIND_DIRECTIONS_8[number] {
+  const index = WIND_DIRECTIONS_16.indexOf(direction.toUpperCase() as typeof WIND_DIRECTIONS_16[number]);
+  return index === -1
+    ? "N"
+    : WIND_DIRECTIONS_8[Math.round(index / 2) % WIND_DIRECTIONS_8.length];
+}
 
 export function normalizeWindDirectionMentions(text: string): string {
   const pairPattern = new RegExp(`\\b(${WIND_DIRECTION_TOKEN})\\s*/\\s*(${WIND_DIRECTION_TOKEN})\\b`, "gi");
   return text.replace(pairPattern, (_match, first: string, second: string) => {
-    const firstIndex = WIND_DIRECTIONS.indexOf(first.toUpperCase() as typeof WIND_DIRECTIONS[number]);
-    const secondIndex = WIND_DIRECTIONS.indexOf(second.toUpperCase() as typeof WIND_DIRECTIONS[number]);
-    if (firstIndex === -1 || secondIndex === -1) return first.toUpperCase();
-    const shortestDelta = ((secondIndex - firstIndex + 8) % 16) - 8;
-    const midpoint = (firstIndex + shortestDelta / 2 + 16) % 16;
-    return WIND_DIRECTIONS[Math.round(midpoint) % 16];
-  });
+    const normalizedFirst = normalizeWindDirection(first);
+    const normalizedSecond = normalizeWindDirection(second);
+    const firstIndex = WIND_DIRECTIONS_8.indexOf(normalizedFirst);
+    const secondIndex = WIND_DIRECTIONS_8.indexOf(normalizedSecond);
+    const shortestDelta = ((secondIndex - firstIndex + 4) % 8) - 4;
+    const midpoint = (firstIndex + shortestDelta / 2 + 8) % 8;
+    return WIND_DIRECTIONS_8[Math.round(midpoint) % WIND_DIRECTIONS_8.length];
+  }).replace(new RegExp(`\\b(${WIND_DIRECTION_TOKEN})\\b`, "gi"), (_match, direction: string) =>
+    normalizeWindDirection(direction),
+  );
 }
 
 function addCalendarDays(date: Date, days: number): Date {
@@ -111,6 +122,15 @@ Verwende GROSSZÜGIG passende Emojis am Anfang jedes Bullets und im Text: 🌀 �
 Ausnahme für Abschnitt #3 Wind & Welle und Abschnitt #4 Wetter & Regen: Die passenden Emojis stehen direkt vor dem jeweiligen Inhalt, nicht am Anfang des Bullets.
 Konkrete Zahlen, KEINE halluzinierten Werte. KEINE Begrüßung, KEINE Floskeln.
 Schreibe KEINE Überschriften — nur die Bullet-Points. KEIN Fettdruck (kein **text**), nur normaler Text.`;
+
+const WIND_PEAK_TIMING_RULE = `=== VERBINDLICHE ZEITZUORDNUNG FÜR WINDSPITZEN ===
+preprocessed.local.wind nennt die stärkste Böe jedes Tages mit exakter Uhrzeit und korrekter Tagesphase.
+Ordne diese Böe ausschließlich dieser Tagesphase zu und verbinde sie niemals mit einem späteren Richtungswechsel, Windsystem oder Frontdurchgang.
+Beispiel: "exakt um 12:00 (mittags)" darf weder als nachmittags noch als abends beschrieben werden.`;
+
+const WIND_DIRECTION_RULE = `=== VERBINDLICHE RICHTUNGSFORMATIERUNG ===
+Verwende ausschließlich diese acht Windrichtungen: N, NO, O, SO, S, SW, W und NW.
+NNO und NNW werden zu NO bzw. N, ONO und OSO zu O bzw. SO, SSO und SSW zu SO bzw. SW, WSW und WNW zu W bzw. NW.`;
 
 // ── Image helper ──────────────────────────────────────────────────────────────
 
@@ -298,6 +318,10 @@ ${JSON.stringify(section4Context, null, 2)}
 === WINDSYSTEME für ${position.country} ===
 ${windsystems || "(keine Daten)"}
 
+${WIND_PEAK_TIMING_RULE}
+
+${WIND_DIRECTION_RULE}
+
 === AUFGABE ===
 Erstelle genau 4 Abschnitte mit den Bullet-Points als String.
 
@@ -326,7 +350,7 @@ Regeln pro Abschnitt:
 - Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨"; nur die wichtigste markante Entwicklung oder, falls keine Änderung vorliegt, eine knappe vorherrschende Tendenz. Keine Stundenwerte und keine vollständige Aufzählung von Windstärken oder Richtungen.
 - Bullet Danach: beginne EXAKT mit "${forecastTailLabel}:". Setze danach "💨" vor die großflächige Zusammenfassung; nenne für jeden Tag nur eine Windstärke-Kategorie und erwähne ausschließlich deutliche Wechsel oder stürmische/kräftige Phasen. Keine Stundenwerte und keine vollständige Aufzählung von Richtungen. Eine passende Großwetterlage darf hier oder bei einer markanten Entwicklung in den Tagesbullets in einem kurzen Nebensatz ergänzt werden, wenn der optionale Kontext sie eindeutig stützt.
 - Der abschließende Datumsbereichs-Bullet ist PFLICHT und darf niemals fehlen oder durch das Ende der Antwort entfallen. Wenn für die Tage danach trotz der 6-Tage-Abfrage keine Winddaten vorliegen, gib trotzdem "Di–Do [entsprechender Datumsbereich]: 💨 Winddaten für diesen Zeitraum nicht verfügbar." aus.
-- Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen. Verwende ausschließlich die 16 Richtungen N, NNO, NO, ONO, O, OSO, SO, SSO, S, SSW, SW, WSW, W, WNW, NW oder NNW; niemals Richtungsbereiche mit "/" oder kombinierte Richtungsangaben. Großwetterlage und Windsysteme dürfen nur genannt werden, wenn sie geographisch und meteorologisch zum lokalen Verlauf passen; sie ersetzen niemals lokale Daten.
+- Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen. Verwende ausschließlich N, NNO, NO, ONO, O, OSO, SO, SSO, S, SW, WSW, W, WNW, NW oder NNW; den Südwestsektor niemals als SSW, sondern als SW ausgeben. Niemals Richtungsbereiche mit "/" oder kombinierte Richtungsangaben. Großwetterlage und Windsysteme dürfen nur genannt werden, wenn sie geographisch und meteorologisch zum lokalen Verlauf passen; sie ersetzen niemals lokale Daten.
 - Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)

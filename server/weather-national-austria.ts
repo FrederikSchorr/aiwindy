@@ -215,25 +215,8 @@ async function fetchAustriaWindCloudRain(
 
     const windDir = (u: number, v: number): string => {
       const deg = ((Math.atan2(-u, -v) * 180) / Math.PI + 360) % 360;
-      const dirs = [
-        "N",
-        "NNO",
-        "NO",
-        "ONO",
-        "O",
-        "OSO",
-        "SO",
-        "SSO",
-        "S",
-        "SSW",
-        "SW",
-        "WSW",
-        "W",
-        "WNW",
-        "NW",
-        "NNW",
-      ];
-      return dirs[Math.round(deg / 22.5) % 16];
+      const dirs = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
+      return dirs[Math.round(deg / 45) % dirs.length];
     };
     const windSpeedKt = (u: number, v: number) =>
       Math.round(Math.sqrt(u * u + v * v) * 1.94384 * 10) / 10;
@@ -567,7 +550,7 @@ export async function preprocessLocalWindAT(
     })
     .join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Verwende nur eine der 16 Richtungen N, NNO, NO, ONO, O, OSO, SO, SSO, S, SSW, SW, WSW, W, WNW, NW oder NNW; niemals "/" oder Richtungsbereiche. Format: "Di 31.03: ...\nMi 01.04: ..."
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Verwende ausschließlich N, NO, O, SO, S, SW, W oder NW. Niemals "/" oder Richtungsbereiche. Format: "Di 31.03: ...\nMi 01.04: ..."
 
 ${table}`;
 

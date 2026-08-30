@@ -9,6 +9,12 @@ Use Open-Meteo as the reliable six-day local baseline for wind, cloud, rain, thu
 
 **How to apply:** Keep section 6 limited to sources that supplied usable data. Show an explicit warning-center capability state separately: connected, temporarily unavailable, or not connected. An unavailable warning source must never be rendered as “no warning.”
 
+Keep the meteogram tied to the representative city coordinate while the wind chart remains tied to the sailing-area coordinate. Do not force their event times to coincide.
+
+**Why:** The city weather view and local sailing wind intentionally describe different locations; genuine timing differences are acceptable and more truthful than artificial alignment.
+
+**How to apply:** Preserve exact timestamp matching and field-specific three-hour aggregation, but allow city thunderstorm signals and sailing-area gust peaks to occur in different displayed columns.
+
 In the sources view, a connected provider must be named as the concrete forecast or warning product it supplied (for example, a marine forecast including storm warnings), not as a generic live “connected” status. Capability status is reserved for unavailable or unsupported warning centers.
 
 **Why:** A source list should explain the provenance of the displayed information. A bare connection status is redundant and can be mistaken for a weather observation or warning.

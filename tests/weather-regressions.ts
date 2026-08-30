@@ -571,6 +571,40 @@ function testSection4DevelopmentSignals(): void {
   );
 }
 
+function testWindPeakTimingContext(): void {
+  const timestamps = Array.from({ length: 24 }, (_, hour) =>
+    `2026-08-23T${String(hour).padStart(2, "0")}:00`,
+  );
+  const gustKt = Array.from({ length: 24 }, () => 8);
+  gustKt[12] = 27;
+  gustKt[20] = 12;
+  const local = preprocessOpenMeteoLocal({
+    resolvedLocalForecast: {
+      sailingArea: {
+        name: "Testrevier",
+        source: "Lokaler Anbieter",
+        hourly: {
+          timestamps,
+          windSpeedKt: timestamps.map((_, hour) => hour === 12 ? 20 : 5),
+          gustKt,
+          windDirDeg: timestamps.map(() => 337.5),
+        },
+      },
+    },
+  }, "Europe/Vienna") as any;
+
+  assert.match(
+    local.wind.text_de,
+    /12:00 N 20-27 kt/,
+    "the strongest gust hour must be included among the daily wind samples",
+  );
+  assert.match(
+    local.wind.text_de,
+    /stärkste Böe 27 kt exakt um 12:00 \(mittags\)/,
+    "the section 3 context must bind the daily gust maximum to its real day period",
+  );
+}
+
 function testSection4OutputContract(): void {
   const output = enforceSection4Output(
     [
@@ -946,11 +980,25 @@ function testForecastExportPreservesRainTotals(): void {
     sources: { windy: [], national: [], europe: [] },
     weatherRaw: {
       openMeteoForecast: {
+        sailingArea: {
+          name: "Testrevier",
+          coordinates: AREA.coordinates,
+          hourly: {
+            timestamps,
+            windSpeedKt: Array.from({ length: 24 }, () => 10),
+            gustKt: [12, 27, 18, ...Array.from({ length: 21 }, () => 14)],
+            windDirDeg: Array.from({ length: 24 }, () => 225),
+          },
+        },
         city: {
           hourly: {
             timestamps,
             rainMm,
             temp2mC: Array.from({ length: 24 }, (_, index) => 20 + index),
+            precipProbabilityPct: [10, 30, 80, ...Array.from({ length: 21 }, () => 5)],
+            weatherCode: [1, 2, 95, ...Array.from({ length: 21 }, () => 1)],
+            cloudType: ["cumulus", "mixed", "cumulonimbus", ...Array.from({ length: 21 }, () => "clear")],
+            capeJkg: [100, 500, 900, ...Array.from({ length: 21 }, () => 0)],
           },
         },
       },
@@ -978,6 +1026,15 @@ function testForecastExportPreservesRainTotals(): void {
     [20, 23, 26],
     "non-accumulating weather values should remain sampled at three-hour intervals",
   );
+  assert.equal(
+    exported.weatherRaw.openMeteoForecast.sailingArea.hourly.gustKt[0],
+    27,
+    "the three-hour export must retain the strongest gust inside the 00–02 block",
+  );
+  assert.equal(exportedHourly.precipProbabilityPct[0], 80, "the highest precipitation probability in a three-hour block must survive export");
+  assert.equal(exportedHourly.weatherCode[0], 95, "a thunderstorm code anywhere in a three-hour block must survive export");
+  assert.equal(exportedHourly.cloudType[0], "cumulonimbus", "a cumulonimbus signal anywhere in a three-hour block must survive export");
+  assert.equal(exportedHourly.capeJkg[0], 900, "the highest CAPE value in a three-hour block must survive export");
   const meteogram = extractCityMeteogram(exported);
   assert.ok(meteogram, "the compacted frontend export should render as a meteogram");
   assert.deepEqual(
@@ -1416,10 +1473,11 @@ function testResolvedLocalForecastPrecedence(): void {
 
 function testWindDirectionNormalization(): void {
   const normalized = normalizeWindDirectionMentions(
-    "- Heute: aus S/SSO, später NW/WNW und danach N/NO.",
+    "- Heute: aus S/SSO, später SSW und NW/WNW, danach N/NO.",
   );
-  assert.equal(normalized, "- Heute: aus S, später NW und danach NNO.");
+  assert.equal(normalized, "- Heute: aus S, später SW und NW, danach NO.");
   assert.doesNotMatch(normalized, /\b(?:N|NNO|NO|ONO|O|OSO|SO|SSO|S|SSW|SW|WSW|W|WNW|NW|NNW)\s*\//);
+  assert.doesNotMatch(normalized, /\b(?:NNO|NNW|ONO|OSO|SSO|SSW|WSW|WNW)\b/);
 }
 
 function testOfficialWarningRestoration(): void {
@@ -1562,6 +1620,7 @@ async function main(): Promise<void> {
   testResolvedForecastExportFeedsCharts();
   await withFixedDate(async () => {
     testSection4DevelopmentSignals();
+    testWindPeakTimingContext();
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();
     await testFailedNationalProvidersStayTransparent();

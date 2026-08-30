@@ -226,6 +226,38 @@ function rainBuckets(value: unknown[]): number[][] {
   return buckets;
 }
 
+function maxNumericBuckets(value: unknown[]): Array<number | null> {
+  const buckets: Array<number | null> = [];
+  for (let index = 0; index < value.length; index += 3) {
+    const finite = value
+      .slice(index, index + 3)
+      .filter((entry): entry is number => typeof entry === "number" && Number.isFinite(entry));
+    buckets.push(finite.length ? Math.max(...finite) : null);
+  }
+  return buckets;
+}
+
+function weatherCodeBuckets(value: unknown[]): unknown[] {
+  const buckets: unknown[] = [];
+  for (let index = 0; index < value.length; index += 3) {
+    const bucket = value.slice(index, index + 3);
+    const thunderstorm = bucket.find((entry) =>
+      typeof entry === "number" && [95, 96, 99].includes(entry),
+    );
+    buckets.push(thunderstorm ?? bucket[0] ?? null);
+  }
+  return buckets;
+}
+
+function cloudTypeBuckets(value: unknown[]): unknown[] {
+  const buckets: unknown[] = [];
+  for (let index = 0; index < value.length; index += 3) {
+    const bucket = value.slice(index, index + 3);
+    buckets.push(bucket.includes("cumulonimbus") ? "cumulonimbus" : bucket[0] ?? null);
+  }
+  return buckets;
+}
+
 function compactForecastData(value: unknown, key = ""): unknown {
   if (Array.isArray(value)) {
     if (value.length <= 20) return value.map(entry => compactForecastData(entry));
@@ -234,6 +266,11 @@ function compactForecastData(value: unknown, key = ""): unknown {
         Math.round(bucket.reduce((sum, amount) => sum + amount, 0) * 100) / 100,
       );
     }
+    if (key === "gustKt" || key === "precipProbabilityPct" || key === "capeJkg") {
+      return maxNumericBuckets(value);
+    }
+    if (key === "weatherCode") return weatherCodeBuckets(value);
+    if (key === "cloudType") return cloudTypeBuckets(value);
     const sampled = value.filter((_, index) => index % 3 === 0);
     return sampled.map(entry => compactForecastData(entry));
   }
