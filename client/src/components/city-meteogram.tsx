@@ -333,7 +333,7 @@ function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogra
   const hasCloudBase = data.points.some((point) => point.cloudBase !== null);
   const dayCount = new Set(data.points.map((point) => point.dateKey)).size;
   const temperatureValues = data.points.map((point) => point.temperature).filter((value): value is number => value !== null);
-  const temperatureMin = temperatureValues.length ? Math.floor(Math.min(...temperatureValues) - 2) : 0;
+  const temperatureMin = temperatureValues.length ? Math.floor(Math.min(...temperatureValues) - 4) : 0;
   const temperatureMax = temperatureValues.length ? Math.ceil(Math.max(...temperatureValues) + 2) : 30;
   const temperatureY = (value: number) => 7 + (1 - (value - temperatureMin) / Math.max(1, temperatureMax - temperatureMin)) * (FORECAST_BLOCK_HEIGHT - 14);
   const tempPoints = data.points.flatMap((point, index) => point.temperature === null ? [] : [[index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]]);
