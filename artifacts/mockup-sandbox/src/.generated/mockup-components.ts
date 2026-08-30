@@ -4,5 +4,6 @@ export const modules: ModuleMap = {
   "./components/mockups/meteogram-redesign/Current.tsx": () => import("../components/mockups/meteogram-redesign/Current.tsx"),
   "./components/mockups/meteogram-redesign/EditorialForecastStrip.tsx": () => import("../components/mockups/meteogram-redesign/EditorialForecastStrip.tsx"),
   "./components/mockups/meteogram-redesign/QuietWeatherMap.tsx": () => import("../components/mockups/meteogram-redesign/QuietWeatherMap.tsx"),
-  "./components/mockups/meteogram-redesign/SailingCockpit.tsx": () => import("../components/mockups/meteogram-redesign/SailingCockpit.tsx")
+  "./components/mockups/meteogram-redesign/SailingCockpit.tsx": () => import("../components/mockups/meteogram-redesign/SailingCockpit.tsx"),
+  "./components/mockups/meteogram-redesign/WeatherIconGallery.tsx": () => import("../components/mockups/meteogram-redesign/WeatherIconGallery.tsx")
 };
