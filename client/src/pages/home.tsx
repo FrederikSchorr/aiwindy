@@ -7,6 +7,7 @@ import { FaLinkedin } from "react-icons/fa";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ChatMessage, GeocodeResult, WeatherEuropeSSE, WeatherOutputData } from "@shared/schema";
 import CityMeteogram from "@/components/city-meteogram";
+import SeaWindForecast from "@/components/sea-wind-forecast";
 
 const KNMI_SOURCE_URL = "https://cdn.knmi.nl/knmi/map/page/weer/waarschuwingen_verwachtingen/weerkaarten";
 const MAX_CHAT_HISTORY_CONTENT = 2000;
@@ -66,7 +67,7 @@ function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker 
     <iframe
       title={`${overlay}-${product}`}
       src={src}
-      className="w-full border-0 rounded-lg"
+      className="block w-full border-0 rounded-lg"
       style={{ height: forecast ? "186px" : "300px" }}
       frameBorder="0"
     />
@@ -326,6 +327,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
           <SectionTitle num={3} title="Wind & Welle" />
           <div className="my-3" data-testid="section-card-3">
             <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
+            <SeaWindForecast analysisJson={analysisJson} isLoading={isStreaming && !hasError} />
             <SourceLink label={`Wind ${sailingAreaShort}`} provider="windy.com" url={windUrl} />
           </div>
           {resolvedWeatherOutput?.windWaves?.text && (

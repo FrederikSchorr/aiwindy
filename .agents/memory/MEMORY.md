@@ -6,3 +6,4 @@
 - [Direct TSX regression tests](direct-tsx-regression-tests.md) — server-rendering TSX with tsx needs an explicit React runtime import when JSX is preserved
 - [Meteogram design direction](meteogram-design-direction.md) — the Windy screenshot is the visual baseline; exclude wind/gust rows and keep three simple cloud bands
 - [npm deployment lockfiles](npm-bundled-dependencies.md) — npm is authoritative for publishing; keep one root lockfile and preserve npm-normalized bundled entries
+- [Frontend forecast cadence](frontend-forecast-cadence.md) — analysis exports may already be compacted to three-hour intervals; consumers must detect cadence before sampling

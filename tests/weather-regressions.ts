@@ -25,6 +25,7 @@ import {
 } from "../server/analysis-store.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
+import SeaWindForecast, { extractSeaWindForecast } from "../client/src/components/sea-wind-forecast";
 
 const REAL_DATE = globalThis.Date;
 const FIXED_NOW = "2026-08-22T09:00:00.000Z";
@@ -744,6 +745,132 @@ function testCityMeteogramCloudBands(): void {
   assert.equal(data.bands.length, 3, "the chart must render only three cloud bands");
 }
 
+function seaWindAnalysis(): Record<string, unknown> {
+  const timestamps = Array.from({ length: 144 }, (_, index) => {
+    const day = 22 + Math.floor(index / 24);
+    const hour = index % 24;
+    return `2026-08-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00`;
+  });
+  return {
+    weatherRaw: {
+      openMeteoForecast: {
+        timezone: "Europe/Vienna",
+        sailingArea: {
+          name: "Testrevier",
+          coordinates: AREA.coordinates,
+          hourly: {
+            timestamps,
+            windSpeedKt: timestamps.map((_, index) => index % 16),
+            gustKt: timestamps.map((_, index) => 3 + (index % 16)),
+            windDirDeg: timestamps.map(() => 292),
+          },
+        },
+      },
+    },
+  };
+}
+
+function compactedSeaWindAnalysis(): Record<string, unknown> {
+  const analysis = seaWindAnalysis();
+  const hourly = (analysis.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+  for (const key of ["timestamps", "windSpeedKt", "gustKt", "windDirDeg"]) {
+    hourly[key] = hourly[key].filter((_: unknown, index: number) => index % 3 === 0);
+  }
+  return analysis;
+}
+
+function testSeaWindForecast(): void {
+  const analysis = seaWindAnalysis();
+  const data = extractSeaWindForecast(analysis);
+  assert.ok(data, "seegebiet wind data should be extracted");
+  assert.equal(data.points.length, 48, "the chart should sample exactly 48 three-hour points from six days");
+  assert.equal(data.points[0].timestamp, "2026-08-22T00:00", "the first three-hour point should preserve its source timestamp");
+  assert.equal(data.points[1].speed, 3, "three-hour sampling should retain aligned wind values");
+  assert.equal(data.latitude, AREA.coordinates.lat, "the chart should retain sailing-area latitude");
+  assert.equal(data.longitude, AREA.coordinates.lon, "the chart should retain sailing-area longitude");
+
+  const markup = renderToStaticMarkup(createElement(SeaWindForecast, { analysisJson: analysis }));
+  assert.match(markup, /data-testid="sea-wind-forecast"[^>]*data-forecast-status="ready"/, "available wind data should render the ready chart");
+  assert.match(markup, /data-forecast-days="6"[^>]*data-forecast-points="48"/, "the chart should expose six days and 48 points");
+  assert.match(markup, /data-sailing-area-lat="47\.8"[^>]*data-sailing-area-lon="16\.75"/, "the chart metadata must use sailing-area coordinates");
+  assert.match(markup, /data-testid="sea-wind-forecast-scroll"/, "the chart should provide a horizontal scroll container");
+  assert.match(markup, /role="region"/, "the horizontal forecast should be exposed as a named region");
+  assert.match(markup, /tabindex="0"/, "keyboard users should be able to focus and scroll the timeline");
+  assert.match(markup, /Wind/, "the chart should include the wind row");
+  assert.match(markup, /Böen/, "the chart should include the gust row");
+  assert.match(markup, /Windrichtung/, "the chart should include the direction row");
+  assert.doesNotMatch(markup, /Temperatur|Regen|Druck|Wolken/, "the wind chart must not include unrelated weather rows");
+  assert.match(markup, /background-color:#f1f2f2/, "zero-knot wind should use the lightest approved color");
+  assert.match(markup, /src="\/assets\/wind-arrows\/wind-arrow-WNW-292\.svg"/, "direction cells should use the nearest generated SVG asset");
+  assert.match(markup, /role="img" aria-label="Windrichtung 292°"/, "direction values should be available to assistive technology");
+
+  const compacted = compactedSeaWindAnalysis();
+  assert.equal(
+    extractSeaWindForecast(compacted)?.points.length,
+    48,
+    "an already compacted three-hour frontend export must not be sampled a second time",
+  );
+
+  const invalidTimezone = seaWindAnalysis();
+  const invalidTimezoneForecast = (invalidTimezone.weatherRaw as any).openMeteoForecast;
+  invalidTimezoneForecast.timezone = "Not/A-Timezone";
+  invalidTimezoneForecast.sailingArea.hourly.timestamps = invalidTimezoneForecast.sailingArea.hourly.timestamps.map(
+    (timestamp: string) => `${timestamp}:00Z`,
+  );
+  assert.doesNotThrow(
+    () => extractSeaWindForecast(invalidTimezone),
+    "an invalid timezone must not crash timestamp parsing",
+  );
+  assert.equal(
+    extractSeaWindForecast(invalidTimezone)?.points.length,
+    48,
+    "invalid timezone metadata should fall back safely while preserving a complete forecast",
+  );
+
+  const loadingMarkup = renderToStaticMarkup(
+    createElement(SeaWindForecast, { analysisJson: null, isLoading: true }),
+  );
+  assert.match(loadingMarkup, /data-forecast-status="loading"/, "the chart should expose a loading state before analysis data arrives");
+  const unavailableMarkup = renderToStaticMarkup(
+    createElement(SeaWindForecast, { analysisJson: { weatherRaw: {} } }),
+  );
+  assert.match(unavailableMarkup, /data-forecast-status="unavailable"/, "missing wind data should render an explicit unavailable state");
+
+  const malformed = seaWindAnalysis();
+  const malformedHourly = (malformed.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+  malformedHourly.timestamps[3] = null;
+  const malformedData = extractSeaWindForecast(malformed);
+  assert.equal(malformedData, null, "a missing three-hour slot should produce the explicit unavailable state instead of a shortened chart");
+  const partial = seaWindAnalysis();
+  const partialHourly = (partial.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+  for (const key of ["timestamps", "windSpeedKt", "gustKt", "windDirDeg"]) {
+    partialHourly[key] = partialHourly[key].slice(0, 72);
+  }
+  assert.equal(extractSeaWindForecast(partial), null, "a partial forecast must not render fewer than six days");
+
+  for (const key of ["windSpeedKt", "gustKt", "windDirDeg"]) {
+    const shortened = compactedSeaWindAnalysis();
+    const shortenedHourly = (shortened.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+    shortenedHourly[key] = shortenedHourly[key].slice(0, 47);
+    assert.equal(extractSeaWindForecast(shortened), null, `a shortened ${key} series must render unavailable`);
+
+    const withNull = compactedSeaWindAnalysis();
+    const withNullHourly = (withNull.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+    withNullHourly[key][10] = null;
+    assert.equal(extractSeaWindForecast(withNull), null, `a null ${key} value must render unavailable`);
+  }
+
+  const duplicateTimestamp = compactedSeaWindAnalysis();
+  const duplicateHourly = (duplicateTimestamp.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+  duplicateHourly.timestamps[10] = duplicateHourly.timestamps[9];
+  assert.equal(extractSeaWindForecast(duplicateTimestamp), null, "duplicate timestamps must render unavailable");
+
+  const timestampGap = compactedSeaWindAnalysis();
+  const timestampGapHourly = (timestampGap.weatherRaw as any).openMeteoForecast.sailingArea.hourly;
+  timestampGapHourly.timestamps[10] = "2026-08-23T07:00";
+  assert.equal(extractSeaWindForecast(timestampGap), null, "non-contiguous three-hour timestamps must render unavailable");
+}
+
 function testCityMeteogramDewPointVisibility(): void {
   const noDewPoint = cityMeteogramAnalysis([null, Number.NaN], []);
   const noDewPointMarkup = renderToStaticMarkup(
@@ -1107,6 +1234,7 @@ async function main(): Promise<void> {
   testSection4OutputContract();
   testCloudBaseEstimate();
   testCityMeteogramCloudBands();
+  testSeaWindForecast();
   testCityMeteogramDewPointVisibility();
   testForecastExportPreservesRainTotals();
   testCityMeteogramVisualLayers();
