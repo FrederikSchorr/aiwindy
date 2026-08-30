@@ -323,17 +323,21 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <BounceLoader />
           )}
 
-          <SectionTitle num={4} title="Wetter & Regen" />
-          <div className="my-3" data-testid="section-card-4">
-            <CityMeteogram
-              analysisJson={analysisJson}
-              cityName={locationShort}
-              isLoading={isStreaming && !hasError}
-            />
-            <SourceLink label={`Meteogramm ${locationShort}`} provider="windy.com" url={meteogramUrl} />
-          </div>
-          {weatherOutput?.cloudsRain?.text && (
-            <MarkdownContent content={weatherOutput.cloudsRain.text} />
+          {analysisJson && (
+            <>
+              <SectionTitle num={4} title="Wetter & Regen" />
+              <div className="my-3" data-testid="section-card-4">
+                <CityMeteogram
+                  analysisJson={analysisJson}
+                  cityName={locationShort}
+                  isLoading={isStreaming && !hasError}
+                />
+                <SourceLink label={`Meteogramm ${locationShort}`} provider="windy.com" url={meteogramUrl} />
+              </div>
+              {weatherOutput?.cloudsRain?.text && (
+                <MarkdownContent content={weatherOutput.cloudsRain.text} />
+              )}
+            </>
           )}
 
           {!weatherOutput && isStreaming && loadingStatus && <StatusLoader text={loadingStatus} />}

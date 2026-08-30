@@ -13,6 +13,6 @@ Temperature and dew-point curves share the same projection, whose visible domain
 
 Weather icons follow Windy's compact visual language and render above the temperature fill. Distinguish clear, few/broken/overcast clouds, light/heavy rain, and thunderstorms; use sun only by day and moon/night treatment after dark. Keep each state in its own SVG viewBox rather than cropping a multi-icon sprite, because generated sprite artwork can cross cell boundaries and reveal neighboring fragments. For thunderstorms, emphasize the safety-orange lightning bolt while keeping the cloud at the normal icon scale.
 
-The section-4 loading state must match the bare animated three-dot loader used in section 3. Render it only after the raw Europe weather data event makes the analysis sections available—not immediately after location recognition—with no box, wrapper spacing, weather icon, or visible preparation text.
+Do not reveal section 4, its Windy link, or a meteogram placeholder when the earlier Europe-map event arrives. Publish the first chart-ready analysis payload immediately after the local Open-Meteo/raw weather fetch, before LLM preprocessing and interpretation; then reveal section 4 with the finished meteogram while the separate interpretation status may continue below it.
 
 The production meteogram container uses subtle Windy-style rounded corners and the app's global Open Sans hierarchy; chart labels should remain readable at normal body-text scale rather than using miniature map-overlay typography.

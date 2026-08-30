@@ -993,6 +993,11 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
     Object.assign(analysis.data.weatherRaw, national.data);
     for (const url of national.sourceUrls) analysis.data.sources.national.push(url);
     analysis.data.sources.nationalWarningCenter = national.warningCenter;
+    analysis.save();
+    publish({
+      analysisJson: analysis.getExportData(),
+      analysisFileName: path.basename(analysis.filePath),
+    });
     publish({ loadingStatus: "Bereite nationale Wetterlage auf" });
     const nationalPre = await preprocessNationalWeather(
       analysis.data.weatherRaw,
