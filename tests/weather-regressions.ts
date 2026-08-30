@@ -1001,7 +1001,7 @@ function testCityMeteogramVisualLayers(): void {
   const hourly = (analysis.weatherRaw as any).openMeteoForecast.city.hourly;
   hourly.cloudBaseM = [900, 1400];
   hourly.rainMm = [0.3, 2.2];
-  hourly.pressureMslHPa = [1010, 1020];
+  hourly.pressureMslHPa = [1010.4, 1020.4];
 
   const data = extractCityMeteogram(analysis);
   assert.ok(data, "visual-layer fixture should produce a meteogram");
