@@ -1089,7 +1089,7 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(temperatureColor(33), /^#(?:[a-f0-9]{6})$/i, "temperature colors should be valid SVG hex colors");
   assert.match(markup, /linearGradient id="temperature-fade"/, "temperature fill should fade vertically");
   assert.match(markup, /data-testid="meteogram-pressure-line"/, "pressure path should remain directly measurable");
-  assert.match(markup, /data-testid="meteogram-pressure-line"[^>]*data-pressure-y-min="0"[^>]*data-pressure-y-max="85"[^>]*data-pressure-row-height="85"/, "pressure should use the full reduced 80 percent pressure/rain row height");
+  assert.match(markup, /data-testid="meteogram-pressure-line"[^>]*data-pressure-min="1010.4"[^>]*data-pressure-max="1020.4"[^>]*data-pressure-y-min="0"[^>]*data-pressure-y-max="85"[^>]*data-pressure-row-height="85"/, "pressure should preserve decimal precision across the full pressure/rain row height");
   assert.match(markup, /font-size="10"/, "pressure labels should be readable");
   assert.match(markup, /stroke="#587b90"/, "pressure should be blue-gray and distinct from cloud fill");
   assert.match(markup, /data-testid="meteogram-current-column"/, "the current forecast column should be highlighted");
@@ -1106,11 +1106,21 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(cityLabelRail, /Bewölkung/, "the meteogram should label the icon row as Bewölkung");
   assert.match(cityLabelRail, /height:44px[^>]*>Bewölkung/, "Bewölkung should align with the icon row");
   assert.match(cityLabelRail, /height:42px[^>]*>Temperatur/, "Temperatur should align with its own row");
-  assert.match(cityLabelRail, /height:30px[\s\S]*?data-testid="city-meteogram-dew-label"[\s\S]*>Taupunkt/, "Taupunkt should align with its own row");
+  assert.match(cityLabelRail, /height:16px[\s\S]*?data-testid="city-meteogram-dew-label"[\s\S]*>Taupunkt/, "Taupunkt should align with its compact row");
   assert.match(cityLabelRail, /Druck<br\/>Regen/, "Druck and Regen should share one neutral label treatment");
   assert.doesNotMatch(cityLabelRail, /text-\[#3275a0\]|text-\[#a85e42\]/, "temperature, pressure, and rain labels should use the same gray color");
   assert.match(markup, /data-testid="meteogram-dew-point-row"[\s\S]*?style="top:78px"/, "dew point values should keep their established chart position");
-  assert.match(markup, /data-testid="city-meteogram-dew-label"[^>]*class="relative top-\[-15px\]"/, "the Taupunkt label should move up without moving the chart values");
+  assert.match(markup, /data-testid="city-meteogram-dew-label"[^>]*class="relative top-\[-8px\]"/, "the Taupunkt label should align with the unchanged chart values");
+  assert.match(markup, /data-testid="meteogram-temperature-section"[^>]*data-section-height="102"/, "the temperature and dew point section should not reserve excess vertical space");
+  assert.match(markup, /data-testid="meteogram-pressure-section"[^>]*data-section-height="85"/, "the pressure section should follow the compact temperature section");
+  const decimalPressureAnalysis = cityMeteogramAnalysis([12, 13, 14]);
+  (decimalPressureAnalysis.weatherRaw as any).openMeteoForecast.city.hourly.pressureMslHPa = [1012.4, 1023.4, 1018.7];
+  const decimalPressureMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: decimalPressureAnalysis }),
+  );
+  assert.match(decimalPressureMarkup, /data-pressure-min="1012\.4"[^>]*data-pressure-max="1023\.4"/, "pressure scaling should retain raw decimal values");
+  assert.match(decimalPressureMarkup, /data-pressure-label="true"[^>]*>1023 hPa</, "pressure labels should remain rounded to whole hPa");
+  assert.doesNotMatch(decimalPressureMarkup, /data-pressure-label="true"[^>]*>1023\.4 hPa</, "pressure labels should not expose decimal places");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,

@@ -44,7 +44,7 @@ const ROW = {
   hours: 21,
   icons: 44,
   temperature: 42,
-  dewPoint: 30,
+  dewPoint: 16,
   pressure: 85,
   cloudBand: 70,
   cloudBase: 35,
@@ -271,6 +271,7 @@ export function temperatureColor(value: number): string {
 function formatRainAmount(value: number): string {
   return `${value < 10 ? value.toFixed(1) : Math.round(value)}mm`;
 }
+
 type RainDayGroup = { label: string; count: number; startIndex: number; rainTotal: number };
 function rainDayGroups(points: MeteogramPoint[]): RainDayGroup[] {
   const groups: RainDayGroup[] = [];
@@ -488,10 +489,9 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
     : "";
 
   const pressureValues = points.map((point) => point.pressure).filter((value): value is number => value !== null);
-  const pressureDisplayValues = pressureValues.map((value) => Math.round(value));
-  const pressureMin = pressureDisplayValues.length ? Math.min(...pressureDisplayValues) : 980;
-  const pressureMax = pressureDisplayValues.length ? Math.max(...pressureDisplayValues) : 1030;
-  const pressureY = (value: number) => (1 - (Math.round(value) - pressureMin) / Math.max(1, pressureMax - pressureMin)) * ROW.pressure;
+  const pressureMin = pressureValues.length ? Math.min(...pressureValues) : 980;
+  const pressureMax = pressureValues.length ? Math.max(...pressureValues) : 1030;
+  const pressureY = (value: number) => (1 - (value - pressureMin) / Math.max(1, pressureMax - pressureMin)) * ROW.pressure;
   const pressurePoints = points.flatMap((point, index) => point.pressure === null
     ? []
     : [[index * POINT_WIDTH + POINT_WIDTH / 2, pressureY(point.pressure)] as [number, number]]);
@@ -525,7 +525,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
         <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3"><span>Stunden</span><ForecastClockGlyph /></div>
         <div style={{ height: ROW.icons }} className="flex items-center justify-end pr-3">Bewölkung</div>
         <div style={{ height: ROW.temperature }} className="flex items-center justify-end pr-3">Temperatur</div>
-        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-3"><span data-testid="city-meteogram-dew-label" className="relative top-[-15px]">Taupunkt</span></div>}
+        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-3"><span data-testid="city-meteogram-dew-label" className="relative top-[-8px]">Taupunkt</span></div>}
         <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-3">
           <span className="text-right">Druck<br />Regen</span>
         </div>
@@ -552,7 +552,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
               {points.map((point) => <div key={`hour-${point.timestamp}`} className="flex items-center justify-center" title={point.timestamp}>{Number(point.hourLabel)}</div>)}
             </div>
 
-            <div className="relative" style={{ height: temperatureSectionHeight }}>
+            <div data-testid="meteogram-temperature-section" data-section-height={temperatureSectionHeight} className="relative" style={{ height: temperatureSectionHeight }}>
               <svg data-testid="meteogram-temperature-area" data-temperature-layer="behind-forecast-rows" viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature + 12}`} width={width} height={ROW.icons + ROW.temperature + 12} className="pointer-events-none absolute inset-0">
                 <defs>
                   <linearGradient id="temperature-gradient" x2={width} gradientUnits="userSpaceOnUse">
@@ -574,7 +574,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
               </div>}
             </div>
 
-            <div className="relative" style={{ height: ROW.pressure }}>
+            <div data-testid="meteogram-pressure-section" data-section-height={ROW.pressure} className="relative" style={{ height: ROW.pressure }}>
               <svg data-testid="meteogram-cloud-field" className="hidden" viewBox={`0 0 ${width} ${CLOUD_CHART_HEIGHT}`} width={width} height={CLOUD_CHART_HEIGHT} aria-hidden="true">
                 <defs>
                   <filter id="meteogram-cloud-soften" x="-30%" y="-40%" width="160%" height="180%"><feGaussianBlur stdDeviation="4.6" /></filter>
