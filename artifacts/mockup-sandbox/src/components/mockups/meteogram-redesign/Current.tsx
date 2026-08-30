@@ -17,7 +17,7 @@ type Point = {
 
 const POINT_WIDTH = 64;
 const MAX_RAIN_MM = 10;
-const ROW = { day: 43, hours: 34, icons: 44, temperature: 42, dew: 30, pressure: 132 };
+const ROW = { day: 43, hours: 34, icons: 44, temperature: 42, dew: 30, pressure: 106 };
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const screenshotData = [
   { hour: 2, temperature: 21, dewPoint: 18, pressure: 1014, rain: .8, cloudAmount: "overcast", storm: false },
