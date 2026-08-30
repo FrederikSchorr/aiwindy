@@ -1108,7 +1108,8 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(cityLabelRail, /height:42px[^>]*>Temperatur/, "Temperatur should align with its own row");
   assert.match(cityLabelRail, /height:30px[^>]*>Taupunkt/, "Taupunkt should align with its own row");
   assert.match(cityLabelRail, /Druck<br\/>Regen/, "Druck and Regen should share one neutral label treatment");
-  assert.doesNotMatch(cityLabelRail, /text-\[#3275a0\]/, "Druck and Regen labels should use the same gray color");
+  assert.doesNotMatch(cityLabelRail, /text-\[#3275a0\]|text-\[#a85e42\]/, "temperature, pressure, and rain labels should use the same gray color");
+  assert.match(markup, /data-testid="meteogram-dew-point-row"[\s\S]*?style="top:93px"/, "dew point values should be vertically centered in their own row");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,
