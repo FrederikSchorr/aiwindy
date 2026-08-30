@@ -38,15 +38,18 @@ function mixColor(start: string, end: string, amount: number) {
 }
 
 const COLOR_STOPS = [
-  { value: 0, color: "#6873bd" },
-  { value: 5, color: "#318daf" },
-  { value: 10, color: "#10c6d0" },
-  { value: 15, color: "#35c653" },
-  { value: 20, color: "#b3d30e" },
-  { value: 25, color: "#ffad05" },
-  { value: 30, color: "#f06c1b" },
-  { value: 40, color: "#d23e63" },
-  { value: 60, color: "#625fa8" },
+  { value: 0, color: "#f1f2f2" },
+  { value: 4, color: "#e1e5e6" },
+  { value: 6, color: "#9bdfe5" },
+  { value: 8, color: "#12bdca" },
+  { value: 10, color: "#28ce51" },
+  { value: 15, color: "#8fd20c" },
+  { value: 20, color: "#ddd000" },
+  { value: 25, color: "#ff9800" },
+  { value: 30, color: "#ff5600" },
+  { value: 35, color: "#ff0080" },
+  { value: 40, color: "#d90098" },
+  { value: 50, color: "#a000b2" },
 ];
 
 function windColor(value: number) {
@@ -85,11 +88,11 @@ function DirectionArrow({ degrees }: { degrees: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-7 w-7"
+      className="h-7 w-7 shrink-0"
       aria-hidden="true"
       style={{ transform: `rotate(${degrees}deg)` }}
     >
-      <path d="m6.2 3.1 12.1 3.7-5.1 4.6 4.2 7.3-4.8 2.2-4-7.5-4.2 3.1 1.8-7.2Z" fill="#5e7890" />
+      <path d="M12 2.5 20.5 11.3l-5.2-.9v10.6H8.7V10.4l-5.2.9L12 2.5Z" fill="#5e7890" />
     </svg>
   );
 }

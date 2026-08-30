@@ -23,6 +23,12 @@ The Windy link below the city meteogram must use the recognized city coordinates
 
 The production meteogram container uses subtle Windy-style rounded corners and the app's global Open Sans hierarchy; chart labels should remain readable at normal body-text scale rather than using miniature map-overlay typography.
 
+For the sea-area wind chart, the Windy color scale starts at white/light gray for 0–4 kt, transitions through cyan and saturated green, then yellow/orange, and reaches red/magenta at stronger wind and gust values. Do not reuse the older blue/purple-at-zero scale.
+
+**Why:** The supplied Windy examples show calm wind as nearly neutral rather than blue, and the user explicitly corrected the initial palette.
+
+**How to apply:** Keep this palette consistent for both wind and gust cells in the sea-area chart; use dark text on the bright middle/highlight colors and reserve white text for the darkest endpoints.
+
 Keep the main timeline in three-hour columns, but render precipitation inside each column as up to three narrow hourly bars. The daily rain badge shows the sum of all hourly amounts; never represent a three-hour rain block as one wide aggregated bar.
 Label the hourly-bar cluster with its highest individual hourly amount; reserve the daily total exclusively for the day badge.
 
