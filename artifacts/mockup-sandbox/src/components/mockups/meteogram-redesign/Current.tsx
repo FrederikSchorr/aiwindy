@@ -3,6 +3,7 @@ import "./_group.css";
 
 type CloudBand = "high" | "mid" | "low";
 type CloudMass = { top: number; bottom: number; opacity: number };
+type CloudAmount = "few" | "broken" | "overcast";
 type Point = {
   timestamp: string;
   temperature: number;
@@ -11,6 +12,8 @@ type Point = {
   rain: number;
   cloudBase: string;
   cloudType: "clear" | "cirrus" | "stratus" | "cumulus" | "mixed";
+  cloudAmount: CloudAmount;
+  storm: boolean;
   isDay: boolean;
   clouds: [CloudMass, CloudMass];
 };
@@ -24,15 +27,15 @@ const BANDS: Array<{ key: CloudBand; label: string; altitude: string }> = [
 ];
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const screenshotData = [
-  { hour: 2, temperature: 21, dewPoint: 18, pressure: 1014, rain: .5, cloudBase: "1900", clouds: [{ top: 3.2, bottom: .7, opacity: .32 }, { top: 1.1, bottom: .25, opacity: .18 }] },
-  { hour: 5, temperature: 19, dewPoint: 15, pressure: 1015, rain: 0, cloudBase: "10k", clouds: [{ top: 3.7, bottom: 1.0, opacity: .28 }, { top: 1.6, bottom: .3, opacity: .14 }] },
-  { hour: 8, temperature: 21, dewPoint: 14, pressure: 1017, rain: 0, cloudBase: "4000", clouds: [{ top: 4.0, bottom: 1.3, opacity: .38 }, { top: 2.0, bottom: .55, opacity: .18 }] },
-  { hour: 11, temperature: 22, dewPoint: 13, pressure: 1018, rain: 0, cloudBase: "3600", clouds: [{ top: 5.3, bottom: .8, opacity: .67 }, { top: 2.1, bottom: .65, opacity: .32 }] },
-  { hour: 14, temperature: 26, dewPoint: 13, pressure: 1019, rain: .3, cloudBase: "3300", clouds: [{ top: 6.0, bottom: .45, opacity: .82 }, { top: 2.9, bottom: .4, opacity: .48 }] },
-  { hour: 17, temperature: 26, dewPoint: 12, pressure: 1020, rain: 0, cloudBase: "--", clouds: [{ top: 4.0, bottom: 1.5, opacity: .54 }, { top: 2.5, bottom: .8, opacity: .32 }] },
-  { hour: 20, temperature: 23, dewPoint: 12, pressure: 1021, rain: 0, cloudBase: "2700", clouds: [{ top: 3.0, bottom: 1.0, opacity: .48 }, { top: 2.0, bottom: .55, opacity: .28 }] },
-  { hour: 23, temperature: 21, dewPoint: 11, pressure: 1022, rain: 0, cloudBase: "8600", clouds: [{ top: 2.7, bottom: 1.1, opacity: .5 }, { top: 1.8, bottom: .7, opacity: .28 }] },
-  { hour: 2, temperature: 20, dewPoint: 12, pressure: 1023, rain: 0, cloudBase: "6100", clouds: [{ top: 2.8, bottom: 1.2, opacity: .48 }, { top: 1.9, bottom: .8, opacity: .25 }] },
+  { hour: 2, temperature: 21, dewPoint: 18, pressure: 1014, rain: .5, cloudBase: "1900", cloudAmount: "overcast", storm: false, clouds: [{ top: 3.2, bottom: .7, opacity: .32 }, { top: 1.1, bottom: .25, opacity: .18 }] },
+  { hour: 5, temperature: 19, dewPoint: 15, pressure: 1015, rain: 0, cloudBase: "10k", cloudAmount: "few", storm: false, clouds: [{ top: 3.7, bottom: 1.0, opacity: .28 }, { top: 1.6, bottom: .3, opacity: .14 }] },
+  { hour: 8, temperature: 21, dewPoint: 14, pressure: 1017, rain: 0, cloudBase: "4000", cloudAmount: "few", storm: false, clouds: [{ top: 4.0, bottom: 1.3, opacity: .38 }, { top: 2.0, bottom: .55, opacity: .18 }] },
+  { hour: 11, temperature: 22, dewPoint: 13, pressure: 1018, rain: 0, cloudBase: "3600", cloudAmount: "broken", storm: false, clouds: [{ top: 5.3, bottom: .8, opacity: .67 }, { top: 2.1, bottom: .65, opacity: .32 }] },
+  { hour: 14, temperature: 26, dewPoint: 13, pressure: 1019, rain: .3, cloudBase: "3300", cloudAmount: "overcast", storm: true, clouds: [{ top: 6.0, bottom: .45, opacity: .82 }, { top: 2.9, bottom: .4, opacity: .48 }] },
+  { hour: 17, temperature: 26, dewPoint: 12, pressure: 1020, rain: 0, cloudBase: "--", cloudAmount: "overcast", storm: false, clouds: [{ top: 4.0, bottom: 1.5, opacity: .54 }, { top: 2.5, bottom: .8, opacity: .32 }] },
+  { hour: 20, temperature: 23, dewPoint: 12, pressure: 1021, rain: 0, cloudBase: "2700", cloudAmount: "broken", storm: false, clouds: [{ top: 3.0, bottom: 1.0, opacity: .48 }, { top: 2.0, bottom: .55, opacity: .28 }] },
+  { hour: 23, temperature: 21, dewPoint: 11, pressure: 1022, rain: 0, cloudBase: "8600", cloudAmount: "few", storm: false, clouds: [{ top: 2.7, bottom: 1.1, opacity: .5 }, { top: 1.8, bottom: .7, opacity: .28 }] },
+  { hour: 2, temperature: 20, dewPoint: 12, pressure: 1023, rain: 0, cloudBase: "6100", cloudAmount: "broken", storm: false, clouds: [{ top: 2.8, bottom: 1.2, opacity: .48 }, { top: 1.9, bottom: .8, opacity: .25 }] },
 ] as const;
 const points: Point[] = screenshotData.map((entry, index) => {
   const date = new Date(Date.UTC(2026, 7, index < 8 ? 29 : 30, entry.hour));
@@ -44,6 +47,8 @@ const points: Point[] = screenshotData.map((entry, index) => {
     rain: entry.rain,
     cloudBase: entry.cloudBase,
     cloudType: index === 0 || index === 1 ? "mixed" : index === 4 ? "cumulus" : "stratus",
+    cloudAmount: entry.cloudAmount,
+    storm: entry.storm,
     isDay: entry.hour >= 6 && entry.hour < 21,
     clouds: entry.clouds,
   };
@@ -81,16 +86,31 @@ function temperatureColor(value: number) {
   return "#ed6a8d";
 }
 function weatherIcon(point: Point) {
-  const cloudStroke = point.rain > 0 ? "#6f818c" : "#7e858b";
-  const cloudFill = point.rain > 0 ? "#9eabb2" : "#b3bdc1";
+  const rainLevel = point.rain >= .5 ? "heavy" : point.rain > 0 ? "light" : "none";
+  const cloudFill = point.cloudAmount === "overcast" ? "#89959b" : point.cloudAmount === "broken" ? "#a1adb2" : "#c0c9cc";
+  const cloudBack = point.cloudAmount === "overcast"
+    ? <path d="M5 21h28a5 5 0 0 0 0-10h-3a8 8 0 0 0-15-1A6 6 0 0 0 5 21Z" fill="#7d8990" opacity=".72" />
+    : point.cloudAmount === "broken"
+      ? <path d="M9 20h27a4.5 4.5 0 0 0 0-9h-3a7 7 0 0 0-13-1 5.5 5.5 0 0 0-11 4.5Z" fill="#b2bdc1" opacity=".72" />
+      : null;
   const skyObject = point.isDay
-    ? <g stroke="#e6a800" strokeWidth="1.5" strokeLinecap="round"><circle cx="14" cy="11" r="5.2" fill="#f5bd22" stroke="none" /><path d="M14 2.5v3M14 16.5v3M5.5 11h3M19.5 11h3M8 5l2.1 2.1M17.9 13.9 20 16M20 5l-2.1 2.1M10.1 13.9 8 16" /></g>
-    : <path d="M18.5 5.2a7.1 7.1 0 1 0 5.3 11.8 7.8 7.8 0 0 1-5.3-11.8Z" fill="#91a7bb" stroke="#71889b" strokeWidth="1.1" />;
+    ? <g stroke="#e6a800" strokeWidth="1.5" strokeLinecap="round"><circle cx="14" cy="10" r="5.2" fill="#f5bd22" stroke="none" /><path d="M14 2v3M14 15v3M6 10h3M19 10h3M8.2 4.3l2.1 2.1M17.7 12.7l2.1 2.1M19.8 4.3l-2.1 2.1M10.3 12.7 8.2 14.8" /></g>
+    : <path d="M18.5 4.5a7 7 0 1 0 5.8 11.4A7.8 7.8 0 0 1 18.5 4.5Z" fill="#91a7bb" stroke="#71889b" strokeWidth="1.1" />;
+  const rain = rainLevel === "heavy"
+    ? <g stroke="#2479a8" strokeWidth="1.8" strokeLinecap="round"><path d="m12 30-2 5M19 30l-2 5M26 30l-2 5M33 30l-2 5" /></g>
+    : rainLevel === "light"
+      ? <g stroke="#2479a8" strokeWidth="1.8" strokeLinecap="round"><path d="m16 30-2 5M27 30l-2 5" /></g>
+      : null;
+  const lightning = point.storm
+    ? <path d="m23 27-5 7h4l-2 5 8-9h-4l3-3Z" fill="#f3bd24" stroke="#d79b00" strokeWidth="1" strokeLinejoin="round" />
+    : null;
   return <svg viewBox="0 0 48 40" className="h-9 w-11" aria-hidden="true">
     {skyObject}
-    <path d="M7 27.2h28.6a6.3 6.3 0 0 0 .1-12.6 10.3 10.3 0 0 0-19-1.6A7.2 7.2 0 0 0 7 27.2Z" fill={cloudFill} stroke={cloudStroke} strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M10 27.2h26.5a4.4 4.4 0 0 1-4.2 3H12.5a4.5 4.5 0 0 1-2.5-3Z" fill="#d3dade" fillOpacity=".72" />
-    {point.rain > 0 && <g stroke="#2779a7" strokeWidth="1.8" strokeLinecap="round"><path d="m14 32-2 4M22 32l-2 4M30 32l-2 4" /></g>}
+    {cloudBack}
+    <path d="M6 26h29a6 6 0 0 0 .1-12 10 10 0 0 0-18.7-1.5A7 7 0 0 0 6 26Z" fill={cloudFill} stroke="#75828a" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M9 26h27a4.5 4.5 0 0 1-4.3 3H12.5A4.5 4.5 0 0 1 9 26Z" fill="#d9e0e2" fillOpacity=".68" />
+    {rain}
+    {lightning}
   </svg>;
 }
 function TemperatureDewSection({ points, width, grid, temperatureArea, dewBoundaryPoints }: {
