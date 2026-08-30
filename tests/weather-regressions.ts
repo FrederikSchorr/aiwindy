@@ -19,6 +19,10 @@ import {
   estimateCloudBaseM,
 } from "../server/weather-open-meteo.js";
 import { enforceSection4Output } from "../server/weather-output.js";
+import {
+  getSanitizedAnalysisExport,
+  type AnalysisJson,
+} from "../server/analysis-store.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
 
@@ -601,9 +605,9 @@ function testSection4OutputContract(): void {
 
   const sanitized = enforceSection4Output(
     [
-      "- Heute: ☁️ Cumulus-Bewölkung 53–76 %; 📉 Druck fällt von 1016 auf 1014 hPa; 🌡️ Maximum 33,8°C; 🌡️ rascher Temperaturrückgang um ca. 2°C zwischen 18:00 und 19:00 Uhr; 🌡️ rascher Temperaturabfall ab 18:00–19:00 Uhr.",
+      "- Heute: ☁️ Cumulus-Bewölkung 53–76 %; 📉 Druck fällt von 1016 auf 1014 hPa; 🌡️ Maximum 33,8°C, abends rascher Rückgang auf rund 26°C; 🌡️ rascher Temperaturrückgang um ca. 2°C zwischen 18:00 und 19:00 Uhr; 🌡️ rascher Temperaturabfall ab 18:00–19:00 Uhr.",
       "- Morgen: ⛅ Nebelfelder möglich (WMO-Code 45); ⛈️ Gewittersignal bei Cumulonimbus; 📉 Druck bleibt bei 1014 hPa.",
-      "- Mo–Do 24.–27.08.: ☀️ Stabil; kein Gewitterrisiko; 📈 Druck steigt auf 1018 hPa.",
+      "- Mo–Do 24.–27.08.: ☀️ Stabil; Di früh 7,2 mm Regen; kein Gewitterrisiko; 📈 Druck steigt auf 1018,4 hPa.",
     ].join("\n"),
     {
       todayLabel: "Sa 22.08.",
@@ -613,14 +617,27 @@ function testSection4OutputContract(): void {
     {
       pressureSignificant: [false, false, false],
       thunderstormAllowed: [false, false, false],
+      rainDays: [
+        [{ label: "Sa 22.08", totalMm: 0 }],
+        [{ label: "So 23.08", totalMm: 0 }],
+        [
+          { label: "Mo 24.08", totalMm: 0 },
+          { label: "Di 25.08", totalMm: 3 },
+          { label: "Mi 26.08", totalMm: 0 },
+          { label: "Do 27.08", totalMm: 0 },
+        ],
+      ],
     },
   ) ?? "";
   assert.doesNotMatch(sanitized, /%|Druck|hPa|Gewitter|Cumulonimbus|⛈️|WMO[-\s]?Code/i);
   assert.match(sanitized, /Cumulus-Bewölkung/);
   assert.match(sanitized, /Nebelfelder möglich/);
   assert.match(sanitized, /Maximum 34°C/);
-  assert.doesNotMatch(sanitized, /rascher Temperaturrückgang|18:00|19:00/);
+  assert.doesNotMatch(sanitized, /rascher Temperaturrückgang|abends rascher Rückgang|18:00|19:00/);
   assert.match(sanitized, /⛅ Nebelfelder möglich/);
+  assert.match(sanitized, /Di früh 3 mm Regen/);
+  assert.doesNotMatch(sanitized, /7[,.]2 mm Regen|1018[,.]4 hPa/);
+  assert.doesNotMatch(sanitized, /\d+[,.]\d+\s*(?:mm|hPa|°C)/i);
 
   const informativeFallback = enforceSection4Output(
     [
@@ -756,6 +773,82 @@ function testCityMeteogramLoadingState(): void {
   assert.match(markup, /data-meteogram-status="loading"/, "loading state should be marked as loading");
   assert.doesNotMatch(markup, /bounce-loader|animate-bounce/, "the meteogram must not render animated dots");
   assert.doesNotMatch(markup, /Meteogramm wird vorbereitet …/, "the shared icon status remains outside the meteogram");
+}
+
+function testForecastExportPreservesRainTotals(): void {
+  const timestamps = Array.from(
+    { length: 24 },
+    (_, hour) => `2026-09-01T${String(hour).padStart(2, "0")}:00`,
+  );
+  const rainMm = [3, 3.9, 0.3, ...Array.from({ length: 21 }, () => 0)];
+  const analysis = {
+    meta: {
+      app: "aiWindy",
+      version: "test",
+      website: "",
+      github: "",
+      copyright: "",
+      requestDate: FIXED_NOW,
+    },
+    position: {
+      userInput: "Teststadt",
+      country: "Österreich",
+      countryCode: "AT",
+      windyModel: "iconD2",
+      sailingArea: null,
+      city: CITY,
+    },
+    sources: { windy: [], national: [], europe: [] },
+    weatherRaw: {
+      openMeteoForecast: {
+        city: {
+          hourly: {
+            timestamps,
+            rainMm,
+            temp2mC: Array.from({ length: 24 }, (_, index) => 20 + index),
+          },
+        },
+      },
+    },
+    weatherPreprocessed: { europe: {}, national: {}, local: {} },
+    weatherOutput: {},
+  } satisfies AnalysisJson;
+
+  const exported = getSanitizedAnalysisExport(analysis) as any;
+  const exportedHourly = exported.weatherRaw.openMeteoForecast.city.hourly;
+  assert.equal(exportedHourly.timestamps.length, 8, "the frontend export should retain its three-hour resolution");
+  assert.equal(exportedHourly.rainMm[0], 7.2, "rain within each three-hour block must be summed, not sampled");
+  assert.deepEqual(
+    exportedHourly.rainMm3h[0],
+    [3, 3.9, 0.3],
+    "the frontend export must retain all three hourly rain bars inside each three-hour block",
+  );
+  assert.equal(
+    exportedHourly.rainMm.reduce((sum: number, amount: number) => sum + amount, 0),
+    7.2,
+    "forecast export compaction must preserve the daily rain total shown to the LLM",
+  );
+  assert.deepEqual(
+    exportedHourly.temp2mC.slice(0, 3),
+    [20, 23, 26],
+    "non-accumulating weather values should remain sampled at three-hour intervals",
+  );
+  const meteogram = extractCityMeteogram(exported);
+  assert.ok(meteogram, "the compacted frontend export should render as a meteogram");
+  assert.deepEqual(
+    meteogram.points[0].rainBars,
+    [3, 3.9, 0.3],
+    "the meteogram must receive the three hourly bars without collapsing them",
+  );
+  const markup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: exported }),
+  );
+  assert.match(markup, /data-rain-bar-count="3"/, "the rainy three-hour column must declare three sub-bars");
+  assert.equal(
+    (markup.match(/data-rain-bar-amount=/g) ?? []).length,
+    3,
+    "all three non-zero hourly rain amounts must render as separate SVG bars",
+  );
 }
 
 function testCityMeteogramVisualLayers(): void {
@@ -1013,6 +1106,7 @@ async function main(): Promise<void> {
   testCloudBaseEstimate();
   testCityMeteogramCloudBands();
   testCityMeteogramDewPointVisibility();
+  testForecastExportPreservesRainTotals();
   testCityMeteogramVisualLayers();
   testMeteogramFormatting();
   testCityMeteogramDoesNotInventCloudsInEmptyBands();

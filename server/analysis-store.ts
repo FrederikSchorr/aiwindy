@@ -216,15 +216,39 @@ function ensureDir() {
   }
 }
 
-function compactForecastData(value: unknown): unknown {
+function rainBuckets(value: unknown[]): number[][] {
+  const buckets: number[][] = [];
+  for (let index = 0; index < value.length; index += 3) {
+    buckets.push(value.slice(index, index + 3).map((entry) =>
+      typeof entry === "number" && Number.isFinite(entry) ? Math.max(0, Math.round(entry * 100) / 100) : 0,
+    ));
+  }
+  return buckets;
+}
+
+function compactForecastData(value: unknown, key = ""): unknown {
   if (Array.isArray(value)) {
-    const sampled = value.length > 20 ? value.filter((_, index) => index % 3 === 0) : value;
-    return sampled.map(compactForecastData);
+    if (value.length <= 20) return value.map(entry => compactForecastData(entry));
+    if (key === "rainMm") {
+      return rainBuckets(value).map(bucket =>
+        Math.round(bucket.reduce((sum, amount) => sum + amount, 0) * 100) / 100,
+      );
+    }
+    const sampled = value.filter((_, index) => index % 3 === 0);
+    return sampled.map(entry => compactForecastData(entry));
   }
   if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, compactForecastData(entry)]),
+    const record = value as Record<string, unknown>;
+    const compacted = Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entry]) => [
+        entryKey,
+        compactForecastData(entry, entryKey),
+      ]),
     );
+    if (Array.isArray(record.rainMm) && record.rainMm.length > 20) {
+      compacted.rainMm3h = rainBuckets(record.rainMm);
+    }
+    return compacted;
   }
   return value;
 }

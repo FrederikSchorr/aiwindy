@@ -13,6 +13,7 @@ type MeteogramPoint = {
   dewPoint: number | null;
   pressure: number | null;
   rain: number | null;
+  rainBars: number[];
   precipProbability: number | null;
   weatherCode: number | null;
   cloudBase: number | null;
@@ -176,6 +177,7 @@ export function extractCityMeteogram(analysisJson: Record<string, unknown> | nul
   const dewPoints = asArray(hourly?.dewPoint2mC);
   const pressures = asArray(hourly?.pressureMslHPa);
   const rain = asArray(hourly?.rainMm);
+  const rainBarsByBlock = asArray(hourly?.rainMm3h);
   const precip = asArray(hourly?.precipProbabilityPct);
   const codes = asArray(hourly?.weatherCode);
   const bases = asArray(hourly?.cloudBaseM);
@@ -189,12 +191,21 @@ export function extractCityMeteogram(analysisJson: Record<string, unknown> | nul
     low: asArray(hourly?.cloudCoverLowPct),
   };
   const allPoints = entries.map(({ timestamp, index, local }) => ({
+    ...(() => {
+      const rainValue = asNumber(rain[index]);
+      const rainBars = asArray(rainBarsByBlock[index])
+        .map(asNumber)
+        .filter((value): value is number => value !== null);
+      return {
+        rain: rainValue,
+        rainBars: rainBars.length > 0 ? rainBars : rainValue === null ? [] : [rainValue],
+      };
+    })(),
     timestamp,
     ...local,
     temperature: asNumber(temperatures[index]),
     dewPoint: asNumber(dewPoints[index]),
     pressure: asNumber(pressures[index]),
-    rain: asNumber(rain[index]),
     precipProbability: asNumber(precip[index]),
     weatherCode: asNumber(codes[index]),
     cloudBase: asNumber(bases[index]),
@@ -579,16 +590,27 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
               <svg data-testid="meteogram-pressure-rain-overlay" viewBox={`0 0 ${width} ${ROW.pressure}`} width={width} height={ROW.pressure} className="absolute inset-0" role="img" aria-label="Luftdruck und Regen">
                 <defs><linearGradient id="current-pressure-fill" x1="0" x2="0" y1="0" y2={ROW.pressure} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#8baec0" stopOpacity=".3" /><stop offset="100%" stopColor="#cfe0e8" stopOpacity=".08" /></linearGradient></defs>
                 {pressurePoints.length > 1 && <path d={`${smoothPath([[0, pressurePoints[0][1]], ...pressurePoints, [width, pressurePoints.at(-1)![1]]])} L ${width} ${ROW.pressure} L 0 ${ROW.pressure} Z`} fill="url(#current-pressure-fill)" />}
-                {points.map((point, index) => {
-                  const rain = Math.max(0, point.rain ?? 0);
-                  if (rain < .05) return null;
-                  const height = Math.max(1, Math.min(rain, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
-                  const x = index * POINT_WIDTH + POINT_WIDTH / 2;
-                  return <g key={`rain-${point.timestamp}`} data-rain-column={formatRainAmount(rain)}>
-                    <rect x={x - 5} y={ROW.pressure - height - 4} width="10" height={height} fill="#0968d2" />
-                    <text data-rain-amount={formatRainAmount(rain)} x={x} y={Math.max(11, ROW.pressure - height - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{formatRainAmount(rain)}</text>
-                  </g>;
-                })}
+                 {points.map((point, index) => {
+                   const totalRain = Math.max(0, point.rain ?? 0);
+                   const rainBars = point.rainBars.length > 0 ? point.rainBars : [totalRain];
+                   const visibleBars = rainBars.filter((rain) => rain >= .05);
+                   if (visibleBars.length === 0) return null;
+                   const barWidth = 4;
+                   const barGap = 2;
+                   const totalBarWidth = rainBars.length * barWidth + Math.max(0, rainBars.length - 1) * barGap;
+                   const left = index * POINT_WIDTH + POINT_WIDTH / 2 - totalBarWidth / 2;
+                   const tallest = Math.max(...visibleBars);
+                   const labelHeight = Math.max(1, Math.min(tallest, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
+                   return <g key={`rain-${point.timestamp}`} data-rain-column={formatRainAmount(totalRain)} data-rain-bar-count={rainBars.length}>
+                     {rainBars.map((rain, barIndex) => {
+                       if (rain < .05) return null;
+                       const height = Math.max(1, Math.min(rain, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
+                       const x = left + barIndex * (barWidth + barGap);
+                       return <rect key={`rain-bar-${point.timestamp}-${barIndex}`} data-rain-bar-index={barIndex} data-rain-bar-amount={rain} x={x} y={ROW.pressure - height - 4} width={barWidth} height={height} fill="#0968d2"><title>{`${rain.toFixed(1)} mm Regen`}</title></rect>;
+                     })}
+                     <text data-rain-amount={formatRainAmount(totalRain)} x={index * POINT_WIDTH + POINT_WIDTH / 2} y={Math.max(11, ROW.pressure - labelHeight - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{formatRainAmount(totalRain)}</text>
+                   </g>;
+                 })}
                 {pressurePoints.length > 1 && <path data-testid="meteogram-pressure-line" data-pressure-min={pressureMin} data-pressure-max={pressureMax} d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />}
                 {pressureExtrema.map(({ point, index, isMaximum }) => {
                   const curveY = pressureY(point.pressure!);

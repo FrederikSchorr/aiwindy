@@ -199,6 +199,14 @@ export async function generateWeatherOutput(
       ? undefined
       : local["cloudRainThunderstorm"] ?? null,
   };
+  const section3LocalContext = Object.fromEntries(
+    Object.entries(local).filter(([key]) => ![
+      "cloudRainThunderstorm",
+      "nationalCloudRain",
+      "temperature",
+      "nationalTemperature",
+    ].includes(key)),
+  );
   const section4Days = Array.isArray((section4LocalForecast as any)?.days)
     ? (section4LocalForecast as any).days as any[]
     : [];
@@ -219,6 +227,16 @@ export async function generateWeatherOutput(
       nationalThunderstormEvidence || section4Days[1]?.summary?.thunderstorm?.signal === true,
       nationalThunderstormEvidence || section4Days.slice(2).some(day => day?.summary?.thunderstorm?.signal === true),
     ],
+    rainDays: [
+      section4Days.slice(0, 1),
+      section4Days.slice(1, 2),
+      section4Days.slice(2),
+    ].map(days => days.map(day => ({
+      label: typeof day?.label === "string" ? day.label : "",
+      totalMm: typeof day?.summary?.rain?.totalMm === "number"
+        ? day.summary.rain.totalMm
+        : 0,
+    }))),
   };
   const section4Fallback = buildSection4Fallback(
     section4Days,
@@ -246,7 +264,7 @@ ${generalWeather ?? "(nicht verfügbar)"}
 ${nationalSynopsis ?? "(nicht verfügbar)"}
 
 === LOKALE WETTERDATEN FÜR ABSCHNITT 3 (weatherPreprocessed.local) ===
-${JSON.stringify(local, null, 2)}
+${JSON.stringify(section3LocalContext, null, 2)}
 
 === ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4 ===
 ${JSON.stringify(section4Context, null, 2)}
@@ -294,7 +312,7 @@ Regeln pro Abschnitt:
 #4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)
 - Erzeuge GENAU 3 Bullets in dieser Reihenfolge: "Heute (${todayLabel})", "Morgen (${tomorrowLabel})" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit diesem Zeitbezug und Datum, niemals mit einem Emoji.
 - INTERPRETIERE Auffälligkeiten und Veränderungen, statt die im Meteogramm bereits sichtbaren Werte vollständig nachzuerzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal, deutlicher Wetterumschwung. Bewölkung nur erwähnen, wenn ihr Wechsel für die Entwicklung relevant ist.
-- Heute: granular. Konkrete Uhrzeiten aus localForecast.timeline sind für Regen- oder Gewitterphasen erlaubt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge, z.B. "🌧️ gegen 12 Uhr kräftiger Regen", "🌡️ abends Abkühlung auf 20–24°C" oder "📉 ab Mittag deutlicher Druckfall". Temperaturwerte immer auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen beschreiben und nie als einzelne benachbarte Stundenintervalle. Einzelne Temperaturänderungen von höchstens 3°C innerhalb eines Stundenintervalls nicht erwähnen.
+- Heute: granular. Konkrete Uhrzeiten aus localForecast.timeline sind für Regen- oder Gewitterphasen erlaubt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge, z.B. "🌧️ gegen 12 Uhr kräftiger Regen" oder "📉 ab Mittag deutlicher Druckfall". Temperaturwerte immer auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen beschreiben und nie als einzelne benachbarte Stundenintervalle. Einen normalen abendlichen Rückgang nach dem Tagesmaximum nicht als Entwicklung erwähnen. Ein deutlich tieferes Nachtminimum darf nur als grobe Nachtentwicklung genannt werden, wenn es gegenüber dem Tagesmaximum meteorologisch relevant ist. Einzelne Temperaturänderungen von höchstens 3°C innerhalb eines Stundenintervalls nicht erwähnen.
 - Morgen: weniger granular. Verwende nur grobe Tageszeiten (nachts, morgens, mittags, nachmittags, abends), KEINE Ziffer-Uhrzeiten; konzentriere dich auf die wichtigste Veränderung oder den stabilen Verlauf.
 - ${forecastOverviewLabel}: fasse die folgenden vier Tage ausschließlich als High-Level-Trend zusammen. Keine Uhrzeiten, keine Tagesphasen und keine vollständige Aufzählung aller Einzelwerte.
 - Schreibe niemals nur "Keine markante Wetterentwicklung erkennbar." Wenn keine Auffälligkeit vorliegt, beschreibe stattdessen den stabilen Charakter des Tages inhaltlich, z.B. trocken, Cumulus-/wechselnde Bewölkung und anhaltend sommerlich warm. Für die folgenden vier Tage ist eine Formulierung wie "Mittelmeerraum unter stabiler Hochdrucklage; verbreitet sonnig und heiß" ausdrücklich erwünscht, sofern der Lagekontext sie stützt. Der Hochdruck-Hinweis darf aber nicht den gesamten Bullet bilden: Ergänze danach 1–2 unterstützende High-Level-Details wie Wärme, Sonnenschein, Trockenheit oder die Stabilität bis zum Ende des Zeitraums.
@@ -303,7 +321,8 @@ Regeln pro Abschnitt:
 - Nationale konkrete Informationen und Warnungen für den Zielort haben Vorrang; die europäische Großwetterlage liefert nur den übergeordneten Zusammenhang.
 - GEWITTERREGEL: Ein Gewitterrisiko darf ausschließlich erwähnt werden, wenn localForecast.summary.thunderstorm.signal=true oder ein konkreter nationaler Wetterbericht/eine Warnung Gewitter für Zielort und Zeitraum nennt. Hohe CAPE-Werte allein sind KEIN Gewittersignal. Bei signal=false weder "erhebliches" noch "geringes Gewitterrisiko" erfinden.
 - Verwende passende Icons direkt vor der jeweiligen Entwicklung, z.B. 📉 Druckfall, 📈 Druckanstieg, 🌧️ Regen, ⛈️ Gewitter, 🌡️ Temperaturwechsel, 🌀 Front/Wetterwechsel, ☀️ Stabilisierung.
-- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. Temperaturwerte immer als ganze °C ohne Kommazahlen ausgeben. WOLKENPROZENTE SIND VERBOTEN. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
+- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. In Abschnitt 4 generell keine Kommazahlen ausgeben: Temperaturen, Niederschlagsmengen und Druckwerte auf verständliche ganze Werte runden. WOLKENPROZENTE SIND VERBOTEN. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
+- Niederschlagsmengen ausschließlich aus localForecast.summary.rain.totalMm übernehmen. Eine Tagesmenge muss exakt der im Meteogramm sichtbaren Tagessumme entsprechen; niemals aus Frontkarten, Wahrscheinlichkeiten oder anderen Texten eine abweichende mm-Zahl ableiten.
 - Keine technischen WMO-Codes oder Wettercode-Nummern im Nutzertext nennen. Verwende stattdessen die verständliche Wetterbeschreibung aus dem Kontext.
 - Falls localForecast fehlt, erzeuge trotzdem alle 3 Bullets mit den korrekten Präfixen und einer kurzen transparenten Nichtverfügbarkeits-Aussage; erfinde keine Entwicklung.
 
@@ -485,6 +504,57 @@ function stripTechnicalWeatherCodes(text: string): string {
     .trim();
 }
 
+function stripRoutineEveningCooling(text: string): string {
+  return text
+    .replace(
+      /,\s*(?:abends|am Abend)\s+(?:(?:rascher|schneller|allmählicher|normaler)\s+)?(?:Temperatur(?:rückgang|abfall|abkühlung)|Rückgang|Abkühlung|kühler)[^.;,]*/gi,
+      "",
+    )
+    .replace(
+      /(?:abends|am Abend)\s+(?:(?:rascher|schneller|allmählicher|normaler)\s+)?(?:Temperatur(?:rückgang|abfall|abkühlung)|Rückgang|Abkühlung|kühler)[^.;,]*/gi,
+      "",
+    )
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([.,;])/g, "$1")
+    .trim();
+}
+
+function formatRainTotal(value: number): string {
+  const rounded = Math.round(value);
+  return rounded < 1 ? "unter 1 mm" : `${rounded} mm`;
+}
+
+function alignRainAmounts(
+  line: string,
+  rainDays: Array<{ label: string; totalMm: number }>,
+): string {
+  const positiveDays = rainDays.filter(day => Number.isFinite(day.totalMm) && day.totalMm >= 0.05);
+  const uniquePositiveTotals = Array.from(new Set(
+    positiveDays.map(day => Math.round(day.totalMm * 10) / 10),
+  ));
+  return line.replace(
+    /\b\d+(?:[,.]\d+)?\s*mm\b/gi,
+    (amount, offset: number) => {
+      const preceding = line.slice(Math.max(0, offset - 40), offset);
+      const matchingDay = positiveDays.find(day => {
+        const dayToken = day.label.split(/\s+/)[0];
+        return dayToken && new RegExp(`\\b${dayToken}\\b`, "i").test(preceding);
+      });
+      const actual = matchingDay?.totalMm
+        ?? (uniquePositiveTotals.length === 1 ? uniquePositiveTotals[0] : null);
+      if (actual === null) return "";
+      return formatRainTotal(actual);
+    },
+  ).replace(/[ \t]{2,}/g, " ");
+}
+
+function roundDecimalPressureMentions(text: string): string {
+  return text.replace(
+    /(-?\d+(?:[,.]\d+))\s*hPa\b/gi,
+    (_match, value) => `${Math.round(Number(value.replace(",", ".")))} hPa`,
+  );
+}
+
 function removeSection4Clauses(
   line: string,
   forbidden: RegExp,
@@ -594,6 +664,7 @@ export function enforceSection4Output(
   constraints?: {
     pressureSignificant?: boolean[];
     thunderstormAllowed?: boolean[];
+    rainDays?: Array<Array<{ label: string; totalMm: number }>>;
   },
   fallbackLines?: string[],
 ): string | null {
@@ -624,7 +695,10 @@ export function enforceSection4Output(
         /(?:\bTemperatur(?:rückgang|abfall|anstieg)\b[^;]*?\b\d{1,2}(?::[0-5]\d)?\s*[–-]\s*\d{1,2}(?::[0-5]\d)?\s*Uhr\b)/i,
       );
       sanitized = stripCloudPercentages(sanitized);
+      sanitized = stripRoutineEveningCooling(sanitized);
       sanitized = stripTechnicalWeatherCodes(sanitized);
+      sanitized = alignRainAmounts(sanitized, constraints?.rainDays?.[index] ?? []);
+      sanitized = roundDecimalPressureMentions(sanitized);
       if (constraints?.pressureSignificant?.[index] === false) {
         sanitized = removeSection4Clauses(sanitized, /(?:\bDruck\b|\bhPa\b|📉|📈)/i);
       }

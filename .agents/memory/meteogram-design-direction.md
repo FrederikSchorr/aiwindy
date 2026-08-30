@@ -23,6 +23,12 @@ The Windy link below the city meteogram must use the recognized city coordinates
 
 The production meteogram container uses subtle Windy-style rounded corners and the app's global Open Sans hierarchy; chart labels should remain readable at normal body-text scale rather than using miniature map-overlay typography.
 
+Keep the main timeline in three-hour columns, but render precipitation inside each column as up to three narrow hourly bars. The daily rain badge shows the sum of all hourly amounts; never represent a three-hour rain block as one wide aggregated bar.
+
+**Why:** The user wants the Windy-style distinction between individual hourly rain pulses while retaining the compact three-hour weather timeline.
+
+**How to apply:** Preserve the three hourly precipitation amounts alongside each compacted forecast point, use them for the narrow bars, and use their sum for the daily total and interpretation context.
+
 Section-4 interpretation temperatures use whole degrees only. Do not narrate small adjacent-hour temperature changes; describe meaningful temperature evolution with broad day phases instead. Preserve qualitative Cumulus references, and never use “Keine markante Wetterentwicklung erkennbar” as a standalone fallback—summarize the stable dry/cloud/thermal character. For the four-day outlook, highlight a supported synoptic trend such as stable Mediterranean high pressure, but never reduce the bullet to that headline; retain 1–2 complementary details about sunshine, heat, dryness, or persistence.
 
 Section 4 must use user-facing weather descriptions rather than technical WMO code labels or numeric weather codes; for example, say “Nebelfelder möglich” instead of exposing WMO code 45.
