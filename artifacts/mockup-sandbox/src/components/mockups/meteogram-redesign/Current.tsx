@@ -102,7 +102,7 @@ export function Current() {
   const temperatureMax = Math.max(...points.map(point => point.temperature)) + 2;
   const temperatureY = (value: number) => 7 + (1 - (value - temperatureMin) / (temperatureMax - temperatureMin)) * 85;
   const temperaturePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]);
-  const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, ROW.icons + ROW.temperature - 6 - (point.dewPoint - 11) * .9] as [number, number]);
+  const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.dewPoint)] as [number, number]);
   const temperaturePath = smoothPath(temperaturePoints);
   const temperatureArea = `${smoothPath([[0, temperaturePoints[0][1]], ...temperaturePoints, [width, temperaturePoints.at(-1)![1]]])} L ${width} ${dewBoundaryPoints.at(-1)![1]} ${smoothPath([...dewBoundaryPoints].reverse()).replace(/^M /, "L ")} L 0 ${dewBoundaryPoints[0][1]} Z`;
   const pressureProfile = [151, 140, 105, 82, 102, 115, 127, 111, 96];
