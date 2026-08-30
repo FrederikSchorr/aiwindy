@@ -27,13 +27,11 @@ const screenshotData = [
   { hour: 14, temperature: 26, dewPoint: 13, pressure: 1018, rain: .3, cloudAmount: "overcast", storm: true },
   { hour: 17, temperature: 26, dewPoint: 12, pressure: 1017, rain: 0, cloudAmount: "overcast", storm: false },
   { hour: 20, temperature: 23, dewPoint: 12, pressure: 1019, rain: .4, cloudAmount: "broken", storm: false },
-  { hour: 21, temperature: 22, dewPoint: 12, pressure: 1018, rain: .8, cloudAmount: "overcast", storm: false },
-  { hour: 22, temperature: 22, dewPoint: 12, pressure: 1018, rain: 1.4, cloudAmount: "overcast", storm: false },
   { hour: 23, temperature: 21, dewPoint: 11, pressure: 1018, rain: 2.2, cloudAmount: "few", storm: false },
   { hour: 2, temperature: 20, dewPoint: 12, pressure: 1020, rain: .3, cloudAmount: "broken", storm: false },
 ] as const;
 const points: Point[] = screenshotData.map((entry, index) => {
-  const date = new Date(Date.UTC(2026, 7, index < 10 ? 29 : 30, entry.hour));
+  const date = new Date(Date.UTC(2026, 7, index < 8 ? 29 : 30, entry.hour));
   return {
     timestamp: date.toISOString().slice(0, 19),
     temperature: entry.temperature,
@@ -145,6 +143,21 @@ export function Current() {
   });
   const days = dayGroups();
   const dayBoundaryIndex = points.findIndex(point => point.timestamp.slice(8, 10) !== points[0].timestamp.slice(8, 10));
+  const rainTestStartIndex = points.findIndex(point => point.timestamp.slice(11, 13) === "20");
+  const rainColumns = points.flatMap((point, index) => index === rainTestStartIndex || point.rain <= 0
+    ? []
+    : [{ key: point.timestamp, x: index * POINT_WIDTH + POINT_WIDTH / 2, rain: point.rain }]
+  );
+  if (rainTestStartIndex >= 0) {
+    const testValues = [.4, .8, 1.4];
+    testValues.forEach((rain, hourOffset) => {
+      rainColumns.push({
+        key: `hourly-rain-${20 + hourOffset}`,
+        x: rainTestStartIndex * POINT_WIDTH + POINT_WIDTH / 2 + hourOffset * POINT_WIDTH / 3,
+        rain,
+      });
+    });
+  }
   const grid = { gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` };
 
   return <div className="meteogram-current overflow-hidden bg-[#f5f6f8] text-[#30353a]">
@@ -171,12 +184,11 @@ export function Current() {
             <svg viewBox={`0 0 ${width} ${ROW.pressure}`} width={width} height={ROW.pressure} className="absolute inset-0">
               <defs><linearGradient id="current-pressure-fill" x1="0" x2="0" y1="0" y2={ROW.pressure} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#8baec0" stopOpacity=".3" /><stop offset="100%" stopColor="#cfe0e8" stopOpacity=".08" /></linearGradient></defs>
               <path d={`${smoothPath([[0, pressurePoints[0][1]], ...pressurePoints, [width, pressurePoints.at(-1)![1]]])} L ${width} ${ROW.pressure} L 0 ${ROW.pressure} Z`} fill="url(#current-pressure-fill)" />
-              {points.map((point, index) => {
-                if (point.rain <= 0) return null;
-                const height = Math.max(1, Math.min(point.rain, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
-                return <g key={point.timestamp}>
-                  <rect x={index * POINT_WIDTH + POINT_WIDTH / 2 - 5} y={ROW.pressure - height - 4} width="10" height={height} fill="#0968d2" />
-                  <text x={index * POINT_WIDTH + POINT_WIDTH / 2} y={Math.max(11, ROW.pressure - height - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{point.rain.toFixed(1)}mm</text>
+              {rainColumns.map(({ key, x, rain }) => {
+                const height = Math.max(1, Math.min(rain, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
+                return <g key={key}>
+                  <rect x={x - 5} y={ROW.pressure - height - 4} width="10" height={height} fill="#0968d2" />
+                  <text x={x} y={Math.max(11, ROW.pressure - height - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{rain.toFixed(1)}mm</text>
                 </g>;
               })}
               <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />
