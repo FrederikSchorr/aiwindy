@@ -283,6 +283,19 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
 
       {!weatherEurope && isStreaming && !hasError && loadingStatus && <StatusLoader text={loadingStatus} />}
 
+      {!weatherEurope && isStreaming && !hasError && (
+        <>
+          <SectionTitle num={4} title="Wolken & Regen" />
+          <div className="my-3" data-testid="section-card-4">
+            <CityMeteogram
+              analysisJson={analysisJson}
+              cityName={locationShort}
+              isLoading
+            />
+          </div>
+        </>
+      )}
+
       {weatherEurope && (
         <>
           <SectionTitle num={2} title="Fronten" />

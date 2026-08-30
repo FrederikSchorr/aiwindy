@@ -1,4 +1,3 @@
-import { Cloud, CloudLightning, CloudRain, CloudSun, Sun } from "lucide-react";
 import React from "react";
 import { WeatherIcon, type WeatherIconKind } from "./meteogram-weather-icon";
 
@@ -151,15 +150,14 @@ function weatherIcon(code: number | null, cloudType: CloudType | null) {
   return <span data-cloud-type-icon={cloudType ?? "mixed"}><WeatherIcon kind={weatherIconKind(point)} className="h-9 w-9" /></span>;
 }
 
-const LOADING_ICONS = [Sun, CloudSun, Cloud, CloudRain, CloudLightning] as const;
 function MeteogramLoadingState() {
-  const [iconIndex, setIconIndex] = React.useState(0);
-  React.useEffect(() => {
-    const timer = window.setInterval(() => setIconIndex((current) => (current + 1) % LOADING_ICONS.length), 700);
-    return () => window.clearInterval(timer);
-  }, []);
-  const LoadingIcon = LOADING_ICONS[iconIndex];
-  return <span className="inline-flex items-center gap-2" role="status" aria-live="polite"><span className="inline-flex h-4 w-4 items-center justify-center" data-testid="meteogram-loading-icon"><LoadingIcon className="h-4 w-4 text-sky-500" aria-hidden="true" /></span><span>Meteogramm wird vorbereitet …</span></span>;
+  return (
+    <span className="inline-flex items-center gap-0.5 ml-1 mt-2 align-baseline" role="status" aria-live="polite" aria-label="Lädt" data-testid="bounce-loader">
+      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+    </span>
+  );
 }
 
 function smoothPath(points: Array<[number, number]>) {
@@ -316,7 +314,9 @@ function CloudTexture({ points, bandIndex, bandHeight }: { points: MeteogramPoin
 function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps) {
   const data = extractCityMeteogram(analysisJson);
   if (!data) {
-    return <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status={isLoading ? "loading" : "unavailable"}>{isLoading ? <MeteogramLoadingState /> : "Meteogramm für die Stadtdaten nicht verfügbar."}</div>;
+    return isLoading
+      ? <div data-testid="city-meteogram" data-meteogram-status="loading"><MeteogramLoadingState /></div>
+      : <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status="unavailable">Meteogramm für die Stadtdaten nicht verfügbar.</div>;
   }
 
   const chartWidth = Math.max(data.points.length * POINT_WIDTH, POINT_WIDTH);
@@ -473,7 +473,9 @@ function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
 function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps) {
   const data = extractCityMeteogram(analysisJson);
   if (!data) {
-    return <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status={isLoading ? "loading" : "unavailable"}>{isLoading ? <MeteogramLoadingState /> : "Meteogramm für die Stadtdaten nicht verfügbar."}</div>;
+    return isLoading
+      ? <div data-testid="city-meteogram" data-meteogram-status="loading"><MeteogramLoadingState /></div>
+      : <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status="unavailable">Meteogramm für die Stadtdaten nicht verfügbar.</div>;
   }
 
   const points = data.points;
@@ -523,10 +525,10 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
     return pointValue !== null && (bestValue === null || Math.abs(pointValue - nowValue) < Math.abs(bestValue - nowValue)) ? index : bestIndex;
   }, 0);
 
-  return <section className="meteogram-windy-shell relative w-full max-w-full overflow-hidden border border-[#cbd0d6] bg-[#f5f6f8] text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)]" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} data-forecast-days={dayCount} data-forecast-points={points.length} aria-label={`Wettervorhersage für ${cityLabel} · ${dayCount} Tage, horizontal scrollbar`}>
+  return <section className="meteogram-windy-shell relative w-full max-w-full overflow-hidden rounded-[10px] border border-[#cbd0d6] bg-[#f5f6f8] font-sans text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)]" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} data-forecast-days={dayCount} data-forecast-points={points.length} aria-label={`Wettervorhersage für ${cityLabel} · ${dayCount} Tage, horizontal scrollbar`}>
     <h3 className="sr-only">{cityLabel} · {coordinateLabel} · Ortszeit {data.timezone}{stormRisk ? " · Gewitterrisiko" : ""}</h3>
     <div className="flex min-w-0">
-      <aside className="w-[108px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[11px] leading-[14px] text-[#7a7e82] md:w-[116px]" aria-label="Feste Legende">
+      <aside className="w-[108px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82] md:w-[116px]" aria-label="Feste Legende">
         <div style={{ height: ROW.day }} />
         <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-2"><span>Stunden</span><AxisGlyph kind="clock" /></div>
         <div style={{ height: temperatureSectionHeight }} className="flex items-center justify-end gap-2 pr-2">
@@ -547,7 +549,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
           </div>
 
           <div className="relative z-10">
-            <div className="grid bg-[#f7f8fa] text-[14px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
+            <div className="grid bg-[#f7f8fa] text-[15px] font-medium tracking-[.02em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
               {dayGroups.map((day) => <div key={day.label} className="flex items-center border-r border-[#d5d9de] pl-3" style={{ gridColumn: `span ${day.count}` }}><span className="whitespace-nowrap">{day.label}</span></div>)}
             </div>
             <div className="grid text-[15px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>
@@ -568,7 +570,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
               <div className="relative z-30 grid" style={{ height: ROW.icons, ...grid }}>
                 {points.map((point) => <div key={`icon-${point.timestamp}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={`${point.hourLabel} Uhr · ${cloudTypeTooltip(point)}`} title={cloudTypeTooltip(point)}><span data-cloud-type-icon={point.cloudType ?? "unknown"}><WeatherIcon kind={weatherIconKind(point)} className="h-9 w-9" /></span></div>)}
               </div>
-              <div className="relative z-20 grid text-[19px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>
+              <div className="relative z-20 grid text-[21px] font-semibold tracking-[-.02em] text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>
                 {points.map((point) => <div key={`temperature-${point.timestamp}`} className="flex items-center justify-center">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
               </div>
               {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="pointer-events-none absolute inset-0 z-30 grid" style={grid}>
@@ -605,7 +607,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                   const x = index * POINT_WIDTH + POINT_WIDTH / 2;
                   return <g key={`pressure-label-${point.timestamp}`}>
                     <rect x={x - 20} y={labelY - 10} width="40" height="12" rx="2" fill="#f7f8fa" fillOpacity=".94" />
-                    <text data-pressure-label="true" x={x} y={labelY} textAnchor="middle" fontSize="8" fontWeight="700" fill="#4d6979">{Math.round(point.pressure!)} hPa</text>
+                    <text data-pressure-label="true" x={x} y={labelY} textAnchor="middle" fontSize="9" fontWeight="600" fontFamily="Open Sans, sans-serif" fill="#4d6979">{Math.round(point.pressure!)} hPa</text>
                   </g>;
                 })}
                 <text x="-100" y="-100" fontSize="10" aria-hidden="true">hPa</text>

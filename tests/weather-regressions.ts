@@ -505,8 +505,9 @@ function testCityMeteogramLoadingState(): void {
     createElement(CityMeteogram, { analysisJson: null, isLoading: true }),
   );
   assert.match(markup, /data-meteogram-status="loading"/, "loading state should be marked as loading");
-  assert.match(markup, /data-testid="meteogram-loading-icon"/, "loading state should show a weather icon");
-  assert.match(markup, /Meteogramm wird vorbereitet …/, "loading state should use the shortened message");
+  assert.match(markup, /data-testid="bounce-loader"/, "loading state should use the shared animated dots");
+  assert.equal((markup.match(/animate-bounce/g) ?? []).length, 3, "loading state should render exactly three animated dots");
+  assert.doesNotMatch(markup, /Meteogramm wird vorbereitet …/, "loading state should not render the preparation text");
 }
 
 function testCityMeteogramVisualLayers(): void {
