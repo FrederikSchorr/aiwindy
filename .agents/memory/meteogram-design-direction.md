@@ -13,6 +13,12 @@ Temperature and dew-point curves share the same projection, whose visible domain
 
 Weather icons follow Windy's compact visual language and render above the temperature fill. Distinguish clear, few/broken/overcast clouds, light/heavy rain, and thunderstorms; use sun only by day and moon/night treatment after dark. Keep each state in its own SVG viewBox rather than cropping a multi-icon sprite, because generated sprite artwork can cross cell boundaries and reveal neighboring fragments. For thunderstorms, emphasize the safety-orange lightning bolt while keeping the cloud at the normal icon scale.
 
-Do not reveal section 4, its Windy link, or a meteogram placeholder when the earlier Europe-map event arrives. Publish the first chart-ready analysis payload immediately after the local Open-Meteo/raw weather fetch, before LLM preprocessing and interpretation; then reveal section 4 with the finished meteogram while the separate interpretation status may continue below it.
+Do not reveal section 4, its Windy link, or a meteogram placeholder when the earlier Europe-map event arrives. Publish the first chart-ready analysis payload immediately after the local Open-Meteo/raw weather fetch, before LLM preprocessing and interpretation; then reveal section 4 with the finished meteogram. Keep exactly the three animated dots below it until all interpretation output has arrived, then remove them.
+
+The Windy link below the city meteogram must use the recognized city coordinates, not the sailing-area coordinates used by the regional wind map.
+
+**Why:** The meteogram represents the local city forecast; using the sailing-area center can point Windy at a different location than the displayed city data.
+
+**How to apply:** Build the section-4 URL from cityLat/cityLon with the location coordinates only as a fallback. Keep the section-3 wind URL on sailing-area coordinates.
 
 The production meteogram container uses subtle Windy-style rounded corners and the app's global Open Sans hierarchy; chart labels should remain readable at normal body-text scale rather than using miniature map-overlay typography.

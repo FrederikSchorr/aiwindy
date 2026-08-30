@@ -241,12 +241,14 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
   const zoom = 7;
   const locationShort = location.cityName || location.displayName?.split(",")[0]?.trim() || "";
   const sailingAreaShort = location.sailingArea || locationShort;
+  const cityLat = location.cityLat ?? location.lat;
+  const cityLon = location.cityLon ?? location.lon;
   const mapZoom = Math.max(zoom - 2, 4);
   const isIconEu = model === "iconEu";
   const windUrl = isIconEu
     ? "https://www.windy.com/38.449/20.903/iconEuWaves/waves?iconEu,clouds,38.449,20.903,5,i:pressure,p:favs"
     : `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
-  const meteogramUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure`;
+  const meteogramUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/${model}/meteogram?${model},clouds,${cityLat.toFixed(3)},${cityLon.toFixed(3)},${mapZoom},i:pressure`;
   const jsonDownloadUrl = analysisJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(analysisJson, null, 2))}`
     : null;
@@ -340,7 +342,11 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             </>
           )}
 
-          {!weatherOutput && isStreaming && loadingStatus && <StatusLoader text={loadingStatus} />}
+          {isStreaming && !hasError && !weatherOutput && (
+            analysisJson
+              ? <BounceLoader />
+              : loadingStatus && <StatusLoader text={loadingStatus} />
+          )}
 
           {weatherOutput && sources && (
             <>
