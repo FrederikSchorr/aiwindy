@@ -93,7 +93,7 @@ function TemperatureDewSection({ points, width, grid, temperatureArea, dewBounda
   dewBoundaryPoints: Array<[number, number]>;
 }) {
   return <div className="relative bg-[#fafbfc]" style={{ height: ROW.icons + ROW.temperature + ROW.dew }}>
-    <svg viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature + ROW.dew}`} width={width} height={ROW.icons + ROW.temperature + ROW.dew} className="pointer-events-none absolute inset-0">
+    <svg viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature}`} width={width} height={ROW.icons + ROW.temperature} className="pointer-events-none absolute inset-0">
       <defs><linearGradient id="current-temperature" x2={width} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor={temperatureColor(points[0].temperature)} />{points.map((point, index) => <stop key={point.timestamp} offset={`${index / (points.length - 1) * 100}%`} stopColor={temperatureColor(point.temperature)} />)}</linearGradient></defs>
       <path d={temperatureArea} fill="url(#current-temperature)" fillOpacity=".56" />
       <path data-dew-point-boundary="true" d={smoothPath(dewBoundaryPoints)} fill="none" stroke="#aaa9a2" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
@@ -120,7 +120,7 @@ export function Current() {
   const temperatureMax = Math.max(...points.map(point => point.temperature)) + 2;
   const temperatureY = (value: number) => 7 + (1 - (value - temperatureMin) / (temperatureMax - temperatureMin)) * 85;
   const temperaturePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]);
-  const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, ROW.icons + ROW.temperature - 4 + Math.min(3, Math.max(0, (14 - point.dewPoint) * .35))] as [number, number]);
+  const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.dewPoint)] as [number, number]);
   const temperatureArea = `${smoothPath([[0, temperaturePoints[0][1]], ...temperaturePoints, [width, temperaturePoints.at(-1)![1]]])} L ${width} ${dewBoundaryPoints.at(-1)![1]} ${smoothPath([...dewBoundaryPoints].reverse()).replace(/^M /, "L ")} L 0 ${dewBoundaryPoints[0][1]} Z`;
   const pressureProfile = [151, 140, 105, 82, 102, 115, 127, 111, 96];
   const pressurePoints = pressureProfile.map((y, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, y] as [number, number]);
