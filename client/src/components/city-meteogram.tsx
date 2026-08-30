@@ -150,16 +150,6 @@ function weatherIcon(code: number | null, cloudType: CloudType | null) {
   return <span data-cloud-type-icon={cloudType ?? "mixed"}><WeatherIcon kind={weatherIconKind(point)} className="h-9 w-9" /></span>;
 }
 
-function MeteogramLoadingState() {
-  return (
-    <span className="inline-flex items-center gap-0.5 ml-1 mt-2 align-baseline" role="status" aria-live="polite" aria-label="Lädt" data-testid="bounce-loader">
-      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-      <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-    </span>
-  );
-}
-
 function smoothPath(points: Array<[number, number]>) {
   if (!points.length) return "";
   return points.reduce((path, [x, y], index) => {
@@ -315,7 +305,7 @@ function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogra
   const data = extractCityMeteogram(analysisJson);
   if (!data) {
     return isLoading
-      ? <div data-testid="city-meteogram" data-meteogram-status="loading"><MeteogramLoadingState /></div>
+      ? <div data-testid="city-meteogram" data-meteogram-status="loading" />
       : <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status="unavailable">Meteogramm für die Stadtdaten nicht verfügbar.</div>;
   }
 
@@ -474,7 +464,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const data = extractCityMeteogram(analysisJson);
   if (!data) {
     return isLoading
-      ? <div data-testid="city-meteogram" data-meteogram-status="loading"><MeteogramLoadingState /></div>
+      ? <div data-testid="city-meteogram" data-meteogram-status="loading" />
       : <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status="unavailable">Meteogramm für die Stadtdaten nicht verfügbar.</div>;
   }
 

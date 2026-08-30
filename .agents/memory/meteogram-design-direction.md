@@ -13,7 +13,7 @@ Temperature and dew-point curves share the same projection, whose visible domain
 
 Weather icons follow Windy's compact visual language and render above the temperature fill. Distinguish clear, few/broken/overcast clouds, light/heavy rain, and thunderstorms; use sun only by day and moon/night treatment after dark. Keep each state in its own SVG viewBox rather than cropping a multi-icon sprite, because generated sprite artwork can cross cell boundaries and reveal neighboring fragments. For thunderstorms, emphasize the safety-orange lightning bolt while keeping the cloud at the normal icon scale.
 
-Do not reveal section 4, its Windy link, or a meteogram placeholder when the earlier Europe-map event arrives. Publish the first chart-ready analysis payload immediately after the local Open-Meteo/raw weather fetch, before LLM preprocessing and interpretation; then reveal section 4 with the finished meteogram. Keep exactly the three animated dots below it until all interpretation output has arrived, then remove them.
+Do not reveal section 4, its Windy link, or a meteogram placeholder when the earlier Europe-map event arrives. Publish the first chart-ready analysis payload immediately after the local Open-Meteo/raw weather fetch, before LLM preprocessing and interpretation; then reveal section 4 with the finished meteogram. While interpretation is pending, show one three-dot loader under each of the four interpretation sections plus the changing icon-and-text status loader at the very bottom; remove all loaders when the complete output arrives. Do not add a second loader inside the meteogram.
 
 The Windy link below the city meteogram must use the recognized city coordinates, not the sailing-area coordinates used by the regional wind map.
 
@@ -22,3 +22,11 @@ The Windy link below the city meteogram must use the recognized city coordinates
 **How to apply:** Build the section-4 URL from cityLat/cityLon with the location coordinates only as a fallback. Keep the section-3 wind URL on sailing-area coordinates.
 
 The production meteogram container uses subtle Windy-style rounded corners and the app's global Open Sans hierarchy; chart labels should remain readable at normal body-text scale rather than using miniature map-overlay typography.
+
+Section-4 interpretation temperatures use whole degrees only. Do not narrate small adjacent-hour temperature changes; describe meaningful temperature evolution with broad day phases instead. Preserve qualitative Cumulus references, and never use “Keine markante Wetterentwicklung erkennbar” as a standalone fallback—summarize the stable dry/cloud/thermal character. For the four-day outlook, highlight a supported synoptic trend such as stable Mediterranean high pressure, but never reduce the bullet to that headline; retain 1–2 complementary details about sunshine, heat, dryness, or persistence.
+
+Section 4 must use user-facing weather descriptions rather than technical WMO code labels or numeric weather codes; for example, say “Nebelfelder möglich” instead of exposing WMO code 45.
+
+**Why:** The user confirmed that Cumulus wording and concise Mediterranean high-pressure trends are useful, while decimal temperatures, hour-to-hour 2°C changes, and generic no-change text add noise rather than interpretation.
+
+**How to apply:** Enforce these constraints in both the generation prompt and deterministic output cleanup so model variation cannot reintroduce the rejected phrasing.

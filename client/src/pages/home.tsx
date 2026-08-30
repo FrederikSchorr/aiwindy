@@ -252,6 +252,13 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
   const jsonDownloadUrl = analysisJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(analysisJson, null, 2))}`
     : null;
+  const embeddedWeatherOutput = (analysisJson as {
+    weatherOutput?: WeatherOutputData;
+  } | null)?.weatherOutput;
+  const resolvedWeatherOutput = weatherOutput
+    ?? (embeddedWeatherOutput && Object.keys(embeddedWeatherOutput).length > 0
+      ? embeddedWeatherOutput
+      : null);
 
   return (
     <div data-testid="analysis-view">
@@ -272,13 +279,14 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
         <WindyEmbed lat={48} lon={5} overlay="temp" product="ecmwf" level="850h" zoom={3} />
         <SourceLink label="Bodendruck und Temperatur 1.500m Europa" provider="windy.com" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
       </div>
-      {weatherOutput?.airPressureMasses?.text ? (
-        <MarkdownContent content={weatherOutput.airPressureMasses.text} />
-      ) : isStreaming && !hasError && weatherEurope && (
+      {resolvedWeatherOutput?.airPressureMasses?.text && (
+        <MarkdownContent content={resolvedWeatherOutput.airPressureMasses.text} />
+      )}
+      {isStreaming && !hasError && !resolvedWeatherOutput?.airPressureMasses?.text && weatherEurope && (
         <BounceLoader />
       )}
 
-      {hasError && !weatherOutput && (
+      {hasError && !resolvedWeatherOutput && (
         <p className="text-sm text-destructive mt-3" data-testid="text-analysis-error">
           {typeof hasError === "string" ? hasError : "Fehler bei der Datenabfrage. Die Analyse konnte nicht vollständig geladen werden."}
         </p>
@@ -308,9 +316,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
               url={weatherEurope.frontCurrentUrl || KNMI_SOURCE_URL}
             />
           </div>
-          {weatherOutput?.weatherFront?.text ? (
-            <MarkdownContent content={weatherOutput.weatherFront.text} />
-          ) : isStreaming && !hasError && (
+          {resolvedWeatherOutput?.weatherFront?.text && (
+            <MarkdownContent content={resolvedWeatherOutput.weatherFront.text} />
+          )}
+          {isStreaming && !hasError && !resolvedWeatherOutput?.weatherFront?.text && (
             <BounceLoader />
           )}
 
@@ -319,9 +328,10 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
             <SourceLink label={`Wind ${sailingAreaShort}`} provider="windy.com" url={windUrl} />
           </div>
-          {weatherOutput?.windWaves?.text ? (
-            <MarkdownContent content={weatherOutput.windWaves.text} />
-          ) : isStreaming && !hasError && (
+          {resolvedWeatherOutput?.windWaves?.text && (
+            <MarkdownContent content={resolvedWeatherOutput.windWaves.text} />
+          )}
+          {isStreaming && !hasError && !resolvedWeatherOutput?.windWaves?.text && (
             <BounceLoader />
           )}
 
@@ -336,19 +346,20 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
                 />
                 <SourceLink label={`Meteogramm ${locationShort}`} provider="windy.com" url={meteogramUrl} />
               </div>
-              {weatherOutput?.cloudsRain?.text && (
-                <MarkdownContent content={weatherOutput.cloudsRain.text} />
+              {resolvedWeatherOutput?.cloudsRain?.text && (
+                <MarkdownContent content={resolvedWeatherOutput.cloudsRain.text} />
               )}
             </>
           )}
 
-          {isStreaming && !hasError && !weatherOutput && (
-            analysisJson
-              ? <BounceLoader />
-              : loadingStatus && <StatusLoader text={loadingStatus} />
+          {isStreaming && !hasError && !resolvedWeatherOutput?.cloudsRain?.text && (
+            <BounceLoader />
+          )}
+          {isStreaming && !hasError && !resolvedWeatherOutput?.cloudsRain?.text && loadingStatus && (
+            <StatusLoader text={loadingStatus} />
           )}
 
-          {weatherOutput && sources && (
+          {resolvedWeatherOutput && sources && (
             <>
               <SectionTitle num={5} title="Quellen" />
               <ul className="mt-1 mb-2 space-y-0.5 list-disc pl-5" data-testid="section-sources">
@@ -1129,7 +1140,9 @@ export default function Home() {
                       oder lade ein Wolken-Foto ☁️ hoch.
                     </div>
                   ) : msg.content ? <MarkdownContent content={msg.content} /> : null}
-                {isCurrentlyStreaming && (loadingStatus ? <StatusLoader text={loadingStatus} /> : <BounceLoader />)}
+                {isCurrentlyStreaming && (
+                  <StatusLoader text={loadingStatus ?? "Verarbeite Anfrage"} />
+                )}
                 {photoHint && !isStreaming && (
                   <div className="mt-3 text-[14px]" data-testid="text-photo-location-hint">
                     <div className="flex items-center gap-2 flex-wrap text-muted-foreground italic">

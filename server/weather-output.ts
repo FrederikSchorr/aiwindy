@@ -199,6 +199,36 @@ export async function generateWeatherOutput(
       ? undefined
       : local["cloudRainThunderstorm"] ?? null,
   };
+  const section4Days = Array.isArray((section4LocalForecast as any)?.days)
+    ? (section4LocalForecast as any).days as any[]
+    : [];
+  const nationalThunderstormEvidence = /\b(?:Gewitter|thunderstorm)\b/i.test(
+    JSON.stringify({
+      nationalLocalWeather: section4Context.nationalLocalWeather,
+      nationalWarning: section4Context.nationalWarning,
+    }),
+  );
+  const section4OutputConstraints = {
+    pressureSignificant: [
+      section4Days[0]?.summary?.pressure?.significant === true,
+      section4Days[1]?.summary?.pressure?.significant === true,
+      section4Days.slice(2).some(day => day?.summary?.pressure?.significant === true),
+    ],
+    thunderstormAllowed: [
+      nationalThunderstormEvidence || section4Days[0]?.summary?.thunderstorm?.signal === true,
+      nationalThunderstormEvidence || section4Days[1]?.summary?.thunderstorm?.signal === true,
+      nationalThunderstormEvidence || section4Days.slice(2).some(day => day?.summary?.thunderstorm?.signal === true),
+    ],
+  };
+  const section4Fallback = buildSection4Fallback(
+    section4Days,
+    { todayLabel, tomorrowLabel, forecastOverviewLabel },
+    /\bHochdruck\b/i.test(
+      [generalWeather, nationalSynopsis, section4Context.nationalLocalWeather]
+        .filter(Boolean)
+        .join(" "),
+    ),
+  );
 
   content.push({
     type: "text",
@@ -264,14 +294,17 @@ Regeln pro Abschnitt:
 #4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)
 - Erzeuge GENAU 3 Bullets in dieser Reihenfolge: "Heute (${todayLabel})", "Morgen (${tomorrowLabel})" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit diesem Zeitbezug und Datum, niemals mit einem Emoji.
 - INTERPRETIERE Auffälligkeiten und Veränderungen, statt die im Meteogramm bereits sichtbaren Werte vollständig nachzuerzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal, deutlicher Wetterumschwung. Bewölkung nur erwähnen, wenn ihr Wechsel für die Entwicklung relevant ist.
-- Heute: granular. Konkrete Uhrzeiten aus localForecast.timeline sind erlaubt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge, z.B. "🌧️ gegen 12 Uhr kräftiger Regen", "🌡️ danach Abkühlung auf 20–24°C" oder "📉 ab Mittag deutlicher Druckfall".
-- Morgen: weniger granular. Verwende nur grobe Tageszeiten (nachts, morgens, mittags, nachmittags, abends), keine exakten Uhrzeiten; konzentriere dich auf die wichtigste Veränderung oder den stabilen Verlauf.
-- ${forecastOverviewLabel}: fasse die folgenden vier Tage ausschließlich als High-Level-Trend zusammen. Keine Uhrzeiten und keine vollständige Aufzählung aller Einzelwerte.
+- Heute: granular. Konkrete Uhrzeiten aus localForecast.timeline sind für Regen- oder Gewitterphasen erlaubt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge, z.B. "🌧️ gegen 12 Uhr kräftiger Regen", "🌡️ abends Abkühlung auf 20–24°C" oder "📉 ab Mittag deutlicher Druckfall". Temperaturwerte immer auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen beschreiben und nie als einzelne benachbarte Stundenintervalle. Einzelne Temperaturänderungen von höchstens 3°C innerhalb eines Stundenintervalls nicht erwähnen.
+- Morgen: weniger granular. Verwende nur grobe Tageszeiten (nachts, morgens, mittags, nachmittags, abends), KEINE Ziffer-Uhrzeiten; konzentriere dich auf die wichtigste Veränderung oder den stabilen Verlauf.
+- ${forecastOverviewLabel}: fasse die folgenden vier Tage ausschließlich als High-Level-Trend zusammen. Keine Uhrzeiten, keine Tagesphasen und keine vollständige Aufzählung aller Einzelwerte.
+- Schreibe niemals nur "Keine markante Wetterentwicklung erkennbar." Wenn keine Auffälligkeit vorliegt, beschreibe stattdessen den stabilen Charakter des Tages inhaltlich, z.B. trocken, Cumulus-/wechselnde Bewölkung und anhaltend sommerlich warm. Für die folgenden vier Tage ist eine Formulierung wie "Mittelmeerraum unter stabiler Hochdrucklage; verbreitet sonnig und heiß" ausdrücklich erwünscht, sofern der Lagekontext sie stützt. Der Hochdruck-Hinweis darf aber nicht den gesamten Bullet bilden: Ergänze danach 1–2 unterstützende High-Level-Details wie Wärme, Sonnenschein, Trockenheit oder die Stabilität bis zum Ende des Zeitraums.
 - Verknüpfe lokale Entwicklungen mit europeanOverview, nationalSynopsis, nationalLocalWeather und den KNMI-Frontkarten. Ein markanter lokaler Druckfall darf nur dann als wahrscheinlicher Frontdurchgang bezeichnet werden, wenn eine zeitlich und räumlich passende Front bzw. nationale Synopsis dies stützt. Ohne solche Bestätigung schreibe nur "Wetterwechsel" oder "zunehmender Tiefdruckeinfluss".
+- Druck nur erwähnen, wenn localForecast.summary.pressure.significant=true. Schwankungen unter 4 hPa innerhalb eines Tages sind kein relevantes Entwicklungssignal und werden weggelassen. Eine Druckänderung ist NIEMALS ein Gewitterindikator.
 - Nationale konkrete Informationen und Warnungen für den Zielort haben Vorrang; die europäische Großwetterlage liefert nur den übergeordneten Zusammenhang.
 - GEWITTERREGEL: Ein Gewitterrisiko darf ausschließlich erwähnt werden, wenn localForecast.summary.thunderstorm.signal=true oder ein konkreter nationaler Wetterbericht/eine Warnung Gewitter für Zielort und Zeitraum nennt. Hohe CAPE-Werte allein sind KEIN Gewittersignal. Bei signal=false weder "erhebliches" noch "geringes Gewitterrisiko" erfinden.
 - Verwende passende Icons direkt vor der jeweiligen Entwicklung, z.B. 📉 Druckfall, 📈 Druckanstieg, 🌧️ Regen, ⛈️ Gewitter, 🌡️ Temperaturwechsel, 🌀 Front/Wetterwechsel, ☀️ Stabilisierung.
-- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
+- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. Temperaturwerte immer als ganze °C ohne Kommazahlen ausgeben. WOLKENPROZENTE SIND VERBOTEN. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
+- Keine technischen WMO-Codes oder Wettercode-Nummern im Nutzertext nennen. Verwende stattdessen die verständliche Wetterbeschreibung aus dem Kontext.
 - Falls localForecast fehlt, erzeuge trotzdem alle 3 Bullets mit den korrekten Präfixen und einer kurzen transparenten Nichtverfügbarkeits-Aussage; erfinde keine Entwicklung.
 
 Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt mit dem Marker in einer eigenen Zeile):
@@ -315,9 +348,11 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
       windWaves:         { source, text: windWavesText },
       cloudsRain:        {
         source,
-        text: enforceCloudForecastDatePrefixes(
+        text: enforceSection4Output(
           parsed.cloudsRain ?? null,
           { todayLabel, tomorrowLabel, forecastOverviewLabel },
+          section4OutputConstraints,
+          section4Fallback,
         ),
       },
     };
@@ -408,6 +443,203 @@ export function enforceCloudForecastDatePrefixes(
         DATE_RANGE_PREFIX,
         `$1${labels.forecastOverviewLabel}:`,
       );
+    })
+    .join("\n");
+}
+
+function broadDayPeriod(hour: number): string {
+  if (hour < 6 || hour >= 22) return "nachts";
+  if (hour < 10) return "morgens";
+  if (hour < 14) return "mittags";
+  if (hour < 18) return "nachmittags";
+  return "abends";
+}
+
+function replaceExactClockTimes(text: string): string {
+  return text.replace(
+    /\b(?:(?:ab|bis|gegen|um)\s+)?([01]?\d|2[0-3])(?::[0-5]\d)?\s*Uhr\b/gi,
+    (_match, hour) => broadDayPeriod(Number(hour)),
+  );
+}
+
+function roundTemperatureMentions(text: string): string {
+  return text.replace(
+    /(-?\d+(?:[,.]\d+))\s*°\s*C/gi,
+    (_match, value) => `${Math.round(Number(value.replace(",", ".")))}°C`,
+  );
+}
+
+function stripCloudPercentages(text: string): string {
+  return text
+    .replace(/\s*\(?\d{1,3}\s*[–-]\s*\d{1,3}\s*%\)?/g, "")
+    .replace(/\s*\(?\d{1,3}\s*%\)?/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function stripTechnicalWeatherCodes(text: string): string {
+  return text
+    .replace(/\s*\(\s*WMO[-\s]?Code\s*[:#]?\s*\d{1,3}\s*\)/gi, "")
+    .replace(/\bWMO[-\s]?Code\s*[:#]?\s*\d{1,3}\b/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function removeSection4Clauses(
+  line: string,
+  forbidden: RegExp,
+): string {
+  const prefixEnd = line.indexOf(":");
+  if (prefixEnd === -1) return line;
+  const prefix = line.slice(0, prefixEnd + 1);
+  const body = line.slice(prefixEnd + 1).trim();
+  const clauses = body
+    .split(/;\s*|\s+—\s+/)
+    .filter(clause => clause && !forbidden.test(clause));
+  return clauses.length
+    ? `${prefix} ${clauses.join("; ")}`
+    : prefix;
+}
+
+function cloudDevelopment(cloudTypes: unknown): string {
+  const types = Array.isArray(cloudTypes)
+    ? cloudTypes.filter((value): value is string => typeof value === "string")
+    : [];
+  if (types.includes("cumulus")) return "wechselnd bewölkt mit Cumulus-Bewölkung";
+  if (types.includes("clear")) return "überwiegend klar";
+  if (types.includes("stratus")) return "überwiegend geschlossen bewölkt";
+  if (types.includes("altostratus")) return "mit hohen und mittleren Wolkenfeldern";
+  return "wechselnd bewölkt";
+}
+
+function stableDevelopment(day: any): string {
+  const summary = day?.summary ?? {};
+  const rainTotal = summary.rain?.totalMm;
+  const temperatureMax = summary.temperature?.maxC;
+  const conditions = [
+    typeof rainTotal === "number" && rainTotal < 0.1
+      ? "trocken"
+      : "mit einzelnen Niederschlagsphasen",
+    cloudDevelopment(summary.cloudTypes),
+    typeof temperatureMax === "number" && temperatureMax >= 28
+      ? "sommerlich warm"
+      : null,
+  ].filter((value): value is string => Boolean(value));
+  return `Ruhiger Verlauf: ${conditions.join("; ")}; die Wetterlage bleibt im Tagesgang stabil.`;
+}
+
+function buildSection4Fallback(
+  days: any[],
+  labels: {
+    todayLabel: string;
+    tomorrowLabel: string;
+    forecastOverviewLabel: string;
+  },
+  highPressureSupported: boolean,
+): string[] {
+  const unavailable = "Lokale Entwicklungsdaten nicht verfügbar.";
+  const dayFallback = (day: any, label: string) =>
+    day ? `- ${label}: ${stableDevelopment(day)}` : `- ${label}: ${unavailable}`;
+  const overviewDays = days.slice(2);
+  const overviewTemperatures = overviewDays
+    .map(day => day?.summary?.temperature?.maxC)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const overviewRain = overviewDays
+    .map(day => day?.summary?.rain?.totalMm)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const overviewMaxTemperature = overviewTemperatures.length
+    ? Math.round(Math.max(...overviewTemperatures))
+    : null;
+  const overviewClouds = cloudDevelopment(
+    overviewDays.flatMap(day => day?.summary?.cloudTypes ?? []),
+  );
+  const overviewConditions = [
+    highPressureSupported ? "Mittelmeerraum unter stabiler Hochdrucklage" : "stabile Wetterlage",
+    overviewClouds === "überwiegend klar" ? "verbreitet sonnig" : overviewClouds,
+    overviewMaxTemperature !== null && overviewMaxTemperature >= 30
+      ? `heiß mit Höchstwerten bis ${overviewMaxTemperature}°C`
+      : null,
+    overviewRain.length && overviewRain.every(value => value < 0.1) ? "überwiegend trocken" : null,
+    "die Stabilität hält bis zum Ende des Zeitraums an",
+  ].filter((value): value is string => Boolean(value));
+  const overview = overviewDays.length
+    ? `- ${labels.forecastOverviewLabel}: ${overviewConditions.join("; ")}.`
+    : `- ${labels.forecastOverviewLabel}: ${unavailable}`;
+  return [
+    dayFallback(days[0], `Heute (${labels.todayLabel})`),
+    dayFallback(days[1], `Morgen (${labels.tomorrowLabel})`),
+    overview,
+  ];
+}
+
+function isUnderDetailedOverview(line: string): boolean {
+  const prefixEnd = line.indexOf(":");
+  if (prefixEnd === -1) return false;
+  const body = line.slice(prefixEnd + 1).trim();
+  if (!/\bHochdrucklage\b/i.test(body)) return false;
+  const withoutHeadline = body
+    .replace(/^[☀️\s]*/u, "")
+    .replace(/\bMittelmeerraum\s+unter\s+stabiler\s+Hochdrucklage\b[.;]?/i, "")
+    .trim();
+  return withoutHeadline.length < 15;
+}
+
+export function enforceSection4Output(
+  text: string | null,
+  labels: {
+    todayLabel: string;
+    tomorrowLabel: string;
+    forecastOverviewLabel: string;
+  },
+  constraints?: {
+    pressureSignificant?: boolean[];
+    thunderstormAllowed?: boolean[];
+  },
+  fallbackLines?: string[],
+): string | null {
+  const prefixed = enforceCloudForecastDatePrefixes(text, labels);
+  if (!prefixed) return prefixed;
+
+  const bullets = prefixed
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.startsWith("- "));
+  if (!bullets.length) return prefixed;
+
+  const fallback = [
+    `- Heute (${labels.todayLabel}): Lokale Entwicklungsdaten nicht verfügbar.`,
+    `- Morgen (${labels.tomorrowLabel}): Lokale Entwicklungsdaten nicht verfügbar.`,
+    `- ${labels.forecastOverviewLabel}: Lokale Entwicklungsdaten nicht verfügbar.`,
+  ];
+  const exactlyThree = fallback.map((fallbackLine, index) => bullets[index] ?? fallbackLine);
+  exactlyThree[1] = replaceExactClockTimes(exactlyThree[1]);
+  return exactlyThree
+    .map((line, index) => {
+      let sanitized = removeSection4Clauses(
+        roundTemperatureMentions(line),
+        /(?:\bTemperatur(?:rückgang|abfall|anstieg)\b[^;]*?\b(?:[0-3](?:[,.]\d+)?)\s*°\s*C\b)/i,
+      );
+      sanitized = removeSection4Clauses(
+        sanitized,
+        /(?:\bTemperatur(?:rückgang|abfall|anstieg)\b[^;]*?\b\d{1,2}(?::[0-5]\d)?\s*[–-]\s*\d{1,2}(?::[0-5]\d)?\s*Uhr\b)/i,
+      );
+      sanitized = stripCloudPercentages(sanitized);
+      sanitized = stripTechnicalWeatherCodes(sanitized);
+      if (constraints?.pressureSignificant?.[index] === false) {
+        sanitized = removeSection4Clauses(sanitized, /(?:\bDruck\b|\bhPa\b|📉|📈)/i);
+      }
+      if (constraints?.thunderstormAllowed?.[index] === false) {
+        sanitized = removeSection4Clauses(
+          sanitized,
+          /(?:\bGewitter\w*\b|\bCumulonimbus\b|\bCb-Signal\b|⛈️)/i,
+        );
+      }
+      if (index === 2 && isUnderDetailedOverview(sanitized) && fallbackLines?.[index]) {
+        return fallbackLines[index];
+      }
+      return sanitized.endsWith(":")
+        ? fallbackLines?.[index] ?? `${sanitized} Lokale Entwicklungsdaten nicht verfügbar.`
+        : sanitized;
     })
     .join("\n");
 }

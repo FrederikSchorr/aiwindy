@@ -18,6 +18,7 @@ import {
   classifyCloudType,
   estimateCloudBaseM,
 } from "../server/weather-open-meteo.js";
+import { enforceSection4Output } from "../server/weather-output.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
 
@@ -483,6 +484,7 @@ function testSection4DevelopmentSignals(): void {
   const today = context.days[0];
   assert.equal(today.detailLevel, "granular");
   assert.equal(today.summary.pressure.changeHPa, -8);
+  assert.equal(today.summary.pressure.significant, true);
   assert.deepEqual(today.summary.pressure.steepestDrop, {
     from: "09:00",
     to: "12:00",
@@ -511,6 +513,11 @@ function testSection4DevelopmentSignals(): void {
     /cape/i,
     "raw CAPE must not reach the section-4 interpretation context",
   );
+  assert.doesNotMatch(
+    JSON.stringify(context),
+    /cloudCover/i,
+    "cloud-cover percentages must not reach the section-4 interpretation context",
+  );
 
   const capeOnlyRaw = structuredClone(rawData) as any;
   capeOnlyRaw.openMeteoForecast.city.hourly.weatherCode.fill(1);
@@ -526,12 +533,141 @@ function testSection4DevelopmentSignals(): void {
     "high CAPE without a weather-code or cumulonimbus signal must not create thunderstorm risk",
   );
 
+  const minorPressureRaw = structuredClone(capeOnlyRaw) as any;
+  minorPressureRaw.openMeteoForecast.city.hourly.pressureMslHPa.splice(
+    0,
+    4,
+    1016,
+    1015,
+    1014,
+    1015,
+  );
+  const minorPressure = buildSection4WeatherContext(
+    minorPressureRaw,
+    "Europe/Vienna",
+    new REAL_DATE("2026-08-22T07:00:00.000Z"),
+  ) as any;
+  assert.equal(
+    minorPressure.days[0].summary.pressure.significant,
+    false,
+    "a two-hectopascal daily fluctuation must not be treated as a notable pressure signal",
+  );
+
   const local = preprocessOpenMeteoLocal(capeOnlyRaw, "Europe/Vienna") as any;
   assert.match(
     local.cloudRainThunderstorm.text_de,
     /kein Gewitterrisiko/,
     "the generic local summary must use the same evidence rule as the meteogram",
   );
+}
+
+function testSection4OutputContract(): void {
+  const output = enforceSection4Output(
+    [
+      "- Heute: 🌧️ gegen 12:00 Uhr kräftiger Regen.",
+      "- Morgen: ⛈️ Gewittersignal gegen 23:00 Uhr.",
+      "- Di–Fr 24.–27.08.: ☀️ Stabilisierung.",
+      "- Zusätzlicher unerlaubter Bullet.",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+  );
+  assert.ok(output);
+  const bullets = output.split("\n");
+  assert.equal(bullets.length, 3, "section 4 must contain exactly three bullets");
+  assert.match(bullets[0], /^- Heute \(Sa 22\.08\.\):/);
+  assert.match(bullets[1], /^- Morgen \(So 23\.08\.\):/);
+  assert.match(bullets[1], /nachts/, "tomorrow's exact clock time should become a broad day period");
+  assert.doesNotMatch(bullets[1], /\d{1,2}:\d{2}\s*Uhr/, "tomorrow must not contain exact clock times");
+  assert.match(bullets[2], /^- Mo–Do 24\.–27\.08\.:/);
+
+  const missingBullets = enforceSection4Output(
+    "- Heute: Ruhiger Verlauf.",
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+  );
+  assert.equal(
+    missingBullets?.split("\n").length,
+    3,
+    "missing LLM bullets should be completed transparently rather than changing the contract",
+  );
+  assert.match(missingBullets ?? "", /Lokale Entwicklungsdaten nicht verfügbar/);
+
+  const sanitized = enforceSection4Output(
+    [
+      "- Heute: ☁️ Cumulus-Bewölkung 53–76 %; 📉 Druck fällt von 1016 auf 1014 hPa; 🌡️ Maximum 33,8°C; 🌡️ rascher Temperaturrückgang um ca. 2°C zwischen 18:00 und 19:00 Uhr; 🌡️ rascher Temperaturabfall ab 18:00–19:00 Uhr.",
+      "- Morgen: ⛅ Nebelfelder möglich (WMO-Code 45); ⛈️ Gewittersignal bei Cumulonimbus; 📉 Druck bleibt bei 1014 hPa.",
+      "- Mo–Do 24.–27.08.: ☀️ Stabil; kein Gewitterrisiko; 📈 Druck steigt auf 1018 hPa.",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+    {
+      pressureSignificant: [false, false, false],
+      thunderstormAllowed: [false, false, false],
+    },
+  ) ?? "";
+  assert.doesNotMatch(sanitized, /%|Druck|hPa|Gewitter|Cumulonimbus|⛈️|WMO[-\s]?Code/i);
+  assert.match(sanitized, /Cumulus-Bewölkung/);
+  assert.match(sanitized, /Nebelfelder möglich/);
+  assert.match(sanitized, /Maximum 34°C/);
+  assert.doesNotMatch(sanitized, /rascher Temperaturrückgang|18:00|19:00/);
+  assert.match(sanitized, /⛅ Nebelfelder möglich/);
+
+  const informativeFallback = enforceSection4Output(
+    [
+      "- Heute: 📉 Druckschwankung von 1016 auf 1014 hPa; ⛈️ Gewitterrisiko.",
+      "- Morgen: 📉 Druck bleibt bei 1014 hPa; ⛈️ Gewittersignal.",
+      "- Mo–Do 24.–27.08.: 📈 Druck bleibt stabil.",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+    {
+      pressureSignificant: [false, false, false],
+      thunderstormAllowed: [false, false, false],
+    },
+    [
+      "- Heute (Sa 22.08.): Ruhiger Verlauf: trocken; wechselnd bewölkt mit Cumulus-Bewölkung; sommerlich warm.",
+      "- Morgen (So 23.08.): Wechselhaft, aber überwiegend trocken mit Cumulus-Bewölkung.",
+      "- Mo–Do 24.–27.08.: Stabile Entwicklung; überwiegend trocken und sommerlich.",
+    ],
+  ) ?? "";
+  assert.doesNotMatch(informativeFallback, /Keine markante Wetterentwicklung erkennbar/);
+  assert.match(informativeFallback, /Ruhiger Verlauf: trocken/);
+  assert.match(informativeFallback, /Cumulus-Bewölkung/);
+
+  const expandedOverview = enforceSection4Output(
+    [
+      "- Heute: Ruhiger Verlauf.",
+      "- Morgen: Wechselnd bewölkt.",
+      "- Mo–Do 24.–27.08.: ☀️ Mittelmeerraum unter stabiler Hochdrucklage",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+    undefined,
+    [
+      "- Heute (Sa 22.08.): Ruhiger Verlauf.",
+      "- Morgen (So 23.08.): Wechselnd bewölkt.",
+      "- Mo–Do 24.–27.08.: Mittelmeerraum unter stabiler Hochdrucklage; verbreitet sonnig und heiß; Höchstwerte bis 34°C; überwiegend trocken; die Stabilität hält bis zum Ende des Zeitraums an.",
+    ],
+  ) ?? "";
+  assert.match(expandedOverview, /Hochdrucklage; verbreitet sonnig und heiß/);
+  assert.match(expandedOverview, /Höchstwerte bis 34°C/);
+  assert.match(expandedOverview, /bis zum Ende des Zeitraums/);
 }
 
 function testCloudBaseEstimate(): void {
@@ -618,9 +754,8 @@ function testCityMeteogramLoadingState(): void {
     createElement(CityMeteogram, { analysisJson: null, isLoading: true }),
   );
   assert.match(markup, /data-meteogram-status="loading"/, "loading state should be marked as loading");
-  assert.match(markup, /data-testid="bounce-loader"/, "loading state should use the shared animated dots");
-  assert.equal((markup.match(/animate-bounce/g) ?? []).length, 3, "loading state should render exactly three animated dots");
-  assert.doesNotMatch(markup, /Meteogramm wird vorbereitet …/, "loading state should not render the preparation text");
+  assert.doesNotMatch(markup, /bounce-loader|animate-bounce/, "the meteogram must not render animated dots");
+  assert.doesNotMatch(markup, /Meteogramm wird vorbereitet …/, "the shared icon status remains outside the meteogram");
 }
 
 function testCityMeteogramVisualLayers(): void {
@@ -874,6 +1009,7 @@ function testCityMeteogramMalformedArrays(): void {
 
 async function main(): Promise<void> {
   testCloudTypeClassification();
+  testSection4OutputContract();
   testCloudBaseEstimate();
   testCityMeteogramCloudBands();
   testCityMeteogramDewPointVisibility();

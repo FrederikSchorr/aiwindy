@@ -465,7 +465,6 @@ type Section4WeatherRow = {
   pressureHPa: number | null;
   rainMm: number | null;
   precipitationProbabilityPct: number | null;
-  cloudCoverPct: number | null;
   weatherCode: number | null;
   cloudType: CloudType | null;
   thunderstormSignal: boolean;
@@ -567,15 +566,17 @@ function summarizeSection4Day(rows: Section4WeatherRow[]): Record<string, unknow
   const pressures = rows
     .map(row => row.pressureHPa)
     .filter((value): value is number => value !== null);
-  const cloudCover = rows
-    .map(row => row.cloudCoverPct)
-    .filter((value): value is number => value !== null);
   const rain = rows
     .map(row => row.rainMm)
     .filter((value): value is number => value !== null);
   const thunderstormTimes = rows
     .filter(row => row.thunderstormSignal)
     .map(row => formatHour(row.hour));
+  const cloudTypes = Array.from(new Set(
+    rows
+      .map(row => row.cloudType)
+      .filter((value): value is CloudType => value !== null),
+  ));
 
   const temperatureStart = temperatures[0] ?? null;
   const temperatureEnd = temperatures.at(-1) ?? null;
@@ -598,6 +599,7 @@ function summarizeSection4Day(rows: Section4WeatherRow[]): Record<string, unknow
       startHPa: roundTo(pressureStart!),
       endHPa: roundTo(pressureEnd!),
       changeHPa: roundTo(pressureEnd! - pressureStart!),
+      significant: Math.max(...pressures) - Math.min(...pressures) >= 4,
       steepestDrop: stepChange(rows, row => row.pressureHPa, "drop"),
       steepestRise: stepChange(rows, row => row.pressureHPa, "rise"),
     } : null,
@@ -606,10 +608,7 @@ function summarizeSection4Day(rows: Section4WeatherRow[]): Record<string, unknow
       peakIntervalMm: roundTo(Math.max(...rain)),
       periods: rainPeriods(rows),
     } : null,
-    cloudCover: cloudCover.length ? {
-      minPct: Math.round(Math.min(...cloudCover)),
-      maxPct: Math.round(Math.max(...cloudCover)),
-    } : null,
+    cloudTypes,
     thunderstorm: {
       signal: thunderstormTimes.length > 0,
       times: thunderstormTimes,
@@ -644,7 +643,6 @@ export function buildSection4WeatherContext(
       pressureHPa: numberAt(hourly.pressureMslHPa, index),
       rainMm: numberAt(hourly.rainMm, index),
       precipitationProbabilityPct: numberAt(hourly.precipProbabilityPct, index),
-      cloudCoverPct: numberAt(hourly.cloudCoverPct, index),
       weatherCode,
       cloudType,
       thunderstormSignal: isThunderstormSignal(weatherCode, cloudType),
@@ -671,7 +669,6 @@ export function buildSection4WeatherContext(
           pressureHPa: row.pressureHPa,
           rainMm: row.rainMm,
           precipitationProbabilityPct: row.precipitationProbabilityPct,
-          cloudCoverPct: row.cloudCoverPct,
           weatherCode: row.weatherCode,
           cloudType: row.cloudType,
           thunderstormSignal: row.thunderstormSignal,
