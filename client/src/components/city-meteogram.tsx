@@ -33,6 +33,7 @@ type CityMeteogramData = {
 type CityMeteogramProps = { analysisJson: Record<string, unknown> | null; cityName?: string; isLoading?: boolean };
 
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
+const MAX_FORECAST_DAYS = 6;
 const POINT_WIDTH = 60;
 const ROW = {
   day: 43,
@@ -179,7 +180,7 @@ export function extractCityMeteogram(analysisJson: Record<string, unknown> | nul
     mid: asArray(hourly?.cloudCoverMidPct),
     low: asArray(hourly?.cloudCoverLowPct),
   };
-  const points = entries.map(({ timestamp, index, local }) => ({
+  const allPoints = entries.map(({ timestamp, index, local }) => ({
     timestamp,
     ...local,
     temperature: asNumber(temperatures[index]),
@@ -194,6 +195,8 @@ export function extractCityMeteogram(analysisJson: Record<string, unknown> | nul
     isDay: asIsDay(days[index]),
     cloudBands: CLOUD_BANDS.map((band) => ({ key: band.key, label: band.label, pct: asNumber(cloudCoverByBand[band.key][index]) })),
   }));
+  const forecastDays = Array.from(new Set(allPoints.map((point) => point.dateKey))).slice(0, MAX_FORECAST_DAYS);
+  const points = allPoints.filter((point) => forecastDays.includes(point.dateKey));
   const coordinates = asRecord(city.coordinates);
   return {
     cityName: asString(city.name) ?? "Stadt",
@@ -295,7 +298,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
     return <div className="border border-slate-300/70 bg-slate-100/70 px-3 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300" data-testid="city-meteogram" data-meteogram-status={isLoading ? "loading" : "unavailable"}>{isLoading ? <MeteogramLoadingState /> : "Meteogramm für die Stadtdaten nicht verfügbar."}</div>;
   }
 
-  const chartWidth = data.points.length * POINT_WIDTH;
+  const chartWidth = Math.max(data.points.length * POINT_WIDTH, POINT_WIDTH);
   const pressureValues = data.points.map((point) => point.pressure).filter((value): value is number => value !== null);
   const pressureRawMin = pressureValues.length ? Math.min(...pressureValues) : 980;
   const pressureRawMax = pressureValues.length ? Math.max(...pressureValues) : 1030;
@@ -336,7 +339,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
     ? `${Math.abs(data.latitude).toFixed(3)}° ${data.latitude < 0 ? "S" : "N"} · ${Math.abs(data.longitude).toFixed(3)}° ${data.longitude < 0 ? "W" : "E"}`
     : "Koordinaten nicht verfügbar";
 
-  return <section className="meteogram-windy-shell relative left-0 w-full max-w-full translate-x-0 overflow-hidden border border-[#cbd0d6] bg-[#f5f6f8] text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:left-1/2 md:w-[min(1120px,calc(100vw-48px))] md:-translate-x-1/2" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} aria-label={`Wettervorhersage für ${cityLabel}`}>
+  return <section className="meteogram-windy-shell relative left-0 w-full max-w-full translate-x-0 overflow-hidden border border-[#cbd0d6] bg-[#f5f6f8] text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:left-1/2 md:w-[min(1120px,calc(100vw-48px))] md:-translate-x-1/2" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} data-forecast-days={dayCount} data-forecast-points={data.points.length} aria-label={`Wettervorhersage für ${cityLabel} · ${dayCount} Tage, horizontal scrollbar`}>
     <header className="flex flex-col gap-2 border-b border-[#cbd0d6] bg-[#f1f3f5] px-4 py-3 sm:flex-row sm:items-end sm:justify-between sm:px-5">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#737b84]">Wettervorhersage · {dayCount} Tage</div>
@@ -367,8 +370,8 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
         </div>
         {hasCloudBase && <div data-testid="meteogram-cloud-base-label" style={{ height: ROW.cloudBase }} className="flex items-center justify-center gap-1 bg-[#dff1df] px-2 text-center text-[#65716b]">Wolkenbasis <span className="underline">m</span></div>}
       </aside>
-      <div className="meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll">
-        <div className="relative" style={{ minWidth: chartWidth }}>
+      <div className="meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll" aria-label={`${dayCount}-Tage-Meteogramm, horizontal scrollen für weitere Stunden`}>
+        <div className="relative" style={{ width: chartWidth, minWidth: chartWidth }}>
           <div data-night-overlay-layer="true" className="pointer-events-none absolute inset-0 z-[15] flex">
             {data.points.map((point, index) => point.isDay === false
               ? <div key={`night-${point.timestamp}`} data-chart-night-column="true" data-night-shading="true" data-night-index={index} className="h-full shrink-0 bg-[#63709b]/[.075]" style={{ width: POINT_WIDTH }}><title>Nacht</title></div>
