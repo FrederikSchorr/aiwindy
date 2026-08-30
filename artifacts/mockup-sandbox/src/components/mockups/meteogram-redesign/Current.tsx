@@ -1,5 +1,6 @@
 import React from "react";
 import "./_group.css";
+import { WeatherIcon, type WeatherIconKind } from "./_WeatherIcon";
 
 type CloudAmount = "clear" | "few" | "broken" | "overcast";
 type Point = {
@@ -58,10 +59,6 @@ function temperatureColor(value: number) {
   if (value < 23) return "#f3c66d";
   return "#ed6a8d";
 }
-const SPRITE_CELL_WIDTH = 19.68;
-const ICON_CELLS = Array.from({ length: 10 }, (_, index) => [index * SPRITE_CELL_WIDTH, SPRITE_CELL_WIDTH] as const);
-const SPRITE_SCALE = 1.9;
-
 function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
   if (kind === "clock") return <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#373d42]" aria-hidden="true">
     <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -79,33 +76,22 @@ function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
 }
 
 function weatherIcon(point: Point) {
-  const iconIndex = point.storm
-    ? 9
+  const kind: WeatherIconKind = point.storm
+    ? "thunderstorm"
     : point.rain >= .5
-      ? 8
+      ? "heavy-rain"
       : point.rain > 0
-        ? 7
+        ? "light-rain"
         : !point.isDay
-          ? point.cloudAmount === "clear" ? 0 : point.cloudAmount === "few" ? 1 : 2
+          ? point.cloudAmount === "clear" ? "clear-night" : point.cloudAmount === "few" ? "partly-cloudy-night" : "overcast-night"
           : point.cloudAmount === "clear"
-            ? 3
+            ? "clear-day"
             : point.cloudAmount === "few"
-              ? 4
+              ? "few-clouds-day"
             : point.cloudAmount === "broken"
-                ? 5
-                : 6;
-  const [cellX, cellWidth] = ICON_CELLS[iconIndex];
-  return <span
-    className="block shrink-0 bg-no-repeat"
-    style={{
-      width: cellWidth * SPRITE_SCALE,
-      height: 20 * SPRITE_SCALE,
-      backgroundImage: `url(${import.meta.env.BASE_URL}weather-icons/windy-inspired-strip-v2.svg)`,
-      backgroundSize: `${196.8 * SPRITE_SCALE}px ${20 * SPRITE_SCALE}px`,
-      backgroundPosition: `${-cellX * SPRITE_SCALE}px 0`,
-    }}
-    aria-hidden="true"
-  />;
+                ? "partly-cloudy-day"
+                : "overcast-day";
+  return <WeatherIcon kind={kind} className="h-9 w-9" />;
 }
 function TemperatureDewSection({ points, width, grid, temperatureArea, dewBoundaryPoints }: {
   points: Point[];
