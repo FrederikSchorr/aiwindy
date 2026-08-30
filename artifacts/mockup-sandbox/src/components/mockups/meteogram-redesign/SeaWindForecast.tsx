@@ -16,11 +16,11 @@ const ROW = { day: 42, hours: 32, wind: 42, gust: 42, direction: 52 };
 const FORECAST_HOURS = 6 * 8;
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const windSpeeds = [
-  13, 12, 12, 12, 13, 13, 13, 15, 12, 11, 14, 12, 18, 10, 8, 10, 11, 12, 12, 13, 14, 15, 13, 12,
-  10, 10, 11, 12, 13, 14, 16, 17, 18, 18, 17, 16, 15, 15, 14, 13, 13, 14, 16, 17, 19, 18, 16, 14,
-  9, 10, 10, 11, 12, 13, 14, 14, 15, 16, 16, 15, 14, 13, 12, 12, 13, 15, 17, 17, 16, 15, 14, 13,
+  0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24,
+  26, 28, 30, 32, 35, 38, 40, 42, 45, 48, 50, 48, 45, 42, 40, 38,
+  35, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 5, 2,
 ];
-const gustOffsets = [6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 7];
+const gustOffsets = [2, 3, 4, 5, 4, 5, 6, 6];
 const directions = [
   250, 245, 240, 235, 230, 225, 220, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 280, 275,
   260, 255, 250, 245, 240, 235, 230, 225, 220, 215, 210, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265,
@@ -74,7 +74,7 @@ function makePoints(): WindPoint[] {
       dayLabel: `${day} ${String(date.getUTCDate()).padStart(2, "0")}`,
       hour: String(date.getUTCHours()).padStart(2, "0"),
       speed,
-      gust: speed + gustOffsets[index % gustOffsets.length],
+      gust: Math.min(50, speed + gustOffsets[index % gustOffsets.length]),
       direction: directions[index % directions.length],
       isDay: date.getUTCHours() >= 7 && date.getUTCHours() < 21,
     };
@@ -89,7 +89,7 @@ function DirectionArrow({ degrees }: { degrees: number }) {
       aria-hidden="true"
       style={{ transform: `rotate(${degrees}deg)` }}
     >
-      <path d="M4 12 17.6 4.7l-2.5 5.8h5v3h-5l2.5 5.8L4 12Z" fill="#5e7890" />
+      <path d="m6.2 3.1 12.1 3.7-5.1 4.6 4.2 7.3-4.8 2.2-4-7.5-4.2 3.1 1.8-7.2Z" fill="#5e7890" />
     </svg>
   );
 }
