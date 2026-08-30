@@ -93,14 +93,14 @@ function TemperatureDewSection({ points, width, grid, temperatureArea, dewBounda
   dewBoundaryPoints: Array<[number, number]>;
 }) {
   return <div className="relative bg-[#fafbfc]" style={{ height: ROW.icons + ROW.temperature + ROW.dew }}>
-    <svg viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature}`} width={width} height={ROW.icons + ROW.temperature} className="pointer-events-none absolute inset-0">
+    <svg viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature + 12}`} width={width} height={ROW.icons + ROW.temperature + 12} className="pointer-events-none absolute inset-0">
       <defs><linearGradient id="current-temperature" x2={width} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor={temperatureColor(points[0].temperature)} />{points.map((point, index) => <stop key={point.timestamp} offset={`${index / (points.length - 1) * 100}%`} stopColor={temperatureColor(point.temperature)} />)}</linearGradient></defs>
       <path d={temperatureArea} fill="url(#current-temperature)" fillOpacity=".56" />
       <path data-dew-point-boundary="true" d={smoothPath(dewBoundaryPoints)} fill="none" stroke="#aaa9a2" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
     <div className="relative z-10 grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div>
     <div className="relative z-10 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
-    <div className="pointer-events-none absolute inset-0 z-20 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 2 }}>{point.dewPoint}°</span></div>)}</div>
+    <div className="pointer-events-none absolute inset-0 z-20 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] leading-[16px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 8 }}>{point.dewPoint}°</span></div>)}</div>
   </div>;
 }
 function dayGroups() {
@@ -134,7 +134,7 @@ export function Current() {
         <div style={{ height: ROW.hours }} className="flex items-center justify-center font-semibold">Stunden</div>
         <div style={{ height: ROW.icons }} className="flex items-center justify-center">Wetter</div>
         <div style={{ height: ROW.temperature }} className="flex items-center justify-center text-[#a85e42]">Temperatur<br />°C</div>
-        <div style={{ height: ROW.dew }} className="flex items-center justify-center">Taupunkt</div>
+        <div style={{ height: ROW.dew, transform: "translateY(-15px)" }} className="flex items-center justify-center">Taupunkt</div>
         <div style={{ height: ROW.clouds }} className="flex flex-col items-center justify-center text-center text-[11px] text-[#69737b]"><span>Druck</span><span className="text-[#3275a0]">Regen</span><span className="mt-1 text-[9px]">hPa · mm</span></div>
         <div style={{ height: ROW.base }} className="flex items-center justify-center bg-[#dff1df] px-2 text-center">Wolkenbasis <u>m</u></div>
       </aside>
