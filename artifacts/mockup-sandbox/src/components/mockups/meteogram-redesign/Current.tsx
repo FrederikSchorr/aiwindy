@@ -27,11 +27,13 @@ const screenshotData = [
   { hour: 14, temperature: 26, dewPoint: 13, pressure: 1018, rain: .3, cloudAmount: "overcast", storm: true },
   { hour: 17, temperature: 26, dewPoint: 12, pressure: 1017, rain: 0, cloudAmount: "overcast", storm: false },
   { hour: 20, temperature: 23, dewPoint: 12, pressure: 1019, rain: .4, cloudAmount: "broken", storm: false },
+  { hour: 21, temperature: 22, dewPoint: 12, pressure: 1018, rain: .8, cloudAmount: "overcast", storm: false },
+  { hour: 22, temperature: 22, dewPoint: 12, pressure: 1018, rain: 1.4, cloudAmount: "overcast", storm: false },
   { hour: 23, temperature: 21, dewPoint: 11, pressure: 1018, rain: 2.2, cloudAmount: "few", storm: false },
   { hour: 2, temperature: 20, dewPoint: 12, pressure: 1020, rain: .3, cloudAmount: "broken", storm: false },
 ] as const;
 const points: Point[] = screenshotData.map((entry, index) => {
-  const date = new Date(Date.UTC(2026, 7, index < 8 ? 29 : 30, entry.hour));
+  const date = new Date(Date.UTC(2026, 7, index < 10 ? 29 : 30, entry.hour));
   return {
     timestamp: date.toISOString().slice(0, 19),
     temperature: entry.temperature,
@@ -142,6 +144,7 @@ export function Current() {
     return isMaximum || isMinimum ? [{ point, index, isMaximum }] : [];
   });
   const days = dayGroups();
+  const dayBoundaryIndex = points.findIndex(point => point.timestamp.slice(8, 10) !== points[0].timestamp.slice(8, 10));
   const grid = { gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` };
 
   return <div className="meteogram-current overflow-hidden bg-[#f5f6f8] text-[#30353a]">
@@ -181,7 +184,7 @@ export function Current() {
             </svg>
           </div>
          </div>
-         <div className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: 8 * POINT_WIDTH }} />
+         <div className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: dayBoundaryIndex * POINT_WIDTH }} />
          <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 4 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
       </div></div>
     </div>
