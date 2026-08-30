@@ -1,97 +1,124 @@
 import React from "react";
 import "./_group.css";
 
-type CloudType = "clear" | "cirrus" | "altostratus" | "stratus" | "cumulus" | "cumulonimbus" | "mixed";
+type CloudBand = "high" | "mid" | "low";
 type Point = {
-  timestamp: string; temperature: number; dewPoint: number; pressure: number; rain: number;
-  precipProbability: number; weatherCode: number; cloudBase: number; cloudType: CloudType;
-  isDay: boolean; low: number; mid: number; high: number;
+  timestamp: string;
+  temperature: number;
+  dewPoint: number;
+  pressure: number;
+  rain: number;
+  cloudBase: number;
+  cloudType: "clear" | "cirrus" | "stratus" | "cumulus" | "mixed";
+  isDay: boolean;
+  clouds: Record<CloudBand, number>;
 };
 
-const POINT_WIDTH = 64;
-const ROW = { day: 48, hours: 38, icons: 54, temperature: 42, temperatureArea: 96, dew: 34, clouds: 216, base: 38 };
+const POINT_WIDTH = 60;
+const ROW = { day: 43, hours: 34, icons: 50, temperature: 42, dew: 31, clouds: 210, base: 35 };
+const BANDS: Array<{ key: CloudBand; label: string; altitude: string }> = [
+  { key: "high", label: "HOCH", altitude: "6–13 km" },
+  { key: "mid", label: "MITTEL", altitude: "2–6 km" },
+  { key: "low", label: "TIEF", altitude: "0–2 km" },
+];
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
-const TYPES: CloudType[] = ["stratus", "mixed", "cumulus", "cirrus", "altostratus", "cumulonimbus"];
+const TYPES = ["stratus", "mixed", "cumulus", "cirrus", "stratus", "cumulus"] as const;
 const wave = (i: number, center: number, range: number, period: number) => center + Math.sin(i / period) * range;
-
-// Fixed data keeps the production analysisJson shape so this isolated preview is representative.
-const analysisJson: Record<string, unknown> = (() => {
-  const timestamps = Array.from({ length: 16 }, (_, i) => new Date(Date.UTC(2026, 7, 29, i * 3)).toISOString().slice(0, 19));
-  const rain = timestamps.map((_, i) => i === 9 ? .1 : i === 10 ? 2.3 : i === 14 ? .8 : 0);
-  return { weatherRaw: { openMeteoForecast: { timezone: "Europe/Vienna", city: {
-    name: "Weiden am See", coordinates: { lat: 47.925, lon: 16.869 }, url: "https://open-meteo.com/",
-    hourly: {
-      timestamps, temp2mC: timestamps.map((_, i) => Math.round(wave(i, 21, 7, 3.4))),
-      dewPoint2mC: timestamps.map((_, i) => Math.round(wave(i, 12, 2, 5.1))),
-      pressureMslHPa: timestamps.map((_, i) => Math.round(wave(i, 1018, 6, 8.2))), rainMm: rain,
-      precipProbabilityPct: rain.map(v => v >= 2 ? 90 : v ? 55 : 8),
-      weatherCode: rain.map((v, i) => v >= 2 ? 81 : v ? 61 : i % 7 < 2 ? 2 : 1),
-      cloudBaseM: timestamps.map((_, i) => Math.max(250, Math.round(wave(i, 1550, 1100, 4.5) / 50) * 50)),
-      cloudType: timestamps.map((_, i) => TYPES[Math.floor(i / 3) % TYPES.length]),
-      capeJkg: timestamps.map((_, i) => i >= 12 ? 900 : 80),
-      isDay: timestamps.map(t => { const h = Number(t.slice(11, 13)); return h >= 6 && h < 21 ? 1 : 0; }),
-      cloudCoverLowPct: timestamps.map((_, i) => Math.round(Math.max(5, Math.min(100, wave(i, 52, 43, 2.7))))),
-      cloudCoverMidPct: timestamps.map((_, i) => Math.round(Math.max(0, Math.min(100, wave(i, 44, 40, 4.2))))),
-      cloudCoverHighPct: timestamps.map((_, i) => Math.round(Math.max(0, Math.min(100, wave(i, 48, 46, 5.8))))),
+const points: Point[] = Array.from({ length: 16 }, (_, i) => {
+  const date = new Date(Date.UTC(2026, 7, 29, i * 3));
+  const timestamp = date.toISOString().slice(0, 19);
+  const rain = i === 9 ? .1 : i === 10 ? 2.3 : i === 14 ? .8 : 0;
+  const hour = date.getUTCHours();
+  return {
+    timestamp,
+    temperature: Math.round(wave(i, 21, 7, 3.4)),
+    dewPoint: Math.round(wave(i, 12, 2, 5.1)),
+    pressure: Math.round(wave(i, 1018, 6, 8.2)),
+    rain,
+    cloudBase: Math.max(250, Math.round(wave(i, 1550, 1100, 4.5) / 50) * 50),
+    cloudType: TYPES[Math.floor(i / 3) % TYPES.length],
+    isDay: hour >= 6 && hour < 21,
+    clouds: {
+      low: Math.round(Math.max(5, Math.min(100, wave(i, 52, 43, 2.7)))),
+      mid: Math.round(Math.max(0, Math.min(100, wave(i, 44, 40, 4.2)))),
+      high: Math.round(Math.max(0, Math.min(100, wave(i, 48, 46, 5.8)))),
     },
-  } } } };
-})();
+  };
+});
 
-function pointsFromContract(json: Record<string, unknown>): Point[] {
-  const hourly = (((json.weatherRaw as { openMeteoForecast: { city: { hourly: Record<string, unknown[]> } } }).openMeteoForecast.city.hourly));
-  return hourly.timestamps.map((timestamp, i) => ({
-    timestamp: String(timestamp), temperature: Number(hourly.temp2mC[i]), dewPoint: Number(hourly.dewPoint2mC[i]),
-    pressure: Number(hourly.pressureMslHPa[i]), rain: Number(hourly.rainMm[i]), precipProbability: Number(hourly.precipProbabilityPct[i]),
-    weatherCode: Number(hourly.weatherCode[i]), cloudBase: Number(hourly.cloudBaseM[i]), cloudType: hourly.cloudType[i] as CloudType,
-    isDay: Number(hourly.isDay[i]) === 1, low: Number(hourly.cloudCoverLowPct[i]), mid: Number(hourly.cloudCoverMidPct[i]), high: Number(hourly.cloudCoverHighPct[i]),
-  }));
+function smoothPath(values: Array<[number, number]>) {
+  return values.reduce((path, [x, y], index) => {
+    if (!index) return `M ${x} ${y}`;
+    const [previousX, previousY] = values[index - 1];
+    const middle = (previousX + x) / 2;
+    return `${path} C ${middle} ${previousY}, ${middle} ${y}, ${x} ${y}`;
+  }, "");
 }
-
-function smoothPath(points: Array<[number, number]>) {
-  return points.reduce((path, [x, y], i) => !i ? `M ${x} ${y}` : `${path} C ${(points[i - 1][0] + x) / 2} ${points[i - 1][1]}, ${(points[i - 1][0] + x) / 2} ${y}, ${x} ${y}`, "");
+function temperatureColor(value: number) {
+  if (value < 8) return "#42bfd0";
+  if (value < 16) return "#a8d66d";
+  if (value < 23) return "#f3c66d";
+  return "#ed6a8d";
 }
-function color(type: CloudType) { return type === "stratus" ? "#fab219" : type === "cumulonimbus" ? "#d03b3b" : "#898781"; }
-function icon(point: Point) {
-  const c = color(point.cloudType), rainy = point.weatherCode >= 51;
-  if (point.cloudType === "clear") return <svg viewBox="0 0 32 32" className="h-9 w-9"><circle cx="16" cy="16" r="7" fill="#f4b400" /><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M25.2 6.8l-2.8 2.8M9.6 22.4l-2.8 2.8" stroke="#e7a600" strokeWidth="2.3" strokeLinecap="round" /></svg>;
-  return <svg viewBox="0 0 36 32" className="h-9 w-10"><circle cx="11" cy="10" r="5" fill="#f4b400" /><path d="M4 21h24a5 5 0 0 0 0-10h-4a7 7 0 0 0-13-1 5.5 5.5 0 0 0-5 5Z" fill={c} fillOpacity=".24" stroke={c} strokeWidth="1.7" />{point.cloudType === "cumulonimbus" && <path d="m18 13-4 7h4l-2 7 7-10h-4l3-4Z" fill={c} />}{rainy && <path d="M12 25l-2 4M19 25l-2 4M26 25l-2 4" stroke="#6e9db4" strokeWidth="2" strokeLinecap="round" />}</svg>;
+function weatherIcon(point: Point) {
+  const stroke = point.cloudType === "stratus" ? "#d59b24" : "#7e858b";
+  if (point.cloudType === "clear") return <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#f4b400" /><g stroke="#e5a500" strokeWidth="2.3" strokeLinecap="round"><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M25.2 6.8l-2.8 2.8M9.6 22.4l-2.8 2.8" /></g></svg>;
+  return <svg viewBox="0 0 36 32" className="h-9 w-10" aria-hidden="true"><circle cx="11" cy="10" r="5" fill="#f4b400" /><path d="M4 21h25a5 5 0 0 0 0-10h-4a7 7 0 0 0-13-1 5.5 5.5 0 0 0-5 5Z" fill={stroke} fillOpacity=".25" stroke={stroke} strokeWidth="1.7" /><path d="M12 25l-2 4M19 25l-2 4M26 25l-2 4" stroke="#2278a7" strokeWidth="2" strokeLinecap="round" /></svg>;
 }
-function tempColor(v: number) { return v < 12 ? "#a7d66d" : v < 18 ? "#f1dd70" : v < 24 ? "#f5a15c" : "#ec5e91"; }
-function formatBase(v: number) { return v >= 5000 ? `${Math.round(v / 500) * 500}` : `${Math.round(v / 100) * 100}`; }
+function dayGroups() {
+  return points.reduce<Array<{ label: string; count: number }>>((groups, point) => {
+    const date = new Date(`${point.timestamp.slice(0, 10)}T12:00:00Z`);
+    const label = `${DAY_NAMES[date.getUTCDay()]} ${point.timestamp.slice(8, 10)}`;
+    const last = groups.at(-1);
+    if (last?.label === label) last.count += 1;
+    else groups.push({ label, count: 1 });
+    return groups;
+  }, []);
+}
 
 export function Current() {
-  const points = pointsFromContract(analysisJson), width = points.length * POINT_WIDTH;
-  const temps = points.map(p => p.temperature), min = Math.min(...temps) - 2, max = Math.max(...temps) + 2;
-  const yTemp = (v: number) => 5 + (1 - (v - min) / (max - min)) * 86;
-  const tempPoints = points.map((p, i) => [i * POINT_WIDTH + 32, yTemp(p.temperature)] as [number, number]);
-  const tempPath = smoothPath(tempPoints);
-  const pressure = points.map(p => p.pressure), pMin = Math.min(...pressure) - 3, pMax = Math.max(...pressure) + 3;
-  const pressurePoints = points.map((p, i) => [i * POINT_WIDTH + 32, 10 + (1 - (p.pressure - pMin) / (pMax - pMin)) * 188] as [number, number]);
-  const days = points.reduce<Array<{ label: string; count: number }>>((all, point) => {
-    const d = new Date(`${point.timestamp.slice(0, 10)}T12:00:00Z`), label = `${DAY_NAMES[d.getUTCDay()]} ${point.timestamp.slice(8, 10)}`;
-    const last = all[all.length - 1]; if (last?.label === label) last.count++; else all.push({ label, count: 1 }); return all;
-  }, []);
+  const width = points.length * POINT_WIDTH;
+  const temperatureMin = Math.min(...points.map(point => point.temperature)) - 2;
+  const temperatureMax = Math.max(...points.map(point => point.temperature)) + 2;
+  const temperatureY = (value: number) => 7 + (1 - (value - temperatureMin) / (temperatureMax - temperatureMin)) * 85;
+  const temperaturePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]);
+  const temperaturePath = smoothPath(temperaturePoints);
+  const temperatureArea = `${smoothPath([[0, temperaturePoints[0][1]], ...temperaturePoints, [width, temperaturePoints.at(-1)![1]]])} L ${width} 92 L 0 92 Z`;
+  const pressureMin = Math.min(...points.map(point => point.pressure)) - 3;
+  const pressureMax = Math.max(...points.map(point => point.pressure)) + 3;
+  const pressurePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, 15 + (1 - (point.pressure - pressureMin) / (pressureMax - pressureMin)) * 180] as [number, number]);
+  const days = dayGroups();
   const grid = { gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` };
-  return <div className="meteogram-current overflow-hidden border-y border-slate-300/55 bg-[#f8fafb] text-slate-700">
-    <div className="flex">
-      <aside className="w-[116px] shrink-0 border-r border-slate-300/60 bg-[#edf1f2] text-[11px] leading-[13px] text-slate-500 md:w-[176px]">
-        <div style={{ height: ROW.day }} className="flex flex-col justify-center border-b border-slate-300/50 px-3"><b className="truncate text-[13px] text-slate-800">Weiden am See</b><span className="truncate text-[9px]">Europe/Vienna · 2 Tage · 16 Punkte</span><a className="mt-1 w-fit text-[9px] font-semibold underline" href="https://open-meteo.com/">Open-Meteo ↗</a></div>
-        <div style={{ height: ROW.hours }} className="flex items-center justify-center font-semibold">Stunden</div><div style={{ height: ROW.icons }} className="flex items-center justify-center">Wetter</div><div style={{ height: ROW.temperature }} className="flex items-center justify-center font-medium text-[#bd5b2d]">Temperatur</div><div style={{ height: ROW.dew }} className="flex items-center justify-center">Taupunkt</div>
-        <div style={{ height: ROW.clouds }} className="relative"><div className="absolute inset-y-0 left-0 flex w-[52%] flex-col items-center justify-center text-center text-[10px]"><span>Wolken, Regen</span><u className="mt-1">mm</u></div><div className="absolute inset-y-0 right-0 flex w-[48%] flex-col">{[["HOCH", "6–13 km"], ["MITTEL", "2–6 km"], ["TIEF", "0–2 km"]].map(([name, alt]) => <div key={name} className="flex flex-1 flex-col items-center justify-center text-center"><b className="text-[10px] tracking-[.04em]">{name}</b><span className="text-[9px]">{alt}</span></div>)}</div></div>
-        <div style={{ height: ROW.base }} className="flex items-center justify-center px-2 text-center">Wolkenuntergrenze&nbsp;<u>m</u></div>
+
+  return <div className="meteogram-current overflow-hidden border border-[#cbd0d6] bg-[#f5f6f8] text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)]">
+    <header className="flex flex-col gap-2 border-b border-[#cbd0d6] bg-[#f1f3f5] px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
+      <div><div className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#737b84]">Wettervorhersage · 6 Tage</div><h1 className="text-[23px] font-medium tracking-[-.025em] text-[#343a40]">Weiden am See</h1><p className="text-[11px] text-[#7a828a]">47.925° N · 16.869° E · Ortszeit Europe/Vienna</p></div>
+      <div className="flex gap-1.5 text-[10px] font-semibold text-[#64707a]"><span className="border border-[#c7cdd2] bg-white px-2 py-1">Modellprognose</span><span className="border border-[#a9cde1] bg-[#e3f0f8] px-2 py-1 text-[#27678d]">Regen ab DIENSTAG 15:00</span><span className="border border-[#e1b5b5] bg-[#fae5e5] px-2 py-1 text-[#a34848]">Gewitterrisiko</span></div>
+    </header>
+    <div className="border-b border-[#d3d7dc] bg-[#fafbfc] px-4 py-1.5 text-[10px] text-[#7a828a]"><strong className="text-[#555d65]">Lesart:</strong> Farben und Wolkenflächen zeigen den prognostizierten Verlauf. Wolkentypen sind heuristische Modelldaten.</div>
+    <div className="flex min-w-0">
+      <aside className="w-[112px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[10px] leading-[12px] text-[#737b82] md:w-[176px]">
+        <div style={{ height: ROW.day }} className="flex flex-col justify-center border-b border-[#d4d8dc] px-3"><b className="truncate text-[12px] text-[#4a5158]">Weiden am See</b><span className="truncate text-[9px]">Europe/Vienna · 48 Werte</span><a className="mt-1 w-fit text-[9px] font-semibold underline" href="https://open-meteo.com/">Open-Meteo ↗</a></div>
+        <div style={{ height: ROW.hours }} className="flex items-center justify-center border-b border-[#d4d8dc] font-semibold">Stunden</div>
+        <div style={{ height: ROW.icons }} className="flex items-center justify-center border-b border-[#d4d8dc]">Wetter</div>
+        <div style={{ height: ROW.temperature }} className="flex items-center justify-center border-b border-[#d4d8dc] text-[#a85e42]">Temperatur<br />°C</div>
+        <div style={{ height: ROW.dew }} className="flex items-center justify-center border-b border-[#d4d8dc]">Taupunkt</div>
+        <div style={{ height: ROW.clouds }} className="relative"><div className="absolute inset-y-0 left-0 flex w-1/2 flex-col items-center justify-center text-center text-[10px] md:text-[12px]"><span>Wolken</span><span className="text-[#3275a0]">Regen</span><span className="text-[#3275a0]">· Druck</span><span className="text-[9px]">mm · hPa</span></div><div className="absolute inset-y-0 right-0 flex w-1/2 flex-col">{BANDS.map(band => <div key={band.key} className="flex flex-1 flex-col items-center justify-center border-b border-[#d7dbe0] text-center last:border-0"><b className="text-[9px] text-[#5d666e] md:text-[10px]">{band.label}</b><span className="text-[8px] text-[#858c93] md:text-[9px]">{band.altitude}</span></div>)}</div></div>
+        <div style={{ height: ROW.base }} className="flex items-center justify-center bg-[#dff1df] px-2 text-center">Wolkenbasis <u>m</u></div>
       </aside>
       <div className="meteogram-current__scroll min-w-0 flex-1 overflow-x-auto"><div className="relative" style={{ minWidth: width }}>
-        <div className="pointer-events-none absolute inset-0 z-10 flex">{points.map((p, i) => <div key={i} className={p.isDay ? "" : "bg-[#6872a3]/[.055]"} style={{ width: POINT_WIDTH }} />)}</div>
+        <div className="pointer-events-none absolute inset-0 z-10 flex">{points.map((point, index) => <div key={point.timestamp} className={point.isDay ? "" : "bg-[#63709b]/[.075]"} style={{ width: POINT_WIDTH }} />)}</div>
         <div className="relative z-0">
-          <div className="grid border-b border-slate-300/45 bg-[#f4f6f7]/80 text-[15px] font-semibold tracking-[.055em]" style={{ height: ROW.day, ...grid }}>{days.map((d, i) => <div key={i} className="flex items-center pl-4" style={{ gridColumn: `span ${d.count}` }}>{d.label}</div>)}</div>
-          <div className="grid border-b border-slate-300/45 text-[17px] text-slate-500" style={{ height: ROW.hours, ...grid }}>{points.map((p, i) => <div key={i} className="flex items-center justify-center">{p.timestamp.slice(11, 13)}</div>)}</div>
-          <div className="relative border-b border-slate-300/45" style={{ height: ROW.temperatureArea }}><svg viewBox={`0 0 ${width} 96`} width={width} height="96" className="absolute inset-0"><defs><linearGradient id="meteogram-current-temperature" x2={width} gradientUnits="userSpaceOnUse">{points.map((p, i) => <stop key={i} offset={`${i / 15 * 100}%`} stopColor={tempColor(p.temperature)} />)}</linearGradient></defs><path d={`${smoothPath([[0, tempPoints[0][1]], ...tempPoints, [width, tempPoints.at(-1)![1]]])} L ${width} 96 L 0 96Z`} fill="url(#meteogram-current-temperature)" fillOpacity=".45" /><path d={tempPath} fill="none" stroke="url(#meteogram-current-temperature)" strokeWidth="2.5" /></svg><div className="relative grid" style={{ height: ROW.icons, ...grid }}>{points.map((p, i) => <div key={i} className="flex items-center justify-center" title={`${p.cloudType} · Regen ${p.rain.toFixed(1)} mm`}>{icon(p)}</div>)}</div><div className="relative grid text-[22px] font-medium text-slate-800" style={{ height: ROW.temperature, ...grid }}>{points.map((p, i) => <div key={i} className="flex items-center justify-center">{Math.round(p.temperature)}°</div>)}</div></div>
-          <div className="grid border-b border-slate-300/45 text-[16px] text-slate-500" style={{ height: ROW.dew, ...grid }}>{points.map((p, i) => <div key={i} className="flex items-center justify-center">{Math.round(p.dewPoint)}°</div>)}</div>
-          <div className="relative border-b border-slate-300/55" style={{ height: ROW.clouds }}><svg viewBox={`0 0 ${width} 216`} width={width} height="216" className="absolute inset-0"><defs><filter id="meteogram-current-blur"><feGaussianBlur stdDeviation="4.1" /></filter><pattern id="meteogram-current-hatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-2 10L4 4M3 15L15 3" stroke="#53616e" strokeOpacity=".12" /></pattern></defs>{(["high", "mid", "low"] as const).map((band, row) => <g key={band}><line x2={width} y1={row * 72} y2={row * 72} stroke="#7c8791" strokeOpacity=".24" />{points.map((p, i) => { const pct = p[band], h = Math.max(5, Math.min(59, 72 * (.28 + pct / 150))), cy = row * 72 + 72 - h * .55; return <g key={i}><ellipse cx={i * 64 + 32} cy={cy} rx={Math.min(55, 64 * (.64 + pct / 104)) / 2} ry={h / 2} fill="#66737b" opacity={.18 + pct / 420} filter="url(#meteogram-current-blur)" />{pct > 35 && <rect x={i * 64} y={row * 72} width="64" height="72" fill="url(#meteogram-current-hatch)" opacity=".26" />}</g>; })}</g>)}</svg>
-            <svg viewBox={`0 0 ${width} 216`} width={width} height="216" className="absolute inset-0">{points.map((p, i) => { const h = p.rain ? Math.max(3, p.rain / 2.3 * 46) : 0, y = 210 - h; return <g key={i}>{p.rain > 0 && <text x={i * 64 + 32} y={y - 6} textAnchor="middle" fontSize="10" fontWeight="700" fill="#1765b4">{p.rain.toFixed(1)}mm</text>}<rect x={i * 64 + 27} y={y} width="10" height={h} fill="#1469d2" /><path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.55" /></g>; })}</svg>
-            <div className="absolute right-[18px] top-2 rounded-[5px] bg-[#0869d8] px-2.5 py-1 text-[11px] font-bold text-white">2.4mm</div></div>
-          <div className="grid bg-[#dff2e4] text-[16px] font-medium" style={{ height: ROW.base, ...grid }}>{points.map((p, i) => <div key={i} className="flex items-center justify-center">{formatBase(p.cloudBase)}</div>)}</div>
-        </div><div className="pointer-events-none absolute z-20 border-l border-dashed border-slate-600/55" style={{ left: 32, top: ROW.day, bottom: 0 }} /></div></div>
+          <div className="grid border-b border-[#d5d9de] bg-[#f7f8fa] text-[15px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>{days.map(day => <div key={day.label} className="flex items-center border-r border-[#d5d9de] pl-4" style={{ gridColumn: `span ${day.count}` }}>{day.label}</div>)}</div>
+          <div className="grid border-b border-[#d5d9de] bg-[#fafbfc] text-[16px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{Number(point.timestamp.slice(11, 13))}</div>)}</div>
+          <div className="relative border-b border-[#d5d9de]" style={{ height: ROW.icons + ROW.temperature }}><svg viewBox={`0 0 ${width} 92`} width={width} height="92" className="pointer-events-none absolute inset-0"><defs><linearGradient id="current-temperature" x2={width} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor={temperatureColor(points[0].temperature)} />{points.map((point, index) => <stop key={point.timestamp} offset={`${index / 15 * 100}%`} stopColor={temperatureColor(point.temperature)} />)}</linearGradient></defs><path d={temperatureArea} fill="url(#current-temperature)" fillOpacity=".56" /><path d={temperaturePath} fill="none" stroke="url(#current-temperature)" strokeWidth="2.4" strokeLinecap="round" /><line x1="0" x2={width} y1={ROW.icons} y2={ROW.icons} stroke="#aeb6be" strokeOpacity=".3" strokeDasharray="2 4" /></svg><div className="relative grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div><div className="relative grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div></div>
+          <div className="grid border-b border-[#d5d9de] bg-[#fafbfc] text-[15px] text-[#7b838b]" style={{ height: ROW.dew, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.dewPoint}°</div>)}</div>
+          <div className="relative border-b border-[#d5d9de] bg-[#f7f8fa]" style={{ height: ROW.clouds }}><svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0"><defs><filter id="current-cloud-blur" x="-30%" y="-40%" width="160%" height="180%"><feGaussianBlur stdDeviation="4.6" /></filter></defs>{BANDS.map((band, bandIndex) => <g key={band.key}><rect x="0" y={bandIndex * 70} width={width} height="70" fill={bandIndex % 2 ? "#fafbfc" : "#f5f6f8"} fillOpacity=".45" /><line x2={width} y1={bandIndex * 70} y2={bandIndex * 70} stroke="#89929b" strokeOpacity=".22" strokeDasharray="5 5" />{points.map((point, index) => { const pct = point.clouds[band.key]; const height = Math.max(10, Math.min(58, 70 * (.18 + pct / 130))); const x = index * POINT_WIDTH + POINT_WIDTH / 2; const y = bandIndex * 70 + 52 - pct * .2; return <g key={point.timestamp} clipPath={`url(#current-${band.key}-clip)`}><ellipse data-cloud-shape-band={band.key} cx={x} cy={y} rx={Math.min(52, POINT_WIDTH * (.66 + pct / 115)) / 2} ry={height / 2} fill="#818991" opacity={.17 + pct / 500} filter="url(#current-cloud-blur)" /><ellipse cx={x - 7} cy={y - 2} rx="14" ry={height * .32} fill="#69737a" opacity=".16" filter="url(#current-cloud-blur)" /></g>; })}</g>)}<defs>{BANDS.map((band, index) => <clipPath key={band.key} id={`current-${band.key}-clip`}><rect x="0" y={index * 70} width={width} height="70" /></clipPath>)}</defs></svg><svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0"><path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.5" />{pressurePoints.map(([x, y,], index) => <g key={index}>{index % 6 === 0 && <text x={x} y={Math.max(13, y - 6)} textAnchor="middle" fontSize="10" fill="#466d84" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{points[index].pressure} hPa</text>}</g>)}{points.map((point, index) => { const height = point.rain ? Math.max(3, point.rain / 2.3 * 55) : 0; return <g key={point.timestamp}>{point.rain > 0 && <text x={index * POINT_WIDTH + POINT_WIDTH / 2} y={ROW.clouds - height - 7} textAnchor="middle" fontSize="10" fontWeight="700" fill="#1266c5" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{point.rain.toFixed(1)}mm</text>}<rect x={index * POINT_WIDTH + 25} y={ROW.clouds - height - 6} width="9" height={height} fill="#1268d0" /></g>; })}</svg><div className="absolute right-3 top-1.5 rounded-[4px] bg-[#0869d8] px-2 py-1 text-[11px] font-bold text-white">2.4mm</div></div>
+          <div className="grid bg-[#dff1df] text-[15px] font-medium text-[#5c6d61]" style={{ height: ROW.base, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.cloudBase}</div>)}</div>
+        </div>
+        <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#56646d]/75" style={{ left: 8 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }}><span className="absolute -top-3.5 -translate-x-1/2 rounded-[2px] bg-[#536b73] px-1.5 py-0.5 text-[8px] font-bold text-white">JETZT</span></div>
+      </div></div>
     </div>
+    <footer className="flex justify-between border-t border-[#cbd0d6] bg-[#f1f3f5] px-4 py-2 text-[10px] text-[#7a828a]"><span><b className="text-[#5a646d]">Hinweis:</b> Wolkentypen und Wolkenhöhen sind modellbasierte Heuristiken, keine Beobachtungen.</span><span>Quelle: <u>Open-Meteo</u></span></footer>
   </div>;
 }
