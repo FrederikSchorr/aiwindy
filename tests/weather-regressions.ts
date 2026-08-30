@@ -809,7 +809,8 @@ function testSeaWindForecast(): void {
   assert.match(markup, /data-testid="forecast-clock-glyph"/, "the wind forecast should use the shared clock glyph");
   assert.match(markup, /data-testid="sea-wind-hours-row"[^>]*data-row-height="21"[^>]*data-font-size="13"/, "the wind forecast should expose the compact shared hour-row dimensions");
   const windLabelRail = markup.match(/<aside[^>]*data-testid="sea-wind-label-rail"[^>]*>(.*?)<\/aside>/)?.[1] ?? "";
-  assert.doesNotMatch(windLabelRail, />kt<|>hPa<|>mm<|>°C</, "the wind forecast label rail should not repeat measurement units");
+  assert.equal((windLabelRail.match(/>kt</g) ?? []).length, 2, "wind and gust labels should show kt");
+  assert.doesNotMatch(windLabelRail, /⚑/, "the wind direction label should not show a flag glyph");
   assert.match(markup, /data-testid="sea-wind-current-column"[^>]*border-dashed/, "the wind forecast should keep a dashed current-time line without a visible label");
   assert.match(markup, /background-color:#f1f2f2/, "zero-knot wind should use the lightest approved color");
   assert.match(markup, /src="\/assets\/wind-arrows\/wind-arrow-ESE-112\.svg"/, "a wind reported from NW should use an arrow pointing toward SE");
@@ -1102,6 +1103,12 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(markup, /data-testid="city-meteogram-hours-row"[^>]*data-row-height="21"[^>]*data-font-size="13"/, "the meteogram hour row should match the compact wind forecast");
   const cityLabelRail = markup.match(/<aside[^>]*data-testid="city-meteogram-label-rail"[^>]*>(.*?)<\/aside>/)?.[1] ?? "";
   assert.doesNotMatch(cityLabelRail, />kt<|>hPa<|>mm<|>°C</, "the meteogram label rail should not repeat measurement units");
+  assert.match(cityLabelRail, /Bewölkung/, "the meteogram should label the icon row as Bewölkung");
+  assert.match(cityLabelRail, /height:44px[^>]*>Bewölkung/, "Bewölkung should align with the icon row");
+  assert.match(cityLabelRail, /height:42px[^>]*>Temperatur/, "Temperatur should align with its own row");
+  assert.match(cityLabelRail, /height:30px[^>]*>Taupunkt/, "Taupunkt should align with its own row");
+  assert.match(cityLabelRail, /Druck<br\/>Regen/, "Druck and Regen should share one neutral label treatment");
+  assert.doesNotMatch(cityLabelRail, /text-\[#3275a0\]/, "Druck and Regen labels should use the same gray color");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,

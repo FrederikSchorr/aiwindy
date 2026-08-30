@@ -292,10 +292,6 @@ function DirectionArrow({ degrees }: { degrees: number }) {
   );
 }
 
-function LabelGlyph() {
-  return <span className="text-[17px] leading-none text-[#303b43]" aria-hidden="true">⚑</span>;
-}
-
 export default function SeaWindForecast({ analysisJson, isLoading = false }: SeaWindForecastProps) {
   const data = extractSeaWindForecast(analysisJson);
   if (!data) {
@@ -351,14 +347,13 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
             <ForecastClockGlyph />
           </div>
           <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.wind }}>
-            <span>Wind</span>
+            <span>Wind</span><span className="text-[10px] leading-3">kt</span>
           </div>
           <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.gust }}>
-            <span>Böen</span>
+            <span>Böen</span><span className="text-[10px] leading-3">kt</span>
           </div>
           <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.direction }}>
             <span className="text-right">Windrichtung</span>
-            <LabelGlyph />
           </div>
         </aside>
 

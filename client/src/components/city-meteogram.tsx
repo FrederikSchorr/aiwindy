@@ -522,11 +522,11 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
       >
         <div style={{ height: ROW.day }} />
         <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3"><span>Stunden</span><ForecastClockGlyph /></div>
-        <div style={{ height: temperatureSectionHeight }} className="flex items-center justify-end gap-2 pr-3">
-          <span className="text-right text-[12px] leading-[15px]"><span className="text-[#a85e42]">Temperatur</span>{hasDewPoint && <><br />Taupunkt</>}</span>
-        </div>
+        <div style={{ height: ROW.icons }} className="flex items-center justify-end pr-3">Bewölkung</div>
+        <div style={{ height: ROW.temperature }} className="flex items-center justify-end pr-3 text-[#a85e42]">Temperatur</div>
+        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-3">Taupunkt</div>}
         <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-3">
-          <span className="text-right text-[12px] leading-[15px]">Druck<br /><span className="text-[#3275a0]">Regen</span></span>
+          <span className="text-right">Druck<br />Regen</span>
         </div>
         <div className="hidden" data-testid="meteogram-fixed-cloud-labels" style={{ color: cloudTypeColor("cirrus") }}>{data.bands.map((band) => <span key={band.key} data-fixed-cloud-band={band.key}>{band.label}</span>)}</div>
       </aside>
