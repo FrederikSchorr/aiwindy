@@ -146,7 +146,9 @@ export function Current() {
   const rainTestStartIndex = points.findIndex(point => point.timestamp.slice(11, 13) === "20");
   const rainColumns = points.flatMap((point, index) => index === rainTestStartIndex || point.rain <= 0
     ? []
-    : [{ key: point.timestamp, x: index * POINT_WIDTH + POINT_WIDTH / 2, rain: point.rain, showLabel: true }]
+    : [{ key: point.timestamp, x: point.timestamp.slice(11, 13) === "23"
+      ? index * POINT_WIDTH + POINT_WIDTH / 6
+      : index * POINT_WIDTH + POINT_WIDTH / 2, rain: point.rain, showLabel: true }]
   );
   if (rainTestStartIndex >= 0) {
     const testValues = [.4, .8, 1.4];
