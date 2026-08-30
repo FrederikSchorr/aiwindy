@@ -146,15 +146,17 @@ export function Current() {
   const rainTestStartIndex = points.findIndex(point => point.timestamp.slice(11, 13) === "20");
   const rainColumns = points.flatMap((point, index) => index === rainTestStartIndex || point.rain <= 0
     ? []
-    : [{ key: point.timestamp, x: index * POINT_WIDTH + POINT_WIDTH / 2, rain: point.rain }]
+    : [{ key: point.timestamp, x: index * POINT_WIDTH + POINT_WIDTH / 2, rain: point.rain, showLabel: true }]
   );
   if (rainTestStartIndex >= 0) {
     const testValues = [.4, .8, 1.4];
+    const highestTestRain = Math.max(...testValues);
     testValues.forEach((rain, hourOffset) => {
       rainColumns.push({
         key: `hourly-rain-${20 + hourOffset}`,
-        x: rainTestStartIndex * POINT_WIDTH + POINT_WIDTH / 2 + hourOffset * POINT_WIDTH / 3,
+        x: rainTestStartIndex * POINT_WIDTH + (hourOffset + .5) * POINT_WIDTH / 3,
         rain,
+        showLabel: rain === highestTestRain,
       });
     });
   }
@@ -184,11 +186,11 @@ export function Current() {
             <svg viewBox={`0 0 ${width} ${ROW.pressure}`} width={width} height={ROW.pressure} className="absolute inset-0">
               <defs><linearGradient id="current-pressure-fill" x1="0" x2="0" y1="0" y2={ROW.pressure} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#8baec0" stopOpacity=".3" /><stop offset="100%" stopColor="#cfe0e8" stopOpacity=".08" /></linearGradient></defs>
               <path d={`${smoothPath([[0, pressurePoints[0][1]], ...pressurePoints, [width, pressurePoints.at(-1)![1]]])} L ${width} ${ROW.pressure} L 0 ${ROW.pressure} Z`} fill="url(#current-pressure-fill)" />
-              {rainColumns.map(({ key, x, rain }) => {
+              {rainColumns.map(({ key, x, rain, showLabel }) => {
                 const height = Math.max(1, Math.min(rain, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
                 return <g key={key}>
                   <rect x={x - 5} y={ROW.pressure - height - 4} width="10" height={height} fill="#0968d2" />
-                  <text x={x} y={Math.max(11, ROW.pressure - height - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{rain.toFixed(1)}mm</text>
+                  {showLabel && <text x={x} y={Math.max(11, ROW.pressure - height - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{rain.toFixed(1)}mm</text>}
                 </g>;
               })}
               <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />
