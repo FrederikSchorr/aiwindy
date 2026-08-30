@@ -109,7 +109,7 @@ export function Current() {
   const temperaturePath = smoothPath(temperaturePoints);
   const temperatureArea = `${smoothPath([[0, temperaturePoints[0][1]], ...temperaturePoints, [width, temperaturePoints.at(-1)![1]]])} L ${width} 92 L 0 92 Z`;
   const pressureProfile = [151, 140, 105, 82, 102, 115, 127, 111, 96];
-  const pressurePoints = pressureProfile.map((y, index) => [index * POINT_WIDTH, y] as [number, number]);
+  const pressurePoints = pressureProfile.map((y, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, y] as [number, number]);
   const days = dayGroups();
   const grid = { gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` };
 
@@ -121,7 +121,7 @@ export function Current() {
         <div style={{ height: ROW.icons }} className="flex items-center justify-center border-b border-[#d4d8dc]">Wetter</div>
         <div style={{ height: ROW.temperature }} className="flex items-center justify-center border-b border-[#d4d8dc] text-[#a85e42]">Temperatur<br />°C</div>
         <div style={{ height: ROW.dew }} className="flex items-center justify-center border-b border-[#d4d8dc]">Taupunkt</div>
-        <div style={{ height: ROW.clouds }} className="relative"><div className="absolute inset-y-0 left-0 flex w-1/2 flex-col items-center justify-center text-center text-[10px] md:text-[12px]"><span>Wolken</span><span className="text-[#3275a0]">Regen</span><span className="text-[#3275a0]">· Druck</span><span className="text-[9px]">mm · hPa</span></div><div className="absolute inset-y-0 right-0 flex w-1/2 flex-col">{BANDS.map(band => <div key={band.key} className="flex flex-1 flex-col items-center justify-center border-b border-[#d7dbe0] text-center last:border-0"><b className="text-[9px] text-[#5d666e] md:text-[10px]">{band.label}</b><span className="text-[8px] text-[#858c93] md:text-[9px]">{band.altitude}</span></div>)}</div></div>
+        <div style={{ height: ROW.clouds }} className="flex flex-col items-center justify-center text-center text-[11px] text-[#69737b]"><span>Druck</span><span className="text-[#3275a0]">Regen</span><span className="mt-1 text-[9px]">hPa · mm</span></div>
         <div style={{ height: ROW.base }} className="flex items-center justify-center bg-[#dff1df] px-2 text-center">Wolkenbasis <u>m</u></div>
       </aside>
       <div className="meteogram-current__scroll min-w-0 flex-1 overflow-x-auto"><div className="relative" style={{ minWidth: width }}>
@@ -133,14 +133,10 @@ export function Current() {
           <div className="grid border-b border-[#d5d9de] bg-[#fafbfc] text-[15px] text-[#7b838b]" style={{ height: ROW.dew, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.dewPoint}°</div>)}</div>
           <div className="relative border-b border-[#d5d9de] bg-[#f7f8fa]" style={{ height: ROW.clouds }}>
             <svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0">
-              <defs>
-                <filter id="current-cloud-soften" x="-12%" y="-14%" width="124%" height="128%"><feGaussianBlur stdDeviation="4.2" /></filter>
-                <linearGradient id="current-cloud-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#59636a" stopOpacity=".72" /><stop offset="55%" stopColor="#737c82" stopOpacity=".45" /><stop offset="100%" stopColor="#8c9498" stopOpacity=".16" /></linearGradient>
-              </defs>
-              {BANDS.map((band, bandIndex) => <g key={band.key}><rect x="0" y={bandIndex * 70} width={width} height="70" fill={bandIndex % 2 ? "#fafbfc" : "#f5f6f8"} fillOpacity=".45" /><line x2={width} y1={bandIndex * 70} y2={bandIndex * 70} stroke="#89929b" strokeOpacity=".18" strokeDasharray="5 5" /></g>)}
-              {[9, 6, 4.5, 3.5, 1.5, .5].map(altitude => { const y = ROW.clouds - altitude / 9 * ROW.clouds; return <g key={altitude}><line x1="0" x2={width} y1={y} y2={y} stroke="#7e8992" strokeOpacity=".2" strokeDasharray="7 6" /><text x="5" y={Math.max(11, y - 4)} fontSize="10" fill="#74808a" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{altitude}km</text></g>; })}
-              {cloudShapes.map((shape, index) => <path key={index} data-cloud-vertical-overlap="true" d={shape.d} fill={shape.fill} opacity={shape.opacity} filter={shape.blur} />)}
-              {[9, 6, 4.5, 3.5, 1.5, .5].map(altitude => { const y = ROW.clouds - altitude / 9 * ROW.clouds; return <g key={`label-${altitude}`}><line x1="0" x2={width} y1={y} y2={y} stroke="#7e8992" strokeOpacity=".2" strokeDasharray="7 6" /><text x="5" y={Math.max(11, y - 4)} fontSize="10" fill="#74808a" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{altitude}km</text></g>; })}
+              <defs><linearGradient id="current-pressure-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#8baec0" stopOpacity=".26" /><stop offset="100%" stopColor="#cfe0e8" stopOpacity=".08" /></linearGradient></defs>
+              {[.25, .5, .75].map(fraction => <line key={fraction} x1="0" x2={width} y1={fraction * ROW.clouds} y2={fraction * ROW.clouds} stroke="#89949c" strokeOpacity=".18" strokeDasharray="6 7" />)}
+              <path d={`${smoothPath([[0, pressurePoints[0][1]], ...pressurePoints, [width, pressurePoints.at(-1)![1]]])} L ${width} ${ROW.clouds} L 0 ${ROW.clouds} Z`} fill="url(#current-pressure-fill)" />
+              <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
             <svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0">
               <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.5" />
