@@ -49,10 +49,6 @@ const points: Point[] = screenshotData.map((entry, index) => {
   };
 });
 const rainBars = [
-  { x: 7, height: 64, color: "#0968d2" },
-  { x: 47, height: 108, color: "#0968d2" },
-  { x: 87, height: 65, color: "#0968d2" },
-  { x: 127, height: 67, color: "#0968d2" },
   { x: 167, height: 48, color: "#0968d2" },
   { x: 207, height: 25, color: "#0968d2" },
   { x: 437, height: 46, color: "#0968d2" },
@@ -141,7 +137,6 @@ export function Current() {
             <svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0">
               <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.5" />
               {rainBars.map((bar, index) => <rect key={index} x={bar.x} y={ROW.clouds - bar.height - 6} width="13" height={bar.height} fill={bar.color} />)}
-               <text x="17" y={ROW.clouds - 116} textAnchor="middle" fontSize="11" fontWeight="700" fill="#1266c5" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">0.5mm</text>
               <text x="484" y={ROW.clouds - 76} textAnchor="middle" fontSize="11" fontWeight="700" fill="#1266c5" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">0.3mm</text>
             </svg>
              <div className="absolute top-1.5 rounded-[4px] bg-[#0869d8] px-2 py-1 text-[11px] font-bold text-white" style={{ left: 8 * POINT_WIDTH - 64 }}>2.2mm</div>
