@@ -524,7 +524,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
         <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3"><span>Stunden</span><ForecastClockGlyph /></div>
         <div style={{ height: ROW.icons }} className="flex items-center justify-end pr-3">Bewölkung</div>
         <div style={{ height: ROW.temperature }} className="flex items-center justify-end pr-3">Temperatur</div>
-        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-3">Taupunkt</div>}
+        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-3"><span data-testid="city-meteogram-dew-label" className="relative top-[-15px]">Taupunkt</span></div>}
         <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-3">
           <span className="text-right">Druck<br />Regen</span>
         </div>
@@ -569,7 +569,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                 {points.map((point) => <div key={`temperature-${point.timestamp}`} className="flex items-center justify-center">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
               </div>
               {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="pointer-events-none absolute inset-0 z-30 grid" style={grid}>
-                {points.map((point) => <div key={`dew-${point.timestamp}`} className="relative"><div className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] leading-[16px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature + (ROW.dewPoint - 16) / 2 }}>{point.dewPoint !== null ? `${Math.round(point.dewPoint)}°` : "—"}</div></div>)}
+                {points.map((point) => <div key={`dew-${point.timestamp}`} className="relative"><div className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] leading-[16px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 8 }}>{point.dewPoint !== null ? `${Math.round(point.dewPoint)}°` : "—"}</div></div>)}
               </div>}
             </div>
 

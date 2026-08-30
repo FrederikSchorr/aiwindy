@@ -1106,10 +1106,11 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(cityLabelRail, /Bewölkung/, "the meteogram should label the icon row as Bewölkung");
   assert.match(cityLabelRail, /height:44px[^>]*>Bewölkung/, "Bewölkung should align with the icon row");
   assert.match(cityLabelRail, /height:42px[^>]*>Temperatur/, "Temperatur should align with its own row");
-  assert.match(cityLabelRail, /height:30px[^>]*>Taupunkt/, "Taupunkt should align with its own row");
+  assert.match(cityLabelRail, /height:30px[\s\S]*?data-testid="city-meteogram-dew-label"[\s\S]*>Taupunkt/, "Taupunkt should align with its own row");
   assert.match(cityLabelRail, /Druck<br\/>Regen/, "Druck and Regen should share one neutral label treatment");
   assert.doesNotMatch(cityLabelRail, /text-\[#3275a0\]|text-\[#a85e42\]/, "temperature, pressure, and rain labels should use the same gray color");
-  assert.match(markup, /data-testid="meteogram-dew-point-row"[\s\S]*?style="top:93px"/, "dew point values should be vertically centered in their own row");
+  assert.match(markup, /data-testid="meteogram-dew-point-row"[\s\S]*?style="top:78px"/, "dew point values should keep their established chart position");
+  assert.match(markup, /data-testid="city-meteogram-dew-label"[^>]*class="relative top-\[-15px\]"/, "the Taupunkt label should move up without moving the chart values");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,
