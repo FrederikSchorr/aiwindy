@@ -166,14 +166,14 @@ export function Current() {
 
   return <div className="meteogram-current overflow-hidden bg-[#f5f6f8] text-[#30353a]">
     <div className="flex min-w-0">
-      <aside className="w-[128px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[11px] leading-[14px] text-[#7a7e82] md:w-[148px]">
+      <aside className="w-[108px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[11px] leading-[14px] text-[#7a7e82] md:w-[116px]">
         <div style={{ height: ROW.day }} />
-        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-4 pr-3"><span>Stunden</span><AxisGlyph kind="clock" /></div>
-        <div style={{ height: ROW.icons + ROW.temperature + ROW.dew }} className="flex items-center justify-end gap-4 pr-3">
+        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-2"><span>Stunden</span><AxisGlyph kind="clock" /></div>
+        <div style={{ height: ROW.icons + ROW.temperature + ROW.dew }} className="flex items-center justify-end gap-2 pr-2">
           <span className="text-right text-[12px] leading-[15px]"><span className="text-[#a85e42]">Temperatur</span><br />Taupunkt</span>
           <AxisGlyph kind="temperature" />
         </div>
-        <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-4 pr-3">
+        <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-2">
           <span className="text-right text-[12px] leading-[15px]">Druck<br /><span className="text-[#3275a0]">Regen</span></span>
           <AxisGlyph kind="pressure" />
         </div>
@@ -181,7 +181,7 @@ export function Current() {
       <div className="meteogram-current__scroll min-w-0 flex-1 overflow-x-auto"><div className="relative" style={{ minWidth: width }}>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex" style={{ top: ROW.day }}>{points.map(point => <div key={point.timestamp} className={point.isDay ? "bg-[#fafbfc]" : "bg-[#eaecf7]"} style={{ width: POINT_WIDTH }} />)}</div>
         <div className="relative z-10">
-          <div className="grid bg-[#f7f8fa] text-[14px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>{days.map(day => <div key={day.label} className="flex items-center border-r border-[#d5d9de] pl-3" style={{ gridColumn: `span ${day.count}` }}><span>{day.label}</span></div>)}</div>
+          <div className="grid bg-[#f7f8fa] text-[14px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>{days.map(day => <div key={day.label} className="flex items-center border-r border-[#d5d9de] pl-3" style={{ gridColumn: `span ${day.count}` }}><span className="whitespace-nowrap">{day.label}</span></div>)}</div>
           <div className="grid text-[15px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{Number(point.timestamp.slice(11, 13))}</div>)}</div>
           <TemperatureDewSection points={points} width={width} grid={grid} temperatureArea={temperatureArea} dewBoundaryPoints={dewBoundaryPoints} />
           <div className="relative" style={{ height: ROW.pressure }}>
