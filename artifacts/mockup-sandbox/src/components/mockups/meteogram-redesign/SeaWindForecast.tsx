@@ -90,9 +90,10 @@ function DirectionArrow({ degrees }: { degrees: number }) {
       viewBox="0 0 24 24"
       className="h-7 w-7 shrink-0"
       aria-hidden="true"
-      style={{ transform: `rotate(${degrees}deg)` }}
+      shapeRendering="geometricPrecision"
+      style={{ transform: `rotate(${degrees}deg)`, transformOrigin: "center" }}
     >
-      <path d="M12 1.5 22 11.5l-6.8-1.2v10.2H8.8V10.3L2 11.5 12 1.5Z" fill="#5e7890" />
+      <path d="M12 1 20.5 14l-4.25-1.3V23h-8.5V12.7L3.5 14 12 1Z" fill="#5e7890" />
     </svg>
   );
 }

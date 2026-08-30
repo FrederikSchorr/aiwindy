@@ -29,6 +29,12 @@ For the sea-area wind chart, the Windy color scale starts at white/light gray fo
 
 **How to apply:** Keep this palette consistent for both wind and gust cells in the sea-area chart; use dark text on the bright middle/highlight colors and reserve white text for the darkest endpoints.
 
+Sea-area wind-direction arrows should match the measured Windy reference: slate blue `#5E7890`, about 19–22 px wide by 22–26 px long in a 42 px column, with roughly 221–229 filled pixels. Use a long, broad head and a shaft about one-third of the arrow width, rotated around the geometric center.
+
+**Why:** Freehand arrow approximations repeatedly looked distorted even when their nominal width and height seemed close; matching the rendered filled area and silhouette proportions produced the accepted Windy-like geometry.
+
+**How to apply:** Preserve a square SVG viewBox and equal CSS width/height so rotation cannot stretch the shape. When changing the icon, compare connected-component bounds and filled area against the reference rather than judging only the unrotated path.
+
 Keep the main timeline in three-hour columns, but render precipitation inside each column as up to three narrow hourly bars. The daily rain badge shows the sum of all hourly amounts; never represent a three-hour rain block as one wide aggregated bar.
 Label the hourly-bar cluster with its highest individual hourly amount; reserve the daily total exclusively for the day badge.
 
