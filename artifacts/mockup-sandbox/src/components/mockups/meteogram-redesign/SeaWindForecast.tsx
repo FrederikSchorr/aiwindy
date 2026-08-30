@@ -92,7 +92,7 @@ function DirectionArrow({ degrees }: { degrees: number }) {
       aria-hidden="true"
       style={{ transform: `rotate(${degrees}deg)` }}
     >
-      <path d="M12 2.5 20.5 11.3l-5.2-.9v10.6H8.7V10.4l-5.2.9L12 2.5Z" fill="#5e7890" />
+      <path d="M12 1.5 22 11.5l-6.8-1.2v10.2H8.8V10.3L2 11.5 12 1.5Z" fill="#5e7890" />
     </svg>
   );
 }
