@@ -1,7 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import windSystemsJson from "../data/windsystems.json" with { type: "json" };
 import type { AnalysisJson } from "./analysis-store.js";
-import { getOpenMeteoTimezone } from "./weather-open-meteo.js";
+import {
+  buildSection4WeatherContext,
+  getOpenMeteoTimezone,
+} from "./weather-open-meteo.js";
 
 // ── Wind systems ──────────────────────────────────────────────────────────────
 
@@ -127,6 +130,8 @@ export async function generateWeatherOutput(
 
   const windsystems = getWindsystemsForCountry(position.country);
   const locationLabel = position.sailingArea?.name_de ?? position.city?.name_de ?? position.userInput;
+  const cityLabel = position.city?.name_de ?? position.userInput;
+  const timezone = getOpenMeteoTimezone(position.countryCode);
 
   const {
     todayLabel,
@@ -139,7 +144,7 @@ export async function generateWeatherOutput(
     forecastEndDay,
   } = buildForecastDateLabels(
     analysis.meta.requestDate,
-    getOpenMeteoTimezone(position.countryCode),
+    timezone,
   );
 
   // ── Build message content ─────────────────────────────────────────────────
@@ -168,9 +173,31 @@ export async function generateWeatherOutput(
   // Text context
   const generalWeather = (europe["generalWeather"] as any)?.text_de ?? null;
   const nationalSynopsis = (national["synopsis"] as any)?.text_de ?? null;
-  const cityCloudContext = {
-    cloudRainThunderstorm: local["cloudRainThunderstorm"] ?? null,
-    nationalCloudRain: local["nationalCloudRain"] ?? null,
+  const section4LocalForecast = buildSection4WeatherContext(
+    analysis.weatherRaw,
+    timezone,
+    new Date(analysis.meta.requestDate),
+  );
+  const section4Context = {
+    targetCity: cityLabel,
+    localForecast: section4LocalForecast,
+    nationalLocalWeather: local["nationalCloudRain"] ?? null,
+    nationalWarning: local["warnings"] ?? null,
+    nationalSynopsis,
+    europeanOverview: generalWeather,
+    frontCharts: {
+      current: knmiCurrentEntry ? {
+        timestamp: knmiCurrentEntry.timestamp ?? null,
+        available: Boolean(knmiCurrentEntry.imageBase64),
+      } : null,
+      forecast: knmiForecastEntry ? {
+        timestamp: knmiForecastEntry.timestamp ?? null,
+        available: Boolean(knmiForecastEntry.imageBase64),
+      } : null,
+    },
+    fallbackLocalSummary: section4LocalForecast
+      ? undefined
+      : local["cloudRainThunderstorm"] ?? null,
   };
 
   content.push({
@@ -191,13 +218,14 @@ ${nationalSynopsis ?? "(nicht verfügbar)"}
 === LOKALE WETTERDATEN FÜR ABSCHNITT 3 (weatherPreprocessed.local) ===
 ${JSON.stringify(local, null, 2)}
 
-=== STADTDATEN FÜR ABSCHNITT 4 ===
-${JSON.stringify(cityCloudContext, null, 2)}
+=== ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4 ===
+${JSON.stringify(section4Context, null, 2)}
 
 === QUELLEN-VORRANG FÜR LOKALE DATEN ===
 - wind und wave sind die Open-Meteo-Grundversorgung für Abschnitt 3.
-- cloudRainThunderstorm enthält ausschließlich Stadtdaten und ist die Open-Meteo-Grundversorgung für Abschnitt 4.
-- nationalWind und sailingareaForecast sind konkrete nationale Ergänzungen für Abschnitt 3; nationalCloudRain ist eine konkrete nationale Stadtdaten-Ergänzung für Abschnitt 4. Verwende nationale Werte für die jeweils abgedeckten Zeiträume bevorzugt; Open-Meteo ergänzt ausschließlich fehlende Tage.
+- localForecast enthält ausschließlich Stadtwerte und ist die zeitliche Grundversorgung für Abschnitt 4.
+- nationalWind und sailingareaForecast sind konkrete nationale Ergänzungen für Abschnitt 3; nationalLocalWeather und nationalSynopsis sind konkrete nationale Ergänzungen für Abschnitt 4. Verwende nationale Werte für die jeweils abgedeckten Zeiträume bevorzugt.
+- europeanOverview und die KNMI-Frontkarten liefern Abschnitt 4 ausschließlich den großräumigen Erklärungszusammenhang. Lokale Zeitangaben stammen aus localForecast oder konkreten nationalen Daten.
 - warnings ist ein separat geprüftes nationales Warnzentrum. Wenn vorhanden, seinen Text in Abschnitt 3 unverändert übernehmen.
 
 === WINDSYSTEME für ${position.country} ===
@@ -233,11 +261,18 @@ Regeln pro Abschnitt:
 - Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
 - Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
-#4 cloudsRain — Wetter & Regen (Inputs: NUR "STADTDATEN FÜR ABSCHNITT 4" — KEINE Seegebietsdaten, KEINE Wind-/Wellendaten, KEINE Europakarten, KEINE nationale Synopsis)
-- Erzeuge genau 3 Bullets: "Heute (${todayLabel})", "Morgen" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit dem Zeitbezug und Datum, niemals mit einem Emoji.
-- Bullet Heute und Bullet Morgen: inhaltlich wie bisher kurz und konkret mit Bewölkung + Regen + Gewitterrisiko. Setze ☁️/🌤️/☀️ direkt vor den Bewölkungstext, 🌧️ direkt vor Regen und ⛈️ direkt vor das Gewitterrisiko. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.
-- Bullet ${forecastOverviewLabel}: nur ein grober Überblick für die Tage ${overviewStartDay}. bis ${forecastEndDay}. (Bewölkung, überwiegend trocken/nass, grobes Gewitterrisiko), keine Stundenwerte und keine einzelnen Tagesdetails. Setze die passenden Wetter-Icons direkt vor den jeweiligen Text.
-- Falls keine Daten: "Wetterprognose aus regionalem Wetterbericht nicht verfügbar."
+#4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)
+- Erzeuge GENAU 3 Bullets in dieser Reihenfolge: "Heute (${todayLabel})", "Morgen (${tomorrowLabel})" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit diesem Zeitbezug und Datum, niemals mit einem Emoji.
+- INTERPRETIERE Auffälligkeiten und Veränderungen, statt die im Meteogramm bereits sichtbaren Werte vollständig nachzuerzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal, deutlicher Wetterumschwung. Bewölkung nur erwähnen, wenn ihr Wechsel für die Entwicklung relevant ist.
+- Heute: granular. Konkrete Uhrzeiten aus localForecast.timeline sind erlaubt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge, z.B. "🌧️ gegen 12 Uhr kräftiger Regen", "🌡️ danach Abkühlung auf 20–24°C" oder "📉 ab Mittag deutlicher Druckfall".
+- Morgen: weniger granular. Verwende nur grobe Tageszeiten (nachts, morgens, mittags, nachmittags, abends), keine exakten Uhrzeiten; konzentriere dich auf die wichtigste Veränderung oder den stabilen Verlauf.
+- ${forecastOverviewLabel}: fasse die folgenden vier Tage ausschließlich als High-Level-Trend zusammen. Keine Uhrzeiten und keine vollständige Aufzählung aller Einzelwerte.
+- Verknüpfe lokale Entwicklungen mit europeanOverview, nationalSynopsis, nationalLocalWeather und den KNMI-Frontkarten. Ein markanter lokaler Druckfall darf nur dann als wahrscheinlicher Frontdurchgang bezeichnet werden, wenn eine zeitlich und räumlich passende Front bzw. nationale Synopsis dies stützt. Ohne solche Bestätigung schreibe nur "Wetterwechsel" oder "zunehmender Tiefdruckeinfluss".
+- Nationale konkrete Informationen und Warnungen für den Zielort haben Vorrang; die europäische Großwetterlage liefert nur den übergeordneten Zusammenhang.
+- GEWITTERREGEL: Ein Gewitterrisiko darf ausschließlich erwähnt werden, wenn localForecast.summary.thunderstorm.signal=true oder ein konkreter nationaler Wetterbericht/eine Warnung Gewitter für Zielort und Zeitraum nennt. Hohe CAPE-Werte allein sind KEIN Gewittersignal. Bei signal=false weder "erhebliches" noch "geringes Gewitterrisiko" erfinden.
+- Verwende passende Icons direkt vor der jeweiligen Entwicklung, z.B. 📉 Druckfall, 📈 Druckanstieg, 🌧️ Regen, ⛈️ Gewitter, 🌡️ Temperaturwechsel, 🌀 Front/Wetterwechsel, ☀️ Stabilisierung.
+- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
+- Falls localForecast fehlt, erzeuge trotzdem alle 3 Bullets mit den korrekten Präfixen und einer kurzen transparenten Nichtverfügbarkeits-Aussage; erfinde keine Entwicklung.
 
 Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt mit dem Marker in einer eigenen Zeile):
 ===airPressureMasses===

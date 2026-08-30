@@ -137,6 +137,14 @@ export type CloudType =
 
 const THUNDERSTORM_WEATHER_CODES = new Set([95, 96, 99]);
 
+export function isThunderstormSignal(
+  weatherCode: number | null,
+  cloudType: CloudType | null,
+): boolean {
+  return cloudType === "cumulonimbus"
+    || (weatherCode !== null && THUNDERSTORM_WEATHER_CODES.has(weatherCode));
+}
+
 export function classifyCloudType(input: {
   totalPct: number | null;
   lowPct: number | null;
@@ -436,8 +444,7 @@ function localDateHour(timestamp: string, timezone: string): {
   return { dateKey, label: `${DAY_NAMES[weekday]} ${day}.${month}`, hour };
 }
 
-function currentLocalDateHour(timezone: string): { dateKey: string; hour: number } {
-  const now = new Date();
+function currentLocalDateHour(timezone: string, now = new Date()): { dateKey: string; hour: number } {
   return {
     dateKey: new Intl.DateTimeFormat("sv-SE", { timeZone: timezone }).format(now),
     hour: Number(
@@ -447,6 +454,243 @@ function currentLocalDateHour(timezone: string): { dateKey: string; hour: number
         timeZone: timezone,
       }).format(now),
     ) % 24,
+  };
+}
+
+type Section4WeatherRow = {
+  dateKey: string;
+  label: string;
+  hour: number;
+  temperatureC: number | null;
+  pressureHPa: number | null;
+  rainMm: number | null;
+  precipitationProbabilityPct: number | null;
+  cloudCoverPct: number | null;
+  weatherCode: number | null;
+  cloudType: CloudType | null;
+  thunderstormSignal: boolean;
+};
+
+type TimedChange = {
+  from: string;
+  to: string;
+  change: number;
+};
+
+function validCloudType(value: unknown): CloudType | null {
+  return value === "clear"
+    || value === "cirrus"
+    || value === "altostratus"
+    || value === "cumulus"
+    || value === "stratus"
+    || value === "cumulonimbus"
+    || value === "mixed"
+    ? value
+    : null;
+}
+
+function roundTo(value: number, digits = 1): number {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function formatHour(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function stepChange(
+  rows: Section4WeatherRow[],
+  select: (row: Section4WeatherRow) => number | null,
+  direction: "drop" | "rise",
+): TimedChange | null {
+  let result: TimedChange | null = null;
+  let previous: { hour: number; value: number } | null = null;
+  for (const row of rows) {
+    const value = select(row);
+    if (value === null) continue;
+    if (previous) {
+      const change = value - previous.value;
+      const isBetter = direction === "drop"
+        ? change < (result?.change ?? 0)
+        : change > (result?.change ?? 0);
+      if (isBetter) {
+        result = {
+          from: formatHour(previous.hour),
+          to: formatHour(row.hour),
+          change: roundTo(change),
+        };
+      }
+    }
+    previous = { hour: row.hour, value };
+  }
+  return result;
+}
+
+function rainPeriods(rows: Section4WeatherRow[]): Array<{
+  period: string;
+  totalMm: number;
+  peakMm: number;
+}> {
+  const periods: Array<{ period: string; totalMm: number; peakMm: number }> = [];
+  let active: { start: number; end: number; total: number; peak: number } | null = null;
+  const close = () => {
+    if (!active) return;
+    periods.push({
+      period: active.start === active.end
+        ? formatHour(active.start)
+        : `${formatHour(active.start)}–${formatHour(active.end)}`,
+      totalMm: roundTo(active.total),
+      peakMm: roundTo(active.peak),
+    });
+    active = null;
+  };
+
+  for (const row of rows) {
+    const rain = row.rainMm ?? 0;
+    if (rain > 0.05) {
+      if (!active) active = { start: row.hour, end: row.hour, total: 0, peak: 0 };
+      active.end = row.hour;
+      active.total += rain;
+      active.peak = Math.max(active.peak, rain);
+    } else {
+      close();
+    }
+  }
+  close();
+  return periods;
+}
+
+function summarizeSection4Day(rows: Section4WeatherRow[]): Record<string, unknown> {
+  const temperatures = rows
+    .map(row => row.temperatureC)
+    .filter((value): value is number => value !== null);
+  const pressures = rows
+    .map(row => row.pressureHPa)
+    .filter((value): value is number => value !== null);
+  const cloudCover = rows
+    .map(row => row.cloudCoverPct)
+    .filter((value): value is number => value !== null);
+  const rain = rows
+    .map(row => row.rainMm)
+    .filter((value): value is number => value !== null);
+  const thunderstormTimes = rows
+    .filter(row => row.thunderstormSignal)
+    .map(row => formatHour(row.hour));
+
+  const temperatureStart = temperatures[0] ?? null;
+  const temperatureEnd = temperatures.at(-1) ?? null;
+  const pressureStart = pressures[0] ?? null;
+  const pressureEnd = pressures.at(-1) ?? null;
+
+  return {
+    temperature: temperatures.length ? {
+      minC: roundTo(Math.min(...temperatures)),
+      maxC: roundTo(Math.max(...temperatures)),
+      startC: roundTo(temperatureStart!),
+      endC: roundTo(temperatureEnd!),
+      changeC: roundTo(temperatureEnd! - temperatureStart!),
+      steepestDrop: stepChange(rows, row => row.temperatureC, "drop"),
+      steepestRise: stepChange(rows, row => row.temperatureC, "rise"),
+    } : null,
+    pressure: pressures.length ? {
+      minHPa: roundTo(Math.min(...pressures)),
+      maxHPa: roundTo(Math.max(...pressures)),
+      startHPa: roundTo(pressureStart!),
+      endHPa: roundTo(pressureEnd!),
+      changeHPa: roundTo(pressureEnd! - pressureStart!),
+      steepestDrop: stepChange(rows, row => row.pressureHPa, "drop"),
+      steepestRise: stepChange(rows, row => row.pressureHPa, "rise"),
+    } : null,
+    rain: rain.length ? {
+      totalMm: roundTo(rain.reduce((sum, value) => sum + value, 0)),
+      peakIntervalMm: roundTo(Math.max(...rain)),
+      periods: rainPeriods(rows),
+    } : null,
+    cloudCover: cloudCover.length ? {
+      minPct: Math.round(Math.min(...cloudCover)),
+      maxPct: Math.round(Math.max(...cloudCover)),
+    } : null,
+    thunderstorm: {
+      signal: thunderstormTimes.length > 0,
+      times: thunderstormTimes,
+    },
+  };
+}
+
+export function buildSection4WeatherContext(
+  rawData: Record<string, unknown>,
+  timezone: string,
+  referenceTime = new Date(),
+): Record<string, unknown> | null {
+  const forecast = rawData["openMeteoForecast"] as any;
+  const city = forecast?.city;
+  const hourly = city?.hourly;
+  if (!Array.isArray(hourly?.timestamps)) return null;
+
+  const reference = currentLocalDateHour(timezone, referenceTime);
+  const byDate = new Map<string, Section4WeatherRow[]>();
+  for (let index = 0; index < hourly.timestamps.length; index++) {
+    const timestamp = hourly.timestamps[index];
+    if (typeof timestamp !== "string") continue;
+    const local = localDateHour(timestamp, timezone);
+    if (local.dateKey < reference.dateKey) continue;
+    const weatherCode = numberAt(hourly.weatherCode, index);
+    const cloudType = validCloudType(hourly.cloudType?.[index]);
+    const row: Section4WeatherRow = {
+      dateKey: local.dateKey,
+      label: local.label,
+      hour: local.hour,
+      temperatureC: numberAt(hourly.temp2mC, index),
+      pressureHPa: numberAt(hourly.pressureMslHPa, index),
+      rainMm: numberAt(hourly.rainMm, index),
+      precipitationProbabilityPct: numberAt(hourly.precipProbabilityPct, index),
+      cloudCoverPct: numberAt(hourly.cloudCoverPct, index),
+      weatherCode,
+      cloudType,
+      thunderstormSignal: isThunderstormSignal(weatherCode, cloudType),
+    };
+    const rows = byDate.get(local.dateKey) ?? [];
+    rows.push(row);
+    byDate.set(local.dateKey, rows);
+  }
+
+  const days = Array.from(byDate.values()).slice(0, 6).map((allRows, index) => {
+    const futureRows = index === 0 && allRows[0]?.dateKey === reference.dateKey
+      ? allRows.filter(row => row.hour >= reference.hour)
+      : allRows;
+    const rows = futureRows.length ? futureRows : allRows.slice(-1);
+    return {
+      label: allRows[0]?.label ?? "",
+      date: allRows[0]?.dateKey ?? "",
+      detailLevel: index === 0 ? "granular" : index === 1 ? "reduced" : "overview",
+      summary: summarizeSection4Day(rows),
+      timeline: index < 2
+        ? rows.map(row => ({
+          time: formatHour(row.hour),
+          temperatureC: row.temperatureC,
+          pressureHPa: row.pressureHPa,
+          rainMm: row.rainMm,
+          precipitationProbabilityPct: row.precipitationProbabilityPct,
+          cloudCoverPct: row.cloudCoverPct,
+          weatherCode: row.weatherCode,
+          cloudType: row.cloudType,
+          thunderstormSignal: row.thunderstormSignal,
+        }))
+        : undefined,
+    };
+  });
+
+  if (!days.length) return null;
+  return {
+    source: "Open-Meteo Forecast API",
+    city: city?.name ?? null,
+    coordinates: city?.coordinates ?? null,
+    timezone,
+    referenceLocalTime: {
+      date: reference.dateKey,
+      hour: formatHour(reference.hour),
+    },
+    days,
   };
 }
 
@@ -528,7 +772,14 @@ export function preprocessOpenMeteoLocal(
 
   const now = currentLocalDateHour(timezone);
   type WindRow = { label: string; dateKey: string; hour: number; speed: number; gust: number; direction: string };
-  type WeatherRow = { label: string; dateKey: string; cloud: number; rain: number; cape: number; weatherCode: number | null };
+  type WeatherRow = {
+    label: string;
+    dateKey: string;
+    cloud: number;
+    rain: number;
+    weatherCode: number | null;
+    cloudType: CloudType | null;
+  };
   const windDays = new Map<string, WindRow[]>();
   const weatherDays = new Map<string, WeatherRow[]>();
 
@@ -561,13 +812,16 @@ export function preprocessOpenMeteoLocal(
     const rain = cityHourly.rainMm?.[index];
     if (typeof cloud === "number" && typeof rain === "number") {
       const rows = weatherDays.get(local.dateKey) ?? [];
+      const weatherCode = typeof cityHourly.weatherCode?.[index] === "number"
+        ? cityHourly.weatherCode[index]
+        : null;
       rows.push({
         label: local.label,
         dateKey: local.dateKey,
         cloud,
         rain,
-        cape: typeof cityHourly.capeJkg?.[index] === "number" ? cityHourly.capeJkg[index] : 0,
-        weatherCode: typeof cityHourly.weatherCode?.[index] === "number" ? cityHourly.weatherCode[index] : null,
+        weatherCode,
+        cloudType: validCloudType(cityHourly.cloudType?.[index]),
       });
       weatherDays.set(local.dateKey, rows);
     }
@@ -588,7 +842,7 @@ export function preprocessOpenMeteoLocal(
     const avgCloud = rows.reduce((sum, row) => sum + row.cloud, 0) / rows.length;
     const rain = rows.reduce((sum, row) => sum + row.rain, 0);
     const thunderstorm = rows.some(row =>
-      row.cape >= 1000 || [95, 96, 99].includes(row.weatherCode ?? -1),
+      isThunderstormSignal(row.weatherCode, row.cloudType),
     );
     return `${rows[0].label}: ${cloudDescription(avgCloud)}, ${rain >= 0.2 ? `${rain.toFixed(1)} mm Regen` : "trocken"}${thunderstorm ? ", Gewitterrisiko" : ", kein Gewitterrisiko"}.`;
   }).join("\n");

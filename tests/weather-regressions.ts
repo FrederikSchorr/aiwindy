@@ -12,7 +12,12 @@ import {
   fetchNationalWeather,
   preprocessLocalWeather,
 } from "../server/weather-national.js";
-import { preprocessOpenMeteoLocal, classifyCloudType, estimateCloudBaseM } from "../server/weather-open-meteo.js";
+import {
+  buildSection4WeatherContext,
+  preprocessOpenMeteoLocal,
+  classifyCloudType,
+  estimateCloudBaseM,
+} from "../server/weather-open-meteo.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
 
@@ -421,6 +426,114 @@ function testCloudTypeClassification(): void {
   );
 }
 
+function testSection4DevelopmentSignals(): void {
+  const timestamps = [
+    "2026-08-22T09:00:00",
+    "2026-08-22T12:00:00",
+    "2026-08-22T15:00:00",
+    "2026-08-22T18:00:00",
+    "2026-08-23T06:00:00",
+    "2026-08-23T12:00:00",
+    "2026-08-23T18:00:00",
+    "2026-08-24T12:00:00",
+    "2026-08-25T12:00:00",
+    "2026-08-26T12:00:00",
+    "2026-08-27T12:00:00",
+  ];
+  const rawData = {
+    openMeteoForecast: {
+      city: {
+        name: "Teststadt",
+        coordinates: { lat: 47.95, lon: 16.84 },
+        hourly: {
+          timestamps,
+          temp2mC: [30, 29, 24, 22, 20, 25, 21, 23, 24, 22, 21],
+          pressureMslHPa: [1018, 1014, 1011, 1010, 1011, 1014, 1016, 1017, 1018, 1019, 1020],
+          rainMm: [0, 5, 1, 0, 0, 0.2, 0, 0, 0, 0, 0],
+          precipProbabilityPct: [10, 90, 70, 20, 10, 30, 10, 5, 5, 5, 5],
+          cloudCoverPct: [20, 90, 80, 40, 20, 50, 30, 20, 10, 20, 10],
+          weatherCode: [1, 63, 95, 2, 1, 51, 1, 1, 0, 1, 0],
+          cloudType: [
+            "cumulus",
+            "stratus",
+            "mixed",
+            "cumulus",
+            "clear",
+            "stratus",
+            "cumulus",
+            "cumulus",
+            "clear",
+            "cumulus",
+            "clear",
+          ],
+          capeJkg: new Array(timestamps.length).fill(5000),
+        },
+      },
+    },
+  };
+
+  const context = buildSection4WeatherContext(
+    rawData,
+    "Europe/Vienna",
+    new REAL_DATE("2026-08-22T07:00:00.000Z"),
+  ) as any;
+  assert.ok(context, "structured section-4 context should be available");
+  assert.equal(context.days.length, 6, "section 4 should cover all six forecast days");
+
+  const today = context.days[0];
+  assert.equal(today.detailLevel, "granular");
+  assert.equal(today.summary.pressure.changeHPa, -8);
+  assert.deepEqual(today.summary.pressure.steepestDrop, {
+    from: "09:00",
+    to: "12:00",
+    change: -4,
+  });
+  assert.equal(today.summary.rain.totalMm, 6);
+  assert.deepEqual(today.summary.rain.periods, [{
+    period: "12:00–15:00",
+    totalMm: 6,
+    peakMm: 5,
+  }]);
+  assert.deepEqual(today.summary.temperature.steepestDrop, {
+    from: "12:00",
+    to: "15:00",
+    change: -5,
+  });
+  assert.deepEqual(today.summary.thunderstorm, {
+    signal: true,
+    times: ["15:00"],
+  });
+  assert.ok(Array.isArray(today.timeline), "today should retain the granular timeline");
+  assert.ok(Array.isArray(context.days[1].timeline), "tomorrow should retain a reduced timeline");
+  assert.equal(context.days[2].timeline, undefined, "later days should only expose trend summaries");
+  assert.doesNotMatch(
+    JSON.stringify(context),
+    /cape/i,
+    "raw CAPE must not reach the section-4 interpretation context",
+  );
+
+  const capeOnlyRaw = structuredClone(rawData) as any;
+  capeOnlyRaw.openMeteoForecast.city.hourly.weatherCode.fill(1);
+  capeOnlyRaw.openMeteoForecast.city.hourly.cloudType.fill("cumulus");
+  const capeOnly = buildSection4WeatherContext(
+    capeOnlyRaw,
+    "Europe/Vienna",
+    new REAL_DATE("2026-08-22T07:00:00.000Z"),
+  ) as any;
+  assert.equal(
+    capeOnly.days[0].summary.thunderstorm.signal,
+    false,
+    "high CAPE without a weather-code or cumulonimbus signal must not create thunderstorm risk",
+  );
+
+  const local = preprocessOpenMeteoLocal(capeOnlyRaw, "Europe/Vienna") as any;
+  assert.match(
+    local.cloudRainThunderstorm.text_de,
+    /kein Gewitterrisiko/,
+    "the generic local summary must use the same evidence rule as the meteogram",
+  );
+}
+
 function testCloudBaseEstimate(): void {
   assert.equal(estimateCloudBaseM(30.7, 21.2), 1188, "125m per °C dew point depression");
   assert.equal(estimateCloudBaseM(20, 20), 0, "saturated air has cloud base at the surface");
@@ -769,6 +882,7 @@ async function main(): Promise<void> {
   testCityMeteogramDoesNotInventCloudsInEmptyBands();
   testCityMeteogramMalformedArrays();
   await withFixedDate(async () => {
+    testSection4DevelopmentSignals();
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();
     await testFailedNationalProvidersStayTransparent();

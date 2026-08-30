@@ -21,7 +21,6 @@ import {
   extractGreeceWarning,
   preprocessGreeceLocalWind,
   preprocessGreeceLocalWave,
-  preprocessGreeceLocalCloudRainThunderstorm,
   preprocessGreeceLocalTemperature,
   preprocessGreeceLocalWaterTemp,
 } from "./weather-national-greece.js";
@@ -219,10 +218,10 @@ export async function preprocessLocalWeather(
     const galeData = rawData["greeceMarineForecast"] as Record<string, unknown> | null;
     const emyName = getGreekEmyName(position.sailingArea);
     return {
+      ...genericLocal,
       ...(await extractGreeceWarning(galeData, emyName, anthropic, signal)),
       ...(await preprocessGreeceLocalWind(rawData, anthropic, signal)),
       ...(await preprocessGreeceLocalWave(rawData, anthropic, signal)),
-      ...(await preprocessGreeceLocalCloudRainThunderstorm(rawData, anthropic, signal)),
       ...preprocessGreeceLocalTemperature(rawData),
       ...preprocessGreeceLocalWaterTemp(rawData),
     };
