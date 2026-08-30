@@ -24,6 +24,7 @@ The Windy link below the city meteogram must use the recognized city coordinates
 The production meteogram container uses subtle Windy-style rounded corners and the app's global Open Sans hierarchy; chart labels should remain readable at normal body-text scale rather than using miniature map-overlay typography.
 
 Keep the main timeline in three-hour columns, but render precipitation inside each column as up to three narrow hourly bars. The daily rain badge shows the sum of all hourly amounts; never represent a three-hour rain block as one wide aggregated bar.
+Label the hourly-bar cluster with its highest individual hourly amount; reserve the daily total exclusively for the day badge.
 
 **Why:** The user wants the Windy-style distinction between individual hourly rain pulses while retaining the compact three-hour weather timeline.
 

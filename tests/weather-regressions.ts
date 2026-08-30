@@ -849,6 +849,8 @@ function testForecastExportPreservesRainTotals(): void {
     3,
     "all three non-zero hourly rain amounts must render as separate SVG bars",
   );
+  assert.match(markup, /data-rain-amount="3\.9mm"/, "the hourly rain label must show the highest hourly value");
+  assert.doesNotMatch(markup, /data-rain-amount="7\.2mm"/, "the daily total must not be used as the hourly bar label");
 }
 
 function testCityMeteogramVisualLayers(): void {

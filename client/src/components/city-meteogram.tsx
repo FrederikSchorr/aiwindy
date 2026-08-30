@@ -600,6 +600,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                    const totalBarWidth = rainBars.length * barWidth + Math.max(0, rainBars.length - 1) * barGap;
                    const left = index * POINT_WIDTH + POINT_WIDTH / 2 - totalBarWidth / 2;
                    const tallest = Math.max(...visibleBars);
+                   const tallestBarIndex = rainBars.findIndex((rain) => rain === tallest);
                    const labelHeight = Math.max(1, Math.min(tallest, MAX_RAIN_MM) / MAX_RAIN_MM * (ROW.pressure - 12));
                    return <g key={`rain-${point.timestamp}`} data-rain-column={formatRainAmount(totalRain)} data-rain-bar-count={rainBars.length}>
                      {rainBars.map((rain, barIndex) => {
@@ -608,7 +609,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                        const x = left + barIndex * (barWidth + barGap);
                        return <rect key={`rain-bar-${point.timestamp}-${barIndex}`} data-rain-bar-index={barIndex} data-rain-bar-amount={rain} x={x} y={ROW.pressure - height - 4} width={barWidth} height={height} fill="#0968d2"><title>{`${rain.toFixed(1)} mm Regen`}</title></rect>;
                      })}
-                     <text data-rain-amount={formatRainAmount(totalRain)} x={index * POINT_WIDTH + POINT_WIDTH / 2} y={Math.max(11, ROW.pressure - labelHeight - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{formatRainAmount(totalRain)}</text>
+                     <text data-rain-amount={formatRainAmount(tallest)} x={left + Math.max(0, tallestBarIndex) * (barWidth + barGap) + barWidth / 2} y={Math.max(11, ROW.pressure - labelHeight - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{formatRainAmount(tallest)}</text>
                    </g>;
                  })}
                 {pressurePoints.length > 1 && <path data-testid="meteogram-pressure-line" data-pressure-min={pressureMin} data-pressure-max={pressureMax} d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />}
