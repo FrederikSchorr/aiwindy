@@ -16,7 +16,7 @@ type Point = {
 };
 
 const POINT_WIDTH = 80;
-const ROW = { day: 43, hours: 34, icons: 48, temperature: 42, dew: 54, clouds: 210, base: 35 };
+const ROW = { day: 43, hours: 34, icons: 48, temperature: 42, dew: 30, clouds: 210, base: 35 };
 const BANDS: Array<{ key: CloudBand; label: string; altitude: string }> = [
   { key: "high", label: "HOCH", altitude: "6–13 km" },
   { key: "mid", label: "MITTEL", altitude: "2–6 km" },
@@ -85,13 +85,12 @@ function weatherIcon(point: Point) {
   if (point.cloudType === "clear") return <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#f4b400" /><g stroke="#e5a500" strokeWidth="2.3" strokeLinecap="round"><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M25.2 6.8l-2.8 2.8M9.6 22.4l-2.8 2.8" /></g></svg>;
   return <svg viewBox="0 0 36 32" className="h-9 w-10" aria-hidden="true"><circle cx="11" cy="10" r="5" fill="#f4b400" /><path d="M4 21h25a5 5 0 0 0 0-10h-4a7 7 0 0 0-13-1 5.5 5.5 0 0 0-5 5Z" fill={stroke} fillOpacity=".25" stroke={stroke} strokeWidth="1.7" />{point.rain > 0 && <path d="M12 25l-2 4M19 25l-2 4M26 25l-2 4" stroke="#2278a7" strokeWidth="2" strokeLinecap="round" />}</svg>;
 }
-function TemperatureDewSection({ points, width, grid, temperatureArea, dewBoundaryPoints, temperatureY }: {
+function TemperatureDewSection({ points, width, grid, temperatureArea, dewBoundaryPoints }: {
   points: Point[];
   width: number;
   grid: React.CSSProperties;
   temperatureArea: string;
   dewBoundaryPoints: Array<[number, number]>;
-  temperatureY: (value: number) => number;
 }) {
   return <div className="relative bg-[#fafbfc]" style={{ height: ROW.icons + ROW.temperature + ROW.dew }}>
     <svg viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature + ROW.dew}`} width={width} height={ROW.icons + ROW.temperature + ROW.dew} className="pointer-events-none absolute inset-0">
@@ -101,7 +100,7 @@ function TemperatureDewSection({ points, width, grid, temperatureArea, dewBounda
     </svg>
     <div className="relative z-10 grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div>
     <div className="relative z-10 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
-    <div className="pointer-events-none absolute inset-0 z-20 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] text-[#7b838b]" style={{ top: temperatureY(point.dewPoint) - 8 }}>{point.dewPoint}°</span></div>)}</div>
+    <div className="pointer-events-none absolute inset-0 z-20 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 2 }}>{point.dewPoint}°</span></div>)}</div>
   </div>;
 }
 function dayGroups() {
@@ -121,7 +120,7 @@ export function Current() {
   const temperatureMax = Math.max(...points.map(point => point.temperature)) + 2;
   const temperatureY = (value: number) => 7 + (1 - (value - temperatureMin) / (temperatureMax - temperatureMin)) * 85;
   const temperaturePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]);
-  const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.dewPoint)] as [number, number]);
+  const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, ROW.icons + ROW.temperature - 4 + Math.min(3, Math.max(0, (14 - point.dewPoint) * .35))] as [number, number]);
   const temperatureArea = `${smoothPath([[0, temperaturePoints[0][1]], ...temperaturePoints, [width, temperaturePoints.at(-1)![1]]])} L ${width} ${dewBoundaryPoints.at(-1)![1]} ${smoothPath([...dewBoundaryPoints].reverse()).replace(/^M /, "L ")} L 0 ${dewBoundaryPoints[0][1]} Z`;
   const pressureProfile = [151, 140, 105, 82, 102, 115, 127, 111, 96];
   const pressurePoints = pressureProfile.map((y, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, y] as [number, number]);
@@ -144,7 +143,7 @@ export function Current() {
         <div className="relative z-0">
           <div className="grid bg-[#f7f8fa] text-[15px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>{days.map((day, index) => <div key={day.label} className="flex items-center gap-3 border-r border-[#d5d9de] pl-4" style={{ gridColumn: `span ${day.count}` }}><span>{day.label}</span>{index === 0 && <span className="rounded-full bg-[#d7c400] px-2 py-0.5 text-[11px] font-bold text-white">60%</span>}</div>)}</div>
           <div className="grid bg-[#fafbfc] text-[16px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{Number(point.timestamp.slice(11, 13))}</div>)}</div>
-          <TemperatureDewSection points={points} width={width} grid={grid} temperatureArea={temperatureArea} dewBoundaryPoints={dewBoundaryPoints} temperatureY={temperatureY} />
+          <TemperatureDewSection points={points} width={width} grid={grid} temperatureArea={temperatureArea} dewBoundaryPoints={dewBoundaryPoints} />
           <div className="relative bg-[#f7f8fa]" style={{ height: ROW.clouds }}>
             <svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0">
               <defs><linearGradient id="current-pressure-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#8baec0" stopOpacity=".26" /><stop offset="100%" stopColor="#cfe0e8" stopOpacity=".08" /></linearGradient></defs>
