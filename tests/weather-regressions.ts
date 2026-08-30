@@ -1089,7 +1089,7 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(temperatureColor(33), /^#(?:[a-f0-9]{6})$/i, "temperature colors should be valid SVG hex colors");
   assert.match(markup, /linearGradient id="temperature-fade"/, "temperature fill should fade vertically");
   assert.match(markup, /data-testid="meteogram-pressure-line"/, "pressure path should remain directly measurable");
-  assert.match(markup, /data-testid="meteogram-pressure-line"[^>]*data-pressure-y-min="1"[^>]*data-pressure-y-max="105"[^>]*data-pressure-row-height="106"/, "pressure should use nearly the full pressure/rain row height");
+  assert.match(markup, /data-testid="meteogram-pressure-line"[^>]*data-pressure-y-min="1"[^>]*data-pressure-y-max="84"[^>]*data-pressure-row-height="85"/, "pressure should use the reduced 80 percent pressure/rain row height");
   assert.match(markup, /font-size="10"/, "pressure labels should be readable");
   assert.match(markup, /stroke="#587b90"/, "pressure should be blue-gray and distinct from cloud fill");
   assert.match(markup, /data-testid="meteogram-current-column"/, "the current forecast column should be highlighted");

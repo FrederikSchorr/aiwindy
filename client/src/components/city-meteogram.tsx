@@ -45,7 +45,7 @@ const ROW = {
   icons: 44,
   temperature: 42,
   dewPoint: 30,
-  pressure: 106,
+  pressure: 85,
   cloudBand: 70,
   cloudBase: 35,
 } as const;
