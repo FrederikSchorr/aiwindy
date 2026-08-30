@@ -12,8 +12,8 @@ type WindPoint = {
 };
 
 const POINT_WIDTH = 42;
-const ROW = { day: 42, hours: 32, wind: 42, gust: 42, direction: 52, legend: 58 };
-const FORECAST_HOURS = 6 * 24;
+const ROW = { day: 42, hours: 32, wind: 42, gust: 42, direction: 52 };
+const FORECAST_HOURS = 6 * 8;
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const windSpeeds = [
   13, 12, 12, 12, 13, 13, 13, 15, 12, 11, 14, 12, 18, 10, 8, 10, 11, 12, 12, 13, 14, 15, 13, 12,
@@ -39,12 +39,14 @@ function mixColor(start: string, end: string, amount: number) {
 
 const COLOR_STOPS = [
   { value: 0, color: "#6873bd" },
-  { value: 5, color: "#398fae" },
-  { value: 10, color: "#55a58c" },
-  { value: 20, color: "#48ad3c" },
-  { value: 30, color: "#d3a12f" },
-  { value: 40, color: "#a74768" },
-  { value: 60, color: "#536aa6" },
+  { value: 5, color: "#318daf" },
+  { value: 10, color: "#10c6d0" },
+  { value: 15, color: "#35c653" },
+  { value: 20, color: "#b3d30e" },
+  { value: 25, color: "#ffad05" },
+  { value: 30, color: "#f06c1b" },
+  { value: 40, color: "#d23e63" },
+  { value: 60, color: "#625fa8" },
 ];
 
 function windColor(value: number) {
@@ -59,12 +61,12 @@ function windColor(value: number) {
 function textColor(background: string) {
   const channels = background.slice(1).match(/.{2}/g)!.map(part => parseInt(part, 16));
   const luminance = (channels[0] * 299 + channels[1] * 587 + channels[2] * 114) / 1000;
-  return luminance > 158 ? "#26333b" : "#ffffff";
+  return luminance > 78 ? "#1f2d33" : "#ffffff";
 }
 
 function makePoints(): WindPoint[] {
   return Array.from({ length: FORECAST_HOURS }, (_, index) => {
-    const date = new Date(Date.UTC(2026, 7, 30, index));
+    const date = new Date(Date.UTC(2026, 7, 30, index * 3));
     const day = DAY_NAMES[date.getUTCDay()];
     const speed = windSpeeds[index % windSpeeds.length];
     return {
@@ -81,11 +83,13 @@ function makePoints(): WindPoint[] {
 
 function DirectionArrow({ degrees }: { degrees: number }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
-      <g transform={`rotate(${degrees + 180} 12 12)`}>
-        <path d="M12 3 17 14.5 12 12l-5 2.5L12 3Z" fill="#5e7890" />
-        <path d="M12 12v8" stroke="#5e7890" strokeWidth="1.4" strokeLinecap="round" />
-      </g>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-7 w-7"
+      aria-hidden="true"
+      style={{ transform: `rotate(${degrees}deg)` }}
+    >
+      <path d="M4 12 17.6 4.7l-2.5 5.8h5v3h-5l2.5 5.8L4 12Z" fill="#5e7890" />
     </svg>
   );
 }
@@ -190,17 +194,7 @@ export function SeaWindForecast() {
             {dayBoundaryIndices.map(index => (
               <div key={`boundary-${index}`} className="pointer-events-none absolute inset-y-0 z-20 border-l border-[#aeb8c0]" style={{ left: index * POINT_WIDTH }} />
             ))}
-            <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 7 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center border-t border-[#d5d9de] bg-[#f7f8fa]" style={{ height: ROW.legend }}>
-        <div className="w-[116px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2]" />
-        <div className="flex min-w-0 flex-1 items-center gap-3 px-4">
-          <span className="shrink-0 text-[12px] font-medium text-[#56616a]">Windstärke · kt</span>
-          <div className="h-3 min-w-0 flex-1 rounded-sm" style={{ background: "linear-gradient(90deg, #6873bd 0%, #398fae 8%, #55a58c 17%, #48ad3c 33%, #d3a12f 50%, #a74768 67%, #536aa6 100%)" }} />
-          <div className="flex w-[370px] shrink-0 justify-between text-[11px] text-[#69737b]">
-            <span>0</span><span>5</span><span>10</span><span>20</span><span>30</span><span>40</span><span>60</span>
+            <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 4 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
           </div>
         </div>
       </div>
