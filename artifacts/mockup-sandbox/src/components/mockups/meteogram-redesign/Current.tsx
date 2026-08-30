@@ -17,6 +17,7 @@ type Point = {
 
 const POINT_WIDTH = 44;
 const MAX_RAIN_MM = 10;
+const HOURLY_RAIN_TEST_VALUES = [.4, .8, 1.4];
 const ROW = { day: 43, hours: 34, icons: 44, temperature: 42, dew: 30, pressure: 106 };
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const screenshotData = [
@@ -121,7 +122,7 @@ function TemperatureDewSection({ points, width, grid, temperatureArea, dewBounda
       <path d={temperatureArea} fill="url(#current-temperature)" fillOpacity=".56" />
     </svg>
     <div className="relative z-30 grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div>
-    <div className="relative z-20 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
+    <div className="relative z-20 grid text-[19px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
     <div className="pointer-events-none absolute inset-0 z-30 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] leading-[16px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 8 }}>{point.dewPoint}°</span></div>)}</div>
   </div>;
 }
@@ -157,22 +158,30 @@ export function Current() {
     return isMaximum || isMinimum ? [{ point, index, isMaximum }] : [];
   });
   const days = dayGroups();
-  const dailyRainSummaries = points.reduce<Array<{ key: string; startIndex: number; count: number; maxRain: number }>>((summaries, point, index) => {
+  const rainTestStartIndex = points.findIndex(point => point.timestamp.slice(8, 10) === "29" && point.timestamp.slice(11, 13) === "20");
+  const dailyRainSummaries = points.reduce<Array<{ key: string; startIndex: number; count: number; totalRain: number }>>((summaries, point, index) => {
     const key = point.timestamp.slice(0, 10);
     const last = summaries.at(-1);
     if (last?.key === key) {
       last.count += 1;
-      last.maxRain = Math.max(last.maxRain, point.rain);
+      last.totalRain += point.rain;
     } else {
-      summaries.push({ key, startIndex: index, count: 1, maxRain: point.rain });
+      summaries.push({ key, startIndex: index, count: 1, totalRain: point.rain });
     }
     return summaries;
-  }, []).filter(summary => summary.maxRain > 0);
+  }, []);
+  if (rainTestStartIndex >= 0) {
+    const testDay = points[rainTestStartIndex].timestamp.slice(0, 10);
+    const testSummary = dailyRainSummaries.find(summary => summary.key === testDay);
+    if (testSummary) {
+      testSummary.totalRain += HOURLY_RAIN_TEST_VALUES.reduce((sum, rain) => sum + rain, 0) - points[rainTestStartIndex].rain;
+    }
+  }
+  const visibleDailyRainSummaries = dailyRainSummaries.filter(summary => summary.totalRain > 0);
   const dayBoundaryIndices = points.reduce<number[]>((indices, point, index) => {
     if (index > 0 && point.timestamp.slice(0, 10) !== points[index - 1].timestamp.slice(0, 10)) indices.push(index);
     return indices;
   }, []);
-  const rainTestStartIndex = points.findIndex(point => point.timestamp.slice(8, 10) === "29" && point.timestamp.slice(11, 13) === "20");
   const rainColumns = points.flatMap((point, index) => index === rainTestStartIndex || point.rain <= 0
     ? []
     : [{ key: point.timestamp, x: point.timestamp.slice(11, 13) === "23"
@@ -180,9 +189,8 @@ export function Current() {
       : index * POINT_WIDTH + POINT_WIDTH / 2, rain: point.rain, showLabel: true }]
   );
   if (rainTestStartIndex >= 0) {
-    const testValues = [.4, .8, 1.4];
-    const highestTestRain = Math.max(...testValues);
-    testValues.forEach((rain, hourOffset) => {
+    const highestTestRain = Math.max(...HOURLY_RAIN_TEST_VALUES);
+    HOURLY_RAIN_TEST_VALUES.forEach((rain, hourOffset) => {
       rainColumns.push({
         key: `hourly-rain-${20 + hourOffset}`,
         x: rainTestStartIndex * POINT_WIDTH + (hourOffset + .5) * POINT_WIDTH / 3,
@@ -236,7 +244,7 @@ export function Current() {
                 </g>;
               })}
             </svg>
-            {dailyRainSummaries.map(summary => <div key={summary.key} className="pointer-events-none absolute top-1.5 z-20 rounded-[4px] bg-[#0869d8] px-1 py-0.5 text-[9px] font-bold leading-[12px] text-white shadow-[0_1px_2px_rgba(0,45,120,.22)]" style={{ left: (summary.startIndex + summary.count - 1) * POINT_WIDTH + 4 }}>{summary.maxRain.toFixed(1)}mm</div>)}
+            {visibleDailyRainSummaries.map(summary => <div key={summary.key} className="pointer-events-none absolute top-1.5 z-20 rounded-[4px] bg-[#0869d8] px-1 py-0.5 text-[9px] font-bold leading-[12px] text-white shadow-[0_1px_2px_rgba(0,45,120,.22)]" style={{ left: (summary.startIndex + summary.count - 1) * POINT_WIDTH + 4 }}>{summary.totalRain.toFixed(1)}mm</div>)}
           </div>
          </div>
          {dayBoundaryIndices.map(index => <div key={index} className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: index * POINT_WIDTH }} />)}
