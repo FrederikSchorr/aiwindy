@@ -800,6 +800,14 @@ function testSeaWindForecast(): void {
   assert.match(markup, /Böen/, "the chart should include the gust row");
   assert.match(markup, /Windrichtung/, "the chart should include the direction row");
   assert.doesNotMatch(markup, /Temperatur|Regen|Druck|Wolken/, "the wind chart must not include unrelated weather rows");
+  assert.match(markup, /Sonntag 23/, "day headings should use normal capitalization");
+  assert.doesNotMatch(markup, /SONNTAG/, "day headings should not use all caps");
+  assert.match(markup, /data-hour-label="3">3<\/div>/, "hour labels should not have a leading zero");
+  assert.match(markup, /data-night-overlay-layer="true"/, "night shading should use the shared overlay treatment");
+  assert.match(markup, /bg-\[#63709b\]\/\[\.075\]/, "night shading should match the city meteogram");
+  assert.match(markup, /data-label-rail-width="108"/, "the fixed label rail should expose the shared width");
+  assert.match(markup, /data-testid="forecast-clock-glyph"/, "the wind forecast should use the shared clock glyph");
+  assert.match(markup, /data-testid="sea-wind-current-column"[^>]*border-dashed/, "the wind forecast should keep a dashed current-time line without a visible label");
   assert.match(markup, /background-color:#f1f2f2/, "zero-knot wind should use the lightest approved color");
   assert.match(markup, /src="\/assets\/wind-arrows\/wind-arrow-ESE-112\.svg"/, "a wind reported from NW should use an arrow pointing toward SE");
   assert.match(markup, /role="img" aria-label="Windrichtung 292°"/, "direction values should be available to assistive technology");
@@ -877,6 +885,7 @@ function testCityMeteogramDewPointVisibility(): void {
     createElement(CityMeteogram, { analysisJson: noDewPoint }),
   );
   assert.doesNotMatch(noDewPointMarkup, /Taupunkt/, "the complete Taupunkt legend, label and row should be absent");
+  assert.doesNotMatch(noDewPointMarkup, /JETZT/, "the meteogram should use only the dashed current-time line");
 
   const partialDewPoint = cityMeteogramAnalysis([null, 12.4], []);
   const partialData = extractCityMeteogram(partialDewPoint);

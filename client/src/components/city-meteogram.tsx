@@ -1,4 +1,5 @@
 import React from "react";
+import { FORECAST_LABEL_RAIL_WIDTH, FORECAST_POINT_WIDTH, ForecastClockGlyph } from "./forecast-chart-shared";
 import { WeatherIcon, type WeatherIconKind } from "./meteogram-weather-icon";
 
 type JsonRecord = Record<string, unknown>;
@@ -36,7 +37,7 @@ type CityMeteogramProps = { analysisJson: Record<string, unknown> | null; cityNa
 
 const DAY_NAMES = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const MAX_FORECAST_DAYS = 6;
-const POINT_WIDTH = 44;
+const POINT_WIDTH = FORECAST_POINT_WIDTH;
 const MAX_RAIN_MM = 10;
 const ROW = {
   day: 30,
@@ -442,7 +443,6 @@ function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogra
             {hasCloudBase && <div data-testid="meteogram-cloud-base-row" aria-label="Geschätzte Wolkenuntergrenze" className="grid border-b border-[#d5d9de] bg-[#dff1df] text-[15px] font-medium text-[#5c6d61]" style={{ height: ROW.cloudBase, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`base-${point.timestamp}-${index}`} data-cloud-base-level={point.cloudBase === null ? "unavailable" : point.cloudBase < 300 ? "very-low" : point.cloudBase < 600 ? "low" : point.cloudBase < 1000 ? "caution" : point.cloudBase < 2000 ? "moderate" : point.cloudBase < 5000 ? "high" : "very-high"} className={`flex items-center justify-center ${point.cloudBase === null ? "" : cloudBaseTone(point.cloudBase)}`} title={point.cloudBase === null ? "Keine gültige Schätzung der Wolkenuntergrenze" : `Geschätzte Wolkenuntergrenze: ${Math.round(point.cloudBase)} m, aus Temperatur und Taupunkt abgeleitet; keine Beobachtung`}>{point.cloudBase !== null ? formatCloudBase(point.cloudBase) : "—"}</div>)}</div>}
           </div>
           <div data-testid="meteogram-current-column" role="img" aria-label={`Aktueller Prognosezeitpunkt: ${data.points[currentPointIndex].dayLabel} ${data.points[currentPointIndex].hourLabel}:00 Uhr`} className="pointer-events-none absolute z-20 rounded-[2px] border-2 border-transparent bg-transparent" style={{ left: currentPointIndex * POINT_WIDTH, top: ROW.day, bottom: 0, width: POINT_WIDTH }}>
-            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-[2px] bg-[#536b73] px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-white">JETZT</span>
             <span aria-hidden="true" className="absolute inset-y-0 left-1/2 border-l border-dashed border-[#56646d]/75 dark:border-slate-300/55" />
           </div>
         </div>
@@ -456,11 +456,7 @@ function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogra
 }
 
 function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
-  if (kind === "clock") return <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#373d42]" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M12 6v6h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-  </svg>;
+  if (kind === "clock") return <ForecastClockGlyph />;
   if (kind === "temperature") return <div className="flex w-8 flex-col items-center text-[#30353a]" aria-hidden="true">
     <span className="text-[14px] leading-4">°C</span>
     <svg viewBox="0 0 24 8" className="h-2 w-6"><path d="M2 2h20M4 6h2m3 0h2m3 0h2m3 0h2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
@@ -529,14 +525,19 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   return <section className="meteogram-windy-shell relative w-full max-w-full overflow-hidden rounded-[10px] border border-[#cbd0d6] bg-[#f5f6f8] font-sans text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)]" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} data-forecast-days={dayCount} data-forecast-points={points.length} aria-label={`Wettervorhersage für ${cityLabel} · ${dayCount} Tage, horizontal scrollbar`}>
     <h3 className="sr-only">{cityLabel} · {coordinateLabel} · Ortszeit {data.timezone}{stormRisk ? " · Gewitterrisiko" : ""}</h3>
     <div className="flex min-w-0">
-      <aside className="w-[108px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82] md:w-[116px]" aria-label="Feste Legende">
+      <aside
+        className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]"
+        style={{ width: FORECAST_LABEL_RAIL_WIDTH }}
+        data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
+        aria-label="Feste Legende"
+      >
         <div style={{ height: ROW.day }} />
-        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-2"><span>Stunden</span><AxisGlyph kind="clock" /></div>
-        <div style={{ height: temperatureSectionHeight }} className="flex items-center justify-end gap-2 pr-2">
+        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3 text-[11px]"><span>Stunden</span><AxisGlyph kind="clock" /></div>
+        <div style={{ height: temperatureSectionHeight }} className="flex items-center justify-end gap-2 pr-3">
           <span className="text-right text-[12px] leading-[15px]"><span className="text-[#a85e42]">Temperatur</span>{hasDewPoint && <><br />Taupunkt</>}</span>
           <AxisGlyph kind="temperature" />
         </div>
-        <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-2">
+        <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-3">
           <span className="text-right text-[12px] leading-[15px]">Druck<br /><span className="text-[#3275a0]">Regen</span></span>
           <AxisGlyph kind="pressure" />
         </div>
@@ -544,7 +545,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
       </aside>
 
       <div className="meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll" aria-label={`${dayCount}-Tage-Meteogramm, horizontal scrollen für weitere Stunden`}>
-        <div className="relative" style={{ width, minWidth: width }}>
+      <div className="relative" style={{ width, minWidth: width }}>
           <div data-night-overlay-layer="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] flex" style={{ top: ROW.day }}>
             {points.map((point, index) => <div key={`daylight-${point.timestamp}`} data-chart-night-column={point.isDay === false ? "true" : undefined} data-night-shading={point.isDay === false ? "true" : undefined} data-night-index={point.isDay === false ? index : undefined} className={point.isDay === false ? "h-full shrink-0 bg-[#63709b]/[.075]" : "h-full shrink-0"} style={{ width: POINT_WIDTH }} />)}
           </div>
@@ -569,7 +570,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                 {temperatureArea && <path data-series="temperature" d={temperatureArea} fill="none" stroke="none" />}
               </svg>
               <div className="relative z-30 grid" style={{ height: ROW.icons, ...grid }}>
-                {points.map((point) => <div key={`icon-${point.timestamp}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={`${point.hourLabel} Uhr · ${cloudTypeTooltip(point)}`} title={cloudTypeTooltip(point)}><span data-cloud-type-icon={point.cloudType ?? "unknown"}><WeatherIcon kind={weatherIconKind(point)} className="h-9 w-9" /></span></div>)}
+                {points.map((point) => <div key={`icon-${point.timestamp}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={`${point.hourLabel} Uhr · ${cloudTypeTooltip(point)}`} title={cloudTypeTooltip(point)}><span data-cloud-type-icon={point.cloudType ?? "unknown"}><WeatherIcon kind={weatherIconKind(point)} className="h-7 w-7" /></span></div>)}
               </div>
               <div className="relative z-20 grid text-[16px] font-medium tracking-[-.01em] text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>
                 {points.map((point) => <div key={`temperature-${point.timestamp}`} className="flex items-center justify-center">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
@@ -630,7 +631,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
           </div>
 
           {dayGroups.slice(1).map((day) => <div key={`boundary-${day.label}`} className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: day.startIndex * POINT_WIDTH }} />)}
-          <div data-testid="meteogram-current-column" role="img" aria-label={`Aktueller Prognosezeitpunkt: ${points[currentPointIndex].dayLabel} ${points[currentPointIndex].hourLabel}:00 Uhr`} className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: currentPointIndex * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }}><span className="absolute -left-[19px] top-1 rounded bg-[#b85e42] px-1.5 py-0.5 text-[8px] font-bold text-[#fff4e9]">JETZT</span></div>
+          <div data-testid="meteogram-current-column" role="img" aria-label={`Aktueller Prognosezeitpunkt: ${points[currentPointIndex].dayLabel} ${points[currentPointIndex].hourLabel}:00 Uhr`} className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: currentPointIndex * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
         </div>
       </div>
     </div>

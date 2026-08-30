@@ -1,4 +1,5 @@
 import React from "react";
+import { FORECAST_LABEL_RAIL_WIDTH, FORECAST_POINT_WIDTH, ForecastClockGlyph } from "./forecast-chart-shared";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -26,10 +27,10 @@ type SeaWindForecastProps = {
   isLoading?: boolean;
 };
 
-const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
-const POINT_WIDTH = 34;
+const DAY_NAMES = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const POINT_WIDTH = FORECAST_POINT_WIDTH;
 const MAX_POINTS = 6 * 8;
-const ROW = { day: 30, hours: 24, wind: 32, gust: 32, direction: 40 } as const;
+const ROW = { day: 27, hours: 21, wind: 27, gust: 27, direction: 34 } as const;
 const WIND_ARROW_ASSETS = [
   { degrees: 0, src: "/assets/wind-arrows/wind-arrow-N-000.svg" },
   { degrees: 22.5, src: "/assets/wind-arrows/wind-arrow-NNE-022.svg" },
@@ -284,7 +285,7 @@ function DirectionArrow({ degrees }: { degrees: number }) {
     <img
       src={asset.src}
       alt=""
-      className="h-[22px] w-[22px] shrink-0"
+      className="h-5 w-5 shrink-0"
       aria-hidden="true"
       draggable="false"
     />
@@ -341,11 +342,15 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
       aria-label={`Windvorhersage für ${data.sailingAreaName} · ${days.length} Tage, horizontal scrollbar`}
     >
       <div className="flex min-w-0">
-        <aside className="w-[108px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]">
+        <aside
+          className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]"
+          style={{ width: FORECAST_LABEL_RAIL_WIDTH }}
+          data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
+        >
           <div style={{ height: ROW.day }} />
           <div className="flex items-center justify-end gap-2 pr-3 text-[11px]" style={{ height: ROW.hours }}>
             <span>Stunden</span>
-            <span className="text-[16px] leading-none text-[#37434b]" aria-hidden="true">◷</span>
+            <ForecastClockGlyph />
           </div>
           <div className="flex items-center justify-end gap-2 pr-3 text-[12px]" style={{ height: ROW.wind }}>
             <span>Wind</span>
@@ -370,32 +375,35 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
           style={{ scrollbarWidth: "thin" }}
         >
           <div className="relative" style={{ minWidth: width }}>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0" style={{ top: ROW.day }}>
-              <div className="grid h-full" style={grid}>
-                {data.points.map((point, index) => (
-                  <div key={`shade-${point.timestamp}-${index}`} className={point.isDay ? "bg-[#fafbfc]" : "bg-[#e6e9f5]"} />
-                ))}
-              </div>
+            <div data-night-overlay-layer="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] flex" style={{ top: ROW.day }}>
+              {data.points.map((point, index) => (
+                <div
+                  key={`shade-${point.timestamp}-${index}`}
+                  data-night-shading={point.isDay ? undefined : "true"}
+                  className={point.isDay ? "h-full shrink-0" : "h-full shrink-0 bg-[#63709b]/[.075]"}
+                  style={{ width: POINT_WIDTH }}
+                />
+              ))}
             </div>
 
             <div className="relative z-10">
-              <div className="grid bg-[#f7f8fa] text-[13px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
+              <div className="grid bg-[#f7f8fa] text-[13px] font-medium tracking-[.01em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
                 {days.map((day, index) => (
                   <div key={`${day.label}-${index}`} className="flex items-center border-r border-[#d5d9de] pl-3" style={{ gridColumn: `span ${day.count}` }}>
                     <span className="whitespace-nowrap">{day.label}</span>
                   </div>
                 ))}
               </div>
-              <div className="grid text-[14px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>
+              <div className="grid text-[13px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>
                 {data.points.map((point, index) => (
-                  <div key={`hour-${point.timestamp}-${index}`} className="flex items-center justify-center">{String(point.hour).padStart(2, "0")}</div>
+                  <div key={`hour-${point.timestamp}-${index}`} className="flex items-center justify-center" data-hour-label={point.hour}>{point.hour}</div>
                 ))}
               </div>
               <div className="grid" style={{ height: ROW.wind, ...grid }}>
                 {data.points.map((point, index) => {
                   const background = windColor(point.speed);
                   return (
-                    <div key={`wind-${point.timestamp}-${index}`} className="flex items-center justify-center text-[14px] font-medium" style={{ backgroundColor: background, color: textColor(background) }}>
+                    <div key={`wind-${point.timestamp}-${index}`} className="flex items-center justify-center text-[13px] font-medium" style={{ backgroundColor: background, color: textColor(background) }}>
                       {formatValue(point.speed)}
                     </div>
                   );
@@ -405,7 +413,7 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
                 {data.points.map((point, index) => {
                   const background = windColor(point.gust);
                   return (
-                    <div key={`gust-${point.timestamp}-${index}`} className="flex items-center justify-center text-[13px] font-medium" style={{ backgroundColor: background, color: textColor(background) }}>
+                    <div key={`gust-${point.timestamp}-${index}`} className="flex items-center justify-center text-[12px] font-medium" style={{ backgroundColor: background, color: textColor(background) }}>
                       {formatValue(point.gust)}
                     </div>
                   );
@@ -429,7 +437,13 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
             {dayBoundaryIndices.map((index) => (
               <div key={`boundary-${index}`} className="pointer-events-none absolute inset-y-0 z-20 border-l border-[#aeb8c0]" style={{ left: index * POINT_WIDTH }} />
             ))}
-            <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: currentPointIndex * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
+            <div
+              data-testid="sea-wind-current-column"
+              role="img"
+              aria-label={`Aktueller Prognosezeitpunkt: ${data.points[currentPointIndex].dayLabel} ${data.points[currentPointIndex].hour}:00 Uhr`}
+              className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75"
+              style={{ left: currentPointIndex * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }}
+            />
           </div>
         </div>
       </div>
