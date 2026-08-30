@@ -48,6 +48,27 @@ const points: Point[] = screenshotData.map((entry, index) => {
     clouds: entry.clouds,
   };
 });
+const rainBars = [
+  { x: 7, height: 64, color: "#bd31d2" },
+  { x: 47, height: 108, color: "#bd31d2" },
+  { x: 87, height: 65, color: "#bd31d2" },
+  { x: 127, height: 67, color: "#bd31d2" },
+  { x: 167, height: 48, color: "#0968d2" },
+  { x: 207, height: 25, color: "#0968d2" },
+  { x: 437, height: 46, color: "#0968d2" },
+  { x: 477, height: 70, color: "#0968d2" },
+];
+const cloudShapes = [
+  { d: "M0 10 C48 3 90 7 132 19 C174 29 207 18 244 8 L244 0 L0 0 Z", fill: "#7d858a", opacity: .13, blur: "url(#current-cloud-soften)" },
+  { d: "M0 52 C28 44 47 38 66 46 C87 57 84 84 104 99 C124 112 156 100 169 119 C186 145 157 170 180 192 C143 203 104 198 78 184 C49 168 43 139 22 123 C8 111 2 84 0 52 Z", fill: "#737b80", opacity: .28, blur: "url(#current-cloud-soften)" },
+  { d: "M103 71 C132 61 153 69 176 88 C197 105 221 101 239 84 C254 69 247 52 265 44 C286 34 302 56 304 80 C306 104 328 113 350 106 C386 96 422 109 453 124 C473 134 483 147 474 158 C444 166 412 154 379 153 C346 151 320 163 288 157 C253 151 232 128 204 130 C166 133 128 132 103 115 C91 106 91 83 103 71 Z", fill: "#646d72", opacity: .34, blur: "url(#current-cloud-soften)" },
+  { d: "M242 82 C247 52 252 25 273 20 C297 16 312 47 310 76 C308 105 333 116 356 114 C336 134 307 145 278 137 C251 130 234 108 242 82 Z", fill: "#4f585d", opacity: .5, blur: "url(#current-cloud-core)" },
+  { d: "M291 133 C326 122 351 127 369 145 C384 160 405 162 421 147 C433 135 454 137 466 151 C481 169 469 184 445 187 C407 192 378 179 347 184 C323 188 302 178 291 164 C283 154 282 140 291 133 Z", fill: "#727b80", opacity: .3, blur: "url(#current-cloud-soften)" },
+  { d: "M380 119 C418 113 455 120 486 137 C507 148 531 151 551 141 C570 131 603 132 622 148 C641 165 629 181 602 187 C565 194 537 180 503 181 C473 182 443 169 416 159 C393 151 379 137 380 119 Z", fill: "#70787d", opacity: .31, blur: "url(#current-cloud-soften)" },
+  { d: "M489 135 C505 121 526 119 542 132 C553 141 554 158 543 168 C527 180 499 177 485 163 C476 154 479 143 489 135 Z", fill: "#50595e", opacity: .42, blur: "url(#current-cloud-core)" },
+  { d: "M548 123 C577 112 615 114 637 130 C657 145 656 164 635 174 C609 186 568 180 546 163 C531 151 532 133 548 123 Z", fill: "#525b60", opacity: .38, blur: "url(#current-cloud-core)" },
+  { d: "M606 15 C643 5 683 7 720 19 L720 70 C690 70 671 52 646 48 C626 45 611 32 606 15 Z", fill: "#6a7378", opacity: .23, blur: "url(#current-cloud-soften)" },
+];
 
 function smoothPath(values: Array<[number, number]>) {
   return values.reduce((path, [x, y], index) => {
@@ -56,22 +77,6 @@ function smoothPath(values: Array<[number, number]>) {
     const middle = (previousX + x) / 2;
     return `${path} C ${middle} ${previousY}, ${middle} ${y}, ${x} ${y}`;
   }, "");
-}
-function cloudSegmentPath(massIndex: number, index: number) {
-  const left = points[index].clouds[massIndex];
-  const right = points[index + 1].clouds[massIndex];
-  const chartHeight = ROW.clouds;
-  const y = (altitude: number) => chartHeight - (altitude / 9) * chartHeight;
-  const x1 = index * POINT_WIDTH;
-  const x2 = (index + 1) * POINT_WIDTH;
-  const top1 = y(left.top);
-  const top2 = y(right.top);
-  const bottom1 = y(left.bottom);
-  const bottom2 = y(right.bottom);
-  return {
-    d: `M ${x1} ${top1} C ${x1 + POINT_WIDTH * .28} ${top1}, ${x2 - POINT_WIDTH * .28} ${top2}, ${x2} ${top2} L ${x2} ${bottom2} C ${x2 - POINT_WIDTH * .28} ${bottom2}, ${x1 + POINT_WIDTH * .28} ${bottom1}, ${x1} ${bottom1} Z`,
-    opacity: (left.opacity + right.opacity) / 2,
-  };
 }
 function temperatureColor(value: number) {
   if (value < 8) return "#42bfd0";
@@ -103,18 +108,12 @@ export function Current() {
   const temperaturePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]);
   const temperaturePath = smoothPath(temperaturePoints);
   const temperatureArea = `${smoothPath([[0, temperaturePoints[0][1]], ...temperaturePoints, [width, temperaturePoints.at(-1)![1]]])} L ${width} 92 L 0 92 Z`;
-  const pressureMin = Math.min(...points.map(point => point.pressure)) - 3;
-  const pressureMax = Math.max(...points.map(point => point.pressure)) + 3;
-  const pressurePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, 15 + (1 - (point.pressure - pressureMin) / (pressureMax - pressureMin)) * 180] as [number, number]);
+  const pressureProfile = [151, 140, 105, 82, 102, 115, 127, 111, 96];
+  const pressurePoints = pressureProfile.map((y, index) => [index * POINT_WIDTH, y] as [number, number]);
   const days = dayGroups();
   const grid = { gridTemplateColumns: `repeat(${points.length}, ${POINT_WIDTH}px)` };
 
-  return <div className="meteogram-current overflow-hidden border border-[#cbd0d6] bg-[#f5f6f8] text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)]">
-    <header className="flex flex-col gap-2 border-b border-[#cbd0d6] bg-[#f1f3f5] px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
-      <div><div className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#737b84]">Windy-Referenz · 2 Tage</div><h1 className="text-[23px] font-medium tracking-[-.025em] text-[#343a40]">Weiden am See</h1><p className="text-[11px] text-[#7a828a]">Screenshot-Daten · Samstag 29 bis Sonntag 30</p></div>
-      <div className="flex gap-1.5 text-[10px] font-semibold text-[#64707a]"><span className="border border-[#c7cdd2] bg-white px-2 py-1">Referenzdaten</span><span className="border border-[#a9cde1] bg-[#e3f0f8] px-2 py-1 text-[#27678d]">Tagessumme 2.2mm</span></div>
-    </header>
-    <div className="border-b border-[#d3d7dc] bg-[#fafbfc] px-4 py-1.5 text-[10px] text-[#7a828a]"><strong className="text-[#555d65]">Lesart:</strong> Farben und Wolkenflächen zeigen den prognostizierten Verlauf. Wolkentypen sind heuristische Modelldaten.</div>
+  return <div className="meteogram-current overflow-hidden border-y border-[#cbd0d6] bg-[#f5f6f8] text-[#30353a]">
     <div className="flex min-w-0">
       <aside className="w-[112px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[10px] leading-[12px] text-[#737b82] md:w-[176px]">
         <div style={{ height: ROW.day }} className="flex flex-col justify-center border-b border-[#d4d8dc] px-3"><b className="truncate text-[12px] text-[#4a5158]">Weiden am See</b><span className="truncate text-[9px]">Europe/Vienna · 9 Werte</span><a className="mt-1 w-fit text-[9px] font-semibold underline" href="https://open-meteo.com/">Open-Meteo ↗</a></div>
@@ -140,20 +139,21 @@ export function Current() {
               </defs>
               {BANDS.map((band, bandIndex) => <g key={band.key}><rect x="0" y={bandIndex * 70} width={width} height="70" fill={bandIndex % 2 ? "#fafbfc" : "#f5f6f8"} fillOpacity=".45" /><line x2={width} y1={bandIndex * 70} y2={bandIndex * 70} stroke="#89929b" strokeOpacity=".18" strokeDasharray="5 5" /></g>)}
               {[9, 6, 4.5, 3.5, 1.5, .5].map(altitude => { const y = ROW.clouds - altitude / 9 * ROW.clouds; return <g key={altitude}><line x1="0" x2={width} y1={y} y2={y} stroke="#7e8992" strokeOpacity=".2" strokeDasharray="7 6" /><text x="5" y={Math.max(11, y - 4)} fontSize="10" fill="#74808a" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{altitude}km</text></g>; })}
-              {([0, 1] as const).map(massIndex => points.slice(0, -1).map((_, index) => { const segment = cloudSegmentPath(massIndex, index); return <path key={`${massIndex}-${index}`} data-cloud-vertical-overlap="true" d={segment.d} fill={massIndex === 0 ? "url(#current-cloud-fill)" : "#626d73"} opacity={segment.opacity} filter="url(#current-cloud-soften)" />; }))}
-              {points.slice(0, -1).map((_, index) => { const segment = cloudSegmentPath(0, index); return <path key={`core-${index}`} d={segment.d} fill="#505a60" opacity={segment.opacity * .23} transform={`translate(0 ${10 + Math.sin(index) * 4}) scale(1 .7)`} transformOrigin={`${index * POINT_WIDTH + POINT_WIDTH / 2}px ${ROW.clouds / 2}px`} filter="url(#current-cloud-soften)" />; })}
+              {cloudShapes.map((shape, index) => <path key={index} data-cloud-vertical-overlap="true" d={shape.d} fill={shape.fill} opacity={shape.opacity} filter={shape.blur} />)}
+              {[9, 6, 4.5, 3.5, 1.5, .5].map(altitude => { const y = ROW.clouds - altitude / 9 * ROW.clouds; return <g key={`label-${altitude}`}><line x1="0" x2={width} y1={y} y2={y} stroke="#7e8992" strokeOpacity=".2" strokeDasharray="7 6" /><text x="5" y={Math.max(11, y - 4)} fontSize="10" fill="#74808a" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{altitude}km</text></g>; })}
             </svg>
             <svg viewBox={`0 0 ${width} ${ROW.clouds}`} width={width} height={ROW.clouds} className="absolute inset-0">
               <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.5" />
-              {points.map((point, index) => { const height = point.rain ? Math.max(3, point.rain / .5 * 55) : 0; return <g key={point.timestamp}>{point.rain > 0 && <text x={index * POINT_WIDTH + POINT_WIDTH / 2} y={ROW.clouds - height - 7} textAnchor="middle" fontSize="10" fontWeight="700" fill="#1266c5" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{point.rain.toFixed(1)}mm</text>}<rect x={index * POINT_WIDTH + (POINT_WIDTH - 9) / 2} y={ROW.clouds - height - 6} width="9" height={height} fill={index === 0 ? "#ae31cc" : "#1268d0"} /></g>; })}
+              {rainBars.map((bar, index) => <rect key={index} x={bar.x} y={ROW.clouds - bar.height - 6} width="13" height={bar.height} fill={bar.color} />)}
+              <text x="17" y={ROW.clouds - 116} textAnchor="middle" fontSize="11" fontWeight="700" fill="#a52fc1" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">0.5mm</text>
+              <text x="484" y={ROW.clouds - 76} textAnchor="middle" fontSize="11" fontWeight="700" fill="#1266c5" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">0.3mm</text>
             </svg>
-            <div className="absolute right-3 top-1.5 rounded-[4px] bg-[#0869d8] px-2 py-1 text-[11px] font-bold text-white">2.2mm</div>
+            <div className="absolute left-[530px] top-1.5 rounded-[4px] bg-[#0869d8] px-2 py-1 text-[11px] font-bold text-white">2.2mm</div>
           </div>
           <div className="grid bg-[#dff1df] text-[15px] font-medium text-[#5c6d61]" style={{ height: ROW.base, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.cloudBase}</div>)}</div>
         </div>
         <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 4 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }}><span className="absolute -top-3.5 -translate-x-1/2 rounded-[2px] bg-[#536b73] px-1.5 py-0.5 text-[8px] font-bold text-white">JETZT</span></div>
       </div></div>
     </div>
-    <footer className="flex justify-between border-t border-[#cbd0d6] bg-[#f1f3f5] px-4 py-2 text-[10px] text-[#7a828a]"><span><b className="text-[#5a646d]">Hinweis:</b> Wolkentypen und Wolkenhöhen sind modellbasierte Heuristiken, keine Beobachtungen.</span><span>Quelle: <u>Open-Meteo</u></span></footer>
   </div>;
 }
