@@ -5,3 +5,4 @@
 - [Chat history limits](chat-history-limits.md) — trim long generated media analyses before reusing them as chat history, rather than weakening request limits
 - [Direct TSX regression tests](direct-tsx-regression-tests.md) — server-rendering TSX with tsx needs an explicit React runtime import when JSX is preserved
 - [Meteogram design direction](meteogram-design-direction.md) — the Windy screenshot is the visual baseline; exclude wind/gust rows and keep three simple cloud bands
+- [npm bundled dependencies](npm-bundled-dependencies.md) — preserve npm-normalized inBundle entries for Tailwind Oxide WASM or clean Cloud Run installs may fail
