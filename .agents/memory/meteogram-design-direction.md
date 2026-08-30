@@ -1,10 +1,10 @@
 ---
 name: Meteogram design direction
-description: Rationale for the selected visual and structural direction of the city weather forecast.
+description: The authoritative visual baseline and product constraints for the city weather forecast.
 ---
 
-Use a calm atmospheric-map framing for the city meteogram: continuous weather patterns should lead, with operational detail remaining available in a fixed legend and scrollable timeline.
+Use the supplied Windy meteogram screenshot as the visual baseline for the city forecast. Build a compact, light weather timeline from that reference rather than from the previous atmospheric-map implementation.
 
-**Why:** Comparing map, sailing-cockpit, and editorial-strip concepts showed that the map best balanced professional visual quality, pattern recognition, and data density. The cockpit added too much interface chrome, while the editorial direction consumed horizontal space and competed with the forecast itself.
+**Why:** The user explicitly rejected the prior atmospheric-map direction because it treated the existing implementation as the baseline instead of the supplied reference. The city chart should also exclude wind and gust rows, while its three cloud bands may remain visually simple.
 
-**How to apply:** Preserve the map-like hierarchy when extending or polishing the city forecast. Do not turn it into a dashboard of instruments or a magazine-style day narrative unless the product goal changes explicitly.
+**How to apply:** Match the reference's row rhythm, neutral surface, temperature fill, compact weather icons, rain treatment, and fixed-label/scrolling-timeline structure. Keep exactly three aggregate cloud bands and do not add wind or gust rows.

@@ -541,6 +541,11 @@ function testCityMeteogramVisualLayers(): void {
   );
   assert.match(
     markup,
+    /data-chart-night-column="true"[^>]*data-night-index="0"/,
+    "night columns should retain their source index for visual regression tooling",
+  );
+  assert.match(
+    markup,
     /data-testid="meteogram-temperature-area"[^>]*data-temperature-layer="behind-forecast-rows"/,
     "the filled temperature chart must be the background layer behind icons and temperature values",
   );
@@ -561,6 +566,11 @@ function testCityMeteogramVisualLayers(): void {
   );
   assert.match(markup, /data-testid="meteogram-cloud-field"/, "cloud field must remain testable");
   assert.equal((markup.match(/data-cloud-shape-band="(?:high|mid|low)"/g) ?? []).length, 6, "three cloud bands should render for each populated timestamp");
+  assert.equal(
+    (markup.match(/data-cloud-band-clip="(?:high|mid|low)"[^>]*clip-path="url\(#meteogram-cloud-band-(?:high|mid|low)\)"/g) ?? []).length,
+    3,
+    "each cloud texture must be clipped to its own altitude band",
+  );
   assert.doesNotMatch(markup, /data-testid="meteogram-cloud-type-row"/, "the separate cloud type row should be removed");
   assert.equal((markup.match(/data-weather-cloud-type="/g) ?? []).length, 2, "each weather cell should carry the cloud type once");
   assert.equal((markup.match(/data-cloud-type-icon="/g) ?? []).length, 2, "each weather cell should render one integrated cloud-type icon");
