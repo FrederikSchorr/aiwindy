@@ -27,9 +27,9 @@ type SeaWindForecastProps = {
 };
 
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
-const POINT_WIDTH = 38;
+const POINT_WIDTH = 34;
 const MAX_POINTS = 6 * 8;
-const ROW = { day: 36, hours: 28, wind: 36, gust: 36, direction: 46 } as const;
+const ROW = { day: 30, hours: 24, wind: 32, gust: 32, direction: 40 } as const;
 const WIND_ARROW_ASSETS = [
   { degrees: 0, src: "/assets/wind-arrows/wind-arrow-N-000.svg" },
   { degrees: 22.5, src: "/assets/wind-arrows/wind-arrow-NNE-022.svg" },
@@ -277,12 +277,14 @@ function nearestWindArrow(degrees: number): (typeof WIND_ARROW_ASSETS)[number] {
 }
 
 function DirectionArrow({ degrees }: { degrees: number }) {
-  const asset = nearestWindArrow(degrees);
+  // Open-Meteo reports the meteorological "from" direction. The arrow itself
+  // points toward where the air is moving, which is the opposite direction.
+  const asset = nearestWindArrow(degrees + 180);
   return (
     <img
       src={asset.src}
       alt=""
-      className="h-6 w-6 shrink-0"
+      className="h-[22px] w-[22px] shrink-0"
       aria-hidden="true"
       draggable="false"
     />
@@ -339,17 +341,17 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
       aria-label={`Windvorhersage für ${data.sailingAreaName} · ${days.length} Tage, horizontal scrollbar`}
     >
       <div className="flex min-w-0">
-        <aside className="w-[112px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]">
+        <aside className="w-[108px] shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]">
           <div style={{ height: ROW.day }} />
-          <div className="flex items-center justify-end gap-2 border-b border-[#d8dce0] pr-3 text-[11px]" style={{ height: ROW.hours }}>
+          <div className="flex items-center justify-end gap-2 pr-3 text-[11px]" style={{ height: ROW.hours }}>
             <span>Stunden</span>
             <span className="text-[16px] leading-none text-[#37434b]" aria-hidden="true">◷</span>
           </div>
-          <div className="flex items-center justify-end gap-2 border-b border-[#d8dce0] pr-3 text-[12px]" style={{ height: ROW.wind }}>
+          <div className="flex items-center justify-end gap-2 pr-3 text-[12px]" style={{ height: ROW.wind }}>
             <span>Wind</span>
             <LabelGlyph kind="wind" />
           </div>
-          <div className="flex items-center justify-end gap-2 border-b border-[#d8dce0] pr-3 text-[12px]" style={{ height: ROW.gust }}>
+          <div className="flex items-center justify-end gap-2 pr-3 text-[12px]" style={{ height: ROW.gust }}>
             <span>Böen</span>
             <LabelGlyph kind="gust" />
           </div>

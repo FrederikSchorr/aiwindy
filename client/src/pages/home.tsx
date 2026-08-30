@@ -327,8 +327,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
           <SectionTitle num={3} title="Wind & Welle" />
           <div className="my-3" data-testid="section-card-3">
             <WindyEmbed lat={saLat} lon={saLon} overlay="wind" product={model} level="surface" zoom={Math.max(zoom - 2, 4)} marker />
-            <SeaWindForecast analysisJson={analysisJson} isLoading={isStreaming && !hasError} />
             <SourceLink label={`Wind ${sailingAreaShort}`} provider="windy.com" url={windUrl} />
+            <SeaWindForecast analysisJson={analysisJson} isLoading={isStreaming && !hasError} />
           </div>
           {resolvedWeatherOutput?.windWaves?.text && (
             <MarkdownContent content={resolvedWeatherOutput.windWaves.text} />

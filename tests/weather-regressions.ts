@@ -801,7 +801,7 @@ function testSeaWindForecast(): void {
   assert.match(markup, /Windrichtung/, "the chart should include the direction row");
   assert.doesNotMatch(markup, /Temperatur|Regen|Druck|Wolken/, "the wind chart must not include unrelated weather rows");
   assert.match(markup, /background-color:#f1f2f2/, "zero-knot wind should use the lightest approved color");
-  assert.match(markup, /src="\/assets\/wind-arrows\/wind-arrow-WNW-292\.svg"/, "direction cells should use the nearest generated SVG asset");
+  assert.match(markup, /src="\/assets\/wind-arrows\/wind-arrow-ESE-112\.svg"/, "a wind reported from NW should use an arrow pointing toward SE");
   assert.match(markup, /role="img" aria-label="Windrichtung 292°"/, "direction values should be available to assistive technology");
 
   const compacted = compactedSeaWindAnalysis();
