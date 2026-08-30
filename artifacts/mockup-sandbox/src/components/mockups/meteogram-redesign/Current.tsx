@@ -1,7 +1,7 @@
 import React from "react";
 import "./_group.css";
 
-type CloudAmount = "few" | "broken" | "overcast";
+type CloudAmount = "clear" | "few" | "broken" | "overcast";
 type Point = {
   timestamp: string;
   temperature: number;
@@ -20,8 +20,8 @@ const ROW = { day: 43, hours: 34, icons: 44, temperature: 42, dew: 30, pressure:
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const screenshotData = [
   { hour: 2, temperature: 21, dewPoint: 18, pressure: 1014, rain: .8, cloudAmount: "overcast", storm: false },
-  { hour: 5, temperature: 19, dewPoint: 15, pressure: 1013, rain: 0, cloudAmount: "few", storm: false },
-  { hour: 8, temperature: 21, dewPoint: 14, pressure: 1016, rain: 0, cloudAmount: "few", storm: false },
+  { hour: 5, temperature: 19, dewPoint: 15, pressure: 1013, rain: 0, cloudAmount: "clear", storm: false },
+  { hour: 8, temperature: 21, dewPoint: 14, pressure: 1016, rain: 0, cloudAmount: "clear", storm: false },
   { hour: 11, temperature: 22, dewPoint: 13, pressure: 1019, rain: 0, cloudAmount: "broken", storm: false },
   { hour: 14, temperature: 26, dewPoint: 13, pressure: 1018, rain: .3, cloudAmount: "overcast", storm: true },
   { hour: 17, temperature: 26, dewPoint: 12, pressure: 1017, rain: 0, cloudAmount: "overcast", storm: false },
@@ -58,17 +58,9 @@ function temperatureColor(value: number) {
   if (value < 23) return "#f3c66d";
   return "#ed6a8d";
 }
-const ICON_CELLS = [
-  [0, 50.1],
-  [50.1, 56.6],
-  [106.7, 45.6],
-  [152.3, 48.1],
-  [200.4, 49.5],
-  [249.9, 50.5],
-  [300.4, 50.9],
-  [351.3, 48.7],
-] as const;
-const SPRITE_SCALE = .73;
+const SPRITE_CELL_WIDTH = 19.68;
+const ICON_CELLS = Array.from({ length: 10 }, (_, index) => [index * SPRITE_CELL_WIDTH, SPRITE_CELL_WIDTH] as const);
+const SPRITE_SCALE = 1.9;
 
 function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
   if (kind === "clock") return <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#373d42]" aria-hidden="true">
@@ -88,27 +80,29 @@ function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
 
 function weatherIcon(point: Point) {
   const iconIndex = point.storm
-    ? 7
+    ? 9
     : point.rain >= .5
-      ? 6
+      ? 8
       : point.rain > 0
-        ? 5
+        ? 7
         : !point.isDay
-          ? point.cloudAmount === "few" ? 0 : 1
-          : point.cloudAmount === "few"
-            ? 2
+          ? point.cloudAmount === "clear" ? 0 : point.cloudAmount === "few" ? 1 : 2
+          : point.cloudAmount === "clear"
+            ? 3
+            : point.cloudAmount === "few"
+              ? 4
             : point.cloudAmount === "broken"
-              ? 3
-              : 4;
+                ? 5
+                : 6;
   const [cellX, cellWidth] = ICON_CELLS[iconIndex];
   return <span
     className="block shrink-0 bg-no-repeat"
     style={{
       width: cellWidth * SPRITE_SCALE,
-      height: 55 * SPRITE_SCALE,
-      backgroundImage: `url(${import.meta.env.BASE_URL}weather-icons/windy-inspired-strip.svg)`,
-      backgroundSize: `${400 * SPRITE_SCALE}px ${79 * SPRITE_SCALE}px`,
-      backgroundPosition: `${-cellX * SPRITE_SCALE}px ${-10 * SPRITE_SCALE}px`,
+      height: 20 * SPRITE_SCALE,
+      backgroundImage: `url(${import.meta.env.BASE_URL}weather-icons/windy-inspired-strip-v2.svg)`,
+      backgroundSize: `${196.8 * SPRITE_SCALE}px ${20 * SPRITE_SCALE}px`,
+      backgroundPosition: `${-cellX * SPRITE_SCALE}px 0`,
     }}
     aria-hidden="true"
   />;
@@ -202,7 +196,7 @@ export function Current() {
           </div>
          </div>
          <div className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: 8 * POINT_WIDTH }} />
-        <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 4 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }}><span className="absolute -top-3.5 -translate-x-1/2 rounded-[2px] bg-[#536b73] px-1.5 py-0.5 text-[8px] font-bold text-white">JETZT</span></div>
+         <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 4 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
       </div></div>
     </div>
   </div>;
