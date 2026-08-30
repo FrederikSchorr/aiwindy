@@ -81,9 +81,17 @@ function temperatureColor(value: number) {
   return "#ed6a8d";
 }
 function weatherIcon(point: Point) {
-  const stroke = point.cloudType === "stratus" ? "#d59b24" : "#7e858b";
-  if (point.cloudType === "clear") return <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#f4b400" /><g stroke="#e5a500" strokeWidth="2.3" strokeLinecap="round"><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M25.2 6.8l-2.8 2.8M9.6 22.4l-2.8 2.8" /></g></svg>;
-  return <svg viewBox="0 0 36 32" className="h-9 w-10" aria-hidden="true"><circle cx="11" cy="10" r="5" fill="#f4b400" /><path d="M4 21h25a5 5 0 0 0 0-10h-4a7 7 0 0 0-13-1 5.5 5.5 0 0 0-5 5Z" fill={stroke} fillOpacity=".25" stroke={stroke} strokeWidth="1.7" />{point.rain > 0 && <path d="M12 25l-2 4M19 25l-2 4M26 25l-2 4" stroke="#2278a7" strokeWidth="2" strokeLinecap="round" />}</svg>;
+  const cloudStroke = point.rain > 0 ? "#6f818c" : "#7e858b";
+  const cloudFill = point.rain > 0 ? "#9eabb2" : "#b3bdc1";
+  const skyObject = point.isDay
+    ? <g stroke="#e6a800" strokeWidth="1.5" strokeLinecap="round"><circle cx="14" cy="11" r="5.2" fill="#f5bd22" stroke="none" /><path d="M14 2.5v3M14 16.5v3M5.5 11h3M19.5 11h3M8 5l2.1 2.1M17.9 13.9 20 16M20 5l-2.1 2.1M10.1 13.9 8 16" /></g>
+    : <path d="M18.5 5.2a7.1 7.1 0 1 0 5.3 11.8 7.8 7.8 0 0 1-5.3-11.8Z" fill="#91a7bb" stroke="#71889b" strokeWidth="1.1" />;
+  return <svg viewBox="0 0 48 40" className="h-9 w-11" aria-hidden="true">
+    {skyObject}
+    <path d="M7 27.2h28.6a6.3 6.3 0 0 0 .1-12.6 10.3 10.3 0 0 0-19-1.6A7.2 7.2 0 0 0 7 27.2Z" fill={cloudFill} stroke={cloudStroke} strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M10 27.2h26.5a4.4 4.4 0 0 1-4.2 3H12.5a4.5 4.5 0 0 1-2.5-3Z" fill="#d3dade" fillOpacity=".72" />
+    {point.rain > 0 && <g stroke="#2779a7" strokeWidth="1.8" strokeLinecap="round"><path d="m14 32-2 4M22 32l-2 4M30 32l-2 4" /></g>}
+  </svg>;
 }
 function TemperatureDewSection({ points, width, grid, temperatureArea, dewBoundaryPoints }: {
   points: Point[];
@@ -97,9 +105,9 @@ function TemperatureDewSection({ points, width, grid, temperatureArea, dewBounda
       <defs><linearGradient id="current-temperature" x2={width} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor={temperatureColor(points[0].temperature)} />{points.map((point, index) => <stop key={point.timestamp} offset={`${index / (points.length - 1) * 100}%`} stopColor={temperatureColor(point.temperature)} />)}</linearGradient></defs>
       <path d={temperatureArea} fill="url(#current-temperature)" fillOpacity=".56" />
     </svg>
-    <div className="relative z-10 grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div>
-    <div className="relative z-10 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
-    <div className="pointer-events-none absolute inset-0 z-20 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] leading-[16px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 8 }}>{point.dewPoint}°</span></div>)}</div>
+    <div className="relative z-30 grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div>
+    <div className="relative z-20 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
+    <div className="pointer-events-none absolute inset-0 z-30 grid" style={grid}>{points.map(point => <div key={point.timestamp} className="relative"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[15px] leading-[16px] text-[#7b838b]" style={{ top: ROW.icons + ROW.temperature - 8 }}>{point.dewPoint}°</span></div>)}</div>
   </div>;
 }
 function dayGroups() {
@@ -138,8 +146,8 @@ export function Current() {
         <div style={{ height: ROW.base }} className="flex items-center justify-center bg-[#dff1df] px-2 text-center">Wolkenbasis <u>m</u></div>
       </aside>
       <div className="meteogram-current__scroll min-w-0 flex-1 overflow-x-auto"><div className="relative" style={{ minWidth: width }}>
-        <div className="pointer-events-none absolute inset-0 z-10 flex">{points.map((point, index) => <div key={point.timestamp} className={point.isDay ? "" : "bg-[#63709b]/[.075]"} style={{ width: POINT_WIDTH }} />)}</div>
-        <div className="relative z-0">
+        <div className="pointer-events-none absolute inset-0 z-0 flex">{points.map((point, index) => <div key={point.timestamp} className={point.isDay ? "" : "bg-[#63709b]/[.075]"} style={{ width: POINT_WIDTH }} />)}</div>
+        <div className="relative z-10">
           <div className="grid bg-[#f7f8fa] text-[15px] font-medium tracking-[.03em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>{days.map((day, index) => <div key={day.label} className="flex items-center gap-3 border-r border-[#d5d9de] pl-4" style={{ gridColumn: `span ${day.count}` }}><span>{day.label}</span>{index === 0 && <span className="rounded-full bg-[#d7c400] px-2 py-0.5 text-[11px] font-bold text-white">60%</span>}</div>)}</div>
           <div className="grid bg-[#fafbfc] text-[16px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{Number(point.timestamp.slice(11, 13))}</div>)}</div>
           <TemperatureDewSection points={points} width={width} grid={grid} temperatureArea={temperatureArea} dewBoundaryPoints={dewBoundaryPoints} />
