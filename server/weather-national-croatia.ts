@@ -97,10 +97,37 @@ function extractDhmzReportTimestamp(xml: string): string | null {
   return m ? utcToCroatiaLocal(m[1], m[2]) : null;
 }
 
+export function parseDhmzWarningSection(xml: string | null | undefined): {
+  exists: boolean;
+  explicitlyClear: boolean;
+  text: string | null;
+} {
+  if (!xml) return { exists: false, explicitlyClear: false, text: null };
+  const detailed = xml.match(/<Upozorenje_tekst>([\s\S]*?)<\/Upozorenje_tekst>/i);
+  const general = xml.match(/<Upozorenje>([\s\S]*?)<\/Upozorenje>/i);
+  const match = detailed ?? general;
+  if (!match) return { exists: false, explicitlyClear: false, text: null };
+  const text = match[1]
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+  return {
+    exists: true,
+    explicitlyClear: text === "" || /^nema(?:\b|[.!])/i.test(text),
+    text: text || null,
+  };
+}
+
+function isInvalidWarningTranslation(text: string): boolean {
+  return /\b(?:please provide|paste (?:it|the text)|was not included|not included in your message|cannot translate|can't translate|no text (?:was )?provided)\b/i.test(text);
+}
+
 export async function extractDhmzWarning(xml: string, sailingArea: string | null, anthropic: Anthropic, signal?: AbortSignal): Promise<string | null> {
-  const match = xml.match(/<Upozorenje>([\s\S]*?)<\/Upozorenje>/);
-  if (!match) return null;
-  const croatianText = match[1].trim();
+  const warning = parseDhmzWarningSection(xml);
+  if (!warning.exists || warning.explicitlyClear || !warning.text) return null;
+  const croatianText = warning.text;
   const timestamp = extractDhmzReportTimestamp(xml);
   const isNorth = isNorthAdriaticSailingArea(sailingArea);
   try {
@@ -124,7 +151,7 @@ Croatian text:\n${croatianText}`,
       }],
     }, { signal });
     const text = (msg.content[0] as { type: "text"; text: string }).text.trim();
-    if (!text) return null;
+    if (!text || isInvalidWarningTranslation(text)) return null;
     return timestamp ? `Aktuell (${timestamp}): ${text}` : text;
   } catch (e) {
     console.error("extractDhmzWarning error:", e instanceof Error ? e.message : e);

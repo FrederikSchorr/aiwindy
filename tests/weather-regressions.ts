@@ -28,6 +28,7 @@ import {
   type AnalysisJson,
 } from "../server/analysis-store.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
+import { extractDhmzWarning } from "../server/weather-national-croatia.js";
 import { resolveLocalForecast } from "../server/weather-local-forecast.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
 import SeaWindForecast, { extractSeaWindForecast } from "../client/src/components/sea-wind-forecast";
@@ -387,6 +388,64 @@ async function testHnmsFailureIsNotAllClear(): Promise<void> {
   } finally {
     mock.restore();
   }
+}
+
+async function testCroatiaEmptyAndFallbackWarnings(): Promise<void> {
+  let warningTranslationCalls = 0;
+  const anthropic = {
+    messages: {
+      create: async (request: any) => {
+        const prompt = String(request.messages?.[0]?.content ?? "");
+        if (prompt.includes("Translate the following Croatian maritime warning")) {
+          warningTranslationCalls++;
+          return { content: [{ type: "text", text: "Auf der nördlichen Adria Bora-Böen 35–45 kt." }] };
+        }
+        if (prompt.includes("extract only the forecast section")) {
+          return { content: [{ type: "text", text: "Lokaler Seewetterbericht." }] };
+        }
+        return { content: [{ type: "text", text: "NONE" }] };
+      },
+    },
+  } as unknown as Anthropic;
+
+  const emptyRegional = [
+    "<Prognoza_pomorci>",
+    "<Naslov>VREMENSKO IZVJEŠĆE, dan 30.08.2026 u 12:00 sati</Naslov>",
+    "<Upozorenje>   </Upozorenje>",
+    "</Prognoza_pomorci>",
+  ].join("");
+  const noWarningAdria = "<Upozorenje><Upozorenje_tekst>Nema.</Upozorenje_tekst></Upozorenje>";
+  assert.equal(
+    await extractDhmzWarning(emptyRegional, "Adria Nord (Kroatien)", anthropic),
+    null,
+    "an empty DHMZ warning element must not be sent to the translator",
+  );
+  const clearLocal = await preprocessLocalWeather(
+    {
+      croatiaAdriaRegional: { xml: emptyRegional },
+      croatiaAdriaForecast: { xml: noWarningAdria },
+    },
+    { userInput: "Punat", city: "Punat", sailingArea: "Adria Nord (Kroatien)" },
+    anthropic,
+    "HR",
+  );
+  assert.equal((clearLocal.warnings as any).checked, true);
+  assert.equal((clearLocal.warnings as any).text_de, "Aktuell: Keine Sturmwarnung von DHMZ");
+  assert.equal(warningTranslationCalls, 0, "explicit DHMZ all-clear fields must not invoke warning translation");
+
+  const activeAdria = "<Upozorenje><Upozorenje_tekst>Na sjevernom Jadranu udari bure 35-45 čvorova.</Upozorenje_tekst></Upozorenje>";
+  const activeLocal = await preprocessLocalWeather(
+    {
+      croatiaAdriaRegional: { xml: emptyRegional },
+      croatiaAdriaForecast: { xml: activeAdria },
+    },
+    { userInput: "Punat", city: "Punat", sailingArea: "Adria Nord (Kroatien)" },
+    anthropic,
+    "HR",
+  );
+  assert.equal((activeLocal.warnings as any).checked, true);
+  assert.match((activeLocal.warnings as any).text_de, /Bora-Böen 35–45 kt/);
+  assert.equal(warningTranslationCalls, 1, "an active warning in the alternate DHMZ feed must be preserved");
 }
 
 function testCloudTypeClassification(): void {
@@ -1625,6 +1684,7 @@ async function main(): Promise<void> {
     await testUnsupportedAreaCoverage();
     await testFailedNationalProvidersStayTransparent();
     await testHnmsFailureIsNotAllClear();
+    await testCroatiaEmptyAndFallbackWarnings();
   });
   console.log("weather regressions: all checks passed");
 }

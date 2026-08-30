@@ -12,6 +12,7 @@ import {
   preprocessDhmzSynopsis,
   extractDhmzWarning,
   extractDhmzSailingAreaForecast,
+  parseDhmzWarningSection,
   preprocessDhmzLocalTemperature,
 } from "./weather-national-croatia.js";
 import {
@@ -92,10 +93,12 @@ function warningCenterFor(
       : { status: "unavailable", label: "HNMS Griechenland", url: bulletin?.url };
   }
   if (countryCode === "HR") {
-    const report = data["croatiaAdriaRegional"] as any;
+    const regional = data["croatiaAdriaRegional"] as any;
+    const adria = data["croatiaAdriaForecast"] as any;
+    const report = regional?.xml ? regional : adria;
     return report?.xml
       ? { status: "integrated", label: "DHMZ Kroatien", url: report?.url }
-      : { status: "unavailable", label: "DHMZ Kroatien", url: report?.url };
+      : { status: "unavailable", label: "DHMZ Kroatien", url: regional?.url ?? adria?.url };
   }
   if (countryCode === "AT" && sailingAreaName?.toLowerCase().includes("neusiedler")) {
     const report = data["austriaNeusiedlerLakeWarnings"] as any;
@@ -235,15 +238,27 @@ export async function preprocessLocalWeather(
   const regionalXml = (rawData["croatiaAdriaRegional"] as any)?.xml as
     | string
     | null;
+  const adriaXml = (rawData["croatiaAdriaForecast"] as any)?.xml as
+    | string
+    | null;
   const forecastXml = (rawData["croatiaCityForecast"] as any)?.xml as
     | string
     | null;
 
-  const warningText = regionalXml
-    ? await extractDhmzWarning(regionalXml, position.sailingArea, anthropic, signal)
+  const warningCandidates = [regionalXml, adriaXml]
+    .filter((xml): xml is string => typeof xml === "string" && Boolean(xml.trim()))
+    .map(xml => ({ xml, section: parseDhmzWarningSection(xml) }));
+  const activeWarning = warningCandidates.find(candidate =>
+    candidate.section.exists
+    && !candidate.section.explicitlyClear
+    && Boolean(candidate.section.text),
+  );
+  const warningText = activeWarning
+    ? await extractDhmzWarning(activeWarning.xml, position.sailingArea, anthropic, signal)
     : null;
-  const warningSectionExists = regionalXml ? /<Upozorenje>[\s\S]*?<\/Upozorenje>/i.test(regionalXml) : false;
-  const warningChecked = Boolean(regionalXml) && (!warningSectionExists || warningText !== null);
+  const warningChecked = activeWarning
+    ? warningText !== null
+    : warningCandidates.some(candidate => candidate.section.explicitlyClear);
   const warningDisplayText = warningText ??
     (warningChecked ? "Aktuell: Keine Sturmwarnung von DHMZ" : null);
 

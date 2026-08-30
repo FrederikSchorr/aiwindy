@@ -15,6 +15,12 @@ Keep the meteogram tied to the representative city coordinate while the wind cha
 
 **How to apply:** Preserve exact timestamp matching and field-specific three-hour aggregation, but allow city thunderstorm signals and sailing-area gust peaks to occur in different displayed columns.
 
+For national warning feeds, an explicitly empty warning field or provider-specific “none” marker is a checked all-clear; missing/malformed fields remain unavailable. Never send empty warning text to an LLM or accept its meta-response as a warning.
+
+**Why:** DHMZ returned an empty regional warning plus “Nema.” in its alternate feed; translating the empty field produced an English request for input that was then displayed as an official warning.
+
+**How to apply:** Parse warning state before translation, let any active warning across equivalent official feeds override clear markers, reject translation meta-responses, and preserve unavailable status if active text cannot be processed.
+
 In the sources view, a connected provider must be named as the concrete forecast or warning product it supplied (for example, a marine forecast including storm warnings), not as a generic live “connected” status. Capability status is reserved for unavailable or unsupported warning centers.
 
 **Why:** A source list should explain the provenance of the displayed information. A bare connection status is redundant and can be mistaken for a weather observation or warning.
