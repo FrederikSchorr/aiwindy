@@ -490,7 +490,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const pressureValues = points.map((point) => point.pressure).filter((value): value is number => value !== null);
   const pressureMin = pressureValues.length ? Math.min(...pressureValues) : 980;
   const pressureMax = pressureValues.length ? Math.max(...pressureValues) : 1030;
-  const pressureY = (value: number) => 1 + (1 - (value - pressureMin) / Math.max(1, pressureMax - pressureMin)) * (ROW.pressure - 2);
+  const pressureY = (value: number) => (1 - (value - pressureMin) / Math.max(1, pressureMax - pressureMin)) * ROW.pressure;
   const pressurePoints = points.flatMap((point, index) => point.pressure === null
     ? []
     : [[index * POINT_WIDTH + POINT_WIDTH / 2, pressureY(point.pressure)] as [number, number]]);
