@@ -116,7 +116,7 @@ function dayGroups() {
 export function Current() {
   const width = points.length * POINT_WIDTH;
   const temperatureMin = Math.min(...points.map(point => point.temperature)) - 2;
-  const temperatureMax = Math.max(...points.map(point => point.temperature)) + 2;
+  const temperatureMax = Math.max(...points.map(point => point.temperature)) + 1;
   const temperatureY = (value: number) => 7 + (1 - (value - temperatureMin) / (temperatureMax - temperatureMin)) * 85;
   const temperaturePoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.temperature)] as [number, number]);
   const dewBoundaryPoints = points.map((point, index) => [index * POINT_WIDTH + POINT_WIDTH / 2, temperatureY(point.dewPoint)] as [number, number]);
