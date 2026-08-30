@@ -157,7 +157,21 @@ export function Current() {
     return isMaximum || isMinimum ? [{ point, index, isMaximum }] : [];
   });
   const days = dayGroups();
-  const dayBoundaryIndex = points.findIndex(point => point.timestamp.slice(8, 10) !== points[0].timestamp.slice(8, 10));
+  const dailyRainSummaries = points.reduce<Array<{ key: string; startIndex: number; count: number; maxRain: number }>>((summaries, point, index) => {
+    const key = point.timestamp.slice(0, 10);
+    const last = summaries.at(-1);
+    if (last?.key === key) {
+      last.count += 1;
+      last.maxRain = Math.max(last.maxRain, point.rain);
+    } else {
+      summaries.push({ key, startIndex: index, count: 1, maxRain: point.rain });
+    }
+    return summaries;
+  }, []).filter(summary => summary.maxRain > 0);
+  const dayBoundaryIndices = points.reduce<number[]>((indices, point, index) => {
+    if (index > 0 && point.timestamp.slice(0, 10) !== points[index - 1].timestamp.slice(0, 10)) indices.push(index);
+    return indices;
+  }, []);
   const rainTestStartIndex = points.findIndex(point => point.timestamp.slice(8, 10) === "29" && point.timestamp.slice(11, 13) === "20");
   const rainColumns = points.flatMap((point, index) => index === rainTestStartIndex || point.rain <= 0
     ? []
@@ -211,11 +225,21 @@ export function Current() {
                 </g>;
               })}
               <path d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />
-              {pressureExtrema.map(({ point, index, isMaximum }) => <text key={point.timestamp} x={index * POINT_WIDTH + POINT_WIDTH / 2} y={pressureY(point.pressure) + (isMaximum ? -7 : 14)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#4d6979" stroke="#f7f8fa" strokeWidth="3" paintOrder="stroke">{point.pressure} hPa</text>)}
+              {pressureExtrema.map(({ point, index, isMaximum }) => {
+                const curveY = pressureY(point.pressure);
+                const preferredY = curveY + (isMaximum ? -7 : 14);
+                const labelY = preferredY > ROW.pressure - 8 ? curveY - 8 : Math.max(16, preferredY);
+                const x = index * POINT_WIDTH + POINT_WIDTH / 2;
+                return <g key={point.timestamp}>
+                  <rect x={x - 20} y={labelY - 10} width="40" height="12" rx="2" fill="#f7f8fa" fillOpacity=".94" />
+                  <text x={x} y={labelY} textAnchor="middle" fontSize="8" fontWeight="700" fill="#4d6979">{point.pressure} hPa</text>
+                </g>;
+              })}
             </svg>
+            {dailyRainSummaries.map(summary => <div key={summary.key} className="pointer-events-none absolute top-1.5 z-20 rounded-[4px] bg-[#0869d8] px-1 py-0.5 text-[9px] font-bold leading-[12px] text-white shadow-[0_1px_2px_rgba(0,45,120,.22)]" style={{ left: (summary.startIndex + summary.count - 1) * POINT_WIDTH + 4 }}>{summary.maxRain.toFixed(1)}mm</div>)}
           </div>
          </div>
-         <div className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: dayBoundaryIndex * POINT_WIDTH }} />
+         {dayBoundaryIndices.map(index => <div key={index} className="pointer-events-none absolute inset-y-0 z-10 border-l border-[#b6bec5]" style={{ left: index * POINT_WIDTH }} />)}
          <div className="pointer-events-none absolute z-20 border-l border-dashed border-[#bd8d8d]/75" style={{ left: 4 * POINT_WIDTH + POINT_WIDTH / 2, top: ROW.day, bottom: 0 }} />
       </div></div>
     </div>
