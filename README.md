@@ -7,7 +7,7 @@ An AI-powered sailing weather analysis app for European waters. Each analysis pr
 1. **Druck & Luftmassen** — Europe-wide 850hPa pressure and air mass map (ECMWF)
 2. **Fronten** — KNMI weather fronts analysis chart with AI interpretation
 3. **Wind & Welle** — Regional high-resolution wind model map (1–7 km) with forecast bullets
-4. **Wolken & Regen** — Cloud and precipitation overlay with thunderstorm risk
+4. **Wetter & Regen** — Local meteogram with cloud and precipitation details
 5. **Temperatur** — Local meteogram with temperature summary
 
 The app combines data from European synoptic services (Meteonews, Wetterzentrale, KNMI), national weather APIs (GeoSphere Austria, DHMZ Croatia, HNMS/Open-Meteo Greece), and multiple AI models to generate concise, sailor-relevant analysis. Users can also upload photos or videos for meteorological AI analysis.

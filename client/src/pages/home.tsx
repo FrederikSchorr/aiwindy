@@ -246,6 +246,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
   const windUrl = isIconEu
     ? "https://www.windy.com/38.449/20.903/iconEuWaves/waves?iconEu,clouds,38.449,20.903,5,i:pressure,p:favs"
     : `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
+  const meteogramUrl = `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}/meteogram?${model},clouds,${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure`;
   const jsonDownloadUrl = analysisJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(analysisJson, null, 2))}`
     : null;
@@ -322,13 +323,14 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <BounceLoader />
           )}
 
-          <SectionTitle num={4} title="Wolken & Regen" />
+          <SectionTitle num={4} title="Wetter & Regen" />
           <div className="my-3" data-testid="section-card-4">
             <CityMeteogram
               analysisJson={analysisJson}
               cityName={locationShort}
               isLoading={isStreaming && !hasError}
             />
+            <SourceLink label={`Meteogramm ${locationShort}`} provider="windy.com" url={meteogramUrl} />
           </div>
           {weatherOutput?.cloudsRain?.text && (
             <MarkdownContent content={weatherOutput.cloudsRain.text} />
@@ -947,7 +949,7 @@ export default function Home() {
                           airPressureMasses: "🌀 Druck & Luftmassen",
                           weatherFront: "🌊 Fronten",
                           windWaves: "💨 Wind & Welle",
-                          cloudsRain: "☁️ Wolken & Regen",
+                          cloudsRain: "☁️ Wetter & Regen",
                         };
                         const saCoords = activeLocation.lat != null && activeLocation.lon != null
                           ? ` (${activeLocation.lat.toFixed(4)}, ${activeLocation.lon.toFixed(4)})`

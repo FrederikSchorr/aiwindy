@@ -33,12 +33,12 @@ type CityMeteogramData = {
 };
 type CityMeteogramProps = { analysisJson: Record<string, unknown> | null; cityName?: string; isLoading?: boolean };
 
-const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
+const DAY_NAMES = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const MAX_FORECAST_DAYS = 6;
 const POINT_WIDTH = 44;
 const MAX_RAIN_MM = 10;
 const ROW = {
-  day: 43,
+  day: 30,
   hours: 34,
   icons: 44,
   temperature: 42,
@@ -465,8 +465,8 @@ function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
     <svg viewBox="0 0 24 8" className="h-2 w-6"><path d="M2 2h20M4 6h2m3 0h2m3 0h2m3 0h2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
   </div>;
   return <div className="flex w-8 flex-col items-center gap-1 text-[#30353a]" aria-hidden="true">
-    <span className="border-b border-dotted border-current text-[10px] leading-3">hPa</span>
-    <span className="border-b border-dotted border-current text-[14px] leading-4">mm</span>
+    <span className="border-b border-dotted border-current text-[12px] leading-4">hPa</span>
+    <span className="border-b border-dotted border-current text-[12px] leading-4">mm</span>
   </div>;
 }
 
@@ -549,7 +549,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
           </div>
 
           <div className="relative z-10">
-            <div className="grid bg-[#f7f8fa] text-[15px] font-medium tracking-[.02em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
+            <div className="grid bg-[#f7f8fa] text-[13px] font-medium tracking-[.01em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
               {dayGroups.map((day) => <div key={day.label} className="flex items-center border-r border-[#d5d9de] pl-3" style={{ gridColumn: `span ${day.count}` }}><span className="whitespace-nowrap">{day.label}</span></div>)}
             </div>
             <div className="grid text-[15px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>
@@ -570,7 +570,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
               <div className="relative z-30 grid" style={{ height: ROW.icons, ...grid }}>
                 {points.map((point) => <div key={`icon-${point.timestamp}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={`${point.hourLabel} Uhr · ${cloudTypeTooltip(point)}`} title={cloudTypeTooltip(point)}><span data-cloud-type-icon={point.cloudType ?? "unknown"}><WeatherIcon kind={weatherIconKind(point)} className="h-9 w-9" /></span></div>)}
               </div>
-              <div className="relative z-20 grid text-[21px] font-semibold tracking-[-.02em] text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>
+              <div className="relative z-20 grid text-[16px] font-medium tracking-[-.01em] text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>
                 {points.map((point) => <div key={`temperature-${point.timestamp}`} className="flex items-center justify-center">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}
               </div>
               {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="pointer-events-none absolute inset-0 z-30 grid" style={grid}>
@@ -606,8 +606,8 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                   const labelY = preferredY > ROW.pressure - 8 ? curveY - 8 : Math.max(16, preferredY);
                   const x = index * POINT_WIDTH + POINT_WIDTH / 2;
                   return <g key={`pressure-label-${point.timestamp}`}>
-                    <rect x={x - 20} y={labelY - 10} width="40" height="12" rx="2" fill="#f7f8fa" fillOpacity=".94" />
-                    <text data-pressure-label="true" x={x} y={labelY} textAnchor="middle" fontSize="9" fontWeight="600" fontFamily="Open Sans, sans-serif" fill="#4d6979">{Math.round(point.pressure!)} hPa</text>
+                    <rect x={x - 23} y={labelY - 11} width="46" height="15" rx="2" fill="#f7f8fa" fillOpacity=".94" />
+                    <text data-pressure-label="true" x={x} y={labelY} textAnchor="middle" fontSize="11" fontWeight="600" fontFamily="Open Sans, sans-serif" fill="#4d6979">{Math.round(point.pressure!)} hPa</text>
                   </g>;
                 })}
                 <text x="-100" y="-100" fontSize="10" aria-hidden="true">hPa</text>

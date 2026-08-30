@@ -91,7 +91,7 @@ export function buildForecastDateLabels(
 const SYSTEM_PROMPT = `Du bist Meteorologe und Segelexperte.
 STIL: Deutsch, sachlich-professionell. Bullet-Point-Stil, KURZ und PRÄGNANT.
 Verwende GROSSZÜGIG passende Emojis am Anfang jedes Bullets und im Text: 🌀 💨 🌊 ☀️ ⛅ ☁️ 🌥️ 🌧️ 🌦️ ⚠️ ⛈️ 🌡️ 🧭 🌬️ ❄️ 🔵 🔴 📍 ✅.
-Ausnahme für Abschnitt #3 Wind & Welle und Abschnitt #4 Wolken & Regen: Die passenden Emojis stehen direkt vor dem jeweiligen Inhalt, nicht am Anfang des Bullets.
+Ausnahme für Abschnitt #3 Wind & Welle und Abschnitt #4 Wetter & Regen: Die passenden Emojis stehen direkt vor dem jeweiligen Inhalt, nicht am Anfang des Bullets.
 Konkrete Zahlen, KEINE halluzinierten Werte. KEINE Begrüßung, KEINE Floskeln.
 Schreibe KEINE Überschriften — nur die Bullet-Points. KEIN Fettdruck (kein **text**), nur normaler Text.`;
 
@@ -233,7 +233,7 @@ Regeln pro Abschnitt:
 - Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen.
 - Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
-#4 cloudsRain — Wolken & Regen (Inputs: NUR "STADTDATEN FÜR ABSCHNITT 4" — KEINE Seegebietsdaten, KEINE Wind-/Wellendaten, KEINE Europakarten, KEINE nationale Synopsis)
+#4 cloudsRain — Wetter & Regen (Inputs: NUR "STADTDATEN FÜR ABSCHNITT 4" — KEINE Seegebietsdaten, KEINE Wind-/Wellendaten, KEINE Europakarten, KEINE nationale Synopsis)
 - Erzeuge genau 3 Bullets: "Heute (${todayLabel})", "Morgen" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit dem Zeitbezug und Datum, niemals mit einem Emoji.
 - Bullet Heute und Bullet Morgen: inhaltlich wie bisher kurz und konkret mit Bewölkung + Regen + Gewitterrisiko. Setze ☁️/🌤️/☀️ direkt vor den Bewölkungstext, 🌧️ direkt vor Regen und ⛈️ direkt vor das Gewitterrisiko. CAPE-Werte NIEMALS im Text erwähnen — nur als interne Entscheidungshilfe für Gewitterrisiko verwenden.
 - Bullet ${forecastOverviewLabel}: nur ein grober Überblick für die Tage ${overviewStartDay}. bis ${forecastEndDay}. (Bewölkung, überwiegend trocken/nass, grobes Gewitterrisiko), keine Stundenwerte und keine einzelnen Tagesdetails. Setze die passenden Wetter-Icons direkt vor den jeweiligen Text.
