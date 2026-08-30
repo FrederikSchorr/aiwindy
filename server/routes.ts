@@ -94,6 +94,7 @@ import {
   preprocessLocalWeather,
 } from "./weather-national.js";
 import { generateWeatherOutput } from "./weather-output.js";
+import { resolveLocalForecast } from "./weather-local-forecast.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -991,6 +992,10 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
       (status) => publish({ loadingStatus: status }),
     );
     Object.assign(analysis.data.weatherRaw, national.data);
+    const resolvedLocalForecast = resolveLocalForecast(analysis.data.weatherRaw, countryCode);
+    if (resolvedLocalForecast) {
+      analysis.data.weatherRaw.resolvedLocalForecast = resolvedLocalForecast;
+    }
     for (const url of national.sourceUrls) analysis.data.sources.national.push(url);
     analysis.data.sources.nationalWarningCenter = national.warningCenter;
     analysis.save();

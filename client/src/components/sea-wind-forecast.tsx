@@ -160,7 +160,9 @@ function forecastSamplingStride(timestamps: Array<string | null>): number {
 
 export function extractSeaWindForecast(analysisJson: Record<string, unknown> | null): SeaWindForecastData | null {
   const weatherRaw = asRecord(analysisJson?.weatherRaw);
-  const forecast = asRecord(weatherRaw?.openMeteoForecast) ?? asRecord(analysisJson?.openMeteoForecast);
+  const forecast = asRecord(weatherRaw?.resolvedLocalForecast)
+    ?? asRecord(weatherRaw?.openMeteoForecast)
+    ?? asRecord(analysisJson?.openMeteoForecast);
   const sailingArea = asRecord(forecast?.sailingArea);
   const hourly = asRecord(sailingArea?.hourly);
   const timestamps = asArray(hourly?.timestamps).map(asString);

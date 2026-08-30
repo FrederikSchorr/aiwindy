@@ -621,7 +621,7 @@ export function buildSection4WeatherContext(
   timezone: string,
   referenceTime = new Date(),
 ): Record<string, unknown> | null {
-  const forecast = rawData["openMeteoForecast"] as any;
+  const forecast = (rawData["resolvedLocalForecast"] ?? rawData["openMeteoForecast"]) as any;
   const city = forecast?.city;
   const hourly = city?.hourly;
   if (!Array.isArray(hourly?.timestamps)) return null;
@@ -743,7 +743,7 @@ export function preprocessOpenMeteoLocal(
   rawData: Record<string, unknown>,
   timezone: string,
 ): Record<string, unknown> {
-  const forecast = rawData["openMeteoForecast"] as any;
+  const forecast = (rawData["resolvedLocalForecast"] ?? rawData["openMeteoForecast"]) as any;
   const marine = rawData["openMeteoMarine"] as any;
   const hourly = forecast?.sailingArea?.hourly;
   const cityHourly = forecast?.city?.hourly;
@@ -754,10 +754,10 @@ export function preprocessOpenMeteoLocal(
   const city = forecast?.city?.name ?? null;
   const cityCoordinates = forecast?.city?.coordinates ?? null;
   const empty = {
-    wind: { source: "Open-Meteo Forecast API", url: forecastUrl, sailingArea, text_de: null },
+    wind: { source: forecast?.sailingArea?.source ?? "Open-Meteo Forecast API", url: forecastUrl, sailingArea, text_de: null },
     wave: { source: "Open-Meteo Marine API", url: marineUrl, sailingArea, text_de: null },
     cloudRainThunderstorm: {
-      source: "Open-Meteo Forecast API",
+      source: forecast?.city?.source ?? "Open-Meteo Forecast API",
       url: cityForecastUrl,
       city,
       coordinates: cityCoordinates,

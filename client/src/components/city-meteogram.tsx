@@ -164,7 +164,8 @@ function smoothPath(points: Array<[number, number]>) {
 
 export function extractCityMeteogram(analysisJson: Record<string, unknown> | null): CityMeteogramData | null {
   const weatherRaw = asRecord(analysisJson?.weatherRaw);
-  const forecast = asRecord(weatherRaw?.openMeteoForecast);
+  const forecast = asRecord(weatherRaw?.resolvedLocalForecast)
+    ?? asRecord(weatherRaw?.openMeteoForecast);
   const city = asRecord(forecast?.city);
   if (!forecast || !city) return null;
   const hourly = asRecord(city.hourly);

@@ -18,12 +18,17 @@ import {
   classifyCloudType,
   estimateCloudBaseM,
 } from "../server/weather-open-meteo.js";
-import { enforceSection4Output } from "../server/weather-output.js";
+import {
+  enforceSection4Output,
+  ensureWarningFirst,
+  normalizeWindDirectionMentions,
+} from "../server/weather-output.js";
 import {
   getSanitizedAnalysisExport,
   type AnalysisJson,
 } from "../server/analysis-store.js";
 import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
+import { resolveLocalForecast } from "../server/weather-local-forecast.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
 import SeaWindForecast, { extractSeaWindForecast } from "../client/src/components/sea-wind-forecast";
 
@@ -254,8 +259,8 @@ async function testNationalCoverageAndPrecedence(): Promise<void> {
       anthropicStub(),
       "AT",
     );
-    assert.equal((local.wind as any).source, "Open-Meteo Forecast API");
-    assert.equal((local.nationalWind as any).text_de, "Nationale Winddetails");
+    assert.match((local.wind as any).source, /GeoSphere Austria.*Open-Meteo Forecast API/);
+    assert.equal("nationalWind" in local, false, "resolved structured wind should replace the parallel national wind summary");
     assert.equal((local.nationalCloudRain as any).text_de, "Nationale Wolken- und Regendetails");
     assert.deepEqual(
       (local.nationalCloudRain as any).coordinates,
@@ -1265,6 +1270,280 @@ function testCityMeteogramMalformedArrays(): void {
   );
 }
 
+function testResolvedLocalForecastPrecedence(): void {
+  const localTimestamps = [
+    "2026-08-30T00:00",
+    "2026-08-30T01:00",
+    "2026-08-30T02:00",
+  ];
+  const utcTimestamps = [
+    "2026-08-29T22:00:00Z",
+    "2026-08-29T23:00:00Z",
+    "2026-08-30T00:00:00Z",
+  ];
+  const baseline = {
+    source: "Open-Meteo Forecast API",
+    timezone: "Europe/Vienna",
+    sailingArea: {
+      name: "Testrevier",
+      coordinates: AREA.coordinates,
+      hourly: {
+        timestamps: localTimestamps,
+        windSpeedKt: [10, 11, 12],
+        gustKt: [14, 15, 16],
+        windDirDeg: [90, 90, 90],
+      },
+    },
+    city: {
+      name: "Teststadt",
+      coordinates: CITY.coordinates,
+      hourly: {
+        timestamps: localTimestamps,
+        temp2mC: [20, 21, 22],
+        cloudCoverPct: [20, 30, 40],
+        rainMm: [0.1, 0.1, 0.1],
+      },
+    },
+  };
+  const resolved = resolveLocalForecast({
+    openMeteoForecast: baseline,
+    austriaWindCloudRain: {
+      source: "GeoSphere Austria",
+      timestamps: utcTimestamps,
+      windSpeedKt: [25, null, 27],
+      gustKt: [31, null, 35],
+      windDir: ["SO", null, "SSO"],
+    },
+    austriaCityCloudRain: {
+      source: "GeoSphere Austria",
+      timestamps: utcTimestamps,
+      cloudCover: [80, null, 60],
+      rainKgm2: [0, 0.4, 1],
+    },
+    austriaTemperature: {
+      source: "GeoSphere Austria",
+      timestamps: utcTimestamps,
+      temp2mC: [30, null, 32],
+    },
+  }, "AT") as any;
+
+  assert.deepEqual(resolved.sailingArea.hourly.windSpeedKt, [25, 11, 27], "local wind values should override only matching valid timestamps");
+  assert.deepEqual(resolved.sailingArea.hourly.gustKt, [31, 15, 35], "Open-Meteo gusts should remain as a field-level fallback");
+  assert.deepEqual(resolved.sailingArea.hourly.windDirDeg, [135, 90, 157.5], "local compass directions should become chart-compatible degrees");
+  assert.deepEqual(resolved.city.hourly.temp2mC, [30, 21, 32], "local temperatures should override only valid city values");
+  assert.deepEqual(resolved.city.hourly.cloudCoverPct, [80, 30, 60], "local cloud values should retain Open-Meteo gaps");
+  assert.deepEqual(resolved.city.hourly.rainMm, [0, 0.4, 0.6], "local cumulative rain should be converted to interval amounts");
+
+  const genericResolved = resolveLocalForecast({
+    openMeteoForecast: baseline,
+    structuredLocalForecasts: [{
+      target: "wind",
+      source: "DHMZ strukturierte Lokalprognose",
+      timestamps: localTimestamps,
+      windSpeedKt: [18, 19, 20],
+      gustKt: [24, 25, 26],
+      windDirDeg: [315, 315, 292.5],
+    }],
+  }, "HR") as any;
+  assert.deepEqual(genericResolved.sailingArea.hourly.windSpeedKt, [18, 19, 20], "structured local priority should not be country-specific");
+  assert.match(genericResolved.sailingArea.source, /DHMZ strukturierte Lokalprognose.*Open-Meteo Forecast API/);
+
+  const ambiguousResolved = resolveLocalForecast({
+    openMeteoForecast: baseline,
+    structuredLocalForecasts: [{
+      target: "wind",
+      source: "Lokaler Testanbieter",
+      timestamps: [
+        "2026-08-30T00:00",
+        "2026-08-30T01:30",
+        "2026-08-30T02:00",
+        "2026-08-30T02:00",
+      ],
+      windSpeedKt: [18, 99, 30, 31],
+    }],
+  }, "HR") as any;
+  assert.deepEqual(
+    ambiguousResolved.sailingArea.hourly.windSpeedKt,
+    [18, 11, 12],
+    "non-aligned or duplicate local timestamps must fall back to Open-Meteo",
+  );
+
+  const strictTimestampResolved = resolveLocalForecast({
+    openMeteoForecast: baseline,
+    structuredLocalForecasts: [{
+      target: "wind",
+      source: "Lokaler Testanbieter",
+      timestamps: [
+        "2026-08-30T00:00:30",
+        "2026-08-30T01:00invalid",
+        "2026-08-30T02:00:00+02:00",
+      ],
+      windSpeedKt: [40, 41, 42],
+    }],
+  }, "HR") as any;
+  assert.deepEqual(
+    strictTimestampResolved.sailingArea.hourly.windSpeedKt,
+    [10, 11, 42],
+    "second-level mismatches and malformed suffixes must not overwrite exact baseline timestamps, while a valid offset may match",
+  );
+
+  const dstBaseline = structuredClone(baseline) as any;
+  dstBaseline.sailingArea.hourly.timestamps = [
+    "2026-10-25T02:00",
+    "2026-10-25T02:00",
+  ];
+  dstBaseline.sailingArea.hourly.windSpeedKt = [10, 11];
+  dstBaseline.sailingArea.hourly.gustKt = [14, 15];
+  dstBaseline.sailingArea.hourly.windDirDeg = [90, 90];
+  const dstResolved = resolveLocalForecast({
+    openMeteoForecast: dstBaseline,
+    structuredLocalForecasts: [{
+      target: "wind",
+      source: "Lokaler Testanbieter",
+      timestamps: [
+        "2026-10-25T00:00:00Z",
+        "2026-10-25T01:00:00Z",
+      ],
+      windSpeedKt: [30, 31],
+    }],
+  }, "HR") as any;
+  assert.deepEqual(
+    dstResolved.sailingArea.hourly.windSpeedKt,
+    [10, 11],
+    "the repeated local hour during the DST fallback must remain ambiguous and use the baseline",
+  );
+}
+
+function testWindDirectionNormalization(): void {
+  const normalized = normalizeWindDirectionMentions(
+    "- Heute: aus S/SSO, später NW/WNW und danach N/NO.",
+  );
+  assert.equal(normalized, "- Heute: aus S, später NW und danach NNO.");
+  assert.doesNotMatch(normalized, /\b(?:N|NNO|NO|ONO|O|OSO|SO|SSO|S|SSW|SW|WSW|W|WNW|NW|NNW)\s*\//);
+}
+
+function testOfficialWarningRestoration(): void {
+  const officialWarning = [
+    "Sturmwarnung der LSZ: Böen aus S/SSO.",
+    "Gültig bis Montag 06:00 Uhr; amtlichen Wortlaut vollständig beachten.",
+  ].join("\n");
+  const restored = ensureWarningFirst({
+    sources: {
+      nationalWarningCenter: { status: "integrated", label: "LSZ Burgenland" },
+    },
+    weatherPreprocessed: {
+      local: {
+        warnings: {
+          checked: true,
+          text_de: officialWarning,
+        },
+      },
+    },
+  } as unknown as AnalysisJson, [
+    "- ⚠️ Sturmwarnung der LSZ: Böen aus S.",
+    "Vom Modell verkürzte oder veränderte Fortsetzung.",
+    "- Heute: ⚠️ Sturmphase mit 42 kt.",
+  ].join("\n"));
+
+  assert.equal(
+    restored,
+    `- ⚠️ ${officialWarning}\n- Heute: ⚠️ Sturmphase mit 42 kt.`,
+    "the official warning must replace the model candidate verbatim without deleting a legitimate severe-wind forecast bullet",
+  );
+}
+
+function testResolvedForecastExportFeedsCharts(): void {
+  const start = Date.UTC(2026, 7, 30);
+  const timestamps = Array.from({ length: 144 }, (_, index) =>
+    new Date(start + index * 60 * 60 * 1000).toISOString().slice(0, 16)
+  );
+  const baseline = {
+    source: "Open-Meteo Forecast API",
+    timezone: "Europe/Vienna",
+    sailingArea: {
+      name: "Testrevier",
+      coordinates: AREA.coordinates,
+      hourly: {
+        timestamps,
+        windSpeedKt: timestamps.map(() => 10),
+        gustKt: timestamps.map(() => 14),
+        windDirDeg: timestamps.map(() => 90),
+      },
+    },
+    city: {
+      name: "Teststadt",
+      coordinates: CITY.coordinates,
+      url: "https://open-meteo.com/",
+      hourly: {
+        timestamps,
+        temp2mC: timestamps.map(() => 20),
+        dewPoint2mC: timestamps.map(() => 12),
+        isDay: timestamps.map((_, index) => index % 24 >= 7 && index % 24 < 21 ? 1 : 0),
+        cloudBaseM: timestamps.map(() => 1200),
+        pressureMslHPa: timestamps.map(() => 1015),
+        cloudCoverPct: timestamps.map(() => 30),
+        cloudCoverLowPct: timestamps.map(() => 20),
+        cloudCoverMidPct: timestamps.map(() => 10),
+        cloudCoverHighPct: timestamps.map(() => 5),
+        capeJkg: timestamps.map(() => 0),
+        rainMm: timestamps.map(() => 0),
+        precipProbabilityPct: timestamps.map(() => 10),
+        weatherCode: timestamps.map(() => 1),
+        cloudType: timestamps.map(() => "cumulus"),
+      },
+    },
+  };
+  const resolved = resolveLocalForecast({
+    openMeteoForecast: baseline,
+    structuredLocalForecasts: [
+      {
+        target: "wind",
+        source: "Lokaler strukturierter Anbieter",
+        timestamps: timestamps.slice(0, 24),
+        windSpeedKt: timestamps.slice(0, 24).map(() => 25),
+        gustKt: timestamps.slice(0, 24).map(() => 32),
+        windDirDeg: timestamps.slice(0, 24).map(() => 135),
+      },
+      {
+        target: "city",
+        source: "Lokaler strukturierter Anbieter",
+        timestamps: timestamps.slice(0, 24),
+        temp2mC: timestamps.slice(0, 24).map(() => 30),
+      },
+    ],
+  }, "HR");
+  const section4Context = buildSection4WeatherContext(
+    { openMeteoForecast: baseline, resolvedLocalForecast: resolved },
+    "Europe/Vienna",
+    new Date(start),
+  ) as any;
+  assert.equal(
+    section4Context.days[0].summary.temperature.maxC,
+    30,
+    "section 4 must interpret the resolved local city forecast rather than the Open-Meteo baseline",
+  );
+  const exported = getSanitizedAnalysisExport({
+    meta: { app: "aiWindy", version: "test", requestDate: new Date(start).toISOString() },
+    position: { userInput: "Testrevier", country: "Kroatien", countryCode: "HR" },
+    sources: { windy: [], national: [], europe: [] },
+    weatherRaw: {
+      openMeteoForecast: baseline,
+      resolvedLocalForecast: resolved,
+    },
+    weatherPreprocessed: { europe: {}, national: {}, local: {} },
+    weatherOutput: {},
+  } as unknown as AnalysisJson);
+  const wind = extractSeaWindForecast(exported);
+  const city = extractCityMeteogram(exported);
+  assert.ok(wind, "the resolved forecast should survive export as a complete wind chart");
+  assert.ok(city, "the resolved forecast should survive export as a complete city meteogram");
+  assert.equal(wind.points.length, 48, "the exported wind chart should retain six days at three-hour cadence");
+  assert.equal(city.points.length, 48, "the exported city meteogram should retain six days at three-hour cadence");
+  assert.equal(wind.points[0].speed, 25, "the wind chart should show the structured local source where available");
+  assert.equal(wind.points[8].speed, 10, "the wind chart should fall back to Open-Meteo after local coverage ends");
+  assert.equal(city.points[0].temperature, 30, "the city meteogram should show the structured local source where available");
+}
+
 async function main(): Promise<void> {
   testCloudTypeClassification();
   testSection4OutputContract();
@@ -1277,6 +1556,10 @@ async function main(): Promise<void> {
   testMeteogramFormatting();
   testCityMeteogramDoesNotInventCloudsInEmptyBands();
   testCityMeteogramMalformedArrays();
+  testResolvedLocalForecastPrecedence();
+  testWindDirectionNormalization();
+  testOfficialWarningRestoration();
+  testResolvedForecastExportFeedsCharts();
   await withFixedDate(async () => {
     testSection4DevelopmentSignals();
     await testNationalCoverageAndPrecedence();

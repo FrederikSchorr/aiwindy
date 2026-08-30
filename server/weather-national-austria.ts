@@ -320,6 +320,7 @@ async function fetchAustriaTemperature(
         source: "GeoSphere Austria",
         url: GEOSPHERE_TIMESERIES_URL,
         city: locationObj,
+        timestamps: data.timestamps,
         temp2mC: params.t2m.data,
       },
     };
@@ -340,6 +341,7 @@ function nullTemperature(
       source: "GeoSphere Austria",
       url: GEOSPHERE_TIMESERIES_URL,
       city: locationObj,
+      timestamps: null,
       temp2mC: null,
     },
   };
@@ -565,7 +567,7 @@ export async function preprocessLocalWindAT(
     })
     .join("\n\n");
 
-  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Format: "Di 31.03: ...\nMi 01.04: ..."
+  const prompt = `Du bist ein Segelwetter-Experte. Beschreibe den Windverlauf für jeden Tag in je einem deutschen Satz (max. 25 Wörter). Nenne Richtung, Stärke in Knoten, Böen und signifikante Änderungen im Tagesverlauf. Verwende nur eine der 16 Richtungen N, NNO, NO, ONO, O, OSO, SO, SSO, S, SSW, SW, WSW, W, WNW, NW oder NNW; niemals "/" oder Richtungsbereiche. Format: "Di 31.03: ...\nMi 01.04: ..."
 
 ${table}`;
 

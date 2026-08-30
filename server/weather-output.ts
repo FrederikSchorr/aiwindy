@@ -21,6 +21,20 @@ function getWindsystemsForCountry(country: string): string {
 }
 
 const SHORT_DAY_NAMES = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const WIND_DIRECTIONS = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"] as const;
+const WIND_DIRECTION_TOKEN = WIND_DIRECTIONS.slice().sort((a, b) => b.length - a.length).join("|");
+
+export function normalizeWindDirectionMentions(text: string): string {
+  const pairPattern = new RegExp(`\\b(${WIND_DIRECTION_TOKEN})\\s*/\\s*(${WIND_DIRECTION_TOKEN})\\b`, "gi");
+  return text.replace(pairPattern, (_match, first: string, second: string) => {
+    const firstIndex = WIND_DIRECTIONS.indexOf(first.toUpperCase() as typeof WIND_DIRECTIONS[number]);
+    const secondIndex = WIND_DIRECTIONS.indexOf(second.toUpperCase() as typeof WIND_DIRECTIONS[number]);
+    if (firstIndex === -1 || secondIndex === -1) return first.toUpperCase();
+    const shortestDelta = ((secondIndex - firstIndex + 8) % 16) - 8;
+    const midpoint = (firstIndex + shortestDelta / 2 + 16) % 16;
+    return WIND_DIRECTIONS[Math.round(midpoint) % 16];
+  });
+}
 
 function addCalendarDays(date: Date, days: number): Date {
   const result = new Date(date);
@@ -202,6 +216,7 @@ export async function generateWeatherOutput(
   const section3LocalContext = Object.fromEntries(
     Object.entries(local).filter(([key]) => ![
       "cloudRainThunderstorm",
+      "nationalWind",
       "nationalCloudRain",
       "temperature",
       "nationalTemperature",
@@ -276,7 +291,7 @@ ${JSON.stringify(section4Context, null, 2)}
 === QUELLEN-VORRANG FÜR LOKALE DATEN ===
 - wind und wave sind die Open-Meteo-Grundversorgung für Abschnitt 3.
 - localForecast enthält ausschließlich Stadtwerte und ist die zeitliche Grundversorgung für Abschnitt 4.
-- nationalWind und sailingareaForecast sind konkrete nationale Ergänzungen für Abschnitt 3; nationalLocalWeather und nationalSynopsis sind konkrete nationale Ergänzungen für Abschnitt 4. Verwende nationale Werte für die jeweils abgedeckten Zeiträume bevorzugt.
+- wind enthält bereits die nach Zeitstempel priorisierte lokale Windreihe; strukturierte nationale Werte haben darin Vorrang vor Open-Meteo. sailingareaForecast ist eine konkrete nationale Text-Ergänzung für Abschnitt 3. nationalLocalWeather und nationalSynopsis sind konkrete nationale Ergänzungen für Abschnitt 4.
 - europeanOverview und die KNMI-Frontkarten liefern Abschnitt 4 ausschließlich den großräumigen Erklärungszusammenhang. Lokale Zeitangaben stammen aus localForecast oder konkreten nationalen Daten.
 - warnings ist ein separat geprüftes nationales Warnzentrum. Wenn vorhanden, seinen Text in Abschnitt 3 unverändert übernehmen.
 
@@ -311,7 +326,7 @@ Regeln pro Abschnitt:
 - Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨"; nur die wichtigste markante Entwicklung oder, falls keine Änderung vorliegt, eine knappe vorherrschende Tendenz. Keine Stundenwerte und keine vollständige Aufzählung von Windstärken oder Richtungen.
 - Bullet Danach: beginne EXAKT mit "${forecastTailLabel}:". Setze danach "💨" vor die großflächige Zusammenfassung; nenne für jeden Tag nur eine Windstärke-Kategorie und erwähne ausschließlich deutliche Wechsel oder stürmische/kräftige Phasen. Keine Stundenwerte und keine vollständige Aufzählung von Richtungen. Eine passende Großwetterlage darf hier oder bei einer markanten Entwicklung in den Tagesbullets in einem kurzen Nebensatz ergänzt werden, wenn der optionale Kontext sie eindeutig stützt.
 - Der abschließende Datumsbereichs-Bullet ist PFLICHT und darf niemals fehlen oder durch das Ende der Antwort entfallen. Wenn für die Tage danach trotz der 6-Tage-Abfrage keine Winddaten vorliegen, gib trotzdem "Di–Do [entsprechender Datumsbereich]: 💨 Winddaten für diesen Zeitraum nicht verfügbar." aus.
-- Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen. Großwetterlage und Windsysteme dürfen nur genannt werden, wenn sie geographisch und meteorologisch zum lokalen Verlauf passen; sie ersetzen niemals lokale Daten.
+- Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen. Verwende ausschließlich die 16 Richtungen N, NNO, NO, ONO, O, OSO, SO, SSO, S, SSW, SW, WSW, W, WNW, NW oder NNW; niemals Richtungsbereiche mit "/" oder kombinierte Richtungsangaben. Großwetterlage und Windsysteme dürfen nur genannt werden, wenn sie geographisch und meteorologisch zum lokalen Verlauf passen; sie ersetzen niemals lokale Daten.
 - Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
 
 #4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)
@@ -362,10 +377,14 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
     }
 
     const source = "claude-sonnet-4-6";
-    const windWavesText = enforceWindForecastDatePrefixes(
-      ensureWarningFirst(analysis, parsed.windWaves ?? null),
+    const generatedWindText = parsed.windWaves
+      ? normalizeWindDirectionMentions(parsed.windWaves)
+      : null;
+    const windWithDatePrefixes = enforceWindForecastDatePrefixes(
+      ensureWarningFirst(analysis, generatedWindText),
       { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
     );
+    const windWavesText = windWithDatePrefixes;
     return {
       airPressureMasses: { source, text: parsed.airPressureMasses ?? null },
       weatherFront:      { source, text: parsed.weatherFront ?? null },
@@ -723,7 +742,7 @@ export function enforceSection4Output(
     .join("\n");
 }
 
-function ensureWarningFirst(analysis: AnalysisJson, windWavesText: string | null): string | null {
+export function ensureWarningFirst(analysis: AnalysisJson, windWavesText: string | null): string | null {
   const warningCenter = analysis.sources.nationalWarningCenter;
   if (!warningCenter) return windWavesText;
 
@@ -747,26 +766,22 @@ function ensureWarningFirst(analysis: AnalysisJson, windWavesText: string | null
   const warningPrefix = isNoWarning ? "" : "⚠️ ";
   const warningFirstLine = warningText.split("\n")[0];
 
-  const hasExpectedPrefix = isNoWarning
-    ? output.startsWith("- ") && !output.startsWith("- ⚠️")
-    : output.startsWith("- ⚠️");
-  if (!isNoWarning && hasExpectedPrefix && output.includes(warningFirstLine)) {
-    return output;
-  }
-
-  const remainingLines = removeNationalWarningLines(output)
+  const remainingLines = removeNationalWarningLines(output, warningFirstLine)
     .split("\n")
     .filter((line) => !line.includes(warningFirstLine));
   return [`- ${warningPrefix}${warningText}`, ...remainingLines].filter(Boolean).join("\n");
 }
 
-function removeNationalWarningLines(text: string): string {
+function removeNationalWarningLines(text: string, authoritativeFirstLine?: string): string {
   if (!text) return "";
   const lines = text.split("\n");
   const remaining: string[] = [];
   let skippingContinuation = false;
   for (const line of lines) {
-    const isWarningLine = /\b(?:sturmwarnung|starkwindwarnung|unwetterwarnung|warnquelle|warnzentrum|keine\s+(?:aktive\s+)?warnung|warnung\s+von\s+(?:hnms|dhmz|lsz))\b/i.test(line);
+    const isWarningLine = (
+      Boolean(authoritativeFirstLine && line.includes(authoritativeFirstLine))
+      || /\b(?:sturmwarnung|starkwindwarnung|unwetterwarnung|warnquelle|warnzentrum|keine\s+(?:aktive\s+)?warnung|warnung\s+von\s+(?:hnms|dhmz|lsz))\b/i.test(line)
+    );
     if (isWarningLine) {
       skippingContinuation = true;
       continue;

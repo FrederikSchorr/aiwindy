@@ -20,3 +20,9 @@ For section 3, show the current national or regional storm-warning result as the
 **Why:** Sailors need a visible confirmation that the relevant warning source was checked, while an unavailable service must be unmistakable and never be mistaken for an all-clear.
 
 **How to apply:** Insert this bullet deterministically ahead of the wind forecast after output generation. Use a checked flag to distinguish confirmed warnings/all-clears from an unreachable source; do not create it for unsupported countries.
+
+Restore an integrated warning centre's complete authoritative text after model generation; never accept a model echo as the final warning. Identify warning candidates by warning-specific wording or the authoritative first line, not by the severity icon alone.
+
+**Why:** The model can preserve only the first line while altering later warning lines, and the same severity icon is also valid on ordinary high-wind forecast bullets.
+
+**How to apply:** Remove only the generated warning candidate and its continuation, prepend the authoritative text unchanged, and preserve separate severe-wind forecast bullets even when they use the warning icon.

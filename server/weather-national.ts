@@ -4,7 +4,6 @@ import {
   fetchAustriaWeather,
   preprocessNationalWeatherAT,
   preprocessLocalWeatherAT,
-  preprocessLocalWindAT,
   preprocessLocalCloudRainAT,
   preprocessLocalWarningsNeusiedler,
 } from "./weather-national-austria.js";
@@ -30,6 +29,7 @@ import {
   preprocessOpenMeteoLocal,
   type OpenMeteoTarget,
 } from "./weather-open-meteo.js";
+import { resolveLocalForecast } from "./weather-local-forecast.js";
 
 function getGreekEmyName(sailingAreaNameDe: string | null): string | null {
   if (!sailingAreaNameDe) return null;
@@ -196,19 +196,22 @@ export async function preprocessLocalWeather(
   countryCode?: string,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
+  const resolvedLocalForecast = rawData["resolvedLocalForecast"]
+    ?? resolveLocalForecast(rawData, countryCode);
+  const effectiveRawData = resolvedLocalForecast
+    ? { ...rawData, resolvedLocalForecast }
+    : rawData;
   const genericLocal = preprocessOpenMeteoLocal(
-    rawData,
+    effectiveRawData,
     getOpenMeteoTimezone(countryCode ?? ""),
   );
 
   if (countryCode === "AT") {
-    const nationalWind = await preprocessLocalWindAT(rawData, anthropic, signal);
     const nationalCloudRain = await preprocessLocalCloudRainAT(rawData, anthropic, signal);
     const nationalTemperature = preprocessLocalWeatherAT(rawData);
     return {
       ...genericLocal,
       ...preprocessLocalWarningsNeusiedler(rawData, position.sailingArea),
-      nationalWind: nationalWind["wind"],
       nationalCloudRain: nationalCloudRain["cloudRain"],
       nationalTemperature: nationalTemperature["temperature"],
     };
