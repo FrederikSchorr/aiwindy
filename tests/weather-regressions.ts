@@ -807,6 +807,9 @@ function testSeaWindForecast(): void {
   assert.match(markup, /bg-\[#63709b\]\/\[\.075\]/, "night shading should match the city meteogram");
   assert.match(markup, /data-label-rail-width="108"/, "the fixed label rail should expose the shared width");
   assert.match(markup, /data-testid="forecast-clock-glyph"/, "the wind forecast should use the shared clock glyph");
+  assert.match(markup, /data-testid="sea-wind-hours-row"[^>]*data-row-height="21"[^>]*data-font-size="13"/, "the wind forecast should expose the compact shared hour-row dimensions");
+  const windLabelRail = markup.match(/<aside[^>]*data-testid="sea-wind-label-rail"[^>]*>(.*?)<\/aside>/)?.[1] ?? "";
+  assert.doesNotMatch(windLabelRail, />kt<|>hPa<|>mm<|>°C</, "the wind forecast label rail should not repeat measurement units");
   assert.match(markup, /data-testid="sea-wind-current-column"[^>]*border-dashed/, "the wind forecast should keep a dashed current-time line without a visible label");
   assert.match(markup, /background-color:#f1f2f2/, "zero-knot wind should use the lightest approved color");
   assert.match(markup, /src="\/assets\/wind-arrows\/wind-arrow-ESE-112\.svg"/, "a wind reported from NW should use an arrow pointing toward SE");
@@ -997,6 +1000,7 @@ function testCityMeteogramVisualLayers(): void {
   const hourly = (analysis.weatherRaw as any).openMeteoForecast.city.hourly;
   hourly.cloudBaseM = [900, 1400];
   hourly.rainMm = [0.3, 2.2];
+  hourly.pressureMslHPa = [1010, 1020];
 
   const data = extractCityMeteogram(analysis);
   assert.ok(data, "visual-layer fixture should produce a meteogram");
@@ -1084,6 +1088,7 @@ function testCityMeteogramVisualLayers(): void {
   assert.match(temperatureColor(33), /^#(?:[a-f0-9]{6})$/i, "temperature colors should be valid SVG hex colors");
   assert.match(markup, /linearGradient id="temperature-fade"/, "temperature fill should fade vertically");
   assert.match(markup, /data-testid="meteogram-pressure-line"/, "pressure path should remain directly measurable");
+  assert.match(markup, /data-testid="meteogram-pressure-line"[^>]*data-pressure-y-min="1"[^>]*data-pressure-y-max="105"[^>]*data-pressure-row-height="106"/, "pressure should use nearly the full pressure/rain row height");
   assert.match(markup, /font-size="10"/, "pressure labels should be readable");
   assert.match(markup, /stroke="#587b90"/, "pressure should be blue-gray and distinct from cloud fill");
   assert.match(markup, /data-testid="meteogram-current-column"/, "the current forecast column should be highlighted");
@@ -1094,6 +1099,9 @@ function testCityMeteogramVisualLayers(): void {
   );
   assert.match(markup, /border-l border-dashed/, "the current column should use a subtle Windy-like dashed marker");
   assert.match(markup, /data-night-overlay-layer="true"[^>]*z-\[15\]/, "night shading should overlay opaque chart rows");
+  assert.match(markup, /data-testid="city-meteogram-hours-row"[^>]*data-row-height="21"[^>]*data-font-size="13"/, "the meteogram hour row should match the compact wind forecast");
+  const cityLabelRail = markup.match(/<aside[^>]*data-testid="city-meteogram-label-rail"[^>]*>(.*?)<\/aside>/)?.[1] ?? "";
+  assert.doesNotMatch(cityLabelRail, />kt<|>hPa<|>mm<|>°C</, "the meteogram label rail should not repeat measurement units");
   assert.match(
     markup,
     /data-testid="meteogram-pressure-rain-overlay"/,

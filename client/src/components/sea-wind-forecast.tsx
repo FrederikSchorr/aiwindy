@@ -292,11 +292,8 @@ function DirectionArrow({ degrees }: { degrees: number }) {
   );
 }
 
-function LabelGlyph({ kind }: { kind: "wind" | "gust" | "direction" }) {
-  if (kind === "direction") {
-    return <span className="text-[17px] leading-none text-[#303b43]" aria-hidden="true">⚑</span>;
-  }
-  return <span className="text-[10px] leading-3 text-[#47525a]" aria-hidden="true">kt</span>;
+function LabelGlyph() {
+  return <span className="text-[17px] leading-none text-[#303b43]" aria-hidden="true">⚑</span>;
 }
 
 export default function SeaWindForecast({ analysisJson, isLoading = false }: SeaWindForecastProps) {
@@ -343,26 +340,25 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
     >
       <div className="flex min-w-0">
         <aside
-          className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]"
+          data-testid="sea-wind-label-rail"
+          className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
           style={{ width: FORECAST_LABEL_RAIL_WIDTH }}
           data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
         >
           <div style={{ height: ROW.day }} />
-          <div className="flex items-center justify-end gap-2 pr-3 text-[11px]" style={{ height: ROW.hours }}>
+          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.hours }}>
             <span>Stunden</span>
             <ForecastClockGlyph />
           </div>
-          <div className="flex items-center justify-end gap-2 pr-3 text-[12px]" style={{ height: ROW.wind }}>
+          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.wind }}>
             <span>Wind</span>
-            <LabelGlyph kind="wind" />
           </div>
-          <div className="flex items-center justify-end gap-2 pr-3 text-[12px]" style={{ height: ROW.gust }}>
+          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.gust }}>
             <span>Böen</span>
-            <LabelGlyph kind="gust" />
           </div>
-          <div className="flex items-center justify-end gap-2 pr-3 text-[11px] leading-3" style={{ height: ROW.direction }}>
+          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.direction }}>
             <span className="text-right">Windrichtung</span>
-            <LabelGlyph kind="direction" />
+            <LabelGlyph />
           </div>
         </aside>
 
@@ -394,7 +390,13 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
                   </div>
                 ))}
               </div>
-              <div className="grid text-[13px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>
+              <div
+                data-testid="sea-wind-hours-row"
+                data-row-height={ROW.hours}
+                data-font-size={13}
+                className="grid text-[13px] text-[#717880]"
+                style={{ height: ROW.hours, ...grid }}
+              >
                 {data.points.map((point, index) => (
                   <div key={`hour-${point.timestamp}-${index}`} className="flex items-center justify-center" data-hour-label={point.hour}>{point.hour}</div>
                 ))}

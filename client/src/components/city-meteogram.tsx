@@ -41,7 +41,7 @@ const POINT_WIDTH = FORECAST_POINT_WIDTH;
 const MAX_RAIN_MM = 10;
 const ROW = {
   day: 30,
-  hours: 34,
+  hours: 21,
   icons: 44,
   temperature: 42,
   dewPoint: 30,
@@ -455,18 +455,6 @@ function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogra
   </section>;
 }
 
-function AxisGlyph({ kind }: { kind: "clock" | "temperature" | "pressure" }) {
-  if (kind === "clock") return <ForecastClockGlyph />;
-  if (kind === "temperature") return <div className="flex w-8 flex-col items-center text-[#30353a]" aria-hidden="true">
-    <span className="text-[14px] leading-4">°C</span>
-    <svg viewBox="0 0 24 8" className="h-2 w-6"><path d="M2 2h20M4 6h2m3 0h2m3 0h2m3 0h2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-  </div>;
-  return <div className="flex w-8 flex-col items-center gap-1 text-[#30353a]" aria-hidden="true">
-    <span className="border-b border-dotted border-current text-[12px] leading-4">hPa</span>
-    <span className="border-b border-dotted border-current text-[12px] leading-4">mm</span>
-  </div>;
-}
-
 function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps) {
   const data = extractCityMeteogram(analysisJson);
   if (!data) {
@@ -502,7 +490,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
   const pressureValues = points.map((point) => point.pressure).filter((value): value is number => value !== null);
   const pressureMin = pressureValues.length ? Math.min(...pressureValues) : 980;
   const pressureMax = pressureValues.length ? Math.max(...pressureValues) : 1030;
-  const pressureY = (value: number) => 8 + (1 - (value - pressureMin) / Math.max(1, pressureMax - pressureMin)) * (ROW.pressure - 16);
+  const pressureY = (value: number) => 1 + (1 - (value - pressureMin) / Math.max(1, pressureMax - pressureMin)) * (ROW.pressure - 2);
   const pressurePoints = points.flatMap((point, index) => point.pressure === null
     ? []
     : [[index * POINT_WIDTH + POINT_WIDTH / 2, pressureY(point.pressure)] as [number, number]]);
@@ -526,20 +514,19 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
     <h3 className="sr-only">{cityLabel} · {coordinateLabel} · Ortszeit {data.timezone}{stormRisk ? " · Gewitterrisiko" : ""}</h3>
     <div className="flex min-w-0">
       <aside
-        className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[#7a7e82]"
+        data-testid="city-meteogram-label-rail"
+        className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
         style={{ width: FORECAST_LABEL_RAIL_WIDTH }}
         data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
         aria-label="Feste Legende"
       >
         <div style={{ height: ROW.day }} />
-        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3 text-[11px]"><span>Stunden</span><AxisGlyph kind="clock" /></div>
+        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3"><span>Stunden</span><ForecastClockGlyph /></div>
         <div style={{ height: temperatureSectionHeight }} className="flex items-center justify-end gap-2 pr-3">
           <span className="text-right text-[12px] leading-[15px]"><span className="text-[#a85e42]">Temperatur</span>{hasDewPoint && <><br />Taupunkt</>}</span>
-          <AxisGlyph kind="temperature" />
         </div>
         <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-3">
           <span className="text-right text-[12px] leading-[15px]">Druck<br /><span className="text-[#3275a0]">Regen</span></span>
-          <AxisGlyph kind="pressure" />
         </div>
         <div className="hidden" data-testid="meteogram-fixed-cloud-labels" style={{ color: cloudTypeColor("cirrus") }}>{data.bands.map((band) => <span key={band.key} data-fixed-cloud-band={band.key}>{band.label}</span>)}</div>
       </aside>
@@ -554,7 +541,13 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
             <div className="grid bg-[#f7f8fa] text-[13px] font-medium tracking-[.01em] text-[#555c63]" style={{ height: ROW.day, ...grid }}>
               {dayGroups.map((day) => <div key={day.label} className="flex items-center border-r border-[#d5d9de] pl-3" style={{ gridColumn: `span ${day.count}` }}><span className="whitespace-nowrap">{day.label}</span></div>)}
             </div>
-            <div className="grid text-[15px] text-[#717880]" style={{ height: ROW.hours, ...grid }}>
+            <div
+              data-testid="city-meteogram-hours-row"
+              data-row-height={ROW.hours}
+              data-font-size={13}
+              className="grid text-[13px] text-[#717880]"
+              style={{ height: ROW.hours, ...grid }}
+            >
               {points.map((point) => <div key={`hour-${point.timestamp}`} className="flex items-center justify-center" title={point.timestamp}>{Number(point.hourLabel)}</div>)}
             </div>
 
@@ -613,7 +606,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                      <text data-rain-amount={formatRainAmount(tallest)} x={left + Math.max(0, tallestBarIndex) * (barWidth + barGap) + barWidth / 2} y={Math.max(11, ROW.pressure - labelHeight - 8)} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1266c5">{formatRainAmount(tallest)}</text>
                    </g>;
                  })}
-                {pressurePoints.length > 1 && <path data-testid="meteogram-pressure-line" data-pressure-min={pressureMin} data-pressure-max={pressureMax} d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />}
+                {pressurePoints.length > 1 && <path data-testid="meteogram-pressure-line" data-pressure-min={pressureMin} data-pressure-max={pressureMax} data-pressure-y-min={pressureY(pressureMax)} data-pressure-y-max={pressureY(pressureMin)} data-pressure-row-height={ROW.pressure} d={smoothPath(pressurePoints)} fill="none" stroke="#587b90" strokeWidth="1.8" strokeLinecap="round" />}
                 {pressureExtrema.map(({ point, index, isMaximum }) => {
                   const curveY = pressureY(point.pressure!);
                   const preferredY = curveY + (isMaximum ? -7 : 14);
