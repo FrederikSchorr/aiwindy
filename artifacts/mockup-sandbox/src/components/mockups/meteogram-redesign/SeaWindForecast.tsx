@@ -93,7 +93,7 @@ function DirectionArrow({ degrees }: { degrees: number }) {
       shapeRendering="geometricPrecision"
       style={{ transform: `rotate(${degrees}deg)`, transformOrigin: "center" }}
     >
-      <path d="M12 1 20.5 14l-4.25-1.3V23h-8.5V12.7L3.5 14 12 1Z" fill="#5e7890" />
+      <path d="M12 1 20.5 14l-3.4-1.3V23H8.6V12.7L3.5 14 12 1Z" fill="#5e7890" />
     </svg>
   );
 }
