@@ -96,7 +96,6 @@ function TemperatureDewSection({ points, width, grid, temperatureArea, dewBounda
     <svg viewBox={`0 0 ${width} ${ROW.icons + ROW.temperature + 12}`} width={width} height={ROW.icons + ROW.temperature + 12} className="pointer-events-none absolute inset-0">
       <defs><linearGradient id="current-temperature" x2={width} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor={temperatureColor(points[0].temperature)} />{points.map((point, index) => <stop key={point.timestamp} offset={`${index / (points.length - 1) * 100}%`} stopColor={temperatureColor(point.temperature)} />)}</linearGradient></defs>
       <path d={temperatureArea} fill="url(#current-temperature)" fillOpacity=".56" />
-      <path data-dew-point-boundary="true" d={smoothPath(dewBoundaryPoints)} fill="none" stroke="#aaa9a2" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
     <div className="relative z-10 grid" style={{ height: ROW.icons, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center" title={`${point.cloudType} · Regen ${point.rain.toFixed(1)} mm`}>{weatherIcon(point)}</div>)}</div>
     <div className="relative z-10 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>{points.map(point => <div key={point.timestamp} className="flex items-center justify-center">{point.temperature}°</div>)}</div>
