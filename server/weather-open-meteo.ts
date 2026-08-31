@@ -762,7 +762,13 @@ export function preprocessOpenMeteoLocal(
   const city = forecast?.city?.name ?? null;
   const cityCoordinates = forecast?.city?.coordinates ?? null;
   const empty = {
-    wind: { source: forecast?.sailingArea?.source ?? "Open-Meteo Forecast API", url: forecastUrl, sailingArea, text_de: null },
+    wind: {
+      source: forecast?.sailingArea?.source ?? "Open-Meteo Forecast API",
+      url: forecastUrl,
+      sailingArea,
+      text_de: null,
+      hourlyText_de: null,
+    },
     wave: { source: "Open-Meteo Marine API", url: marineUrl, sailingArea, text_de: null },
     cloudRainThunderstorm: {
       source: forecast?.city?.source ?? "Open-Meteo Forecast API",
@@ -833,6 +839,11 @@ export function preprocessOpenMeteoLocal(
   }
 
   let gustySummaryUsed = false;
+  const hourlyWindText = Array.from(windDays.values()).slice(0, 6).flatMap(rows =>
+    rows.map(row =>
+      `${row.label} | ${String(row.hour).padStart(2, "0")}:00 | ${row.direction} | ${Math.round(row.speed)} | ${Math.round(row.gust)}`,
+    ),
+  ).join("\n");
   const windText = Array.from(windDays.values()).slice(0, 6).map(rows => {
     const strongestGustIndex = rows.reduce(
       (strongestIndex, row, index) =>
@@ -911,7 +922,11 @@ export function preprocessOpenMeteoLocal(
   ).join("\n");
 
   return {
-    wind: { ...empty.wind, text_de: windText || null },
+    wind: {
+      ...empty.wind,
+      text_de: windText || null,
+      hourlyText_de: hourlyWindText || null,
+    },
     wave: { ...empty.wave, text_de: waveText || null },
     cloudRainThunderstorm: {
       ...empty.cloudRainThunderstorm,
