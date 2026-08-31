@@ -137,8 +137,8 @@ Danach exakt ===END===. Keine Erklärung außerhalb dieser Marker.
 const SECTION_1_RULES = `=== ABSCHNITT 1: airPressureMasses — Druck & Luftmassen ===
 Input: Bilder, Meteonews und nationale Synopsis; lokale Wetterdaten nicht verwenden.
 - Genau 2 Bullets, maximal 20 Wörter je Bullet.
-- Bullet 1: Dominante Drucksysteme über Europa und ihre Bewegungsrichtung.
-- Bullet 2: Großräumige Luftmassen: kalt/warm, feucht/trocken, Luftmassengrenzen oder Gradienten.
+- Bullet 1 beginnt mit 🌀 und beschreibt dominante Drucksysteme über Europa und ihre Bewegungsrichtung. Keine farbigen Kreise (🔵, 🟠, 🔴).
+- Bullet 2 beginnt mit 🌡️ und beschreibt großräumige Luftmassen: kalt/warm, feucht/trocken, Luftmassengrenzen oder Gradienten.
 - Keine lokalen Windströmungen oder Windstärken, keine Niederschlagserwähnung.
 - Keine Temperaturangaben in °C oder Grad.`;
 
@@ -211,6 +211,18 @@ function imageBlock(base64: string | null | undefined): Anthropic.Messages.Image
     type: "image",
     source: { type: "base64", media_type: detectMediaType(base64), data: base64 },
   };
+}
+
+function normalizeSection1Icons(text: string | null): string | null {
+  if (!text) return text;
+  const leadingIcon = /^(?:🔵|🟠|🔴|🟢|🟡|🟣|⚪|⚫|🌀|🧭|🌡️)\s*/u;
+  let bulletIndex = 0;
+  return text.split("\n").map((line) => {
+    const match = line.match(/^(\s*-\s*)(.*)$/);
+    if (!match || bulletIndex >= 2) return line;
+    const icon = bulletIndex++ === 0 ? "🌀" : "🌡️";
+    return `${match[1]}${icon} ${match[2].replace(leadingIcon, "")}`;
+  }).join("\n");
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
@@ -431,7 +443,7 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
     );
     const windWavesText = windWithDatePrefixes;
     return {
-      airPressureMasses: { source, text: parsed.airPressureMasses ?? null },
+      airPressureMasses: { source, text: normalizeSection1Icons(parsed.airPressureMasses ?? null) },
       weatherFront:      { source, text: parsed.weatherFront ?? null },
       windWaves:         { source, text: windWavesText },
       cloudsRain:        {

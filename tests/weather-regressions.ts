@@ -908,9 +908,14 @@ async function testInterpretationPromptContract(): Promise<void> {
     weatherOutput: {},
   } as AnalysisJson;
 
-  await generateWeatherOutput(analysis, anthropic);
+  const output = await generateWeatherOutput(analysis, anthropic);
 
   assert.equal(callCount, 1, "all four interpretation sections must use one LLM call");
+  assert.equal(
+    (output.airPressureMasses as any).text,
+    "- 🌀 Hochdruck über Mitteleuropa.\n- 🌡️ Warme, trockene Luftmasse.",
+    "section 1 should use understandable semantic icons instead of colored status circles",
+  );
   const prompt = (capturedRequest?.messages?.[0]?.content ?? [])
     .filter((block: any) => block.type === "text")
     .map((block: any) => block.text)
@@ -931,6 +936,9 @@ async function testInterpretationPromptContract(): Promise<void> {
     );
   }
   assert.match(prompt, /Abschnitt 1 enthält genau 2 Bullets/);
+  assert.match(prompt, /Bullet 1 beginnt mit 🌀/);
+  assert.match(prompt, /Bullet 2 beginnt mit 🌡️/);
+  assert.match(prompt, /Keine farbigen Kreise \(🔵, 🟠, 🔴\)/);
   assert.match(prompt, /Abschnitt 2 genau 2/);
   assert.match(prompt, /Abschnitt 4 genau 3/);
   assert.match(prompt, /Genau 4 Prognosebullets/);
