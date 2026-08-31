@@ -854,11 +854,13 @@ export function preprocessOpenMeteoLocal(
       sampleIndexes.add(index);
     }
     const samples = rows.filter((_, index) => sampleIndexes.has(index)).slice(0, 6).map(row =>
-      `${String(row.hour).padStart(2, "0")}:00 ${row.direction} ${Math.round(row.speed)}-${Math.round(row.gust)} kt`,
+      `${String(row.hour).padStart(2, "0")}:00 ${row.direction} Wind ${Math.round(row.speed)}-${Math.round(row.gust)} kt`,
     );
     const speeds = finiteNumbers(rows.map(row => row.speed));
-    const gusts = finiteNumbers(rows.map(row => row.gust));
-    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, Böen ${range(gusts) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}.`;
+    const gustSpreads = rows.map(row => row.gust - row.speed);
+    const unusuallyGusty = gustSpreads.filter(spread => spread >= 8).length >= 2
+      && Math.max(...gustSpreads) >= 10;
+    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}${unusuallyGusty ? "; ungewöhnlich böig" : ""}.`;
   }).join("\n");
 
   const cloudText = Array.from(weatherDays.values()).slice(0, 6).map(rows => {

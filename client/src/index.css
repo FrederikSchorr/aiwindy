@@ -215,23 +215,27 @@
     border-radius: 999px;
   }
 
-  .sea-wind-label-rail {
+  .forecast-label-rail {
     width: 108px;
     flex: 0 0 108px;
   }
 
+  .forecast-label-layout {
+    min-width: 0;
+  }
+
   @media (max-width: 640px) {
     /* On phones the labels are part of the horizontal canvas, not a fixed rail. */
-    .sea-wind-layout {
+    .forecast-label-layout {
       overflow-x: auto;
     }
 
-    .sea-wind-label-rail {
+    .forecast-label-rail {
       width: 78px;
       flex-basis: 78px;
     }
 
-    .sea-wind-forecast-scroll {
+    .forecast-chart-scroll {
       flex: 0 0 auto !important;
       min-width: max-content !important;
       overflow-x: visible !important;

@@ -336,30 +336,30 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
       data-forecast-points={data.points.length}
       aria-label={`Windvorhersage für ${data.sailingAreaName} · ${days.length} Tage, horizontal scrollbar`}
     >
-      <div className="sea-wind-layout flex min-w-0">
+      <div className="forecast-label-layout flex min-w-0">
         <aside
           data-testid="sea-wind-label-rail"
-          className="sea-wind-label-rail shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
+          className="forecast-label-rail shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
           data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
         >
           <div style={{ height: ROW.day }} />
-          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.hours }}>
+          <div className="flex items-center justify-end gap-1 pr-1" style={{ height: ROW.hours }}>
             <span>Stunden</span>
             <ForecastClockGlyph />
           </div>
-          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.wind }}>
+          <div className="flex items-center justify-end gap-1 pr-1" style={{ height: ROW.wind }}>
             <span>Wind</span><span className="text-[10px] leading-3">kt</span>
           </div>
-          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.gust }}>
+          <div className="flex items-center justify-end gap-1 pr-1" style={{ height: ROW.gust }}>
             <span>Böen</span><span className="text-[10px] leading-3">kt</span>
           </div>
-          <div className="flex items-center justify-end gap-2 pr-3" style={{ height: ROW.direction }}>
+          <div className="flex items-center justify-end gap-1 pr-1" style={{ height: ROW.direction }}>
             <span className="text-right">Windrichtung</span>
           </div>
         </aside>
 
         <div
-          className="sea-wind-forecast-scroll min-w-0 flex-1 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+          className="forecast-chart-scroll min-w-0 flex-1 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
           data-testid="sea-wind-forecast-scroll"
           role="region"
           tabIndex={0}

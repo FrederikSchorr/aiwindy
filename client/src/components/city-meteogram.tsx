@@ -514,26 +514,25 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
 
   return <section className="meteogram-windy-shell relative w-full max-w-full overflow-hidden rounded-[10px] border border-[#cbd0d6] bg-[#f5f6f8] font-sans text-[#30353a] shadow-[0_8px_24px_rgba(38,47,57,.1)]" data-testid="city-meteogram" data-meteogram-status="ready" data-city-name={data.cityName} data-city-lat={data.latitude ?? ""} data-city-lon={data.longitude ?? ""} data-timezone={data.timezone} data-forecast-days={dayCount} data-forecast-points={points.length} aria-label={`Wettervorhersage für ${cityLabel} · ${dayCount} Tage, horizontal scrollbar`}>
     <h3 className="sr-only">{cityLabel} · {coordinateLabel} · Ortszeit {data.timezone}{stormRisk ? " · Gewitterrisiko" : ""}</h3>
-    <div className="flex min-w-0">
+    <div className="forecast-label-layout flex min-w-0">
       <aside
         data-testid="city-meteogram-label-rail"
-        className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
-        style={{ width: FORECAST_LABEL_RAIL_WIDTH }}
+        className="forecast-label-rail shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
         data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
         aria-label="Feste Legende"
       >
         <div style={{ height: ROW.day }} />
-        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-2 pr-3"><span>Stunden</span><ForecastClockGlyph /></div>
-        <div style={{ height: ROW.icons }} className="flex items-center justify-end pr-3">Bewölkung</div>
-        <div style={{ height: ROW.temperature }} className="flex items-center justify-end pr-3">Temperatur</div>
-        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-3"><span data-testid="city-meteogram-dew-label" className="relative top-[-8px]">Taupunkt</span></div>}
-        <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-2 pr-3">
+        <div style={{ height: ROW.hours }} className="flex items-center justify-end gap-1 pr-1"><span>Stunden</span><ForecastClockGlyph /></div>
+        <div style={{ height: ROW.icons }} className="flex items-center justify-end pr-1">Bewölkung</div>
+        <div style={{ height: ROW.temperature }} className="flex items-center justify-end pr-1">Temperatur</div>
+        {hasDewPoint && <div style={{ height: ROW.dewPoint }} className="flex items-center justify-end pr-1"><span data-testid="city-meteogram-dew-label" className="relative top-[-8px]">Taupunkt</span></div>}
+        <div style={{ height: ROW.pressure }} className="flex items-center justify-end gap-1 pr-1">
           <span className="text-right">Druck<br />Regen</span>
         </div>
         <div className="hidden" data-testid="meteogram-fixed-cloud-labels" style={{ color: cloudTypeColor("cirrus") }}>{data.bands.map((band) => <span key={band.key} data-fixed-cloud-band={band.key}>{band.label}</span>)}</div>
       </aside>
 
-      <div className="meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll" aria-label={`${dayCount}-Tage-Meteogramm, horizontal scrollen für weitere Stunden`}>
+      <div className="forecast-chart-scroll meteogram-scroller min-w-0 flex-1 overflow-x-auto" data-testid="city-meteogram-scroll" aria-label={`${dayCount}-Tage-Meteogramm, horizontal scrollen für weitere Stunden`}>
       <div className="relative" style={{ width, minWidth: width }}>
           <div data-night-overlay-layer="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] flex" style={{ top: ROW.day }}>
             {points.map((point, index) => <div key={`daylight-${point.timestamp}`} data-chart-night-column={point.isDay === false ? "true" : undefined} data-night-shading={point.isDay === false ? "true" : undefined} data-night-index={point.isDay === false ? index : undefined} className={point.isDay === false ? "h-full shrink-0 bg-[#63709b]/[.075]" : "h-full shrink-0"} style={{ width: POINT_WIDTH }} />)}

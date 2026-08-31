@@ -22,6 +22,7 @@ import {
   enforceSection4Output,
   ensureWarningFirst,
   normalizeWindDirectionMentions,
+  stripRedundantGustMentions,
   stripStrongestGustMentions,
 } from "../server/weather-output.js";
 import {
@@ -655,14 +656,15 @@ function testWindPeakTimingContext(): void {
 
   assert.match(
     local.wind.text_de,
-    /12:00 N 20-27 kt/,
+    /12:00 N Wind 20-27 kt/,
     "the strongest gust hour must be included among the daily wind samples",
   );
   assert.match(
     local.wind.text_de,
-    /Böen 8–27 kt/,
-    "the section 3 context should expose gusts as a compact range",
+    /Wind 5–20 kt/,
+    "the section 3 context should expose the sustained wind range",
   );
+  assert.doesNotMatch(local.wind.text_de, /Böen\s+\d/);
   assert.doesNotMatch(
     local.wind.text_de,
     /stärkste Böe|exakt um 12:00|mittags/,
@@ -672,6 +674,16 @@ function testWindPeakTimingContext(): void {
     stripStrongestGustMentions("- Heute: Böen 12–25 kt (stärkste Böe 25 kt nachts um 23:00 aus SW)."),
     "- Heute: Böen 12–25 kt.",
     "generated wind text should keep the gust range without repeating the peak time",
+  );
+  assert.equal(
+    stripRedundantGustMentions("- Heute: NO Wind 12–25 kt; Böen 4–25 kt."),
+    "- Heute: NO Wind 12–25 kt.",
+    "generated wind text should not repeat ordinary gusts separately",
+  );
+  assert.equal(
+    stripRedundantGustMentions("- Morgen: kräftige Westströmung; NW-Böen nachmittags bis 22 kt."),
+    "- Morgen: kräftige Westströmung.",
+    "direction-prefixed gust clauses should also be removed",
   );
 }
 
