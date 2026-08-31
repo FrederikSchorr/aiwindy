@@ -716,16 +716,6 @@ function testSection4OutputContract(): void {
     {
       pressureSignificant: [false, false, false],
       thunderstormAllowed: [false, false, false],
-      rainDays: [
-        [{ label: "Sa 22.08", totalMm: 0 }],
-        [{ label: "So 23.08", totalMm: 0 }],
-        [
-          { label: "Mo 24.08", totalMm: 0 },
-          { label: "Di 25.08", totalMm: 3 },
-          { label: "Mi 26.08", totalMm: 0 },
-          { label: "Do 27.08", totalMm: 0 },
-        ],
-      ],
     },
   ) ?? "";
   assert.doesNotMatch(sanitized, /%|Druck|hPa|Gewitter|Cumulonimbus|⛈️|WMO[-\s]?Code/i);
@@ -734,8 +724,10 @@ function testSection4OutputContract(): void {
   assert.match(sanitized, /Maximum 34°C/);
   assert.doesNotMatch(sanitized, /rascher Temperaturrückgang|abends rascher Rückgang|18:00|19:00/);
   assert.match(sanitized, /⛅ Nebelfelder möglich/);
-  assert.match(sanitized, /Di früh 3 mm Regen/);
-  assert.doesNotMatch(sanitized, /7[,.]2 mm Regen|1018[,.]4 hPa/);
+  assert.match(sanitized, /Di früh Regen/);
+  assert.doesNotMatch(sanitized, /\d+(?:[,.]\d+)?\s*mm\b/i);
+  assert.doesNotMatch(sanitized, /Tagessumme|Tagesmenge|Niederschlagsmenge/i);
+  assert.doesNotMatch(sanitized, /7[,.]2\s*mm|1018[,.]4 hPa/);
   assert.doesNotMatch(sanitized, /\d+[,.]\d+\s*(?:mm|hPa|°C)/i);
 
   const informativeFallback = enforceSection4Output(

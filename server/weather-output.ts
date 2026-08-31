@@ -262,16 +262,6 @@ export async function generateWeatherOutput(
       nationalThunderstormEvidence || section4Days[1]?.summary?.thunderstorm?.signal === true,
       nationalThunderstormEvidence || section4Days.slice(2).some(day => day?.summary?.thunderstorm?.signal === true),
     ],
-    rainDays: [
-      section4Days.slice(0, 1),
-      section4Days.slice(1, 2),
-      section4Days.slice(2),
-    ].map(days => days.map(day => ({
-      label: typeof day?.label === "string" ? day.label : "",
-      totalMm: typeof day?.summary?.rain?.totalMm === "number"
-        ? day.summary.rain.totalMm
-        : 0,
-    }))),
   };
   const section4Fallback = buildSection4Fallback(
     section4Days,
@@ -356,7 +346,7 @@ Regeln pro Abschnitt:
 #4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)
 - Erzeuge GENAU 3 Bullets in dieser Reihenfolge: "Heute (${todayLabel})", "Morgen (${tomorrowLabel})" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit diesem Zeitbezug und Datum, niemals mit einem Emoji.
 - INTERPRETIERE Auffälligkeiten und Veränderungen, statt die im Meteogramm bereits sichtbaren Werte vollständig nachzuerzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal, deutlicher Wetterumschwung. Bewölkung nur erwähnen, wenn ihr Wechsel für die Entwicklung relevant ist.
-- Heute: granular. Konkrete Uhrzeiten aus localForecast.timeline sind für Regen- oder Gewitterphasen erlaubt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge, z.B. "🌧️ gegen 12 Uhr kräftiger Regen" oder "📉 ab Mittag deutlicher Druckfall". Temperaturwerte immer auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen beschreiben und nie als einzelne benachbarte Stundenintervalle. Einen normalen abendlichen Rückgang nach dem Tagesmaximum nicht als Entwicklung erwähnen. Ein deutlich tieferes Nachtminimum darf nur als grobe Nachtentwicklung genannt werden, wenn es gegenüber dem Tagesmaximum meteorologisch relevant ist. Einzelne Temperaturänderungen von höchstens 3°C innerhalb eines Stundenintervalls nicht erwähnen.
+- Heute: granular, aber kompakt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge. Regen als eine zusammengefasste qualitative Phase beschreiben, nicht jedes Regenband, jeden Schauer oder jede Uhrzeit einzeln aufzählen. Eine konkrete Uhrzeit ist nur für einen markanten Beginn oder Höhepunkt erlaubt. Temperaturwerte immer auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen beschreiben und nie als einzelne benachbarte Stundenintervalle. Einen normalen abendlichen Rückgang nach dem Tagesmaximum nicht als Entwicklung erwähnen. Ein deutlich tieferes Nachtminimum darf nur als grobe Nachtentwicklung genannt werden, wenn es gegenüber dem Tagesmaximum meteorologisch relevant ist. Einzelne Temperaturänderungen von höchstens 3°C innerhalb eines Stundenintervalls nicht erwähnen.
 - Morgen: weniger granular. Verwende nur grobe Tageszeiten (nachts, morgens, mittags, nachmittags, abends), KEINE Ziffer-Uhrzeiten; konzentriere dich auf die wichtigste Veränderung oder den stabilen Verlauf.
 - ${forecastOverviewLabel}: fasse die folgenden vier Tage ausschließlich als High-Level-Trend zusammen. Keine Uhrzeiten, keine Tagesphasen und keine vollständige Aufzählung aller Einzelwerte.
 - Schreibe niemals nur "Keine markante Wetterentwicklung erkennbar." Wenn keine Auffälligkeit vorliegt, beschreibe stattdessen den stabilen Charakter des Tages inhaltlich, z.B. trocken, Cumulus-/wechselnde Bewölkung und anhaltend sommerlich warm. Für die folgenden vier Tage ist eine Formulierung wie "Mittelmeerraum unter stabiler Hochdrucklage; verbreitet sonnig und heiß" ausdrücklich erwünscht, sofern der Lagekontext sie stützt. Der Hochdruck-Hinweis darf aber nicht den gesamten Bullet bilden: Ergänze danach 1–2 unterstützende High-Level-Details wie Wärme, Sonnenschein, Trockenheit oder die Stabilität bis zum Ende des Zeitraums.
@@ -365,8 +355,8 @@ Regeln pro Abschnitt:
 - Nationale konkrete Informationen und Warnungen für den Zielort haben Vorrang; die europäische Großwetterlage liefert nur den übergeordneten Zusammenhang.
 - GEWITTERREGEL: Ein Gewitterrisiko darf ausschließlich erwähnt werden, wenn localForecast.summary.thunderstorm.signal=true oder ein konkreter nationaler Wetterbericht/eine Warnung Gewitter für Zielort und Zeitraum nennt. Hohe CAPE-Werte allein sind KEIN Gewittersignal. Bei signal=false weder "erhebliches" noch "geringes Gewitterrisiko" erfinden.
 - Verwende passende Icons direkt vor der jeweiligen Entwicklung, z.B. 📉 Druckfall, 📈 Druckanstieg, 🌧️ Regen, ⛈️ Gewitter, 🌡️ Temperaturwechsel, 🌀 Front/Wetterwechsel, ☀️ Stabilisierung.
-- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. In Abschnitt 4 generell keine Kommazahlen ausgeben: Temperaturen, Niederschlagsmengen und Druckwerte auf verständliche ganze Werte runden. WOLKENPROZENTE SIND VERBOTEN. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
-- Niederschlagsmengen ausschließlich aus localForecast.summary.rain.totalMm übernehmen. Eine Tagesmenge muss exakt der im Meteogramm sichtbaren Tagessumme entsprechen; niemals aus Frontkarten, Wahrscheinlichkeiten oder anderen Texten eine abweichende mm-Zahl ableiten.
+- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. In Abschnitt 4 Temperaturen und Druckwerte auf verständliche ganze Werte runden. Niederschlagsmengen oder die Einheit "mm" sind im Fließtext VERBOTEN; sie stehen ausschließlich im Meteogramm. WOLKENPROZENTE SIND VERBOTEN. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
+- Beschreibe Regen ausschließlich qualitativ (z.B. zeitweise, einzelne Schauer, länger anhaltend, nachlassend). Leite keine Niederschlagsmenge aus Frontkarten, Wahrscheinlichkeiten oder anderen Texten ab und nenne keine Tagessumme.
 - Keine technischen WMO-Codes oder Wettercode-Nummern im Nutzertext nennen. Verwende stattdessen die verständliche Wetterbeschreibung aus dem Kontext.
 - Falls localForecast fehlt, erzeuge trotzdem alle 3 Bullets mit den korrekten Präfixen und einer kurzen transparenten Nichtverfügbarkeits-Aussage; erfinde keine Entwicklung.
 
@@ -567,33 +557,21 @@ function stripRoutineEveningCooling(text: string): string {
     .trim();
 }
 
-function formatRainTotal(value: number): string {
-  const rounded = Math.round(value);
-  return rounded < 1 ? "unter 1 mm" : `${rounded} mm`;
-}
-
-function alignRainAmounts(
-  line: string,
-  rainDays: Array<{ label: string; totalMm: number }>,
-): string {
-  const positiveDays = rainDays.filter(day => Number.isFinite(day.totalMm) && day.totalMm >= 0.05);
-  const uniquePositiveTotals = Array.from(new Set(
-    positiveDays.map(day => Math.round(day.totalMm * 10) / 10),
-  ));
-  return line.replace(
-    /\b\d+(?:[,.]\d+)?\s*mm\b/gi,
-    (amount, offset: number) => {
-      const preceding = line.slice(Math.max(0, offset - 40), offset);
-      const matchingDay = positiveDays.find(day => {
-        const dayToken = day.label.split(/\s+/)[0];
-        return dayToken && new RegExp(`\\b${dayToken}\\b`, "i").test(preceding);
-      });
-      const actual = matchingDay?.totalMm
-        ?? (uniquePositiveTotals.length === 1 ? uniquePositiveTotals[0] : null);
-      if (actual === null) return "";
-      return formatRainTotal(actual);
-    },
-  ).replace(/[ \t]{2,}/g, " ");
+function stripRainAmounts(text: string): string {
+  return text
+    // Remove parenthetical amounts first so qualitative rain wording survives.
+    .replace(/\s*\([^()]*\d+(?:[,.]\d+)?\s*mm[^()]*\)/gi, "")
+    // A total amount adds no information beyond the chart and leaves awkward
+    // fragments if only its number is removed.
+    .replace(
+      /\b(?:Tages(?:summe|menge)|Gesamtsumme|Niederschlagsmenge)\b[^.;]*\d+(?:[,.]\d+)?\s*mm[^.;]*[.;]?/gi,
+      "",
+    )
+    .replace(/(?:~|ca\.?|circa|rund|etwa)?\s*\d+(?:[,.]\d+)?\s*mm\b/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.;])/g, "$1")
+    .replace(/;\s*([.;])/g, "$1")
+    .trim();
 }
 
 function roundDecimalPressureMentions(text: string): string {
@@ -712,7 +690,6 @@ export function enforceSection4Output(
   constraints?: {
     pressureSignificant?: boolean[];
     thunderstormAllowed?: boolean[];
-    rainDays?: Array<Array<{ label: string; totalMm: number }>>;
   },
   fallbackLines?: string[],
 ): string | null {
@@ -745,7 +722,7 @@ export function enforceSection4Output(
       sanitized = stripCloudPercentages(sanitized);
       sanitized = stripRoutineEveningCooling(sanitized);
       sanitized = stripTechnicalWeatherCodes(sanitized);
-      sanitized = alignRainAmounts(sanitized, constraints?.rainDays?.[index] ?? []);
+      sanitized = stripRainAmounts(sanitized);
       sanitized = roundDecimalPressureMentions(sanitized);
       if (constraints?.pressureSignificant?.[index] === false) {
         sanitized = removeSection4Clauses(sanitized, /(?:\bDruck\b|\bhPa\b|📉|📈)/i);

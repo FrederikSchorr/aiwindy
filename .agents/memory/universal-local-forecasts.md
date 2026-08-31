@@ -38,3 +38,9 @@ Restore an integrated warning centre's complete authoritative text after model g
 **Why:** The model can preserve only the first line while altering later warning lines, and the same severity icon is also valid on ordinary high-wind forecast bullets.
 
 **How to apply:** Remove only the generated warning candidate and its continuation, prepend the authoritative text unchanged, and preserve separate severe-wind forecast bullets even when they use the warning icon.
+
+In section 4, precipitation amounts and daily totals belong exclusively in the meteogram; prose describes only the qualitative rain development and must not contain `mm`.
+
+**Why:** Textual amounts can diverge from chart intervals or rounded daily sums and merely duplicate information already visible in the meteogram. Listing every rain interval also obscures the main weather development.
+
+**How to apply:** Summarize rain as one compact phase (or one standout onset/peak), never enumerate every shower, and strip generated amount or total mentions before display.
