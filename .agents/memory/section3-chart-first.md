@@ -17,11 +17,11 @@ Generated wind text must not use `SSW`; normalize that southwest sector to `SW`.
 
 **How to apply:** Exclude `SSW` from generation prompts and normalize generated forecast text before the authoritative warning is restored.
 
-Bind every highlighted daily gust maximum to its actual timestamp and corresponding day period. Never attach that peak to a later direction change, wind system, or front passage.
+Show gusts in prose only as a compact daily range such as `Böen 12–25 kt`. Do not repeat the maximum as “stärkste Böe um …” with an exact time or day period.
 
-**Why:** A daily range without the peak timestamp led a midday 27 kt gust to be described as an evening frontal gust.
+**Why:** The exact gust timeline is already visible in the chart; repeating its maximum and timestamp makes section 3 unnecessarily detailed.
 
-**How to apply:** Put the strongest gust's exact time and derived day period into the section-3 context, include that row among salient samples, and make the timing binding for interpretation.
+**How to apply:** Keep the maximum row among chart/context samples so the range stays accurate, but remove peak-time prose before display and prohibit “Böen bis …” wording.
 
 User-facing wind text uses only the eight compass points N, NO, O, SO, S, SW, W, NW; finer 16-point source directions are reduced to their nearest 8-point direction.
 

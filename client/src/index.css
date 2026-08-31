@@ -215,6 +215,29 @@
     border-radius: 999px;
   }
 
+  .sea-wind-label-rail {
+    width: 108px;
+    flex: 0 0 108px;
+  }
+
+  @media (max-width: 640px) {
+    /* On phones the labels are part of the horizontal canvas, not a fixed rail. */
+    .sea-wind-layout {
+      overflow-x: auto;
+    }
+
+    .sea-wind-label-rail {
+      width: 78px;
+      flex-basis: 78px;
+    }
+
+    .sea-wind-forecast-scroll {
+      flex: 0 0 auto !important;
+      min-width: max-content !important;
+      overflow-x: visible !important;
+    }
+  }
+
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

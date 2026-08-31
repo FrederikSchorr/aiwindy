@@ -336,11 +336,10 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
       data-forecast-points={data.points.length}
       aria-label={`Windvorhersage für ${data.sailingAreaName} · ${days.length} Tage, horizontal scrollbar`}
     >
-      <div className="flex min-w-0">
+      <div className="sea-wind-layout flex min-w-0">
         <aside
           data-testid="sea-wind-label-rail"
-          className="shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
-          style={{ width: FORECAST_LABEL_RAIL_WIDTH }}
+          className="sea-wind-label-rail shrink-0 border-r border-[#cbd0d6] bg-[#eceff2] text-[12px] leading-[15px] text-[#7a7e82]"
           data-label-rail-width={FORECAST_LABEL_RAIL_WIDTH}
         >
           <div style={{ height: ROW.day }} />
@@ -360,7 +359,7 @@ export default function SeaWindForecast({ analysisJson, isLoading = false }: Sea
         </aside>
 
         <div
-          className="min-w-0 flex-1 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+          className="sea-wind-forecast-scroll min-w-0 flex-1 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
           data-testid="sea-wind-forecast-scroll"
           role="region"
           tabIndex={0}

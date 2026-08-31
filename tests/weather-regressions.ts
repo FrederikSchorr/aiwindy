@@ -22,6 +22,7 @@ import {
   enforceSection4Output,
   ensureWarningFirst,
   normalizeWindDirectionMentions,
+  stripStrongestGustMentions,
 } from "../server/weather-output.js";
 import {
   getSanitizedAnalysisExport,
@@ -659,8 +660,18 @@ function testWindPeakTimingContext(): void {
   );
   assert.match(
     local.wind.text_de,
-    /stärkste Böe 27 kt exakt um 12:00 \(mittags\)/,
-    "the section 3 context must bind the daily gust maximum to its real day period",
+    /Böen 8–27 kt/,
+    "the section 3 context should expose gusts as a compact range",
+  );
+  assert.doesNotMatch(
+    local.wind.text_de,
+    /stärkste Böe|exakt um 12:00|mittags/,
+    "the section 3 context should not repeat the exact strongest-gust time",
+  );
+  assert.equal(
+    stripStrongestGustMentions("- Heute: Böen 12–25 kt (stärkste Böe 25 kt nachts um 23:00 aus SW)."),
+    "- Heute: Böen 12–25 kt.",
+    "generated wind text should keep the gust range without repeating the peak time",
   );
 }
 

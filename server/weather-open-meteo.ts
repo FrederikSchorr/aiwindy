@@ -858,8 +858,7 @@ export function preprocessOpenMeteoLocal(
     );
     const speeds = finiteNumbers(rows.map(row => row.speed));
     const gusts = finiteNumbers(rows.map(row => row.gust));
-    const strongestGust = rows[strongestGustIndex];
-    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, Böen ${range(gusts) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}; stärkste Böe ${Math.round(strongestGust.gust)} kt exakt um ${String(strongestGust.hour).padStart(2, "0")}:00 (${windDayPeriod(strongestGust.hour)}).`;
+    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, Böen ${range(gusts) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}.`;
   }).join("\n");
 
   const cloudText = Array.from(weatherDays.values()).slice(0, 6).map(rows => {
