@@ -832,6 +832,7 @@ export function preprocessOpenMeteoLocal(
     }
   }
 
+  let gustySummaryUsed = false;
   const windText = Array.from(windDays.values()).slice(0, 6).map(rows => {
     const strongestGustIndex = rows.reduce(
       (strongestIndex, row, index) =>
@@ -858,9 +859,11 @@ export function preprocessOpenMeteoLocal(
     );
     const speeds = finiteNumbers(rows.map(row => row.speed));
     const gustSpreads = rows.map(row => row.gust - row.speed);
-    const unusuallyGusty = gustSpreads.filter(spread => spread >= 8).length >= 2
-      && Math.max(...gustSpreads) >= 10;
-    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}${unusuallyGusty ? "; ungewöhnlich böig" : ""}.`;
+    const gusty = !gustySummaryUsed
+      && gustSpreads.filter(spread => spread >= 10).length >= 3
+      && Math.max(...gustSpreads) >= 12;
+    if (gusty) gustySummaryUsed = true;
+    return `${rows[0].label}: ${samples.join(", ")}; Wind ${range(speeds) ?? "?"} kt, vorherrschend ${mostFrequent(rows.map(row => row.direction))}${gusty ? "; böig" : ""}.`;
   }).join("\n");
 
   const cloudText = Array.from(weatherDays.values()).slice(0, 6).map(rows => {

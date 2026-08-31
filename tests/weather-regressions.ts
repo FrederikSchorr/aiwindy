@@ -23,7 +23,9 @@ import {
   ensureWarningFirst,
   normalizeWindDirectionMentions,
   stripRedundantGustMentions,
+  stripRedundantWindRangeMentions,
   stripStrongestGustMentions,
+  softenGustyDescriptions,
 } from "../server/weather-output.js";
 import {
   getSanitizedAnalysisExport,
@@ -685,6 +687,46 @@ function testWindPeakTimingContext(): void {
     "- Morgen: kräftige Westströmung.",
     "direction-prefixed gust clauses should also be removed",
   );
+  assert.equal(
+    stripRedundantWindRangeMentions("- Morgen: W Wind 6–21 kt, tagsüber nachmittags bis zu 21 kt."),
+    "- Morgen: W Wind 6–21 kt.",
+    "a repeated maximum wind clause should be removed",
+  );
+  assert.equal(
+    stripRedundantWindRangeMentions("- Morgen: W Wind 6–21 kt, abends bis zu 24 kt."),
+    "- Morgen: W Wind 6–21 kt, abends bis zu 24 kt.",
+    "a changed later maximum should be retained",
+  );
+  assert.equal(
+    softenGustyDescriptions("- Heute: ungewöhnlich böig; Morgen: ungewöhnlich böige Entwicklung."),
+    "- Heute: böig; Morgen: böige Entwicklung.",
+    "overstated gust wording should be softened",
+  );
+
+  const twoGustyDays = preprocessOpenMeteoLocal({
+    resolvedLocalForecast: {
+      sailingArea: {
+        name: "Testrevier",
+        source: "Lokaler Anbieter",
+        hourly: {
+          timestamps: Array.from({ length: 48 }, (_, index) => {
+            const day = index < 24 ? "23" : "24";
+            const hour = index % 24;
+            return `2026-08-${day}T${String(hour).padStart(2, "0")}:00`;
+          }),
+          windSpeedKt: Array.from({ length: 48 }, () => 6),
+          gustKt: Array.from({ length: 48 }, () => 20),
+          windDirDeg: Array.from({ length: 48 }, () => 270),
+        },
+      },
+    },
+  }, "Europe/Vienna") as any;
+  assert.equal(
+    (twoGustyDays.wind.text_de.match(/; böig/g) ?? []).length,
+    1,
+    "at most one clearly gusty day should be highlighted in the wind context",
+  );
+  assert.doesNotMatch(twoGustyDays.wind.text_de, /ungewöhnlich böig/i);
 }
 
 function testSection4OutputContract(): void {

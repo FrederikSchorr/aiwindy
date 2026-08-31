@@ -336,7 +336,7 @@ Regeln pro Abschnitt:
 - Wenn das nationale Warnzentrum nicht angebunden ist, keine Warnzeile erzeugen. Nicht angebundene Länder zeigen diesen Status ausschließlich in der Quellenübersicht.
 - Jede Prognosezeile (Bullets 2–5) MUSS mit dem relativen Zeitbezug und der konkreten Tagesbezeichnung bzw. dem Datumsbereich beginnen, niemals mit einem Emoji. Erwartetes Schema: "Heute (Sa 22.08.): ...", "Morgen (So 23.08.): ...", "Übermorgen (Mo 24.08.): ...", "Di–Do 25.–27.08.: ...".
 - Die Grafik zeigt den vollständigen zeitlichen Verlauf von Windstärke und Windrichtung, aber KEINE Wellendaten. Die kompakte Grafikinterpretation betrifft daher nur Windwerte: Beschreibe NICHT jeden Zeitabschnitt, nicht jede einzelne Richtung und nicht wiederholt normale Windbereiche. Explizite Wellendaten bleiben eigenständige Pflichtinformation und dürfen nicht entfallen, nur weil der Windverlauf sichtbar ist.
-- Bullet Heute und Bullet Morgen: jeweils Wind und — NUR WENN preprocessed.local.wave.text_de tatsächlich vorhanden und nicht leer ist — die passende Seegangsstärke im selben Bullet. Direkt nach dem Zeit-/Datumspräfix steht "💨" vor dem Windtext; falls Wellendaten vorhanden sind, steht "🌊" direkt vor der Welle. Wenn keine Wellendaten vorhanden sind, den Wellen-Teil vollständig weglassen: kein 🌊, kein Platzhalter und keine Erwähnung fehlender Wellendaten. Nenne ein geographisch passendes Windsystem, wenn es die Entwicklung erklärt. Beschreibe danach höchstens 1–2 markante Signale: deutliche Verstärkung oder Abschwächung, Richtungswechsel zwischen Windsystemen, Flaute, ungewöhnlicher Peak oder starke/stürmische Phase. Einen stabilen normalen Tagesverlauf nicht in mehrere Bereiche zerlegen. Heute sind für diese Signale konkrete Uhrzeiten erlaubt, morgen nur grobe Tageszeiten. Eine Angabe wie "NO Wind 12–25 kt" enthält bereits Wind und zugehörige Böe; erwähne Böen nicht noch einmal separat. Verwende "ungewöhnlich böig" nur, wenn dieser Tagescharakter ausdrücklich durch die lokalen Daten gestützt wird. Keine Formulierung "stärkste Böe um …", keine exakte Uhrzeit für eine Böen-Spitze und kein "Böen bis …". Welle nur als Douglas-Skala (z.B. "See 2 schwach bewegt"), KEINE Richtung, Periode oder Dünung. Nur explizite Wellendaten verwenden, niemals schätzen.
+- Bullet Heute und Bullet Morgen: jeweils Wind und — NUR WENN preprocessed.local.wave.text_de tatsächlich vorhanden und nicht leer ist — die passende Seegangsstärke im selben Bullet. Direkt nach dem Zeit-/Datumspräfix steht "💨" vor dem Windtext; falls Wellendaten vorhanden sind, steht "🌊" direkt vor der Welle. Wenn keine Wellendaten vorhanden sind, den Wellen-Teil vollständig weglassen: kein 🌊, kein Platzhalter und keine Erwähnung fehlender Wellendaten. Nenne ein geographisch passendes Windsystem, wenn es die Entwicklung erklärt. Beschreibe danach höchstens 1–2 markante Signale: deutliche Verstärkung oder Abschwächung, Richtungswechsel zwischen Windsystemen, Flaute, ungewöhnlicher Peak oder starke/stürmische Phase. Einen stabilen normalen Tagesverlauf nicht in mehrere Bereiche zerlegen. Heute sind für diese Signale konkrete Uhrzeiten erlaubt, morgen nur grobe Tageszeiten. Eine Angabe wie "NO Wind 12–25 kt" enthält bereits Wind und zugehörige Böe; erwähne Böen nicht noch einmal separat. Verwende niemals "ungewöhnlich böig" oder "ungewöhnlich böige Entwicklung". Verwende "böig" höchstens einmal im gesamten Abschnitt und nur, wenn der jeweilige Tagesblock in preprocessed.local.wind ausdrücklich "; böig" enthält. Eine nachgestellte Tageszeit-Angabe wie "tagsüber bis zu 21 kt" ist wegzulassen, wenn sie nur den bereits genannten Windbereich wiederholt. Keine Formulierung "stärkste Böe um …", keine exakte Uhrzeit für eine Böen-Spitze und kein "Böen bis …". Welle nur als Douglas-Skala (z.B. "See 2 schwach bewegt"), KEINE Richtung, Periode oder Dünung. Nur explizite Wellendaten verwenden, niemals schätzen.
 - Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨"; nur die wichtigste markante Entwicklung oder, falls keine Änderung vorliegt, eine knappe vorherrschende Tendenz. Keine Stundenwerte und keine vollständige Aufzählung von Windstärken oder Richtungen.
 - Bullet Danach: beginne EXAKT mit "${forecastTailLabel}:". Setze danach "💨" vor die großflächige Zusammenfassung; nenne für jeden Tag nur eine Windstärke-Kategorie und erwähne ausschließlich deutliche Wechsel oder stürmische/kräftige Phasen. Keine Stundenwerte und keine vollständige Aufzählung von Richtungen. Eine passende Großwetterlage darf hier oder bei einer markanten Entwicklung in den Tagesbullets in einem kurzen Nebensatz ergänzt werden, wenn der optionale Kontext sie eindeutig stützt.
 - Der abschließende Datumsbereichs-Bullet ist PFLICHT und darf niemals fehlen oder durch das Ende der Antwort entfallen. Wenn für die Tage danach trotz der 6-Tage-Abfrage keine Winddaten vorliegen, gib trotzdem "Di–Do [entsprechender Datumsbereich]: 💨 Winddaten für diesen Zeitraum nicht verfügbar." aus.
@@ -392,8 +392,12 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
 
     const source = "claude-sonnet-4-6";
     const generatedWindText = parsed.windWaves
-      ? stripRedundantGustMentions(
-        stripStrongestGustMentions(normalizeWindDirectionMentions(parsed.windWaves)),
+      ? softenGustyDescriptions(
+        stripRedundantWindRangeMentions(
+          stripRedundantGustMentions(
+            stripStrongestGustMentions(normalizeWindDirectionMentions(parsed.windWaves)),
+          ),
+        ),
       )
       : null;
     const windWithDatePrefixes = enforceWindForecastDatePrefixes(
@@ -541,6 +545,30 @@ export function stripRedundantGustMentions(text: string): string {
     )
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\s+([,.;)])/g, "$1")
+    .trim();
+}
+
+export function stripRedundantWindRangeMentions(text: string): string {
+  return text
+    .replace(
+      /(\bWind\s+(\d+(?:[.,]\d+)?)\s*[–-]\s*(\d+(?:[.,]\d+)?)\s*kt)(,\s*[^,.;\n]*?\b(?:bis zu|bis)\s+(\d+(?:[.,]\d+)?)\s*kt)/gi,
+      (match, windRange, _minimum, maximum, _repeatedClause, repeatedMaximum) =>
+        Number(maximum.replace(",", ".")) === Number(repeatedMaximum.replace(",", "."))
+          ? windRange
+          : match,
+    )
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.;)])/g, "$1")
+    .trim();
+}
+
+export function softenGustyDescriptions(text: string): string {
+  return text
+    .replace(
+      /\bungewöhnlich(?:e|er|es|en)?\s+(böig(?:e|er|en|es)?)\b/gi,
+      "$1",
+    )
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
 

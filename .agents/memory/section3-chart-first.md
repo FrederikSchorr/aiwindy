@@ -17,11 +17,11 @@ Generated wind text must not use `SSW`; normalize that southwest sector to `SW`.
 
 **How to apply:** Exclude `SSW` from generation prompts and normalize generated forecast text before the authoritative warning is restored.
 
-Treat a combined value such as `NO Wind 12–25 kt` as sustained wind plus its associated gust; do not add a separate numeric gust clause. Only call out an unusually gusty day qualitatively.
+Treat a combined value such as `NO Wind 12–25 kt` as sustained wind plus its associated gust; do not add a separate numeric gust clause. Use only the restrained word `böig`, if clearly warranted.
 
-**Why:** The exact gust timeline is already visible in the chart, and the combined range already contains the gust value. Separate “Böen …” clauses duplicate it and make section 3 unnecessarily detailed.
+**Why:** The exact gust timeline is already visible in the chart, and the combined range already contains the gust value. Separate “Böen …” clauses or repeated maxima duplicate it; “ungewöhnlich böig” overstates common gust spreads.
 
-**How to apply:** Keep gust values in each sampled wind range and in the chart. Remove generated standalone forms such as “Böen …”, “mit Böen …”, direction-prefixed “NW-Böen …”, and peak-time prose before display.
+**How to apply:** Keep gust values in sampled ranges and the chart. Remove standalone gust clauses, peak-time prose, and a repeated upper bound. Never say “ungewöhnlich böig”; allow `böig` at most once and only for a clearly supported day.
 
 User-facing wind text uses only the eight compass points N, NO, O, SO, S, SW, W, NW; finer 16-point source directions are reduced to their nearest 8-point direction.
 
