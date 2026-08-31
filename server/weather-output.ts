@@ -131,7 +131,7 @@ const GLOBAL_OUTPUT_RULES = `=== PRIORITÄTEN UND AUSGABEVERTRAG ===
 ===windWaves===
 ===cloudsRain===
 Danach exakt ===END===. Keine Erklärung außerhalb dieser Marker.
-4. Abschnitt 1 enthält genau 2 Bullets, Abschnitt 2 genau 2, Abschnitt 3 genau 5 und Abschnitt 4 genau 3.
+4. Abschnitt 1 enthält genau 2 Bullets, Abschnitt 2 genau 2 und Abschnitt 4 genau 3. Abschnitt 3 enthält vier Prognosebullets plus die Warnzeile, wenn eine Warnquelle angebunden ist; insgesamt höchstens 5.
 5. Bullet-Text bleibt kurz. Emojis stehen in Abschnitt 1 und 2 passend am Bullet-Anfang; in Abschnitt 3 und 4 direkt vor dem jeweiligen Inhalt.`;
 
 const SECTION_1_RULES = `=== ABSCHNITT 1: airPressureMasses — Druck & Luftmassen ===
@@ -155,6 +155,45 @@ Wind_kt und Böe_kt derselben Zeile bilden immer ein untrennbares Paar.
 Die stärkste Böe darf ausschließlich ihrer tatsächlichen Tagesphase zugeordnet werden.`;
 
 const WIND_DIRECTION_RULE = `Windrichtungen im Nutzertext werden auf acht Richtungen reduziert: N, NO, O, SO, S, SW, W und NW.`;
+
+function buildSection3Rules(
+  locationLabel: string,
+  todayLabel: string,
+  tomorrowLabel: string,
+  dayAfterTomorrowLabel: string,
+  forecastTailLabel: string,
+): string {
+  return `=== ABSCHNITT 3: windWaves — Wind & Welle ===
+Inputs: der kanonische Block LOKALER STÜNDLICHER WIND, preprocessed.local.wave und geprüfte Warnungen. Europäische und nationale Texte liefern nur ergänzenden Kontext.
+- Genau 4 Prognosebullets: Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}. Bei angebundener Warnquelle steht davor genau eine Warnzeile; insgesamt höchstens 5 Bullets.
+- Bei angebundener Warnquelle die geprüfte Warnung aus preprocessed.local.warnings vollständig und unverändert übernehmen. "Keine Sturmwarnung" ohne ⚠️ ausgeben; aktive Warnungen oder Abruffehler dürfen ⚠️ erhalten. Bei nicht angebundener Quelle keine Warnzeile erzeugen.
+- Prognosebullets 2–5 beginnen jeweils mit ihrem Zeit-/Datumspräfix, niemals mit einem Emoji. Heute und Morgen enthalten Wind und nur bei vorhandenen preprocessed.local.wave.text_de die passende Seegangsstärke im selben Bullet; Wellendaten als Douglas-Skala, ohne Richtung, Periode oder Dünung.
+- Die Tabelle ist für konkrete Werte maßgeblich: Wind_kt und Böe_kt derselben Zeile gehören zusammen. Ein konkreter Wert wird immer als Bereich ausgegeben, z.B. "Meltemi NW 23–32 kt"; niemals nur den Windwert nennen und niemals "Wind 3 kt, Böen 6 kt".
+- Interpretiere den Verlauf statt alle Stunden aufzuzählen. Nenne höchstens 1–2 markante Entwicklungen wie Verstärkung, Abschwächung, Richtungswechsel, Flaute oder starke/stürmische Phase. Heute sind konkrete Uhrzeiten, morgen nur grobe Tageszeiten erlaubt.
+- "böig" höchstens einmal und nur, wenn der jeweilige Tagesblock dies ausdrücklich stützt. Niemals "ungewöhnlich böig". Keine separate Böen-Spitze, kein "Böen bis …" und keine redundante Wiederholung desselben oberen Windwerts.
+- Übermorgen nur die wichtigste Tendenz ohne Stundenwerte. Der letzte Bullet beginnt exakt mit "${forecastTailLabel}:" und fasst die weiteren Tage großflächig zusammen; pro Tag höchstens eine Windstärkekategorie.
+- Nur die acht Richtungen N, NO, O, SO, S, SW, W und NW verwenden. Bei Windstärken ab 40 kn ⚠️ ergänzen. Wenn Winddaten fehlen, transparent "Windprognose aus regionalem Wetterbericht nicht verfügbar." ausgeben.
+- Für ${locationLabel} dürfen geographisch passende Windsysteme genannt werden, aber sie ersetzen niemals die lokalen Tabellenwerte.`;
+}
+
+function buildSection4Rules(
+  todayLabel: string,
+  tomorrowLabel: string,
+  forecastOverviewLabel: string,
+): string {
+  return `=== ABSCHNITT 4: cloudsRain — Wetter & Regen ===
+Input: ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4 und KNMI-Frontkarten; Wind- und Wellendaten nicht verwenden.
+- Genau 3 Bullets in dieser Reihenfolge: Heute (${todayLabel}), Morgen (${tomorrowLabel}), ${forecastOverviewLabel}. Jeder Bullet beginnt mit seinem Zeit-/Datumspräfix, niemals mit einem Emoji.
+- INTERPRETIERE Auffälligkeiten und Veränderungen, statt Meteogrammwerte aufzuzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal und deutlicher Wetterumschwung. Bewölkung nur bei relevantem Wechsel.
+- Heute granular, aber kompakt: höchstens 2–3 wichtigste Entwicklungen in zeitlicher Reihenfolge. Regen als qualitative zusammengefasste Phase; konkrete Uhrzeit nur für markanten Beginn oder Höhepunkt. Temperaturen auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen. Einen normalen abendlichen Rückgang und kleine Stundenänderungen bis 3°C nicht erwähnen.
+- Morgen weniger granular: nur nachts, morgens, mittags, nachmittags oder abends, keine Ziffer-Uhrzeiten. ${forecastOverviewLabel} ausschließlich als High-Level-Trend der folgenden vier Tage, ohne Uhrzeiten oder Tagesphasen.
+- Bei fehlender Auffälligkeit den stabilen Charakter inhaltlich beschreiben, nicht nur "Keine markante Wetterentwicklung erkennbar." Eine gestützte Hochdrucklage mit Wärme, Sonnenschein, Trockenheit oder Stabilität darf genannt werden.
+- Lokale und nationale Informationen haben Vorrang; europäische Lage und Frontkarten liefern nur den Zusammenhang. Einen lokalen Druckfall nur mit passender Front oder Synopsis als Frontdurchgang bezeichnen, sonst als Wetterwechsel oder zunehmenden Tiefdruckeinfluss.
+- Druck nur bei localForecast.summary.pressure.significant=true erwähnen; unter 4 hPa pro Tag weglassen. Druckänderung ist kein Gewitterindikator.
+- Gewitter ausschließlich bei localForecast.summary.thunderstorm.signal=true oder konkreter nationaler Gewitterinformation für Ort und Zeitraum. CAPE allein reicht nicht.
+- Regen ausschließlich qualitativ beschreiben. Keine Niederschlagsmengen, "mm", Wolkenprozente, WMO-Codes oder routinemäßige Aufzählungen von Einzelwerten. Passende Icons direkt vor der jeweiligen Entwicklung.
+- Falls localForecast fehlt, trotzdem alle 3 Bullets mit korrekten Präfixen und transparenter Nichtverfügbarkeit erzeugen.`;
+}
 
 // ── Image helper ──────────────────────────────────────────────────────────────
 
@@ -257,8 +296,13 @@ export async function generateWeatherOutput(
       ? undefined
       : local["cloudRainThunderstorm"] ?? null,
   };
+  const section3WindContext = (local["wind"] as Record<string, unknown> | undefined) ?? {};
+  const section3WindHourlyInput = typeof section3WindContext.hourlyText_de === "string"
+    ? section3WindContext.hourlyText_de
+    : "(nicht verfügbar)";
   const section3LocalContext = Object.fromEntries(
     Object.entries(local).filter(([key]) => ![
+      "wind",
       "cloudRainThunderstorm",
       "nationalWind",
       "nationalCloudRain",
@@ -315,6 +359,10 @@ ${nationalSynopsis ?? "(nicht verfügbar)"}
 === LOKALE WETTERDATEN FÜR ABSCHNITT 3 (weatherPreprocessed.local) ===
 ${JSON.stringify(section3LocalContext, null, 2)}
 
+=== LOKALER STÜNDLICHER WIND ===
+Datum | Uhrzeit | Richtung | Wind_kt | Böe_kt
+${section3WindHourlyInput}
+
 === OPTIONALER GROSSWETTERLAGEN-KONTEXT FÜR ABSCHNITT 3 ===
 Europäische Wetterlage: ${generalWeather ?? "(nicht verfügbar)"}
 Nationale Synopsis: ${nationalSynopsis ?? "(nicht verfügbar)"}
@@ -322,79 +370,26 @@ Nationale Synopsis: ${nationalSynopsis ?? "(nicht verfügbar)"}
 === ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4 ===
 ${JSON.stringify(section4Context, null, 2)}
 
-=== QUELLEN-VORRANG FÜR LOKALE DATEN ===
-- wind und wave sind die Open-Meteo-Grundversorgung für Abschnitt 3.
-- localForecast enthält ausschließlich Stadtwerte und ist die zeitliche Grundversorgung für Abschnitt 4.
-- wind enthält bereits die nach Zeitstempel priorisierte lokale Windreihe; strukturierte nationale Werte haben darin Vorrang vor Open-Meteo. sailingareaForecast ist eine konkrete nationale Text-Ergänzung für Abschnitt 3. nationalLocalWeather und nationalSynopsis sind konkrete nationale Ergänzungen für Abschnitt 4.
-- europeanOverview und die KNMI-Frontkarten liefern Abschnitt 4 ausschließlich den großräumigen Erklärungszusammenhang. Lokale Zeitangaben stammen aus localForecast oder konkreten nationalen Daten.
-- warnings ist ein separat geprüftes nationales Warnzentrum. Wenn vorhanden, seinen Text in Abschnitt 3 unverändert übernehmen.
+=== DATENQUELLEN UND VORRANG ===
+- Für Abschnitt 1 und 2 sind Bilder, Meteonews und nationale Synopsis maßgeblich.
+- Für Abschnitt 3 ist LOKALER STÜNDLICHER WIND die maßgebliche Quelle für konkrete Windwerte; wave liefert die optionale Seegangsstärke. sailingareaForecast ergänzt den lokalen Windkontext.
+- Für Abschnitt 4 ist localForecast mit Stadtwerten maßgeblich; nationalLocalWeather, nationalSynopsis, europeanOverview und KNMI-Frontkarten liefern Ergänzungen und großräumigen Zusammenhang.
+- warnings ist ein separat geprüftes nationales Warnzentrum und wird, wenn vorhanden, in Abschnitt 3 unverändert übernommen.
 
 === WINDSYSTEME für ${position.country} ===
 ${windsystems || "(keine Daten)"}
 
+${GLOBAL_OUTPUT_RULES}
+
+${SECTION_1_RULES}
+
+${SECTION_2_RULES}
+
 ${WIND_PEAK_TIMING_RULE}
-
 ${WIND_DIRECTION_RULE}
+${buildSection3Rules(locationLabel, todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel)}
 
-=== AUFGABE ===
-Erstelle genau 4 Abschnitte mit den Bullet-Points als String.
-
-Regeln pro Abschnitt:
-
-#1 airPressureMasses — Druck & Luftmassen (Inputs: Bilder + Meteonews + nationale Synopsis, KEINE lokalen Daten)
-- GENAU 2 Bullets, max 20 Wörter je
-- Bullet 1: Dominante Drucksysteme über Europa + Richtung ihrer Bewegung
-- Bullet 2: Großräumige Luftmassen (kalt/warm, feucht/trocken, Luftmassengrenze, Gradienten)
-- KEINE Windströmungen/stärken, KEINE Niederschlagserwähnung
-- STRIKT VERBOTEN: Temperaturangaben in °C oder Grad — NIEMALS Temperaturwerte in diesem Abschnitt
-
-#2 weatherFront — Fronten (gleiche Inputs wie #1)
-- GENAU 2 Bullets, max 20 Wörter je
-- Bullet 1: Aktive Front(en) — Typ, Position, Bewegung. Nenne NUR Kalt- oder Warmfronten. Okklusionen WEGLASSEN — auch wenn sie nahe sind. Falls keine aktive Kalt-/Warmfront vorhanden: "Keine aktive Kalt- oder Warmfront."
-- Bullet 2: Nächste relevante Front für ${locationLabel} — Zeitpunkt
-- KEINE Effekte (kein Regen, kein Wind) — nur Fronttyp, Position, Bewegungsrichtung
-
-#3 windWaves — Wind & Welle (Inputs: lokale Wind-/Wellendaten + Windsysteme; der optionale Großwetterlagen-Kontext darf nur als übergeordnete Einordnung verwendet werden)
-- Erzeuge genau diese Reihenfolge von Bullets: 1) aktuelle nationale/regionale Sturmwarnung oder der Abrufstatus der grundsätzlich angebundenen Warnquelle, 2) Heute (${todayLabel}), 3) Morgen (${tomorrowLabel}), 4) Übermorgen (${dayAfterTomorrowLabel}), 5) Danach (${forecastTailLabel}). Insgesamt maximal 5 Bullets.
-- Die Warnzeile ist für eine grundsätzlich angebundene Warnquelle PFLICHT. Bei erfolgreicher Prüfung übernimm den Text aus preprocessed.local.warnings INHALTLICH UNVERÄNDERT und vollständig; auch "Keine Sturmwarnung" muss sichtbar sein, aber OHNE ⚠️-Emoji. Bei einer aktiven Sturmwarnung oder einem fehlgeschlagenen Abruf darf ⚠️ davorstehen. Keine Umformulierung, keine Kürzung und niemals eine falsche Entwarnung.
-- Wenn das nationale Warnzentrum nicht angebunden ist, keine Warnzeile erzeugen. Nicht angebundene Länder zeigen diesen Status ausschließlich in der Quellenübersicht.
-- Jede Prognosezeile (Bullets 2–5) MUSS mit dem relativen Zeitbezug und der konkreten Tagesbezeichnung bzw. dem Datumsbereich beginnen, niemals mit einem Emoji. Erwartetes Schema: "Heute (Sa 22.08.): ...", "Morgen (So 23.08.): ...", "Übermorgen (Mo 24.08.): ...", "Di–Do 25.–27.08.: ...".
-- Die Grafik zeigt den vollständigen zeitlichen Verlauf von Windstärke und Windrichtung, aber KEINE Wellendaten. Die kompakte Grafikinterpretation betrifft daher nur Windwerte: Beschreibe NICHT jeden Zeitabschnitt, nicht jede einzelne Richtung und nicht wiederholt normale Windbereiche. Explizite Wellendaten bleiben eigenständige Pflichtinformation und dürfen nicht entfallen, nur weil der Windverlauf sichtbar ist.
-- Bullet Heute und Bullet Morgen: jeweils Wind und — NUR WENN preprocessed.local.wave.text_de tatsächlich vorhanden und nicht leer ist — die passende Seegangsstärke im selben Bullet. Direkt nach dem Zeit-/Datumspräfix steht "💨" vor dem Windtext; falls Wellendaten vorhanden sind, steht "🌊" direkt vor der Welle. Wenn keine Wellendaten vorhanden sind, den Wellen-Teil vollständig weglassen: kein 🌊, kein Platzhalter und keine Erwähnung fehlender Wellendaten. Nenne ein geographisch passendes Windsystem, wenn es die Entwicklung erklärt. Beschreibe danach höchstens 1–2 markante Signale: deutliche Verstärkung oder Abschwächung, Richtungswechsel zwischen Windsystemen, Flaute, ungewöhnlicher Peak oder starke/stürmische Phase. Einen stabilen normalen Tagesverlauf nicht in mehrere Bereiche zerlegen. Heute sind für diese Signale konkrete Uhrzeiten erlaubt, morgen nur grobe Tageszeiten. Eine Angabe wie "NO Wind 12–25 kt" enthält bereits Wind und zugehörige Böe; erwähne Böen nicht noch einmal separat. Falls Wind und Böe getrennt vorliegen, zusammenführen, z.B. "S 3–6 kn", niemals "S 3 kn, Böen 6 kn". Verwende niemals "ungewöhnlich böig" oder "ungewöhnlich böige Entwicklung". Verwende "böig" höchstens einmal im gesamten Abschnitt und nur, wenn der jeweilige Tagesblock in preprocessed.local.wind ausdrücklich "; böig" enthält. Eine nachgestellte Tageszeit-Angabe wie "tagsüber bis zu 21 kt" ist wegzulassen, wenn sie nur den bereits genannten Windbereich wiederholt. Keine Formulierung "stärkste Böe um …", keine exakte Uhrzeit für eine Böen-Spitze und kein "Böen bis …". Welle nur als Douglas-Skala (z.B. "See 2 schwach bewegt"), KEINE Richtung, Periode oder Dünung. Nur explizite Wellendaten verwenden, niemals schätzen.
-- Bei jeder konkreten Windstärke das vollständige lokale Windpaar inklusive Böe übernehmen: Aus "NW Wind 23–32 kt" darf niemals nur "NW 23 kt" oder "Meltemi NW 23 kt" werden.
-- Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨"; nur die wichtigste markante Entwicklung oder, falls keine Änderung vorliegt, eine knappe vorherrschende Tendenz. Keine Stundenwerte und keine vollständige Aufzählung von Windstärken oder Richtungen.
-- Bullet Danach: beginne EXAKT mit "${forecastTailLabel}:". Setze danach "💨" vor die großflächige Zusammenfassung; nenne für jeden Tag nur eine Windstärke-Kategorie und erwähne ausschließlich deutliche Wechsel oder stürmische/kräftige Phasen. Keine Stundenwerte und keine vollständige Aufzählung von Richtungen. Eine passende Großwetterlage darf hier oder bei einer markanten Entwicklung in den Tagesbullets in einem kurzen Nebensatz ergänzt werden, wenn der optionale Kontext sie eindeutig stützt.
-- Der abschließende Datumsbereichs-Bullet ist PFLICHT und darf niemals fehlen oder durch das Ende der Antwort entfallen. Wenn für die Tage danach trotz der 6-Tage-Abfrage keine Winddaten vorliegen, gib trotzdem "Di–Do [entsprechender Datumsbereich]: 💨 Winddaten für diesen Zeitraum nicht verfügbar." aus.
-- Verwende die konkreten Tagesbezeichnungen aus preprocessed.local.wind. Alle Angaben müssen aus den Rohdaten stammen. Bei Windstärken ≥40 kn immer ⚠️ einfügen. Verwende ausschließlich N, NNO, NO, ONO, O, OSO, SO, SSO, S, SW, WSW, W, WNW, NW oder NNW; den Südwestsektor niemals als SSW, sondern als SW ausgeben. Niemals Richtungsbereiche mit "/" oder kombinierte Richtungsangaben. Großwetterlage und Windsysteme dürfen nur genannt werden, wenn sie geographisch und meteorologisch zum lokalen Verlauf passen; sie ersetzen niemals lokale Daten.
-- Falls keine Winddaten vorhanden sind: "Windprognose aus regionalem Wetterbericht nicht verfügbar."
-
-#4 cloudsRain — Wetter & Regen (Inputs: "ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4" sowie die KNMI-Frontkarten — KEINE Wind-/Wellendaten)
-- Erzeuge GENAU 3 Bullets in dieser Reihenfolge: "Heute (${todayLabel})", "Morgen (${tomorrowLabel})" und "${forecastOverviewLabel}". Jeder Bullet beginnt mit diesem Zeitbezug und Datum, niemals mit einem Emoji.
-- INTERPRETIERE Auffälligkeiten und Veränderungen, statt die im Meteogramm bereits sichtbaren Werte vollständig nachzuerzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal, deutlicher Wetterumschwung. Bewölkung nur erwähnen, wenn ihr Wechsel für die Entwicklung relevant ist.
-- Heute: granular, aber kompakt. Nenne höchstens die 2–3 wichtigsten Entwicklungen in zeitlicher Reihenfolge. Regen als eine zusammengefasste qualitative Phase beschreiben, nicht jedes Regenband, jeden Schauer oder jede Uhrzeit einzeln aufzählen. Eine konkrete Uhrzeit ist nur für einen markanten Beginn oder Höhepunkt erlaubt. Temperaturwerte immer auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen beschreiben und nie als einzelne benachbarte Stundenintervalle. Einen normalen abendlichen Rückgang nach dem Tagesmaximum nicht als Entwicklung erwähnen. Ein deutlich tieferes Nachtminimum darf nur als grobe Nachtentwicklung genannt werden, wenn es gegenüber dem Tagesmaximum meteorologisch relevant ist. Einzelne Temperaturänderungen von höchstens 3°C innerhalb eines Stundenintervalls nicht erwähnen.
-- Morgen: weniger granular. Verwende nur grobe Tageszeiten (nachts, morgens, mittags, nachmittags, abends), KEINE Ziffer-Uhrzeiten; konzentriere dich auf die wichtigste Veränderung oder den stabilen Verlauf.
-- ${forecastOverviewLabel}: fasse die folgenden vier Tage ausschließlich als High-Level-Trend zusammen. Keine Uhrzeiten, keine Tagesphasen und keine vollständige Aufzählung aller Einzelwerte.
-- Schreibe niemals nur "Keine markante Wetterentwicklung erkennbar." Wenn keine Auffälligkeit vorliegt, beschreibe stattdessen den stabilen Charakter des Tages inhaltlich, z.B. trocken, Cumulus-/wechselnde Bewölkung und anhaltend sommerlich warm. Für die folgenden vier Tage ist eine Formulierung wie "Mittelmeerraum unter stabiler Hochdrucklage; verbreitet sonnig und heiß" ausdrücklich erwünscht, sofern der Lagekontext sie stützt. Der Hochdruck-Hinweis darf aber nicht den gesamten Bullet bilden: Ergänze danach 1–2 unterstützende High-Level-Details wie Wärme, Sonnenschein, Trockenheit oder die Stabilität bis zum Ende des Zeitraums.
-- Verknüpfe lokale Entwicklungen mit europeanOverview, nationalSynopsis, nationalLocalWeather und den KNMI-Frontkarten. Ein markanter lokaler Druckfall darf nur dann als wahrscheinlicher Frontdurchgang bezeichnet werden, wenn eine zeitlich und räumlich passende Front bzw. nationale Synopsis dies stützt. Ohne solche Bestätigung schreibe nur "Wetterwechsel" oder "zunehmender Tiefdruckeinfluss".
-- Druck nur erwähnen, wenn localForecast.summary.pressure.significant=true. Schwankungen unter 4 hPa innerhalb eines Tages sind kein relevantes Entwicklungssignal und werden weggelassen. Eine Druckänderung ist NIEMALS ein Gewitterindikator.
-- Nationale konkrete Informationen und Warnungen für den Zielort haben Vorrang; die europäische Großwetterlage liefert nur den übergeordneten Zusammenhang.
-- GEWITTERREGEL: Ein Gewitterrisiko darf ausschließlich erwähnt werden, wenn localForecast.summary.thunderstorm.signal=true oder ein konkreter nationaler Wetterbericht/eine Warnung Gewitter für Zielort und Zeitraum nennt. Hohe CAPE-Werte allein sind KEIN Gewittersignal. Bei signal=false weder "erhebliches" noch "geringes Gewitterrisiko" erfinden.
-- Verwende passende Icons direkt vor der jeweiligen Entwicklung, z.B. 📉 Druckfall, 📈 Druckanstieg, 🌧️ Regen, ⛈️ Gewitter, 🌡️ Temperaturwechsel, 🌀 Front/Wetterwechsel, ☀️ Stabilisierung.
-- Zahlen nur nennen, wenn sie eine Auffälligkeit verständlich machen. In Abschnitt 4 Temperaturen und Druckwerte auf verständliche ganze Werte runden. Niederschlagsmengen oder die Einheit "mm" sind im Fließtext VERBOTEN; sie stehen ausschließlich im Meteogramm. WOLKENPROZENTE SIND VERBOTEN. Keine Prozent-Spannen und keine routinemäßige Aufzählung von Wolken, Regen, Temperatur und Gewitter.
-- Beschreibe Regen ausschließlich qualitativ (z.B. zeitweise, einzelne Schauer, länger anhaltend, nachlassend). Leite keine Niederschlagsmenge aus Frontkarten, Wahrscheinlichkeiten oder anderen Texten ab und nenne keine Tagessumme.
-- Keine technischen WMO-Codes oder Wettercode-Nummern im Nutzertext nennen. Verwende stattdessen die verständliche Wetterbeschreibung aus dem Kontext.
-- Falls localForecast fehlt, erzeuge trotzdem alle 3 Bullets mit den korrekten Präfixen und einer kurzen transparenten Nichtverfügbarkeits-Aussage; erfinde keine Entwicklung.
-
-Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt mit dem Marker in einer eigenen Zeile):
-===airPressureMasses===
-- 🌀 ...
-===weatherFront===
-- 🔵 ...
-===windWaves===
-- 💨 ...
-===cloudsRain===
-- ☁️ ...
-===END===
+${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
 `,
   });
 

@@ -28,3 +28,9 @@ User-facing wind text uses only the eight compass points N, NO, O, SO, S, SW, W,
 **Why:** The forecast is intended to be quickly readable and must not leak source labels such as NNW or WNW.
 
 **How to apply:** Keep numeric degrees for chart arrows and timestamp resolution, but normalize textual directions in provider summaries, prompts, and final generated output.
+
+The single global interpretation call receives concrete section-3 values through one canonical hourly table whose rows pair timestamp, direction, wind, and gust. National text summaries may enrich that input but must not replace or hide the table.
+
+**Why:** Provider-specific preprocessing can replace a generic wind object even when the generic object contains the only complete paired timeline; that makes valid local wind appear unavailable to the final interpreter.
+
+**How to apply:** When adding or changing national wind preprocessing, merge its summary with the canonical hourly table and regression-test that the table reaches the final interpretation prompt.

@@ -21,6 +21,7 @@ import {
 import {
   enforceSection4Output,
   ensureWarningFirst,
+  generateWeatherOutput,
   combineWindAndGustMentions,
   normalizeWindDirectionMentions,
   restoreWindGustRanges,
@@ -390,7 +391,86 @@ async function testHnmsFailureIsNotAllClear(): Promise<void> {
     assert.equal((local.warnings as any).text_de, null);
     assert.doesNotMatch(JSON.stringify(local.warnings), /Keine Sturmwarnung/);
     assert.match((local.wind as any).text_de, /Do 27\.08\./);
+    assert.match(
+      (local.wind as any).hourlyText_de,
+      /(?:Mo|Di|Mi|Do|Fr|Sa|So) \d{1,2}\.\d{2} \| \d{2}:00 \| (?:N|NO|O|SO|S|SW|W|NW) \| \d+ \| \d+/,
+      "Greek preprocessing must preserve the canonical hourly wind/gust table",
+    );
     assert.equal((local.wave as any).text_de, "Sa 22.08.: See 3 leicht bewegt\nSo 23.08.: See 3 leicht bewegt");
+
+    let interpretationPrompt = "";
+    const outputAnthropic = {
+      messages: {
+        create: async (request: any) => {
+          interpretationPrompt = (request.messages?.[0]?.content ?? [])
+            .filter((block: any) => block.type === "text")
+            .map((block: any) => block.text)
+            .join("\n");
+          return {
+            content: [{
+              type: "text",
+              text: [
+                "===airPressureMasses===",
+                "- 🌀 Hochdruck.",
+                "- 🧭 Warme Luft.",
+                "===weatherFront===",
+                "- 🔵 Keine aktive Kalt- oder Warmfront.",
+                "- 🧭 Keine relevante Front.",
+                "===windWaves===",
+                "- Heute: 💨 NW 10–15 kt.",
+                "- Morgen: 💨 NW 10–15 kt.",
+                "- Übermorgen: 💨 Mäßiger NW-Wind.",
+                "- Danach: 💨 Mäßiger Wind.",
+                "===cloudsRain===",
+                "- Heute: ☀️ Stabil.",
+                "- Morgen: ☀️ Trocken.",
+                "- Ausblick: ☀️ Ruhig.",
+                "===END===",
+              ].join("\n"),
+            }],
+          };
+        },
+      },
+    } as unknown as Anthropic;
+    await generateWeatherOutput({
+      meta: {
+        app: "aiWindy",
+        version: "test",
+        website: "",
+        github: "",
+        copyright: "",
+        requestDate: FIXED_NOW,
+      },
+      position: {
+        userInput: "Lefkada",
+        country: "Griechenland",
+        countryCode: "GR",
+        windyModel: "ECMWF",
+        sailingArea: {
+          name_de: "Ionisches Meer Nord (Griechenland)",
+          type: "sea",
+          coordinates: { lat: 38.8, lon: 20 },
+        },
+        city: {
+          name_de: "Lefkada",
+          coordinates: { lat: 38.83, lon: 20.71 },
+        },
+      },
+      sources: {
+        windy: [],
+        national: [],
+        europe: [],
+        nationalWarningCenter: national.warningCenter,
+      },
+      weatherRaw: national.data,
+      weatherPreprocessed: { europe: {}, national: {}, local },
+      weatherOutput: {},
+    }, outputAnthropic);
+    assert.match(
+      interpretationPrompt,
+      /=== LOKALER STÜNDLICHER WIND ===\nDatum \| Uhrzeit \| Richtung \| Wind_kt \| Böe_kt\n(?:Mo|Di|Mi|Do|Fr|Sa|So) \d{1,2}\.\d{2}/,
+      "the Greek interpretation prompt must receive the canonical hourly table",
+    );
   } finally {
     mock.restore();
   }
@@ -747,6 +827,114 @@ function testWindPeakTimingContext(): void {
     "at most one clearly gusty day should be highlighted in the wind context",
   );
   assert.doesNotMatch(twoGustyDays.wind.text_de, /ungewöhnlich böig/i);
+}
+
+async function testInterpretationPromptContract(): Promise<void> {
+  let capturedRequest: any = null;
+  let callCount = 0;
+  const anthropic = {
+    messages: {
+      create: async (request: any) => {
+        callCount++;
+        capturedRequest = request;
+        return {
+          content: [{
+            type: "text",
+            text: [
+              "===airPressureMasses===",
+              "- 🌀 Hochdruck über Mitteleuropa.",
+              "- 🧭 Warme, trockene Luftmasse.",
+              "===weatherFront===",
+              "- 🔵 Keine aktive Kalt- oder Warmfront.",
+              "- 🧭 Nächste Front westlich des Zielorts.",
+              "===windWaves===",
+              "- Heute: 💨 NW 23–32 kt.",
+              "- Morgen: 💨 NW 18–26 kt.",
+              "- Übermorgen: 💨 Nachlassender NW-Wind.",
+              "- Danach: 💨 Überwiegend mäßiger Wind.",
+              "===cloudsRain===",
+              "- Heute: ☀️ Stabil.",
+              "- Morgen: ☀️ Trocken.",
+              "- Ausblick: ☀️ Ruhiges Wetter.",
+              "===END===",
+            ].join("\n"),
+          }],
+        };
+      },
+    },
+  } as unknown as Anthropic;
+  const analysis = {
+    meta: {
+      app: "aiWindy",
+      version: "test",
+      website: "",
+      github: "",
+      copyright: "",
+      requestDate: FIXED_NOW,
+    },
+    position: {
+      userInput: "Testrevier",
+      country: "Kroatien",
+      countryCode: "HR",
+      windyModel: "ECMWF",
+      sailingArea: {
+        name_de: "Testrevier",
+        type: "sea",
+        coordinates: { lat: 44, lon: 15 },
+      },
+      city: {
+        name_de: "Teststadt",
+        coordinates: { lat: 44, lon: 15 },
+      },
+    },
+    sources: {
+      windy: [],
+      national: [],
+      europe: [],
+      nationalWarningCenter: { status: "unsupported" },
+    },
+    weatherRaw: {},
+    weatherPreprocessed: {
+      europe: { generalWeather: { text_de: "Hochdruck über Mitteleuropa." } },
+      national: { synopsis: { text_de: "Stabile Wetterlage." } },
+      local: {
+        wind: {
+          text_de: "Sa 22.08.: 12:00 NW Wind 23-32 kt.",
+          hourlyText_de: "2026-08-22 | 12:00 | NW | 23 | 32",
+        },
+        wave: { text_de: "Sa 22.08.: See 2 schwach bewegt." },
+      },
+    },
+    weatherOutput: {},
+  } as AnalysisJson;
+
+  await generateWeatherOutput(analysis, anthropic);
+
+  assert.equal(callCount, 1, "all four interpretation sections must use one LLM call");
+  const prompt = (capturedRequest?.messages?.[0]?.content ?? [])
+    .filter((block: any) => block.type === "text")
+    .map((block: any) => block.text)
+    .join("\n");
+  assert.match(prompt, /Datum \| Uhrzeit \| Richtung \| Wind_kt \| Böe_kt/);
+  assert.match(prompt, /2026-08-22 \| 12:00 \| NW \| 23 \| 32/);
+  assert.doesNotMatch(prompt, /\b(?:NNO|ONO|OSO|SSO|SSW|WSW|WNW|NNW)\b/);
+  for (const section of [
+    "ABSCHNITT 1: airPressureMasses",
+    "ABSCHNITT 2: weatherFront",
+    "ABSCHNITT 3: windWaves",
+    "ABSCHNITT 4: cloudsRain",
+  ]) {
+    assert.equal(
+      (prompt.match(new RegExp(section, "g")) ?? []).length,
+      1,
+      `${section} should have exactly one consolidated rule block`,
+    );
+  }
+  assert.match(prompt, /Abschnitt 1 enthält genau 2 Bullets/);
+  assert.match(prompt, /Abschnitt 2 genau 2/);
+  assert.match(prompt, /Abschnitt 4 genau 3/);
+  assert.match(prompt, /Genau 4 Prognosebullets/);
+  assert.match(prompt, /insgesamt höchstens 5 Bullets/);
 }
 
 function testSection4OutputContract(): void {
@@ -1757,6 +1945,7 @@ async function main(): Promise<void> {
   await withFixedDate(async () => {
     testSection4DevelopmentSignals();
     testWindPeakTimingContext();
+    await testInterpretationPromptContract();
     await testNationalCoverageAndPrecedence();
     await testUnsupportedAreaCoverage();
     await testFailedNationalProvidersStayTransparent();

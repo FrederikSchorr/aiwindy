@@ -223,11 +223,23 @@ export async function preprocessLocalWeather(
   if (countryCode === "GR") {
     const galeData = rawData["greeceMarineForecast"] as Record<string, unknown> | null;
     const emyName = getGreekEmyName(position.sailingArea);
+    const [warning, greekWind, greekWave] = await Promise.all([
+      extractGreeceWarning(galeData, emyName, anthropic, signal),
+      preprocessGreeceLocalWind(rawData, anthropic, signal),
+      preprocessGreeceLocalWave(rawData, anthropic, signal),
+    ]);
+    const genericWind = genericLocal["wind"] as Record<string, unknown> | undefined;
+    const nationalWind = greekWind["wind"] as Record<string, unknown> | undefined;
     return {
       ...genericLocal,
-      ...(await extractGreeceWarning(galeData, emyName, anthropic, signal)),
-      ...(await preprocessGreeceLocalWind(rawData, anthropic, signal)),
-      ...(await preprocessGreeceLocalWave(rawData, anthropic, signal)),
+      ...warning,
+      ...greekWind,
+      wind: {
+        ...genericWind,
+        ...nationalWind,
+        hourlyText_de: genericWind?.hourlyText_de ?? null,
+      },
+      ...greekWave,
       ...preprocessGreeceLocalTemperature(rawData),
       ...preprocessGreeceLocalWaterTemp(rawData),
     };
