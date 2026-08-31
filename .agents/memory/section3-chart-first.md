@@ -21,7 +21,7 @@ Treat a combined value such as `NO Wind 12–25 kt` as sustained wind plus its a
 
 **Why:** The exact gust timeline is already visible in the chart, and the combined range already contains the gust value. Separate “Böen …” clauses or repeated maxima duplicate it; “ungewöhnlich böig” overstates common gust spreads.
 
-**How to apply:** Keep gust values in sampled ranges and the chart. Remove standalone gust clauses, peak-time prose, and a repeated upper bound. Never say “ungewöhnlich böig”; allow `böig` at most once and only for a clearly supported day.
+**How to apply:** Every concrete wind strength must retain its exact sampled wind–gust pair, including named systems such as Meltemi. Restore omitted gusts from the matching local sample; never estimate them. Remove standalone gust clauses, peak-time prose, and repeated upper bounds. Never say “ungewöhnlich böig”; allow `böig` at most once and only for a clearly supported day.
 
 User-facing wind text uses only the eight compass points N, NO, O, SO, S, SW, W, NW; finer 16-point source directions are reduced to their nearest 8-point direction.
 

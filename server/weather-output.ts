@@ -337,6 +337,7 @@ Regeln pro Abschnitt:
 - Jede Prognosezeile (Bullets 2–5) MUSS mit dem relativen Zeitbezug und der konkreten Tagesbezeichnung bzw. dem Datumsbereich beginnen, niemals mit einem Emoji. Erwartetes Schema: "Heute (Sa 22.08.): ...", "Morgen (So 23.08.): ...", "Übermorgen (Mo 24.08.): ...", "Di–Do 25.–27.08.: ...".
 - Die Grafik zeigt den vollständigen zeitlichen Verlauf von Windstärke und Windrichtung, aber KEINE Wellendaten. Die kompakte Grafikinterpretation betrifft daher nur Windwerte: Beschreibe NICHT jeden Zeitabschnitt, nicht jede einzelne Richtung und nicht wiederholt normale Windbereiche. Explizite Wellendaten bleiben eigenständige Pflichtinformation und dürfen nicht entfallen, nur weil der Windverlauf sichtbar ist.
 - Bullet Heute und Bullet Morgen: jeweils Wind und — NUR WENN preprocessed.local.wave.text_de tatsächlich vorhanden und nicht leer ist — die passende Seegangsstärke im selben Bullet. Direkt nach dem Zeit-/Datumspräfix steht "💨" vor dem Windtext; falls Wellendaten vorhanden sind, steht "🌊" direkt vor der Welle. Wenn keine Wellendaten vorhanden sind, den Wellen-Teil vollständig weglassen: kein 🌊, kein Platzhalter und keine Erwähnung fehlender Wellendaten. Nenne ein geographisch passendes Windsystem, wenn es die Entwicklung erklärt. Beschreibe danach höchstens 1–2 markante Signale: deutliche Verstärkung oder Abschwächung, Richtungswechsel zwischen Windsystemen, Flaute, ungewöhnlicher Peak oder starke/stürmische Phase. Einen stabilen normalen Tagesverlauf nicht in mehrere Bereiche zerlegen. Heute sind für diese Signale konkrete Uhrzeiten erlaubt, morgen nur grobe Tageszeiten. Eine Angabe wie "NO Wind 12–25 kt" enthält bereits Wind und zugehörige Böe; erwähne Böen nicht noch einmal separat. Falls Wind und Böe getrennt vorliegen, zusammenführen, z.B. "S 3–6 kn", niemals "S 3 kn, Böen 6 kn". Verwende niemals "ungewöhnlich böig" oder "ungewöhnlich böige Entwicklung". Verwende "böig" höchstens einmal im gesamten Abschnitt und nur, wenn der jeweilige Tagesblock in preprocessed.local.wind ausdrücklich "; böig" enthält. Eine nachgestellte Tageszeit-Angabe wie "tagsüber bis zu 21 kt" ist wegzulassen, wenn sie nur den bereits genannten Windbereich wiederholt. Keine Formulierung "stärkste Böe um …", keine exakte Uhrzeit für eine Böen-Spitze und kein "Böen bis …". Welle nur als Douglas-Skala (z.B. "See 2 schwach bewegt"), KEINE Richtung, Periode oder Dünung. Nur explizite Wellendaten verwenden, niemals schätzen.
+- Bei jeder konkreten Windstärke das vollständige lokale Windpaar inklusive Böe übernehmen: Aus "NW Wind 23–32 kt" darf niemals nur "NW 23 kt" oder "Meltemi NW 23 kt" werden.
 - Bullet Übermorgen: direkt nach dem Zeit-/Datumspräfix "💨"; nur die wichtigste markante Entwicklung oder, falls keine Änderung vorliegt, eine knappe vorherrschende Tendenz. Keine Stundenwerte und keine vollständige Aufzählung von Windstärken oder Richtungen.
 - Bullet Danach: beginne EXAKT mit "${forecastTailLabel}:". Setze danach "💨" vor die großflächige Zusammenfassung; nenne für jeden Tag nur eine Windstärke-Kategorie und erwähne ausschließlich deutliche Wechsel oder stürmische/kräftige Phasen. Keine Stundenwerte und keine vollständige Aufzählung von Richtungen. Eine passende Großwetterlage darf hier oder bei einer markanten Entwicklung in den Tagesbullets in einem kurzen Nebensatz ergänzt werden, wenn der optionale Kontext sie eindeutig stützt.
 - Der abschließende Datumsbereichs-Bullet ist PFLICHT und darf niemals fehlen oder durch das Ende der Antwort entfallen. Wenn für die Tage danach trotz der 6-Tage-Abfrage keine Winddaten vorliegen, gib trotzdem "Di–Do [entsprechender Datumsbereich]: 💨 Winddaten für diesen Zeitraum nicht verfügbar." aus.
@@ -395,7 +396,12 @@ Antworte NUR in diesem Format, ohne weitere Erklärungen (jede Sektion beginnt m
       ? softenGustyDescriptions(
         stripRedundantWindRangeMentions(
           stripRedundantGustMentions(
-            stripStrongestGustMentions(normalizeWindDirectionMentions(parsed.windWaves)),
+            combineWindAndGustMentions(
+              restoreWindGustRanges(
+                stripStrongestGustMentions(normalizeWindDirectionMentions(parsed.windWaves)),
+                local["wind"]?.text_de,
+              ),
+            ),
           ),
         ),
       )
@@ -553,6 +559,47 @@ export function combineWindAndGustMentions(text: string): string {
     /(\b(?:Wind\s+)?(\d+(?:[.,]\d+)?)\s*)(kn|kt)\s*,\s*(?:mit\s+)?Böen\s+(?:bis\s+zu\s+)?(\d+(?:[.,]\d+)?)\s*\3\b/gi,
     (_match, prefix, _speed, unit, gust) => `${prefix.trimEnd()}–${gust} ${unit}`,
   );
+}
+
+export function restoreWindGustRanges(text: string, localWindText: unknown): string {
+  if (typeof localWindText !== "string" || !localWindText.trim()) return text;
+
+  const rangesByDay = new Map<string, Map<number, number>>();
+  for (const line of localWindText.split(/\r?\n/)) {
+    const separator = line.indexOf(":");
+    if (separator <= 0) continue;
+    const dateLabel = line.slice(0, separator).trim();
+    const ranges = rangesByDay.get(dateLabel) ?? new Map<number, number>();
+    for (const match of line.matchAll(
+      /\b\d{2}:00\s+(?:N|NO|O|SO|S|SW|W|NW)\s+Wind\s+(\d+)\s*[–-]\s*(\d+)\s*kt\b/gi,
+    )) {
+      ranges.set(Number(match[1]), Number(match[2]));
+    }
+    if (ranges.size > 0) rangesByDay.set(dateLabel, ranges);
+  }
+
+  return text.split(/\r?\n/).map(line => {
+    const dateMatch = line.match(/^(?:-\s*)?(?:Heute|Morgen|Übermorgen)\s*\(([^)]+)\)/i);
+    const ranges = dateMatch ? rangesByDay.get(dateMatch[1].trim()) : undefined;
+    if (!ranges) return line;
+
+    const addRange = (match: string, direction: string, speedText: string, unit: string) => {
+      const gust = ranges.get(Number(speedText.replace(",", ".")));
+      return typeof gust === "number"
+        ? `${direction}${speedText}–${gust} ${unit}`
+        : match;
+    };
+
+    return line
+      .replace(
+        /\b((?:N|NO|O|SO|S|SW|W|NW)\s+(?:Wind\s+)?)(\d+(?:[.,]\d+)?)\s*(kt|kn)\b/gi,
+        addRange,
+      )
+      .replace(
+        /\b(Wind\s+)(\d+(?:[.,]\d+)?)\s*(kt|kn)\b/gi,
+        addRange,
+      );
+  }).join("\n");
 }
 
 export function stripRedundantWindRangeMentions(text: string): string {

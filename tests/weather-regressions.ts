@@ -23,6 +23,7 @@ import {
   ensureWarningFirst,
   combineWindAndGustMentions,
   normalizeWindDirectionMentions,
+  restoreWindGustRanges,
   stripRedundantGustMentions,
   stripRedundantWindRangeMentions,
   stripStrongestGustMentions,
@@ -687,6 +688,14 @@ function testWindPeakTimingContext(): void {
     combineWindAndGustMentions("- Heute: S 3 kn, Böen 6 kn."),
     "- Heute: S 3–6 kn.",
     "separate wind and gust values should be combined",
+  );
+  assert.equal(
+    restoreWindGustRanges(
+      "- Heute (Mo 31.08.): 💨 Meltemi NW 23 kt.",
+      "Mo 31.08.: 18:00 NW Wind 23-32 kt; Wind 23–25 kt.",
+    ),
+    "- Heute (Mo 31.08.): 💨 Meltemi NW 23–32 kt.",
+    "a missing gust should be restored from the matching local wind pair",
   );
   assert.equal(
     stripRedundantGustMentions("- Heute: S 3 kn, Böen 6 kn."),
