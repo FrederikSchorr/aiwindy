@@ -21,6 +21,7 @@ import {
 import {
   enforceSection4Output,
   ensureWarningFirst,
+  combineWindAndGustMentions,
   normalizeWindDirectionMentions,
   stripRedundantGustMentions,
   stripRedundantWindRangeMentions,
@@ -681,6 +682,16 @@ function testWindPeakTimingContext(): void {
     stripRedundantGustMentions("- Heute: NO Wind 12–25 kt; Böen 4–25 kt."),
     "- Heute: NO Wind 12–25 kt.",
     "generated wind text should not repeat ordinary gusts separately",
+  );
+  assert.equal(
+    combineWindAndGustMentions("- Heute: S 3 kn, Böen 6 kn."),
+    "- Heute: S 3–6 kn.",
+    "separate wind and gust values should be combined",
+  );
+  assert.equal(
+    stripRedundantGustMentions("- Heute: S 3 kn, Böen 6 kn."),
+    "- Heute: S 3 kn.",
+    "an unpaired gust mention in knots should be removed",
   );
   assert.equal(
     stripRedundantGustMentions("- Morgen: kräftige Westströmung; NW-Böen nachmittags bis 22 kt."),
