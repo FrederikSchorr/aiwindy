@@ -424,11 +424,11 @@ async function testHnmsFailureIsNotAllClear(): Promise<void> {
                 "- Heute: 💨 NW 10–15 kt.",
                 "- Morgen: 💨 NW 10–15 kt.",
                 "- Übermorgen: 💨 Mäßiger NW-Wind.",
-                "- Danach: 💨 Mäßiger Wind.",
+                "- Di–Do 25.–27.08.: 💨 Mäßiger Wind.",
                 "===cloudsRain===",
                 "- Heute: ☀️ Stabil.",
                 "- Morgen: ☀️ Trocken.",
-                "- Ausblick: ☀️ Ruhig.",
+                "- Mo–Do 24.–27.08.: ☀️ Ruhig.",
                 "===END===",
               ].join("\n"),
             }],
@@ -855,11 +855,11 @@ async function testInterpretationPromptContract(): Promise<void> {
               "- Heute: 💨 NW 23–32 kt.",
               "- Morgen: 💨 NW 18–26 kt.",
               "- Übermorgen: 💨 Nachlassender NW-Wind.",
-              "- Danach: 💨 Überwiegend mäßiger Wind.",
+              "- Di–Do 25.–27.08.: 💨 Überwiegend mäßiger Wind.",
               "===cloudsRain===",
               "- Heute: ☀️ Stabil.",
               "- Morgen: ☀️ Trocken.",
-              "- Ausblick: ☀️ Ruhiges Wetter.",
+              "- Mo–Do 24.–27.08.: ☀️ Ruhiges Wetter.",
               "===END===",
             ].join("\n"),
           }],
@@ -1049,36 +1049,7 @@ function testSection4OutputContract(): void {
       forecastOverviewLabel: "Mo–Do 24.–27.08.",
     },
   );
-  assert.equal(
-    missingBullets?.split("\n").length,
-    3,
-    "missing LLM bullets should be completed transparently rather than changing the contract",
-  );
-  assert.match(missingBullets ?? "", /Lokale Entwicklungsdaten nicht verfügbar/);
-
-  const shortToday = enforceSection4Output(
-    [
-      "- Heute: Morgens klar, bis ~20 °C.",
-      "- Morgen: Wechselnd bewölkt.",
-      "- Mo–Do 24.–27.08.: Stabil und trocken.",
-    ].join("\n"),
-    {
-      todayLabel: "Sa 22.08.",
-      tomorrowLabel: "So 23.08.",
-      forecastOverviewLabel: "Mo–Do 24.–27.08.",
-    },
-    undefined,
-    [
-      "- Heute (Sa 22.08.): Ruhiger Verlauf: trocken; überwiegend klar; die Wetterlage bleibt im Tagesgang stabil.",
-      "- Morgen (So 23.08.): Ruhiger Verlauf: trocken; wechselnd bewölkt; die Wetterlage bleibt im Tagesgang stabil.",
-      "- Mo–Do 24.–27.08.: stabile Wetterlage; überwiegend trocken.",
-    ],
-  ) ?? "";
-  assert.match(
-    shortToday,
-    /Heute \(Sa 22\.08\.\): ☀️ Ruhiger Verlauf: trocken; überwiegend klar/,
-    "a too-short today bullet should use the existing data-based development summary",
-  );
+  assert.equal(missingBullets, null, "missing LLM bullets must not be replaced by deterministic content");
 
   const sanitized = enforceSection4Output(
     [
@@ -1108,7 +1079,7 @@ function testSection4OutputContract(): void {
   assert.doesNotMatch(sanitized, /7[,.]2\s*mm|1018[,.]4 hPa/);
   assert.doesNotMatch(sanitized, /\d+[,.]\d+\s*(?:mm|hPa|°C)/i);
 
-  const informativeFallback = enforceSection4Output(
+  const strippedOutput = enforceSection4Output(
     [
       "- Heute: 📉 Druckschwankung von 1016 auf 1014 hPa; ⛈️ Gewitterrisiko.",
       "- Morgen: 📉 Druck bleibt bei 1014 hPa; ⛈️ Gewittersignal.",
@@ -1123,15 +1094,8 @@ function testSection4OutputContract(): void {
       pressureSignificant: [false, false, false],
       thunderstormAllowed: [false, false, false],
     },
-    [
-      "- Heute (Sa 22.08.): Ruhiger Verlauf: trocken; wechselnd bewölkt mit Cumulus-Bewölkung; sommerlich warm.",
-      "- Morgen (So 23.08.): Wechselhaft, aber überwiegend trocken mit Cumulus-Bewölkung.",
-      "- Mo–Do 24.–27.08.: Stabile Entwicklung; überwiegend trocken und sommerlich.",
-    ],
-  ) ?? "";
-  assert.doesNotMatch(informativeFallback, /Keine markante Wetterentwicklung erkennbar/);
-  assert.match(informativeFallback, /Ruhiger Verlauf: trocken/);
-  assert.match(informativeFallback, /Cumulus-Bewölkung/);
+  );
+  assert.equal(strippedOutput, null, "empty sanitized bullets must not be replaced by deterministic content");
 
   const expandedOverview = enforceSection4Output(
     [
@@ -1144,16 +1108,9 @@ function testSection4OutputContract(): void {
       tomorrowLabel: "So 23.08.",
       forecastOverviewLabel: "Mo–Do 24.–27.08.",
     },
-    undefined,
-    [
-      "- Heute (Sa 22.08.): Ruhiger Verlauf.",
-      "- Morgen (So 23.08.): Wechselnd bewölkt.",
-      "- Mo–Do 24.–27.08.: Mittelmeerraum unter stabiler Hochdrucklage; verbreitet sonnig und heiß; Höchstwerte bis 34°C; überwiegend trocken; die Stabilität hält bis zum Ende des Zeitraums an.",
-    ],
   ) ?? "";
-  assert.match(expandedOverview, /Hochdrucklage; verbreitet sonnig und heiß/);
-  assert.match(expandedOverview, /Höchstwerte bis 34°C/);
-  assert.match(expandedOverview, /bis zum Ende des Zeitraums/);
+  assert.match(expandedOverview, /Mittelmeerraum unter stabiler Hochdrucklage/);
+  assert.doesNotMatch(expandedOverview, /Höchstwerte bis 34°C|bis zum Ende des Zeitraums/);
 }
 
 function testCloudBaseEstimate(): void {

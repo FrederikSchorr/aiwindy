@@ -35,8 +35,8 @@ The single global interpretation call receives concrete section-3 values through
 
 **How to apply:** When adding or changing national wind preprocessing, merge its summary with the canonical hourly table and regression-test that the table reaches the final interpretation prompt.
 
-Section 3 must not use a deterministic content fallback when generated forecast bullets disappear. Preserve and repair the LLM output path instead; deterministic handling may restore formatting, ordering, icons, and validated wind–gust pairs only.
+No weather section may use deterministic replacement prose when generated bullets disappear. Preserve and repair the LLM output path instead; deterministic handling may restore formatting, ordering, icons, and validated wind–gust pairs only.
 
 **Why:** The LLM forecast content was already useful. A warning-cleanup routine mistakenly treated unhyphenated forecast lines as warning continuation and deleted them.
 
-**How to apply:** If bullets go missing, trace prompt output and postprocessing before generating replacement prose. Recognize forecast prefixes as section boundaries even when Markdown hyphens are absent.
+**How to apply:** If bullets go missing, trace prompt output and postprocessing rather than generating replacement prose. Reject incomplete LLM contracts explicitly; recognize forecast prefixes as boundaries even without Markdown hyphens.

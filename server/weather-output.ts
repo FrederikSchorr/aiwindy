@@ -131,7 +131,7 @@ const GLOBAL_OUTPUT_RULES = `=== PRIORITÄTEN UND AUSGABEVERTRAG ===
 ===windWaves===
 ===cloudsRain===
 Danach exakt ===END===. Keine Erklärung außerhalb dieser Marker.
-4. Abschnitt 1 enthält genau 2 Bullets, Abschnitt 2 genau 2 und Abschnitt 4 genau 3. Abschnitt 3 enthält vier Prognosebullets plus die Warnzeile, wenn eine Warnquelle angebunden ist; insgesamt höchstens 5.
+4. Abschnitt 1 enthält genau 2 Bullets, Abschnitt 2 genau 2 und Abschnitt 4 genau 3. Abschnitt 3 enthält immer vier inhaltliche Prognosebullets plus die Warnzeile, wenn eine Warnquelle angebunden ist; insgesamt höchstens 5. Keine dieser vier Prognosezeilen weglassen.
 5. Bullet-Text bleibt kurz. Emojis stehen in Abschnitt 1 und 2 passend am Bullet-Anfang; in Abschnitt 3 und 4 direkt vor dem jeweiligen Inhalt.`;
 
 const SECTION_1_RULES = `=== ABSCHNITT 1: airPressureMasses — Druck & Luftmassen ===
@@ -169,6 +169,7 @@ function buildSection3Rules(
   return `=== ABSCHNITT 3: windWaves — Wind & Welle ===
 Inputs: der kanonische Block LOKALER STÜNDLICHER WIND, preprocessed.local.wave und geprüfte Warnungen. Europäische und nationale Texte liefern nur ergänzenden Kontext.
 - Genau 4 Prognosebullets: Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}. Bei angebundener Warnquelle steht davor genau eine Warnzeile; insgesamt höchstens 5 Bullets.
+- Diese vier Prognosebullets sind Pflicht und werden als vier eigene Zeilen ausgegeben, auch wenn einzelne Werte fehlen. Bei fehlenden Werten transparent "Windprognose nicht verfügbar." schreiben, niemals den Bullet weglassen oder nur den Mehrtagesausblick ausgeben.
 - Bei angebundener Warnquelle die geprüfte Warnung aus preprocessed.local.warnings vollständig und unverändert übernehmen. "Keine Sturmwarnung" ohne ⚠️ ausgeben; aktive Warnungen oder Abruffehler dürfen ⚠️ erhalten. Bei nicht angebundener Quelle keine Warnzeile erzeugen.
 - Prognosebullets 2–5 beginnen jeweils mit ihrem Zeit-/Datumspräfix, niemals mit einem Emoji. Heute und Morgen enthalten Wind und nur bei vorhandenen preprocessed.local.wave.text_de die passende Seegangsstärke im selben Bullet; Wellendaten als Douglas-Skala, ohne Richtung, Periode oder Dünung.
 - Die Tabelle ist für konkrete Werte maßgeblich: Wind_kt und Böe_kt derselben Zeile gehören zusammen. Ein konkreter Wert wird immer als Bereich ausgegeben, z.B. "Meltemi NW 23–32 kt"; niemals nur den Windwert nennen und niemals "Wind 3 kt, Böen 6 kt".
@@ -351,9 +352,6 @@ export async function generateWeatherOutput(
         available: Boolean(knmiForecastEntry.imageBase64),
       } : null,
     },
-    fallbackLocalSummary: section4LocalForecast
-      ? undefined
-      : local["cloudRainThunderstorm"] ?? null,
   };
   const section3WindContext = (local["wind"] as Record<string, unknown> | undefined) ?? {};
   const section3WindHourlyInput = typeof section3WindContext.hourlyText_de === "string"
@@ -390,16 +388,6 @@ export async function generateWeatherOutput(
       nationalThunderstormEvidence || section4Days.slice(2).some(day => day?.summary?.thunderstorm?.signal === true),
     ],
   };
-  const section4Fallback = buildSection4Fallback(
-    section4Days,
-    { todayLabel, tomorrowLabel, forecastOverviewLabel },
-    /\bHochdruck\b/i.test(
-      [generalWeather, nationalSynopsis, section4Context.nationalLocalWeather]
-        .filter(Boolean)
-        .join(" "),
-    ),
-  );
-
   content.push({
     type: "text",
     text: `
@@ -455,18 +443,47 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
   // ── LLM call ──────────────────────────────────────────────────────────────
 
   try {
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1200,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content }],
-    }, { signal });
-
-    const raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
-    const parsed = parseSectionMarkers(raw);
-    if (!parsed) {
-      console.error("generateWeatherOutput: no section markers in response. Raw (first 200):", raw.slice(0, 200));
-     return emptyOutput(analysis);
+    let raw = "";
+    let parsed: Record<string, string> | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const messages: Anthropic.Messages.MessageParam[] = attempt === 0
+        ? [{ role: "user", content }]
+        : [
+          { role: "user", content },
+          { role: "assistant", content: raw },
+          {
+            role: "user",
+            content: `Korrigiere den vollständigen Output und gib alle vier Abschnitte erneut aus.
+Abschnitt 3 muss zusätzlich zur optionalen Warnzeile exakt vier eigene Prognosezeilen enthalten:
+Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}.
+Abschnitt 4 muss exakt drei eigene Prognosezeilen enthalten:
+Heute (${todayLabel}), Morgen (${tomorrowLabel}) und ${forecastOverviewLabel}.
+Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschnittsmarker und ===END=== erneut ausgeben.`,
+          },
+        ];
+      const msg = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1800,
+        system: SYSTEM_PROMPT,
+        messages,
+      }, { signal });
+      raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
+      parsed = parseSectionMarkers(raw);
+      if (
+        parsed
+        && hasCompleteWindForecast(parsed.windWaves)
+        && hasCompleteCloudForecast(parsed.cloudsRain)
+      ) break;
+      if (attempt < 2) {
+        console.warn("generateWeatherOutput: retrying incomplete forecast sections");
+      }
+    }
+    if (
+      !parsed
+      || !hasCompleteWindForecast(parsed.windWaves)
+      || !hasCompleteCloudForecast(parsed.cloudsRain)
+    ) {
+      throw new Error(`Incomplete LLM forecast contract: ${raw.slice(0, 200)}`);
     }
 
     const source = "claude-sonnet-4-6";
@@ -506,17 +523,43 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
           parsed.cloudsRain ?? null,
           { todayLabel, tomorrowLabel, forecastOverviewLabel },
           section4OutputConstraints,
-          section4Fallback,
         ),
       },
     };
   } catch (e) {
     console.error("generateWeatherOutput error:", e instanceof Error ? e.message : e);
-    return emptyOutput(analysis);
+    throw e;
   }
 }
 
 const SECTION_KEYS = ["airPressureMasses", "weatherFront", "windWaves", "cloudsRain"] as const;
+
+function hasCompleteWindForecast(text: string | undefined): boolean {
+  if (!text) return false;
+  const lines = text.split(/\r?\n/);
+  const hasRelative = (label: string) => lines.some(line =>
+    new RegExp(`^\\s*(?:-\\s*)?${label}\\b`, "i").test(line),
+  );
+  const hasTail = lines.some(line =>
+    /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
+  );
+  return hasRelative("Heute")
+    && hasRelative("Morgen")
+    && hasRelative("Übermorgen")
+    && hasTail;
+}
+
+function hasCompleteCloudForecast(text: string | undefined): boolean {
+  if (!text) return false;
+  const lines = text.split(/\r?\n/);
+  const hasRelative = (label: string) => lines.some(line =>
+    new RegExp(`^\\s*(?:-\\s*)?${label}\\b`, "i").test(line),
+  );
+  const hasTail = lines.some(line =>
+    /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
+  );
+  return hasRelative("Heute") && hasRelative("Morgen") && hasTail;
+}
 
 function parseSectionMarkers(raw: string): Record<string, string> | null {
   const result: Record<string, string> = {};
@@ -540,7 +583,7 @@ function parseSectionMarkers(raw: string): Record<string, string> | null {
 }
 
 const DATE_RANGE_PREFIX =
-  /^(\s*-\s*)(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\.(?:\d{1,2}\.)?[–-]\d{1,2}\.\d{1,2}\.?\s*:/i;
+  /^(\s*)(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\.(?:\d{1,2}\.)?[–-]\d{1,2}\.\d{1,2}\.?\s*:/i;
 
 function replaceRelativeDatePrefix(
   line: string,
@@ -548,10 +591,10 @@ function replaceRelativeDatePrefix(
   dateLabel: string,
 ): string {
   const pattern = new RegExp(
-    `^(\\s*-\\s*)${relativeLabel}(?:\\s*\\([^)]*\\)|\\s+(?:Mo|Di|Mi|Do|Fr|Sa|So)\\s+\\d{1,2}\\.\\d{1,2}\\.?)?\\s*:`,
+    `^(\\s*)(?:-\\s*)?${relativeLabel}(?:\\s*\\([^)]*\\)|\\s+(?:Mo|Di|Mi|Do|Fr|Sa|So)\\s+\\d{1,2}\\.\\d{1,2}\\.?)?\\s*:`,
     "i",
   );
-  return line.replace(pattern, `$1${relativeLabel} (${dateLabel}):`);
+  return line.replace(pattern, `$1- ${relativeLabel} (${dateLabel}):`);
 }
 
 export function enforceWindForecastDatePrefixes(
@@ -576,7 +619,7 @@ export function enforceWindForecastDatePrefixes(
       );
       return withDayAfterTomorrow.replace(
         DATE_RANGE_PREFIX,
-        `$1${labels.forecastTailLabel}:`,
+        `$1- ${labels.forecastTailLabel}:`,
       );
     })
     .join("\n");
@@ -632,7 +675,7 @@ export function enforceCloudForecastDatePrefixes(
       const withTomorrow = replaceRelativeDatePrefix(withToday, "Morgen", labels.tomorrowLabel);
       return withTomorrow.replace(
         DATE_RANGE_PREFIX,
-        `$1${labels.forecastOverviewLabel}:`,
+        `$1- ${labels.forecastOverviewLabel}:`,
       );
     })
     .join("\n");
@@ -826,100 +869,6 @@ function removeSection4Clauses(
     : prefix;
 }
 
-function cloudDevelopment(cloudTypes: unknown): string {
-  const types = Array.isArray(cloudTypes)
-    ? cloudTypes.filter((value): value is string => typeof value === "string")
-    : [];
-  if (types.includes("cumulus")) return "wechselnd bewölkt mit Cumulus-Bewölkung";
-  if (types.includes("clear")) return "überwiegend klar";
-  if (types.includes("stratus")) return "überwiegend geschlossen bewölkt";
-  if (types.includes("altostratus")) return "mit hohen und mittleren Wolkenfeldern";
-  return "wechselnd bewölkt";
-}
-
-function stableDevelopment(day: any): string {
-  const summary = day?.summary ?? {};
-  const rainTotal = summary.rain?.totalMm;
-  const temperatureMax = summary.temperature?.maxC;
-  const conditions = [
-    typeof rainTotal === "number" && rainTotal < 0.1
-      ? "trocken"
-      : "mit einzelnen Niederschlagsphasen",
-    cloudDevelopment(summary.cloudTypes),
-    typeof temperatureMax === "number" && temperatureMax >= 28
-      ? "sommerlich warm"
-      : null,
-  ].filter((value): value is string => Boolean(value));
-  return `Ruhiger Verlauf: ${conditions.join("; ")}; die Wetterlage bleibt im Tagesgang stabil.`;
-}
-
-function buildSection4Fallback(
-  days: any[],
-  labels: {
-    todayLabel: string;
-    tomorrowLabel: string;
-    forecastOverviewLabel: string;
-  },
-  highPressureSupported: boolean,
-): string[] {
-  const unavailable = "Lokale Entwicklungsdaten nicht verfügbar.";
-  const dayFallback = (day: any, label: string) =>
-    day ? `- ${label}: ${stableDevelopment(day)}` : `- ${label}: ${unavailable}`;
-  const overviewDays = days.slice(2);
-  const overviewTemperatures = overviewDays
-    .map(day => day?.summary?.temperature?.maxC)
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-  const overviewRain = overviewDays
-    .map(day => day?.summary?.rain?.totalMm)
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-  const overviewMaxTemperature = overviewTemperatures.length
-    ? Math.round(Math.max(...overviewTemperatures))
-    : null;
-  const overviewClouds = cloudDevelopment(
-    overviewDays.flatMap(day => day?.summary?.cloudTypes ?? []),
-  );
-  const overviewConditions = [
-    highPressureSupported ? "Mittelmeerraum unter stabiler Hochdrucklage" : "stabile Wetterlage",
-    overviewClouds === "überwiegend klar" ? "verbreitet sonnig" : overviewClouds,
-    overviewMaxTemperature !== null && overviewMaxTemperature >= 30
-      ? `heiß mit Höchstwerten bis ${overviewMaxTemperature}°C`
-      : null,
-    overviewRain.length && overviewRain.every(value => value < 0.1) ? "überwiegend trocken" : null,
-    "die Stabilität hält bis zum Ende des Zeitraums an",
-  ].filter((value): value is string => Boolean(value));
-  const overview = overviewDays.length
-    ? `- ${labels.forecastOverviewLabel}: ${overviewConditions.join("; ")}.`
-    : `- ${labels.forecastOverviewLabel}: ${unavailable}`;
-  return [
-    dayFallback(days[0], `Heute (${labels.todayLabel})`),
-    dayFallback(days[1], `Morgen (${labels.tomorrowLabel})`),
-    overview,
-  ];
-}
-
-function isUnderDetailedOverview(line: string): boolean {
-  const prefixEnd = line.indexOf(":");
-  if (prefixEnd === -1) return false;
-  const body = line.slice(prefixEnd + 1).trim();
-  if (!/\bHochdrucklage\b/i.test(body)) return false;
-  const withoutHeadline = body
-    .replace(/^[☀️\s]*/u, "")
-    .replace(/\bMittelmeerraum\s+unter\s+stabiler\s+Hochdrucklage\b[.;]?/i, "")
-    .trim();
-  return withoutHeadline.length < 15;
-}
-
-function isUnderInformativeToday(line: string): boolean {
-  const prefixEnd = line.indexOf(":");
-  if (prefixEnd === -1) return false;
-  const body = line
-    .slice(prefixEnd + 1)
-    .replace(/^[\s☀️⛅☁️🌥️🌧️🌦️⛈️🌡️📉📈🌀]+/u, "")
-    .trim();
-  if (body.length >= 48 && /[,;]|\bund\b/i.test(body)) return false;
-  return body.length < 48 || !/[,;]|\bund\b/i.test(body);
-}
-
 function section4IconFor(body: string): string {
   const positiveWeather = body
     .replace(
@@ -967,7 +916,6 @@ export function enforceSection4Output(
     pressureSignificant?: boolean[];
     thunderstormAllowed?: boolean[];
   },
-  fallbackLines?: string[],
 ): string | null {
   const prefixed = enforceCloudForecastDatePrefixes(text, labels);
   if (!prefixed) return prefixed;
@@ -975,15 +923,21 @@ export function enforceSection4Output(
   const bullets = prefixed
     .split("\n")
     .map(line => line.trim())
-    .filter(line => line.startsWith("- "));
-  if (!bullets.length) return prefixed;
+    .filter(Boolean)
+    .map(line => line.startsWith("- ") ? line : `- ${line.replace(/^•\s*/, "")}`);
+  if (bullets.length < 3) return null;
 
-  const fallback = [
-    `- Heute (${labels.todayLabel}): Lokale Entwicklungsdaten nicht verfügbar.`,
-    `- Morgen (${labels.tomorrowLabel}): Lokale Entwicklungsdaten nicht verfügbar.`,
-    `- ${labels.forecastOverviewLabel}: Lokale Entwicklungsdaten nicht verfügbar.`,
+  const canonicalPrefixes = [
+    `- Heute (${labels.todayLabel}):`,
+    `- Morgen (${labels.tomorrowLabel}):`,
+    `- ${labels.forecastOverviewLabel}:`,
   ];
-  const exactlyThree = fallback.map((fallbackLine, index) => bullets[index] ?? fallbackLine);
+  const exactlyThree = bullets.slice(0, 3).map((line, index) => {
+    const colon = line.indexOf(":");
+    return colon === -1
+      ? line
+      : `${canonicalPrefixes[index]} ${line.slice(colon + 1).trim()}`;
+  });
   exactlyThree[1] = replaceExactClockTimes(exactlyThree[1]);
   const sanitizedOutput = exactlyThree
     .map((line, index) => {
@@ -1009,17 +963,10 @@ export function enforceSection4Output(
           /(?:\bGewitter\w*\b|\bCumulonimbus\b|\bCb-Signal\b|⛈️)/i,
         );
       }
-      if (index === 0 && fallbackLines?.[index] && isUnderInformativeToday(sanitized)) {
-        return fallbackLines[index];
-      }
-      if (index === 2 && isUnderDetailedOverview(sanitized) && fallbackLines?.[index]) {
-        return fallbackLines[index];
-      }
-      return sanitized.endsWith(":")
-        ? fallbackLines?.[index] ?? `${sanitized} Lokale Entwicklungsdaten nicht verfügbar.`
-        : sanitized;
+      return sanitized;
     })
     .join("\n");
+  if (sanitizedOutput.split("\n").some(line => line.trimEnd().endsWith(":"))) return null;
   return ensureSection4Icons(sanitizedOutput);
 }
 
@@ -1074,14 +1021,4 @@ function removeNationalWarningLines(text: string, authoritativeFirstLine?: strin
     remaining.push(line);
   }
   return remaining.join("\n").trim();
-}
-
-function emptyOutput(analysis?: AnalysisJson): Record<string, unknown> {
-  const source = "claude-sonnet-4-6";
-  return {
-    airPressureMasses: { source, text: null },
-    weatherFront:      { source, text: null },
-    windWaves:         { source, text: analysis ? ensureWarningFirst(analysis, null) : null },
-    cloudsRain:        { source, text: null },
-  };
 }
