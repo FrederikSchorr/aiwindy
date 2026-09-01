@@ -483,7 +483,11 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
       || !hasCompleteWindForecast(parsed.windWaves)
       || !hasCompleteCloudForecast(parsed.cloudsRain)
     ) {
-      throw new Error(`Incomplete LLM forecast contract: ${raw.slice(0, 200)}`);
+      console.error("generateWeatherOutput: incomplete LLM contract", {
+        windLines: parsed?.windWaves?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
+        cloudLines: parsed?.cloudsRain?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
+      });
+      throw new Error("Die Wetterinterpretation war unvollständig. Bitte erneut versuchen.");
     }
 
     const source = "claude-sonnet-4-6";
@@ -537,28 +541,29 @@ const SECTION_KEYS = ["airPressureMasses", "weatherFront", "windWaves", "cloudsR
 function hasCompleteWindForecast(text: string | undefined): boolean {
   if (!text) return false;
   const lines = text.split(/\r?\n/);
-  const hasRelative = (label: string) => lines.some(line =>
-    new RegExp(`^\\s*(?:-\\s*)?${label}\\b`, "i").test(line),
+  const forecastLines = lines.filter(line =>
+    /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
+    || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(line)
+    || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
   );
   const hasTail = lines.some(line =>
     /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
   );
-  return hasRelative("Heute")
-    && hasRelative("Morgen")
-    && hasRelative("Übermorgen")
-    && hasTail;
+  return forecastLines.length >= 4 && hasTail;
 }
 
 function hasCompleteCloudForecast(text: string | undefined): boolean {
   if (!text) return false;
   const lines = text.split(/\r?\n/);
-  const hasRelative = (label: string) => lines.some(line =>
-    new RegExp(`^\\s*(?:-\\s*)?${label}\\b`, "i").test(line),
+  const forecastLines = lines.filter(line =>
+    /^\s*(?:-\s*)?(?:Heute|Morgen)\b/i.test(line)
+    || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(line)
+    || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
   );
   const hasTail = lines.some(line =>
     /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
   );
-  return hasRelative("Heute") && hasRelative("Morgen") && hasTail;
+  return forecastLines.length >= 3 && hasTail;
 }
 
 function parseSectionMarkers(raw: string): Record<string, string> | null {
@@ -607,6 +612,12 @@ export function enforceWindForecastDatePrefixes(
   },
 ): string | null {
   if (!text) return text;
+  let calendarForecastIndex = 0;
+  const canonicalPrefixes = [
+    `- Heute (${labels.todayLabel}):`,
+    `- Morgen (${labels.tomorrowLabel}):`,
+    `- Übermorgen (${labels.dayAfterTomorrowLabel}):`,
+  ];
   return text
     .split("\n")
     .map((line) => {
@@ -617,10 +628,21 @@ export function enforceWindForecastDatePrefixes(
         "Übermorgen",
         labels.dayAfterTomorrowLabel,
       );
-      return withDayAfterTomorrow.replace(
+      const normalized = withDayAfterTomorrow.replace(
         DATE_RANGE_PREFIX,
         `$1- ${labels.forecastTailLabel}:`,
       );
+      if (
+        calendarForecastIndex < canonicalPrefixes.length
+        && /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(normalized)
+      ) {
+        const colon = normalized.indexOf(":");
+        const body = normalized.slice(colon + 1).trim();
+        const prefix = canonicalPrefixes[calendarForecastIndex];
+        calendarForecastIndex += 1;
+        return `${prefix} ${body}`.trimEnd();
+      }
+      return normalized;
     })
     .join("\n");
 }
@@ -1015,7 +1037,8 @@ function removeNationalWarningLines(text: string, authoritativeFirstLine?: strin
       continue;
     }
     const startsForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
-      || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\b/i.test(line);
+      || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\b/i.test(line)
+      || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(line);
     if (skippingContinuation && !/^\s*-\s+/.test(line) && !startsForecastLine) continue;
     skippingContinuation = false;
     remaining.push(line);

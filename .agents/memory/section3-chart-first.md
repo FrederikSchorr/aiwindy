@@ -39,4 +39,4 @@ No weather section may use deterministic replacement prose when generated bullet
 
 **Why:** The LLM forecast content was already useful. A warning-cleanup routine mistakenly treated unhyphenated forecast lines as warning continuation and deleted them.
 
-**How to apply:** If bullets go missing, trace prompt output and postprocessing rather than generating replacement prose. Reject incomplete LLM contracts explicitly; recognize forecast prefixes as boundaries even without Markdown hyphens.
+**How to apply:** If bullets go missing, trace prompt output and postprocessing rather than generating replacement prose. Accept relative or calendar-only forecast prefixes, with or without Markdown hyphens, then normalize them; reject genuinely incomplete LLM contracts.

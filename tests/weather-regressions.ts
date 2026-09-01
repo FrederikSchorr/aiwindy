@@ -978,6 +978,20 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(iconizedWind, /Übermorgen \(Mo 24\.08\.\): 💨/);
   assert.match(iconizedWind, /Di–Do 25\.–27\.08\.: 💨/);
 
+  const calendarPrefixedWind = enforceWindForecastDatePrefixes(
+    [
+      "Sa 22.08.: NW 10–15 kt.",
+      "So 23.08.: W 8–12 kt.",
+      "Mo 24.08.: W 6–9 kt.",
+      "Di–Do 25.–27.08.: SW 12–18 kt.",
+    ].join("\n"),
+    windLabels,
+  ) ?? "";
+  assert.match(calendarPrefixedWind, /^- Heute \(Sa 22\.08\.\): NW 10–15 kt\.$/m);
+  assert.match(calendarPrefixedWind, /^- Morgen \(So 23\.08\.\): W 8–12 kt\.$/m);
+  assert.match(calendarPrefixedWind, /^- Übermorgen \(Mo 24\.08\.\): W 6–9 kt\.$/m);
+  assert.match(calendarPrefixedWind, /^- Di–Do 25\.–27\.08\.: SW 12–18 kt\.$/m);
+
 }
 
 function testSection4OutputContract(): void {

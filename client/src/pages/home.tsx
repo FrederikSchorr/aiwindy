@@ -55,6 +55,72 @@ interface UploadPreview {
   isVideo?: boolean;
 }
 
+const LAST_ANALYSIS_STORAGE_KEY = "aiwindy:last-completed-analysis";
+
+interface PersistedAnalysisState {
+  messages: ChatMessage[];
+  activeLocation: GeocodeResult;
+  assistantId: string;
+  weatherEurope: WeatherEuropeSSE | null;
+  weatherOutput: WeatherOutputData;
+  analysisJson: Record<string, unknown>;
+  analysisFileName: string | null;
+  sources: AnalysisSources | null;
+}
+
+function loadPersistedAnalysis(): PersistedAnalysisState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const historyAnalysis = (window.history.state as Record<string, unknown> | null)?.[
+      LAST_ANALYSIS_STORAGE_KEY
+    ];
+    const raw = window.localStorage.getItem(LAST_ANALYSIS_STORAGE_KEY);
+    const parsed = (
+      historyAnalysis && typeof historyAnalysis === "object"
+        ? historyAnalysis
+        : raw
+          ? JSON.parse(raw)
+          : null
+    ) as Partial<PersistedAnalysisState> | null;
+    if (
+      !parsed
+      || !Array.isArray(parsed.messages)
+      || !parsed.activeLocation
+      || typeof parsed.assistantId !== "string"
+      || !parsed.weatherOutput
+      || !parsed.analysisJson
+    ) {
+      window.localStorage.removeItem(LAST_ANALYSIS_STORAGE_KEY);
+      return null;
+    }
+    return parsed as PersistedAnalysisState;
+  } catch {
+    window.localStorage.removeItem(LAST_ANALYSIS_STORAGE_KEY);
+    return null;
+  }
+}
+
+function persistAnalysis(state: PersistedAnalysisState): void {
+  try {
+    window.localStorage.setItem(LAST_ANALYSIS_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // history.state below remains available when persistent storage is blocked.
+  }
+  try {
+    window.history.replaceState(
+      {
+        ...(window.history.state && typeof window.history.state === "object"
+          ? window.history.state
+          : {}),
+        [LAST_ANALYSIS_STORAGE_KEY]: state,
+      },
+      "",
+    );
+  } catch {
+    // localStorage above remains available when the history entry is too large.
+  }
+}
+
 function WindyEmbed({ lat, lon, overlay, product, level, zoom, forecast, marker }: {
   lat: number; lon: number; overlay: string; product: string; level: string; zoom: number; forecast?: boolean; marker?: boolean;
 }) {
@@ -418,33 +484,63 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
 }
 
 export default function Home() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "welcome",
-    },
-  ]);
+  const [restoredAnalysis] = useState(loadPersistedAnalysis);
+  const welcomeMessage: ChatMessage = {
+    id: "welcome",
+    role: "assistant",
+    content: "welcome",
+  };
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    restoredAnalysis ? [welcomeMessage, ...restoredAnalysis.messages] : [welcomeMessage],
+  );
   const [input, setInput] = useState("");
-  const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(null);
+  const [activeLocation, setActiveLocation] = useState<GeocodeResult | null>(
+    restoredAnalysis?.activeLocation ?? null,
+  );
   const [isStreaming, setIsStreaming] = useState(false);
   const [uploadHintAfterMsgId, setUploadHintAfterMsgId] = useState<string | null>(null);
   const uploadHintShownRef = useRef(false);
   const hasUploadedRef = useRef(false);
   const [uploadPreviews, setUploadPreviews] = useState<Record<string, UploadPreview>>({});
-  const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>({});
-  const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>({});
-  const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>({});
-  const [messageAnalysisJson, setMessageAnalysisJson] = useState<Record<string, Record<string, unknown>>>({});
-  const [messageAnalysisFileNames, setMessageAnalysisFileNames] = useState<Record<string, string>>({});
-  const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>({});
+  const [messageLocations, setMessageLocations] = useState<Record<string, GeocodeResult>>(
+    restoredAnalysis ? { [restoredAnalysis.assistantId]: restoredAnalysis.activeLocation } : {},
+  );
+  const [messageWeatherEurope, setMessageWeatherEurope] = useState<Record<string, WeatherEuropeSSE>>(
+    restoredAnalysis?.weatherEurope
+      ? { [restoredAnalysis.assistantId]: restoredAnalysis.weatherEurope }
+      : {},
+  );
+  const [messageWeatherOutput, setMessageWeatherOutput] = useState<Record<string, WeatherOutputData>>(
+    restoredAnalysis
+      ? { [restoredAnalysis.assistantId]: restoredAnalysis.weatherOutput }
+      : {},
+  );
+  const [messageAnalysisJson, setMessageAnalysisJson] = useState<Record<string, Record<string, unknown>>>(
+    restoredAnalysis
+      ? { [restoredAnalysis.assistantId]: restoredAnalysis.analysisJson }
+      : {},
+  );
+  const [messageAnalysisFileNames, setMessageAnalysisFileNames] = useState<Record<string, string>>(
+    restoredAnalysis?.analysisFileName
+      ? { [restoredAnalysis.assistantId]: restoredAnalysis.analysisFileName }
+      : {},
+  );
+  const [messageSources, setMessageSources] = useState<Record<string, AnalysisSources>>(
+    restoredAnalysis?.sources
+      ? { [restoredAnalysis.assistantId]: restoredAnalysis.sources }
+      : {},
+  );
   const [analysisErrors, setAnalysisErrors] = useState<Record<string, string | boolean>>({});
   const [analysisJobs, setAnalysisJobs] = useState<Record<string, AnalysisJobState>>({});
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [photoLocationHints, setPhotoLocationHints] = useState<Record<string, { locationName: string; countryCode?: string | null }>>({});
-  const lastAnalysisLocationRef = useRef<string | null>(null);
+  const lastAnalysisLocationRef = useRef<string | null>(
+    restoredAnalysis?.activeLocation.displayName ?? null,
+  );
   const lastAnalysisTimeRef = useRef<string | null>(null);
-  const lastAnalysisOutputRef = useRef<WeatherOutputData | null>(null);
+  const lastAnalysisOutputRef = useRef<WeatherOutputData | null>(
+    restoredAnalysis?.weatherOutput ?? null,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const analysisSessionRef = useRef<{
@@ -461,6 +557,43 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement>(null);
   const uploadObjectUrlsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const assistantIndex = messages.findLastIndex(message =>
+      message.role === "assistant"
+      && Boolean(messageLocations[message.id])
+      && Boolean(messageWeatherOutput[message.id])
+      && Boolean(messageAnalysisJson[message.id]),
+    );
+    if (assistantIndex === -1) return;
+    const assistantMessage = messages[assistantIndex];
+    const precedingUser = messages
+      .slice(0, assistantIndex)
+      .findLast(message => message.role === "user");
+    const location = messageLocations[assistantMessage.id];
+    const state: PersistedAnalysisState = {
+      messages: [
+        ...(precedingUser ? [precedingUser] : []),
+        assistantMessage,
+      ],
+      activeLocation: location,
+      assistantId: assistantMessage.id,
+      weatherEurope: messageWeatherEurope[assistantMessage.id] ?? null,
+      weatherOutput: messageWeatherOutput[assistantMessage.id],
+      analysisJson: messageAnalysisJson[assistantMessage.id],
+      analysisFileName: messageAnalysisFileNames[assistantMessage.id] ?? null,
+      sources: messageSources[assistantMessage.id] ?? null,
+    };
+    persistAnalysis(state);
+  }, [
+    messages,
+    messageLocations,
+    messageWeatherEurope,
+    messageWeatherOutput,
+    messageAnalysisJson,
+    messageAnalysisFileNames,
+    messageSources,
+  ]);
 
   const sendMessage = useCallback((userMessage: string) => {
     setIsStreaming(true);
