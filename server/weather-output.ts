@@ -185,7 +185,7 @@ function buildSection4Rules(
 Input: ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4 und KNMI-Frontkarten; Wind- und Wellendaten nicht verwenden.
 - Genau 3 Bullets in dieser Reihenfolge: Heute (${todayLabel}), Morgen (${tomorrowLabel}), ${forecastOverviewLabel}. Jeder Bullet beginnt mit seinem Zeit-/Datumspräfix, niemals mit einem Emoji.
 - INTERPRETIERE Auffälligkeiten und Veränderungen, statt Meteogrammwerte aufzuzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal und deutlicher Wetterumschwung. Bewölkung nur bei relevantem Wechsel.
-- Heute granular, aber kompakt: höchstens 2–3 wichtigste Entwicklungen in zeitlicher Reihenfolge. Regen als qualitative zusammengefasste Phase; konkrete Uhrzeit nur für markanten Beginn oder Höhepunkt. Temperaturen auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen. Einen normalen abendlichen Rückgang und kleine Stundenänderungen bis 3°C nicht erwähnen.
+- Heute granular, aber kompakt: höchstens 2–3 wichtigste Entwicklungen in zeitlicher Reihenfolge. Wenn mehrere lokale Signale vorhanden sind, nicht nur einen Einzelwert oder eine einzige Wetterbeschreibung nennen; niemals mit erfundenen Details auffüllen. Regen als qualitative zusammengefasste Phase; konkrete Uhrzeit nur für markanten Beginn oder Höhepunkt. Temperaturen auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen. Einen normalen abendlichen Rückgang und kleine Stundenänderungen bis 3°C nicht erwähnen.
 - Morgen weniger granular: nur nachts, morgens, mittags, nachmittags oder abends, keine Ziffer-Uhrzeiten. ${forecastOverviewLabel} ausschließlich als High-Level-Trend der folgenden vier Tage, ohne Uhrzeiten oder Tagesphasen.
 - Bei fehlender Auffälligkeit den stabilen Charakter inhaltlich beschreiben, nicht nur "Keine markante Wetterentwicklung erkennbar." Eine gestützte Hochdrucklage mit Wärme, Sonnenschein, Trockenheit oder Stabilität darf genannt werden.
 - Lokale und nationale Informationen haben Vorrang; europäische Lage und Frontkarten liefern nur den Zusammenhang. Einen lokalen Druckfall nur mit passender Front oder Synopsis als Frontdurchgang bezeichnen, sonst als Wetterwechsel oder zunehmenden Tiefdruckeinfluss.
@@ -441,7 +441,11 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
       ensureWarningFirst(analysis, generatedWindText),
       { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
     );
-    const windWavesText = windWithDatePrefixes;
+    const windWavesText = ensureWindForecastIcons(
+      windWithDatePrefixes,
+      { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
+      typeof local["wave"]?.text_de === "string" && Boolean(local["wave"].text_de.trim()),
+    );
     return {
       airPressureMasses: { source, text: normalizeSection1Icons(parsed.airPressureMasses ?? null) },
       weatherFront:      { source, text: parsed.weatherFront ?? null },
@@ -493,7 +497,10 @@ function replaceRelativeDatePrefix(
   relativeLabel: "Heute" | "Morgen" | "Übermorgen",
   dateLabel: string,
 ): string {
-  const pattern = new RegExp(`^(\\s*-\\s*)${relativeLabel}(?:\\s*\\([^)]*\\))?\\s*:`, "i");
+  const pattern = new RegExp(
+    `^(\\s*-\\s*)${relativeLabel}(?:\\s*\\([^)]*\\)|\\s+(?:Mo|Di|Mi|Do|Fr|Sa|So)\\s+\\d{1,2}\\.\\d{1,2}\\.?)?\\s*:`,
+    "i",
+  );
   return line.replace(pattern, `$1${relativeLabel} (${dateLabel}):`);
 }
 
@@ -523,6 +530,40 @@ export function enforceWindForecastDatePrefixes(
       );
     })
     .join("\n");
+}
+
+export function ensureWindForecastIcons(
+  text: string | null,
+  labels: {
+    todayLabel: string;
+    tomorrowLabel: string;
+    dayAfterTomorrowLabel: string;
+    forecastTailLabel: string;
+  },
+  waveAvailable: boolean,
+): string | null {
+  if (!text) return text;
+  const forecastPrefixes = [
+    `Heute (${labels.todayLabel}):`,
+    `Morgen (${labels.tomorrowLabel}):`,
+    `Übermorgen (${labels.dayAfterTomorrowLabel}):`,
+    `${labels.forecastTailLabel}:`,
+  ];
+  return text.split("\n").map(line => {
+    const prefix = forecastPrefixes.find(candidate =>
+      line.trimStart().startsWith(`- ${candidate}`),
+    );
+    if (!prefix) return line;
+    const marker = line.indexOf(prefix);
+    const before = line.slice(0, marker + prefix.length);
+    let body = line.slice(marker + prefix.length).trim();
+    body = body.replace(/^(?:💨|🌊)\s*/u, "");
+    body = `💨 ${body}`;
+    if (waveAvailable && !/🌊/u.test(body)) {
+      body = body.replace(/\b(See|Seegang|Welle|Wellen)\b/i, "🌊 $1");
+    }
+    return `${before} ${body}`.trimEnd();
+  }).join("\n");
 }
 
 export function enforceCloudForecastDatePrefixes(
@@ -818,6 +859,17 @@ function isUnderDetailedOverview(line: string): boolean {
   return withoutHeadline.length < 15;
 }
 
+function isUnderInformativeToday(line: string): boolean {
+  const prefixEnd = line.indexOf(":");
+  if (prefixEnd === -1) return false;
+  const body = line
+    .slice(prefixEnd + 1)
+    .replace(/^[\s☀️⛅☁️🌥️🌧️🌦️⛈️🌡️📉📈🌀]+/u, "")
+    .trim();
+  if (body.length >= 48 && /[,;]|\bund\b/i.test(body)) return false;
+  return body.length < 48 || !/[,;]|\bund\b/i.test(body);
+}
+
 export function enforceSection4Output(
   text: string | null,
   labels: {
@@ -870,6 +922,9 @@ export function enforceSection4Output(
           sanitized,
           /(?:\bGewitter\w*\b|\bCumulonimbus\b|\bCb-Signal\b|⛈️)/i,
         );
+      }
+      if (index === 0 && fallbackLines?.[index] && isUnderInformativeToday(sanitized)) {
+        return fallbackLines[index];
       }
       if (index === 2 && isUnderDetailedOverview(sanitized) && fallbackLines?.[index]) {
         return fallbackLines[index];

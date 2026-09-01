@@ -20,7 +20,9 @@ import {
 } from "../server/weather-open-meteo.js";
 import {
   enforceSection4Output,
+  enforceWindForecastDatePrefixes,
   ensureWarningFirst,
+  ensureWindForecastIcons,
   generateWeatherOutput,
   combineWindAndGustMentions,
   normalizeWindDirectionMentions,
@@ -943,6 +945,30 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(prompt, /Abschnitt 4 genau 3/);
   assert.match(prompt, /Genau 4 Prognosebullets/);
   assert.match(prompt, /insgesamt höchstens 5 Bullets/);
+
+  const windLabels = {
+    todayLabel: "Sa 22.08.",
+    tomorrowLabel: "So 23.08.",
+    dayAfterTomorrowLabel: "Mo 24.08.",
+    forecastTailLabel: "Di–Do 25.–27.08.",
+  };
+  const iconizedWind = ensureWindForecastIcons(
+    enforceWindForecastDatePrefixes(
+      [
+        "- Heute Sa 22.08.: NW 10–15 kt; See 2 schwach bewegt.",
+        "- Morgen So 23.08.: NW 10–15 kt; See 2 schwach bewegt.",
+        "- Übermorgen Mo 24.08.: Nachlassender NW-Wind.",
+        "- Di–Do 25.–27.08.: Überwiegend mäßiger Wind.",
+      ].join("\n"),
+      windLabels,
+    ),
+    windLabels,
+    true,
+  ) ?? "";
+  assert.match(iconizedWind, /Heute \(Sa 22\.08\.\): 💨 NW 10–15 kt; 🌊 See 2/);
+  assert.match(iconizedWind, /Morgen \(So 23\.08\.\): 💨 NW 10–15 kt; 🌊 See 2/);
+  assert.match(iconizedWind, /Übermorgen \(Mo 24\.08\.\): 💨/);
+  assert.match(iconizedWind, /Di–Do 25\.–27\.08\.: 💨/);
 }
 
 function testSection4OutputContract(): void {
@@ -982,6 +1008,30 @@ function testSection4OutputContract(): void {
     "missing LLM bullets should be completed transparently rather than changing the contract",
   );
   assert.match(missingBullets ?? "", /Lokale Entwicklungsdaten nicht verfügbar/);
+
+  const shortToday = enforceSection4Output(
+    [
+      "- Heute: Morgens klar, bis ~20 °C.",
+      "- Morgen: Wechselnd bewölkt.",
+      "- Mo–Do 24.–27.08.: Stabil und trocken.",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+    undefined,
+    [
+      "- Heute (Sa 22.08.): Ruhiger Verlauf: trocken; überwiegend klar; die Wetterlage bleibt im Tagesgang stabil.",
+      "- Morgen (So 23.08.): Ruhiger Verlauf: trocken; wechselnd bewölkt; die Wetterlage bleibt im Tagesgang stabil.",
+      "- Mo–Do 24.–27.08.: stabile Wetterlage; überwiegend trocken.",
+    ],
+  ) ?? "";
+  assert.match(
+    shortToday,
+    /Heute \(Sa 22\.08\.\): Ruhiger Verlauf: trocken; überwiegend klar/,
+    "a too-short today bullet should use the existing data-based development summary",
+  );
 
   const sanitized = enforceSection4Output(
     [
