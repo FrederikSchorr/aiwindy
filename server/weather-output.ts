@@ -1067,7 +1067,9 @@ function removeNationalWarningLines(text: string, authoritativeFirstLine?: strin
       skippingContinuation = true;
       continue;
     }
-    if (skippingContinuation && !/^\s*-\s+/.test(line)) continue;
+    const startsForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
+      || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\b/i.test(line);
+    if (skippingContinuation && !/^\s*-\s+/.test(line) && !startsForecastLine) continue;
     skippingContinuation = false;
     remaining.push(line);
   }

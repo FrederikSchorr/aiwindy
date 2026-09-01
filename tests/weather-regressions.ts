@@ -977,6 +977,7 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(iconizedWind, /Morgen \(So 23\.08\.\): 💨 NW 10–15 kt; 🌊 See 2/);
   assert.match(iconizedWind, /Übermorgen \(Mo 24\.08\.\): 💨/);
   assert.match(iconizedWind, /Di–Do 25\.–27\.08\.: 💨/);
+
 }
 
 function testSection4OutputContract(): void {
@@ -1960,6 +1961,33 @@ function testOfficialWarningRestoration(): void {
     `- ⚠️ ${officialWarning}\n- Heute: ⚠️ Sturmphase mit 42 kt.`,
     "the official warning must replace the model candidate verbatim without deleting a legitimate severe-wind forecast bullet",
   );
+
+  const unbulletedForecasts = ensureWarningFirst({
+    sources: {
+      nationalWarningCenter: { status: "integrated", label: "LSZ Burgenland" },
+    },
+    weatherPreprocessed: {
+      local: {
+        warnings: {
+          checked: true,
+          text_de: "Aktuell: Keine Sturmwarnung der LSZ Burgenland",
+        },
+      },
+    },
+  } as unknown as AnalysisJson, [
+    "Aktuell: Keine Sturmwarnung der LSZ Burgenland",
+    "Heute (Di 01.09.): W 10–15 kt.",
+    "Morgen (Mi 02.09.): W 8–12 kt.",
+    "Übermorgen (Do 03.09.): NW 6–9 kt.",
+    "Fr–So 04.–06.09.: Schwacher W-Wind.",
+  ].join("\n"));
+  assert.equal(
+    unbulletedForecasts?.split("\n").length,
+    5,
+    "warning restoration must preserve all four LLM forecast lines even when they omit markdown hyphens",
+  );
+  assert.match(unbulletedForecasts ?? "", /Heute \(Di 01\.09\.\)/);
+  assert.match(unbulletedForecasts ?? "", /Fr–So 04\.–06\.09\./);
 }
 
 function testResolvedForecastExportFeedsCharts(): void {

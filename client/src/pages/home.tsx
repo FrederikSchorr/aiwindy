@@ -88,7 +88,13 @@ function SourceLink({ label, provider, url }: { label: string; provider: string;
   );
 }
 
-function MarkdownContent({ content }: { content: string }) {
+function MarkdownContent({
+  content,
+  forceBullets = false,
+}: {
+  content: string;
+  forceBullets?: boolean;
+}) {
   const escapeHtml = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
@@ -122,12 +128,13 @@ function MarkdownContent({ content }: { content: string }) {
 
   for (const line of lines) {
     const trimmed = line.trimStart();
-    const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("• ");
+    const hasBulletMarker = trimmed.startsWith("- ") || trimmed.startsWith("• ");
+    const isBullet = hasBulletMarker || (forceBullets && trimmed.length > 0);
     const indent = line.length - line.trimStart().length;
     const isSubBullet = isBullet && indent >= 2;
 
     if (isBullet) {
-      const text = trimmed.slice(2);
+      const text = hasBulletMarker ? trimmed.slice(2) : trimmed;
       if (isSubBullet) {
         if (!inSubList) {
           inSubList = true;
@@ -281,7 +288,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
         <SourceLink label="Bodendruck und Temperatur 1.500m Europa" provider="windy.com" url="https://www.windy.com/-Temperatur-temp?ecmwf,temp,850h,48.000,5.000,3" />
       </div>
       {resolvedWeatherOutput?.airPressureMasses?.text && (
-        <MarkdownContent content={resolvedWeatherOutput.airPressureMasses.text} />
+        <MarkdownContent content={resolvedWeatherOutput.airPressureMasses.text} forceBullets />
       )}
       {isStreaming && !hasError && !resolvedWeatherOutput?.airPressureMasses?.text && weatherEurope && (
         <BounceLoader />
@@ -318,7 +325,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             />
           </div>
           {resolvedWeatherOutput?.weatherFront?.text && (
-            <MarkdownContent content={resolvedWeatherOutput.weatherFront.text} />
+            <MarkdownContent content={resolvedWeatherOutput.weatherFront.text} forceBullets />
           )}
           {isStreaming && !hasError && !resolvedWeatherOutput?.weatherFront?.text && (
             <BounceLoader />
@@ -331,7 +338,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
             <SeaWindForecast analysisJson={analysisJson} isLoading={isStreaming && !hasError} />
           </div>
           {resolvedWeatherOutput?.windWaves?.text && (
-            <MarkdownContent content={resolvedWeatherOutput.windWaves.text} />
+            <MarkdownContent content={resolvedWeatherOutput.windWaves.text} forceBullets />
           )}
           {isStreaming && !hasError && !resolvedWeatherOutput?.windWaves?.text && (
             <BounceLoader />
@@ -349,7 +356,7 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
                 <SourceLink label={`Meteogramm ${locationShort}`} provider="windy.com" url={meteogramUrl} />
               </div>
               {resolvedWeatherOutput?.cloudsRain?.text && (
-                <MarkdownContent content={resolvedWeatherOutput.cloudsRain.text} />
+                <MarkdownContent content={resolvedWeatherOutput.cloudsRain.text} forceBullets />
               )}
             </>
           )}
