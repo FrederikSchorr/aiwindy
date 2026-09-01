@@ -8,3 +8,4 @@
 - [npm deployment lockfiles](npm-bundled-dependencies.md) — npm is authoritative for publishing; keep one root lockfile and preserve npm-normalized bundled entries
 - [Frontend forecast cadence](frontend-forecast-cadence.md) — analysis exports may already be compacted to three-hour intervals; consumers must detect cadence before sampling
 - [Section 3 chart-first interpretation](section3-chart-first.md) — interpret salient wind changes and systems instead of transcribing the visible timeline
+- [Weather output semantic validation](weather-output-semantic-validation.md) — validate target identity and negated weather phrases after LLM generation, not only icons and counts

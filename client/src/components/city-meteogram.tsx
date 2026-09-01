@@ -125,7 +125,7 @@ function weatherIconKind(point: MeteogramPoint): WeatherIconKind {
   const storm = point.cloudType === "cumulonimbus" || (point.weatherCode !== null && [95, 96, 99].includes(point.weatherCode));
   if (storm) return "thunderstorm";
   if (rain >= .5) return "heavy-rain";
-  if (rain > 0) return "light-rain";
+  if (rain >= .05) return "light-rain";
 
   const cloudCover = point.cloudCover ?? Math.max(0, ...point.cloudBands.map((band) => band.pct ?? 0));
   const amount = cloudCover < 10 ? "clear" : cloudCover < 40 ? "few" : cloudCover < 75 ? "broken" : "overcast";
@@ -140,16 +140,9 @@ function weatherIconKind(point: MeteogramPoint): WeatherIconKind {
   return "overcast-day";
 }
 
-function weatherIcon(code: number | null, cloudType: CloudType | null) {
-  const point = {
-    weatherCode: code,
-    cloudType,
-    rain: code !== null && code >= 51 && code < 95 ? 1 : 0,
-    cloudCover: cloudType === "clear" ? 0 : cloudType === "cirrus" ? 25 : 80,
-    cloudBands: [],
-    isDay: true,
-  } as unknown as MeteogramPoint;
-  return <span data-cloud-type-icon={cloudType ?? "mixed"}><WeatherIcon kind={weatherIconKind(point)} className="h-9 w-9" /></span>;
+function weatherIcon(point: MeteogramPoint) {
+  const kind = weatherIconKind(point);
+  return <span data-cloud-type-icon={point.cloudType ?? "mixed"} data-weather-icon-kind={kind}><WeatherIcon kind={kind} className="h-9 w-9" /></span>;
 }
 
 function smoothPath(points: Array<[number, number]>) {
@@ -416,7 +409,7 @@ function LegacyCityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogra
                 {temperatureArea && <path data-series="temperature" d={temperatureArea} fill="url(#temperature-gradient)" fillOpacity=".65" mask="url(#temperature-soft-fade)" />}
                 {temperaturePath && <path data-series="temperature" d={temperaturePath} fill="none" stroke="url(#temperature-gradient)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
               </svg>
-              <div className="relative z-10 grid" style={{ height: ROW.icons, gridTemplateColumns: grid }}>{data.points.map((point, index) => { const weatherDescription = `${point.hourLabel} Uhr · ${point.weatherCode === null ? "Wetterzustand nicht verfügbar" : `Wettercode ${point.weatherCode}`} · ${cloudTypeTooltip(point)}`; return <div key={`icon-${point.timestamp}-${index}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={weatherDescription} title={weatherDescription}>{weatherIcon(point.weatherCode, point.cloudType)}</div>; })}</div>
+              <div className="relative z-10 grid" style={{ height: ROW.icons, gridTemplateColumns: grid }}>{data.points.map((point, index) => { const weatherDescription = `${point.hourLabel} Uhr · ${point.weatherCode === null ? "Wetterzustand nicht verfügbar" : `Wettercode ${point.weatherCode}`} · ${cloudTypeTooltip(point)}`; return <div key={`icon-${point.timestamp}-${index}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={weatherDescription} title={weatherDescription}>{weatherIcon(point)}</div>; })}</div>
               <div className="relative z-10 grid text-[21px] font-medium text-[#20252a]" style={{ height: ROW.temperature, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`temp-${point.timestamp}-${index}`} className="flex items-center justify-center">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}</div>
             </div>
             {hasDewPoint && <div data-testid="meteogram-dew-point-row" aria-label="Taupunkt" className="grid border-b border-[#d5d9de] bg-[#fafbfc] text-[15px] text-[#7b838b]" style={{ height: ROW.dewPoint, gridTemplateColumns: grid }}>{data.points.map((point, index) => <div key={`dew-${point.timestamp}-${index}`} className="flex items-center justify-center">{point.dewPoint !== null ? `${Math.round(point.dewPoint)}°` : "—"}</div>)}</div>}
@@ -564,7 +557,7 @@ function CityMeteogram({ analysisJson, cityName, isLoading }: CityMeteogramProps
                 {temperatureArea && <path data-series="temperature" d={temperatureArea} fill="none" stroke="none" />}
               </svg>
               <div className="relative z-30 grid" style={{ height: ROW.icons, ...grid }}>
-                {points.map((point) => <div key={`icon-${point.timestamp}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={`${point.hourLabel} Uhr · ${cloudTypeTooltip(point)}`} title={cloudTypeTooltip(point)}><span data-cloud-type-icon={point.cloudType ?? "unknown"}><WeatherIcon kind={weatherIconKind(point)} className="h-7 w-7" /></span></div>)}
+                {points.map((point) => { const kind = weatherIconKind(point); return <div key={`icon-${point.timestamp}`} data-weather-cloud-type={point.cloudType ?? "unknown"} className="flex items-center justify-center" role="img" aria-label={`${point.hourLabel} Uhr · ${cloudTypeTooltip(point)}`} title={cloudTypeTooltip(point)}><span data-cloud-type-icon={point.cloudType ?? "unknown"} data-weather-icon-kind={kind}><WeatherIcon kind={kind} className="h-7 w-7" /></span></div>; })}
               </div>
               <div className="relative z-20 grid text-[16px] font-medium tracking-[-.01em] text-[#20252a]" style={{ height: ROW.temperature, ...grid }}>
                 {points.map((point) => <div key={`temperature-${point.timestamp}`} className="flex items-center justify-center">{point.temperature !== null ? `${Math.round(point.temperature)}°` : "—"}</div>)}

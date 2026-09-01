@@ -21,11 +21,13 @@ import {
 import {
   enforceSection4Output,
   enforceWindForecastDatePrefixes,
+  ensureSection4Icons,
   ensureWarningFirst,
   ensureWindForecastIcons,
   generateWeatherOutput,
   combineWindAndGustMentions,
   normalizeWindDirectionMentions,
+  normalizeSection2Icons,
   restoreWindGustRanges,
   stripRedundantGustMentions,
   stripRedundantWindRangeMentions,
@@ -918,6 +920,11 @@ async function testInterpretationPromptContract(): Promise<void> {
     "- 🌀 Hochdruck über Mitteleuropa.\n- 🌡️ Warme, trockene Luftmasse.",
     "section 1 should use understandable semantic icons instead of colored status circles",
   );
+  assert.match(
+    (output.weatherFront as any).text,
+    /^- 🌍 .+\n- 📍 .+$/,
+    "section 2 should distinguish large-scale and local fronts with semantic icons",
+  );
   const prompt = (capturedRequest?.messages?.[0]?.content ?? [])
     .filter((block: any) => block.type === "text")
     .map((block: any) => block.text)
@@ -942,6 +949,7 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(prompt, /Bullet 2 beginnt mit 🌡️/);
   assert.match(prompt, /Keine farbigen Kreise \(🔵, 🟠, 🔴\)/);
   assert.match(prompt, /Abschnitt 2 genau 2/);
+  assert.match(prompt, /muss genannt werden; keinen anderen Zielort nennen/);
   assert.match(prompt, /Abschnitt 4 genau 3/);
   assert.match(prompt, /Genau 4 Prognosebullets/);
   assert.match(prompt, /insgesamt höchstens 5 Bullets/);
@@ -989,10 +997,48 @@ function testSection4OutputContract(): void {
   const bullets = output.split("\n");
   assert.equal(bullets.length, 3, "section 4 must contain exactly three bullets");
   assert.match(bullets[0], /^- Heute \(Sa 22\.08\.\):/);
+  assert.match(bullets[0], /: 🌧️ /);
   assert.match(bullets[1], /^- Morgen \(So 23\.08\.\):/);
+  assert.match(bullets[1], /: ⛈️ /);
   assert.match(bullets[1], /nachts/, "tomorrow's exact clock time should become a broad day period");
   assert.doesNotMatch(bullets[1], /\d{1,2}:\d{2}\s*Uhr/, "tomorrow must not contain exact clock times");
   assert.match(bullets[2], /^- Mo–Do 24\.–27\.08\.:/);
+  assert.match(bullets[2], /: ☀️ /);
+
+  assert.equal(
+    normalizeSection2Icons(
+      "- ⛵ Kaltfront über Nordeuropa zieht ostwärts.\n- 🚢 Keine Front nahe dem Ionischen Meer.",
+      "Ionisches Meer Meganisi",
+    ),
+    "- 🌍 Kaltfront über Nordeuropa zieht ostwärts.\n- 📍 Keine Front nahe dem Ionischen Meer.",
+  );
+  assert.equal(
+    normalizeSection2Icons(
+      "- 🌍 Kaltfronten über Nordeuropa ziehen ostwärts.\n"
+      + "- 📍 Neusiedler See (Österreich) liegt im frontfreien Bereich; nächste Kaltfront weit nördlich.",
+      "Ionisches Meer Meganisi",
+    ),
+    "- 🌍 Kaltfronten über Nordeuropa ziehen ostwärts.\n"
+      + "- 📍 Ionisches Meer Meganisi liegt im frontfreien Bereich; nächste Kaltfront weit nördlich.",
+    "a stale local-area subject must be replaced by the actual target",
+  );
+  assert.equal(
+    ensureSection4Icons(
+      "- Heute (Sa 22.08.): Zunächst klar, später zunehmend bewölkt.\n"
+      + "- Morgen (So 23.08.): Regen am Morgen, danach trocken.\n"
+      + "- Mo–Do 24.–27.08.: Stabile Hochdrucklage.",
+    ),
+    "- Heute (Sa 22.08.): 🌤️ Zunächst klar, später zunehmend bewölkt.\n"
+      + "- Morgen (So 23.08.): 🌧️ Regen am Morgen, danach trocken.\n"
+      + "- Mo–Do 24.–27.08.: ☀️ Stabile Hochdrucklage.",
+  );
+  assert.match(
+    ensureSection4Icons(
+      "- Heute (Sa 22.08.): Morgens wolkenlos, später bewölkt; kein nennenswerter Niederschlag.",
+    ) ?? "",
+    /: 🌤️ /,
+    "negated precipitation must not produce a rain icon",
+  );
 
   const missingBullets = enforceSection4Output(
     "- Heute: Ruhiger Verlauf.",
@@ -1029,7 +1075,7 @@ function testSection4OutputContract(): void {
   ) ?? "";
   assert.match(
     shortToday,
-    /Heute \(Sa 22\.08\.\): Ruhiger Verlauf: trocken; überwiegend klar/,
+    /Heute \(Sa 22\.08\.\): ☀️ Ruhiger Verlauf: trocken; überwiegend klar/,
     "a too-short today bullet should use the existing data-based development summary",
   );
 
@@ -1503,6 +1549,30 @@ function testCityMeteogramVisualLayers(): void {
   assert.doesNotMatch(markup, /data-testid="meteogram-cloud-type-row"/, "the separate cloud type row should be removed");
   assert.equal((markup.match(/data-weather-cloud-type="/g) ?? []).length, 2, "each weather cell should carry the cloud type once");
   assert.equal((markup.match(/data-cloud-type-icon="/g) ?? []).length, 2, "each weather cell should render one integrated cloud-type icon");
+
+  const dryRainCodeAnalysis = cityMeteogramAnalysis(
+    [12],
+    { low: [60], mid: [30], high: [10] },
+  );
+  const dryRainCodeHourly = (dryRainCodeAnalysis.weatherRaw as any).openMeteoForecast.city.hourly;
+  dryRainCodeHourly.rainMm = [0.01];
+  dryRainCodeHourly.weatherCode = [61];
+  dryRainCodeHourly.cloudType = ["cumulus"];
+  dryRainCodeHourly.cloudCoverPct = [60];
+  dryRainCodeHourly.isDay = [1];
+  const dryRainCodeMarkup = renderToStaticMarkup(
+    createElement(CityMeteogram, { analysisJson: dryRainCodeAnalysis }),
+  );
+  assert.doesNotMatch(
+    dryRainCodeMarkup,
+    /data-weather-icon-kind="(?:light|heavy)-rain"/,
+    "a precipitation trace below the visible bar threshold must not produce a rain icon",
+  );
+  assert.match(
+    dryRainCodeMarkup,
+    /data-weather-icon-kind="partly-cloudy-day"/,
+    "a dry precipitation-code point should fall back to its actual cloud cover",
+  );
   assert.equal((markup.match(/data-fixed-cloud-band="(?:high|mid|low)"/g) ?? []).length, 3, "all three cloud-band labels should remain in the fixed rail");
   assert.equal((markup.match(/data-weather-cloud-type="[^"]+"[^>]*role="img"[^>]*aria-label="/g) ?? []).length, 2, "each integrated weather icon should have an accessible description");
   assert.match(markup, /data-weather-cloud-type="cumulus"/, "weather icons should expose the heuristic classification");

@@ -142,12 +142,15 @@ Input: Bilder, Meteonews und nationale Synopsis; lokale Wetterdaten nicht verwen
 - Keine lokalen Windströmungen oder Windstärken, keine Niederschlagserwähnung.
 - Keine Temperaturangaben in °C oder Grad.`;
 
-const SECTION_2_RULES = `=== ABSCHNITT 2: weatherFront — Fronten ===
+function buildSection2Rules(locationLabel: string): string {
+  return `=== ABSCHNITT 2: weatherFront — Fronten ===
 Input: Bilder, Meteonews und nationale Synopsis.
 - Genau 2 Bullets, maximal 20 Wörter je Bullet.
-- Bullet 1: Aktive Fronten — nur Kalt- oder Warmfront, Position und Bewegung. Okklusionen weglassen. Wenn keine aktive Kalt- oder Warmfront vorliegt: "Keine aktive Kalt- oder Warmfront."
-- Bullet 2: Nächste relevante Front für den Zielort und Zeitpunkt.
+- Bullet 1 beginnt mit 🌍 und beschreibt ausschließlich die großräumige Frontenlage über Europa: aktive Kalt- oder Warmfronten, Position und Bewegung. Keine lokale Bewertung des Zielorts.
+- Bullet 2 beginnt mit 📍 und beschreibt ausschließlich die lokale Frontenlage für "${locationLabel}": nächste relevante Kalt- oder Warmfront und deren Position/Bewegung. "${locationLabel}" muss genannt werden; keinen anderen Zielort nennen. Wenn keine lokale Front vorliegt, dies ausdrücklich sagen.
+- Großräumige und lokale Frontenlage niemals vertauschen. Okklusionen weglassen.
 - Keine Frontwirkungen, kein Regen und kein Wind; nur Fronttyp, Position und Bewegungsrichtung.`;
+}
 
 const WIND_PEAK_TIMING_RULE = `=== WINDDATEN ===
 Der kanonische Block LOKALER STÜNDLICHER WIND enthält pro Zeile Datum, Uhrzeit, Richtung, Wind_kt und Böe_kt.
@@ -222,6 +225,50 @@ function normalizeSection1Icons(text: string | null): string | null {
     if (!match || bulletIndex >= 2) return line;
     const icon = bulletIndex++ === 0 ? "🌀" : "🌡️";
     return `${match[1]}${icon} ${match[2].replace(leadingIcon, "")}`;
+  }).join("\n");
+}
+
+function section2MentionsTarget(text: string, locationLabel: string): boolean {
+  const locationTokens = locationLabel
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(token => token.length >= 5 && !["offshore", "griechenland", "osterreich"].includes(token))
+    .map(token => token.slice(0, 6));
+  const normalizedText = text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+  return locationTokens.some(token => normalizedText.includes(token));
+}
+
+export function normalizeSection2Icons(
+  text: string | null,
+  locationLabel?: string,
+): string | null {
+  if (!text) return text;
+  const leadingIcon = /^(?:🌍|📍|🌀|🧭|⛵|🚢|✅|⚠️|🔵|🟠|🔴|🟢|🟡|🟣|⚪|⚫)\s*/u;
+  let bulletIndex = 0;
+  return text.split("\n").map((line) => {
+    const match = line.match(/^(\s*-\s*)(.*)$/);
+    if (!match || bulletIndex >= 2) return line;
+    const currentIndex = bulletIndex++;
+    const icon = currentIndex === 0 ? "🌍" : "📍";
+    let content = match[2]
+      .replace(/\s+(?:und|sowie)\s+Okklusion\w*/gi, "")
+      .replace(/Okklusion\w*\s+(?:und|sowie)\s+/gi, "")
+      .replace(leadingIcon, "");
+    if (currentIndex === 1 && locationLabel && !section2MentionsTarget(content, locationLabel)) {
+      const withCorrectedSubject = content.replace(
+        /^.+?\s+\b(liegt|befindet\s+sich)\b/i,
+        `${locationLabel} $1`,
+      );
+      content = withCorrectedSubject === content
+        ? `${locationLabel}: ${content}`
+        : withCorrectedSubject;
+    }
+    return `${match[1]}${icon} ${content}`;
   }).join("\n");
 }
 
@@ -395,7 +442,7 @@ ${GLOBAL_OUTPUT_RULES}
 
 ${SECTION_1_RULES}
 
-${SECTION_2_RULES}
+${buildSection2Rules(locationLabel)}
 
 ${WIND_PEAK_TIMING_RULE}
 ${WIND_DIRECTION_RULE}
@@ -448,7 +495,10 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
     );
     return {
       airPressureMasses: { source, text: normalizeSection1Icons(parsed.airPressureMasses ?? null) },
-      weatherFront:      { source, text: parsed.weatherFront ?? null },
+      weatherFront:      {
+        source,
+        text: normalizeSection2Icons(parsed.weatherFront ?? null, locationLabel),
+      },
       windWaves:         { source, text: windWavesText },
       cloudsRain:        {
         source,
@@ -870,6 +920,42 @@ function isUnderInformativeToday(line: string): boolean {
   return body.length < 48 || !/[,;]|\bund\b/i.test(body);
 }
 
+function section4IconFor(body: string): string {
+  const positiveWeather = body
+    .replace(
+      /\b(?:kein|keine|keinen|keinerlei|ohne)\s+(?:[\p{L}-]+\s+){0,2}(?:Regen|Niederschlag|Schauer|Gewitter|Schnee)\w*/giu,
+      "",
+    )
+    .replace(/\b(?:trocken|niederschlagsfrei)\b/gi, "");
+  if (/\b(?:Gewitter|Donner|Blitz)\w*\b/i.test(positiveWeather)) return "⛈️";
+  if (/\b(?:Schnee|Schneefall|Schneeschauer)\w*\b/i.test(positiveWeather)) return "❄️";
+  if (/\b(?:Regen|Niederschlag|Schauer|Niesel)\w*\b/i.test(positiveWeather)) return "🌧️";
+  if (/\b(?:Nebel|Dunst)\w*\b/i.test(body)) return "🌫️";
+  if (
+    /\b(?:sonnig|Sonne|klar|wolkenlos|Aufheiterung|Auflockerung)\w*\b/i.test(body)
+    && /\b(?:Wolke|Bewölkung|bewölkt|wolkig)\w*\b/i.test(body)
+  ) return "🌤️";
+  if (/\b(?:Wolke|Bewölkung|bewölkt|wolkig|bedeckt|Altostratus|Cumulus)\w*\b/i.test(body)) {
+    return "☁️";
+  }
+  if (/\b(?:sonnig|Sonne|klar|wolkenlos|trocken|Hochdruck|stabil|warm)\w*\b/i.test(body)) {
+    return "☀️";
+  }
+  return "🌤️";
+}
+
+export function ensureSection4Icons(text: string | null): string | null {
+  if (!text) return text;
+  const leadingWeatherIcon = /^(?:☀️|⛅|☁️|🌥️|🌤️|🌧️|🌦️|⛈️|❄️|🌫️)\s*/u;
+  return text.split("\n").map((line) => {
+    const match = line.match(/^(\s*-\s*[^:]+:\s*)(.*)$/);
+    if (!match) return line;
+    const body = match[2].trim();
+    if (leadingWeatherIcon.test(body)) return line;
+    return `${match[1]}${section4IconFor(body)} ${body}`;
+  }).join("\n");
+}
+
 export function enforceSection4Output(
   text: string | null,
   labels: {
@@ -899,7 +985,7 @@ export function enforceSection4Output(
   ];
   const exactlyThree = fallback.map((fallbackLine, index) => bullets[index] ?? fallbackLine);
   exactlyThree[1] = replaceExactClockTimes(exactlyThree[1]);
-  return exactlyThree
+  const sanitizedOutput = exactlyThree
     .map((line, index) => {
       let sanitized = removeSection4Clauses(
         roundTemperatureMentions(line),
@@ -934,6 +1020,7 @@ export function enforceSection4Output(
         : sanitized;
     })
     .join("\n");
+  return ensureSection4Icons(sanitizedOutput);
 }
 
 export function ensureWarningFirst(analysis: AnalysisJson, windWavesText: string | null): string | null {
