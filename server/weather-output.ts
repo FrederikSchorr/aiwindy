@@ -488,16 +488,8 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
       ensureWarningFirst(analysis, generatedWindText),
       { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
     );
-    const warningCenterStatus = analysis.sources.nationalWarningCenter?.status;
-    const completedWindForecast = enforceWindForecastOutput(
-      windWithDatePrefixes,
-      { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
-      section3WindHourlyInput,
-      typeof local["wave"]?.text_de === "string" ? local["wave"].text_de : null,
-      warningCenterStatus === "integrated" || warningCenterStatus === "unavailable",
-    );
     const windWavesText = ensureWindForecastIcons(
-      completedWindForecast,
+      windWithDatePrefixes,
       { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
       typeof local["wave"]?.text_de === "string" && Boolean(local["wave"].text_de.trim()),
     );
@@ -622,125 +614,6 @@ export function ensureWindForecastIcons(
     }
     return `${before} ${body}`.trimEnd();
   }).join("\n");
-}
-
-type CanonicalWindRow = {
-  label: string;
-  hour: number;
-  direction: string;
-  speed: number;
-  gust: number;
-};
-
-function parseCanonicalWindDays(hourlyText: string): CanonicalWindRow[][] {
-  const days = new Map<string, CanonicalWindRow[]>();
-  for (const line of hourlyText.split(/\r?\n/)) {
-    const match = line.match(
-      /^(.+?)\s*\|\s*(\d{2}):\d{2}\s*\|\s*(N|NO|O|SO|S|SW|W|NW)\s*\|\s*(\d+(?:[.,]\d+)?)\s*\|\s*(\d+(?:[.,]\d+)?)/i,
-    );
-    if (!match) continue;
-    const row: CanonicalWindRow = {
-      label: match[1].trim(),
-      hour: Number(match[2]),
-      direction: normalizeWindDirection(match[3]),
-      speed: Number(match[4].replace(",", ".")),
-      gust: Number(match[5].replace(",", ".")),
-    };
-    const rows = days.get(row.label) ?? [];
-    rows.push(row);
-    days.set(row.label, rows);
-  }
-  return Array.from(days.values());
-}
-
-function strongestCanonicalWind(rows: CanonicalWindRow[] | undefined): CanonicalWindRow | null {
-  if (!rows?.length) return null;
-  return rows.reduce((strongest, row) =>
-    row.gust > strongest.gust || (row.gust === strongest.gust && row.speed > strongest.speed)
-      ? row
-      : strongest,
-  );
-}
-
-function pairedWind(row: CanonicalWindRow): string {
-  return `${row.direction} ${Math.round(row.speed)}–${Math.round(row.gust)} kt`;
-}
-
-function waveFallbackForIndex(waveText: string | null, index: number): string {
-  if (!waveText) return "";
-  const line = waveText.split(/\r?\n/).filter(Boolean)[index];
-  if (!line) return "";
-  const separator = line.indexOf(":");
-  const body = separator >= 0 ? line.slice(separator + 1).trim() : line.trim();
-  return body ? `; ${body.replace(/\.$/, "")}` : "";
-}
-
-function buildWindForecastFallbackLines(
-  hourlyText: string,
-  waveText: string | null,
-  labels: {
-    todayLabel: string;
-    tomorrowLabel: string;
-    dayAfterTomorrowLabel: string;
-    forecastTailLabel: string;
-  },
-): string[] {
-  const days = parseCanonicalWindDays(hourlyText);
-  const today = strongestCanonicalWind(days[0]);
-  const tomorrow = strongestCanonicalWind(days[1]);
-  const dayAfterTomorrow = strongestCanonicalWind(days[2]);
-  const tail = days.slice(3, 6).flatMap(rows => {
-    const strongest = strongestCanonicalWind(rows);
-    if (!strongest) return [];
-    const dayName = strongest.label.match(/^(?:So|Mo|Di|Mi|Do|Fr|Sa)/)?.[0] ?? strongest.label;
-    return [`${dayName} ${pairedWind(strongest)}`];
-  });
-  return [
-    `- Heute (${labels.todayLabel}): ${today
-      ? `${pairedWind(today)}; stärkste Phase gegen ${String(today.hour).padStart(2, "0")}:00 Uhr${waveFallbackForIndex(waveText, 0)}.`
-      : "Windprognose aus regionalem Wetterbericht nicht verfügbar."}`,
-    `- Morgen (${labels.tomorrowLabel}): ${tomorrow
-      ? `${pairedWind(tomorrow)}; stärkste Phase ${broadDayPeriod(tomorrow.hour)}${waveFallbackForIndex(waveText, 1)}.`
-      : "Windprognose aus regionalem Wetterbericht nicht verfügbar."}`,
-    `- Übermorgen (${labels.dayAfterTomorrowLabel}): ${dayAfterTomorrow
-      ? `${pairedWind(dayAfterTomorrow)} als wichtigste Tendenz.`
-      : "Windprognose aus regionalem Wetterbericht nicht verfügbar."}`,
-    `- ${labels.forecastTailLabel}: ${tail.length
-      ? `${tail.join("; ")}.`
-      : "Windprognose aus regionalem Wetterbericht nicht verfügbar."}`,
-  ];
-}
-
-export function enforceWindForecastOutput(
-  text: string | null,
-  labels: {
-    todayLabel: string;
-    tomorrowLabel: string;
-    dayAfterTomorrowLabel: string;
-    forecastTailLabel: string;
-  },
-  hourlyText: string,
-  waveText: string | null,
-  hasWarningLine: boolean,
-): string {
-  const bulletLines = (text ?? "")
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(line => line.startsWith("- "));
-  const prefixes = [
-    `Heute (${labels.todayLabel}):`,
-    `Morgen (${labels.tomorrowLabel}):`,
-    `Übermorgen (${labels.dayAfterTomorrowLabel}):`,
-    `${labels.forecastTailLabel}:`,
-  ];
-  const fallbackLines = buildWindForecastFallbackLines(hourlyText, waveText, labels);
-  const forecastLines = prefixes.map((prefix, index) =>
-    bulletLines.find(line => line.startsWith(`- ${prefix}`)) ?? fallbackLines[index],
-  );
-  const warningLine = hasWarningLine
-    ? bulletLines.find(line => !prefixes.some(prefix => line.startsWith(`- ${prefix}`)))
-    : null;
-  return [warningLine, ...forecastLines].filter((line): line is string => Boolean(line)).join("\n");
 }
 
 export function enforceCloudForecastDatePrefixes(

@@ -31,9 +31,3 @@ A two-stage JSON fix (`fixJsonNewlines`) handled unescaped newlines but NOT unes
 - Fallback-safe: partial responses still yield whatever sections were parsed
 
 **Why:** JSON parsing of LLM output is inherently fragile; the fix was discovered because real weather text contained German-style quotes that broke parsing at position 45.
-
-## Fallback principle
-
-Deterministic post-processing should fill only missing contractual bullets. When Claude already supplied a forecast bullet, preserve its qualitative meteorological interpretation and only normalize required syntax such as dates, icons, or wind/gust pairing.
-
-**Why:** A completeness fallback that rewrote existing content into numeric summaries removed valuable references to regional wind systems and weather patterns.

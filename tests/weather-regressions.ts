@@ -20,7 +20,6 @@ import {
 } from "../server/weather-open-meteo.js";
 import {
   enforceSection4Output,
-  enforceWindForecastOutput,
   enforceWindForecastDatePrefixes,
   ensureSection4Icons,
   ensureWarningFirst,
@@ -978,33 +977,6 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(iconizedWind, /Morgen \(So 23\.08\.\): 💨 NW 10–15 kt; 🌊 See 2/);
   assert.match(iconizedWind, /Übermorgen \(Mo 24\.08\.\): 💨/);
   assert.match(iconizedWind, /Di–Do 25\.–27\.08\.: 💨/);
-
-  const completedWind = ensureWindForecastIcons(
-    enforceWindForecastOutput(
-      "- Aktuell: Keine Sturmwarnung von HNMS",
-      windLabels,
-      [
-        "Sa 22.08. | 09:00 | NW | 10 | 15",
-        "Sa 22.08. | 15:00 | NW | 14 | 20",
-        "So 23.08. | 12:00 | W | 8 | 13",
-        "Mo 24.08. | 18:00 | SW | 6 | 10",
-        "Di 25.08. | 15:00 | S | 7 | 11",
-        "Mi 26.08. | 15:00 | SO | 5 | 9",
-        "Do 27.08. | 15:00 | O | 4 | 7",
-      ].join("\n"),
-      "Sa 22.08.: See 2 schwach bewegt.\nSo 23.08.: See 2 schwach bewegt.",
-      true,
-    ),
-    windLabels,
-    true,
-  ) ?? "";
-  const completedWindBullets = completedWind.split("\n");
-  assert.equal(completedWindBullets.length, 5, "section 3 must retain one warning and exactly four forecast bullets");
-  assert.match(completedWindBullets[1], /Heute \(Sa 22\.08\.\): 💨 NW 14–20 kt/);
-  assert.match(completedWindBullets[1], /🌊 See 2 schwach bewegt/);
-  assert.match(completedWindBullets[2], /Morgen \(So 23\.08\.\): 💨 W 8–13 kt/);
-  assert.match(completedWindBullets[3], /Übermorgen \(Mo 24\.08\.\): 💨 SW 6–10 kt/);
-  assert.match(completedWindBullets[4], /Di–Do 25\.–27\.08\.: 💨 Di S 7–11 kt; Mi SO 5–9 kt; Do O 4–7 kt/);
 }
 
 function testSection4OutputContract(): void {
