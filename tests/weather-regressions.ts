@@ -978,6 +978,27 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(iconizedWind, /Übermorgen \(Mo 24\.08\.\): 💨/);
   assert.match(iconizedWind, /Di–Do 25\.–27\.08\.: 💨/);
 
+  const windWithoutWaveData = ensureWindForecastIcons(
+    enforceWindForecastDatePrefixes(
+      [
+        "- Heute Sa 22.08.: NW 10–15 kt; für Seegangsdaten liegen keine lokalen Wellendaten vor.",
+        "- Morgen So 23.08.: NW 10–15 kt; See 2 schwach bewegt.",
+        "- Übermorgen Mo 24.08.: Nachlassender NW-Wind.",
+        "- Di–Do 25.–27.08.: Überwiegend mäßiger Wind.",
+      ].join("\n"),
+      windLabels,
+    ),
+    windLabels,
+    false,
+  ) ?? "";
+  assert.doesNotMatch(
+    windWithoutWaveData,
+    /🌊|See(?:gang)?|Wellen?|Wellendaten|Seegangsdaten/i,
+    "missing wave data must be ignored instead of shown as a warning or placeholder",
+  );
+  assert.match(windWithoutWaveData, /Heute \(Sa 22\.08\.\): 💨 NW 10–15 kt/);
+  assert.match(windWithoutWaveData, /Morgen \(So 23\.08\.\): 💨 NW 10–15 kt/);
+
   const calendarPrefixedWind = enforceWindForecastDatePrefixes(
     [
       "Sa 22.08.: NW 10–15 kt.",
@@ -1064,6 +1085,24 @@ function testSection4OutputContract(): void {
     },
   );
   assert.equal(missingBullets, null, "missing LLM bullets must not be replaced by deterministic content");
+
+  const emptyForecastBodies = enforceSection4Output(
+    [
+      "- Heute:",
+      "- Morgen:",
+      "- Mo–Do 24.–27.08.:",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+  );
+  assert.equal(
+    emptyForecastBodies,
+    null,
+    "three formal date prefixes without forecast content must not produce an empty section 4",
+  );
 
   const sanitized = enforceSection4Output(
     [

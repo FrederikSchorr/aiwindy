@@ -16,3 +16,9 @@ Weather icons must be selected from positive weather evidence after removing neg
 **Why:** Keyword-only icon selection classified negated precipitation statements as rain.
 
 **How to apply:** Strip or recognize negated phenomena before semantic icon classification, and cover adjective-bearing negations in regression tests.
+
+Section completeness must be validated again after deterministic normalization and sanitization, not only on the raw model response.
+
+**Why:** A formally complete three-line weather section can become empty when every clause is removed by output constraints, leaving the UI to show a meteogram and sources without forecast text.
+
+**How to apply:** Treat post-normalization emptiness as an incomplete model attempt, retry through the existing correction loop, and never persist or render that result as a completed analysis.

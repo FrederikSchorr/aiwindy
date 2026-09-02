@@ -88,6 +88,7 @@ function loadPersistedAnalysis(): PersistedAnalysisState | null {
       || !parsed.activeLocation
       || typeof parsed.assistantId !== "string"
       || !parsed.weatherOutput
+      || !parsed.weatherOutput.cloudsRain?.text?.trim()
       || !parsed.analysisJson
     ) {
       window.localStorage.removeItem(LAST_ANALYSIS_STORAGE_KEY);

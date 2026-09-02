@@ -171,7 +171,7 @@ Inputs: der kanonische Block LOKALER STÜNDLICHER WIND, preprocessed.local.wave 
 - Genau 4 Prognosebullets: Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}. Bei angebundener Warnquelle steht davor genau eine Warnzeile; insgesamt höchstens 5 Bullets.
 - Diese vier Prognosebullets sind Pflicht und werden als vier eigene Zeilen ausgegeben, auch wenn einzelne Werte fehlen. Bei fehlenden Werten transparent "Windprognose nicht verfügbar." schreiben, niemals den Bullet weglassen oder nur den Mehrtagesausblick ausgeben.
 - Bei angebundener Warnquelle die geprüfte Warnung aus preprocessed.local.warnings vollständig und unverändert übernehmen. "Keine Sturmwarnung" ohne ⚠️ ausgeben; aktive Warnungen oder Abruffehler dürfen ⚠️ erhalten. Bei nicht angebundener Quelle keine Warnzeile erzeugen.
-- Prognosebullets 2–5 beginnen jeweils mit ihrem Zeit-/Datumspräfix, niemals mit einem Emoji. Heute und Morgen enthalten Wind und nur bei vorhandenen preprocessed.local.wave.text_de die passende Seegangsstärke im selben Bullet; Wellendaten als Douglas-Skala, ohne Richtung, Periode oder Dünung.
+- Prognosebullets 2–5 beginnen jeweils mit ihrem Zeit-/Datumspräfix, niemals mit einem Emoji. Heute und Morgen enthalten Wind und nur bei vorhandenen preprocessed.local.wave.text_de die passende Seegangsstärke im selben Bullet; Wellendaten als Douglas-Skala, ohne Richtung, Periode oder Dünung. Wenn preprocessed.local.wave.text_de fehlt, Wellendaten und Seegang vollständig ignorieren und keinerlei Hinweis auf fehlende Wellendaten ausgeben.
 - Die Tabelle ist für konkrete Werte maßgeblich: Wind_kt und Böe_kt derselben Zeile gehören zusammen. Ein konkreter Wert wird immer als Bereich ausgegeben, z.B. "Meltemi NW 23–32 kt"; niemals nur den Windwert nennen und niemals "Wind 3 kt, Böen 6 kt".
 - Interpretiere den Verlauf statt alle Stunden aufzuzählen. Nenne höchstens 1–2 markante Entwicklungen wie Verstärkung, Abschwächung, Richtungswechsel, Flaute oder starke/stürmische Phase. Heute sind konkrete Uhrzeiten, morgen nur grobe Tageszeiten erlaubt.
 - "böig" höchstens einmal und nur, wenn der jeweilige Tagesblock dies ausdrücklich stützt. Niemals "ungewöhnlich böig". Keine separate Böen-Spitze, kein "Böen bis …" und keine redundante Wiederholung desselben oberen Windwerts.
@@ -445,6 +445,7 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
   try {
     let raw = "";
     let parsed: Record<string, string> | null = null;
+    let cloudsRainText: string | null = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const messages: Anthropic.Messages.MessageParam[] = attempt === 0
         ? [{ role: "user", content }]
@@ -469,10 +470,19 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
       }, { signal });
       raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
       parsed = parseSectionMarkers(raw);
+      cloudsRainText = parsed
+        ? enforceSection4Output(
+          parsed.cloudsRain ?? null,
+          { todayLabel, tomorrowLabel, forecastOverviewLabel },
+          section4OutputConstraints,
+        )
+        : null;
       if (
         parsed
         && hasCompleteWindForecast(parsed.windWaves)
         && hasCompleteCloudForecast(parsed.cloudsRain)
+        && Boolean(cloudsRainText)
+        && hasCompleteCloudForecast(cloudsRainText ?? undefined)
       ) break;
       if (attempt < 2) {
         console.warn("generateWeatherOutput: retrying incomplete forecast sections");
@@ -482,6 +492,8 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
       !parsed
       || !hasCompleteWindForecast(parsed.windWaves)
       || !hasCompleteCloudForecast(parsed.cloudsRain)
+      || !cloudsRainText
+      || !hasCompleteCloudForecast(cloudsRainText)
     ) {
       console.error("generateWeatherOutput: incomplete LLM contract", {
         windLines: parsed?.windWaves?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
@@ -523,11 +535,7 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
       windWaves:         { source, text: windWavesText },
       cloudsRain:        {
         source,
-        text: enforceSection4Output(
-          parsed.cloudsRain ?? null,
-          { todayLabel, tomorrowLabel, forecastOverviewLabel },
-          section4OutputConstraints,
-        ),
+        text: cloudsRainText,
       },
     };
   } catch (e) {
@@ -563,7 +571,13 @@ function hasCompleteCloudForecast(text: string | undefined): boolean {
   const hasTail = lines.some(line =>
     /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\./i.test(line),
   );
-  return forecastLines.length >= 3 && hasTail;
+  const hasSubstantiveContent = forecastLines
+    .slice(0, 3)
+    .every(line => {
+      const colon = line.indexOf(":");
+      return colon !== -1 && line.slice(colon + 1).trim().length > 0;
+    });
+  return forecastLines.length >= 3 && hasTail && hasSubstantiveContent;
 }
 
 function parseSectionMarkers(raw: string): Record<string, string> | null {
@@ -658,13 +672,14 @@ export function ensureWindForecastIcons(
   waveAvailable: boolean,
 ): string | null {
   if (!text) return text;
+  const normalizedText = waveAvailable ? text : removeUnavailableWaveMentions(text);
   const forecastPrefixes = [
     `Heute (${labels.todayLabel}):`,
     `Morgen (${labels.tomorrowLabel}):`,
     `Übermorgen (${labels.dayAfterTomorrowLabel}):`,
     `${labels.forecastTailLabel}:`,
   ];
-  return text.split("\n").map(line => {
+  return normalizedText.split("\n").map(line => {
     const prefix = forecastPrefixes.find(candidate =>
       line.trimStart().startsWith(`- ${candidate}`),
     );
@@ -673,11 +688,28 @@ export function ensureWindForecastIcons(
     const before = line.slice(0, marker + prefix.length);
     let body = line.slice(marker + prefix.length).trim();
     body = body.replace(/^(?:💨|🌊)\s*/u, "");
+    if (!waveAvailable) body = body.replace(/🌊\s*/gu, "");
     body = `💨 ${body}`;
     if (waveAvailable && !/🌊/u.test(body)) {
       body = body.replace(/\b(See|Seegang|Welle|Wellen)\b/i, "🌊 $1");
     }
     return `${before} ${body}`.trimEnd();
+  }).join("\n");
+}
+
+function removeUnavailableWaveMentions(text: string): string {
+  const waveTerms = /\b(?:See(?:gang)?|Wellen?|Wellendaten|Seegangsdaten)\b|🌊/iu;
+  const unavailableTerms = /\b(?:keine[nr]?|nicht|fehlen|fehlt|unverfügbar|nicht vorhanden)\b/iu;
+  return text.split(/\r?\n/).map(line => {
+    const prefixEnd = line.indexOf(":");
+    if (prefixEnd === -1) return line;
+    const prefix = line.slice(0, prefixEnd + 1);
+    const body = line.slice(prefixEnd + 1).trim();
+    const clauses = body
+      .split(/;\s*|\s+—\s+/)
+      .filter(clause => !(waveTerms.test(clause) && unavailableTerms.test(clause)))
+      .filter(clause => !waveTerms.test(clause));
+    return `${prefix}${clauses.length ? ` ${clauses.join("; ")}` : ""}`.trimEnd();
   }).join("\n");
 }
 
