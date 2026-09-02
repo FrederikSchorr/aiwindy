@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "test:weather": "tsx tests/weather-regressions.ts",
+    "test:sea-outputs": "tsx tests/sea-output-e2e.ts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

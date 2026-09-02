@@ -17,8 +17,8 @@ Weather icons must be selected from positive weather evidence after removing neg
 
 **How to apply:** Strip or recognize negated phenomena before semantic icon classification, and cover adjective-bearing negations in regression tests.
 
-Section completeness must be validated again after deterministic normalization and sanitization, not only on the raw model response.
+Every section's completeness must be validated again after deterministic normalization and sanitization, not only on the raw model response.
 
-**Why:** A formally complete three-line weather section can become empty when every clause is removed by output constraints, leaving the UI to show a meteogram and sources without forecast text.
+**Why:** A formally complete weather section can become empty when clauses are removed by output constraints. Wind and warning cleanup can also delete a forecast tail that existed in the raw response.
 
-**How to apply:** Treat post-normalization emptiness as an incomplete model attempt, retry through the existing correction loop, and never persist or render that result as a completed analysis.
+**How to apply:** Validate required line counts and forbidden cross-section content on final normalized text inside the correction loop. Retry failures and never persist or render them as completed analyses.

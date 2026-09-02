@@ -27,6 +27,7 @@ import {
   generateWeatherOutput,
   combineWindAndGustMentions,
   normalizeWindDirectionMentions,
+  normalizeSection1Icons,
   normalizeSection2Icons,
   restoreWindGustRanges,
   stripRedundantGustMentions,
@@ -1042,11 +1043,31 @@ function testSection4OutputContract(): void {
   assert.match(bullets[2], /: ☀️ /);
 
   assert.equal(
+    normalizeSection1Icons(
+      "🌀 Hochdruckrücken breitet sich ostwärts aus.\n"
+      + "🌡️ Warme, trockene Luftmasse dominiert.",
+    ),
+    "- 🌀 Hochdruckrücken breitet sich ostwärts aus.\n"
+      + "- 🌡️ Warme, trockene Luftmasse dominiert.",
+    "section 1 must canonicalize unbulleted LLM lines",
+  );
+
+  assert.equal(
     normalizeSection2Icons(
       "- ⛵ Kaltfront über Nordeuropa zieht ostwärts.\n- 🚢 Keine Front nahe dem Ionischen Meer.",
       "Ionisches Meer Meganisi",
     ),
     "- 🌍 Kaltfront über Nordeuropa zieht ostwärts.\n- 📍 Keine Front nahe dem Ionischen Meer.",
+  );
+  assert.equal(
+    normalizeSection2Icons(
+      "🌍 Okklusion über Skandinavien zieht nordostwärts; atlantische Kaltfront bleibt westlich der Britischen Inseln.\n"
+      + "📍 Adria Nord (Kroatien): keine aktive Front in Reichweite.",
+      "Adria Nord (Kroatien)",
+    ),
+    "- 🌍 atlantische Kaltfront bleibt westlich der Britischen Inseln.\n"
+      + "- 📍 Adria Nord (Kroatien): keine aktive Front in Reichweite.",
+    "section 2 must canonicalize unbulleted lines and remove standalone occlusion clauses",
   );
   assert.equal(
     normalizeSection2Icons(
@@ -1998,6 +2019,35 @@ function testOfficialWarningRestoration(): void {
   );
   assert.match(unbulletedForecasts ?? "", /Heute \(Di 01\.09\.\)/);
   assert.match(unbulletedForecasts ?? "", /Fr–So 04\.–06\.09\./);
+
+  const genericDuplicate = ensureWarningFirst({
+    sources: {
+      nationalWarningCenter: { status: "integrated", label: "DHMZ Kroatien" },
+    },
+    weatherPreprocessed: {
+      local: {
+        warnings: {
+          checked: true,
+          text_de: "Aktuell: Böen aus NO mit 35–40 Knoten möglich.",
+        },
+      },
+    },
+  } as unknown as AnalysisJson, [
+    "⚠️ Aktuell (01.09.): Im Norden sind stellenweise möglich.",
+    "- Heute (Di 01.09.): NO 10–15 kt.",
+    "- Morgen (Mi 02.09.): NO 8–12 kt.",
+    "- Übermorgen (Do 03.09.): NW 6–9 kt.",
+    "- Fr–So 04.–06.09.: Schwacher W-Wind.",
+  ].join("\n"));
+  assert.equal(
+    genericDuplicate,
+    "- ⚠️ Aktuell: Böen aus NO mit 35–40 Knoten möglich.\n"
+      + "- Heute (Di 01.09.): NO 10–15 kt.\n"
+      + "- Morgen (Mi 02.09.): NO 8–12 kt.\n"
+      + "- Übermorgen (Do 03.09.): NW 6–9 kt.\n"
+      + "- Fr–So 04.–06.09.: Schwacher W-Wind.",
+    "a generic model warning candidate must not remain below the authoritative warning",
+  );
 }
 
 function testResolvedForecastExportFeedsCharts(): void {

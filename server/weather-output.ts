@@ -217,15 +217,15 @@ function imageBlock(base64: string | null | undefined): Anthropic.Messages.Image
   };
 }
 
-function normalizeSection1Icons(text: string | null): string | null {
+export function normalizeSection1Icons(text: string | null): string | null {
   if (!text) return text;
   const leadingIcon = /^(?:🔵|🟠|🔴|🟢|🟡|🟣|⚪|⚫|🌀|🧭|🌡️)\s*/u;
   let bulletIndex = 0;
-  return text.split("\n").map((line) => {
-    const match = line.match(/^(\s*-\s*)(.*)$/);
-    if (!match || bulletIndex >= 2) return line;
+  return text.split("\n").map(line => line.trim()).filter(Boolean).map((line) => {
+    if (bulletIndex >= 2) return line.startsWith("- ") ? line : `- ${line.replace(/^•\s*/, "")}`;
+    const content = line.replace(/^(?:-\s*|•\s*)/, "");
     const icon = bulletIndex++ === 0 ? "🌀" : "🌡️";
-    return `${match[1]}${icon} ${match[2].replace(leadingIcon, "")}`;
+    return `- ${icon} ${content.replace(leadingIcon, "")}`;
   }).join("\n");
 }
 
@@ -251,15 +251,20 @@ export function normalizeSection2Icons(
   if (!text) return text;
   const leadingIcon = /^(?:🌍|📍|🌀|🧭|⛵|🚢|✅|⚠️|🔵|🟠|🔴|🟢|🟡|🟣|⚪|⚫)\s*/u;
   let bulletIndex = 0;
-  return text.split("\n").map((line) => {
-    const match = line.match(/^(\s*-\s*)(.*)$/);
-    if (!match || bulletIndex >= 2) return line;
+  return text.split("\n").map(line => line.trim()).filter(Boolean).map((line) => {
+    if (bulletIndex >= 2) return line.startsWith("- ") ? line : `- ${line.replace(/^•\s*/, "")}`;
     const currentIndex = bulletIndex++;
     const icon = currentIndex === 0 ? "🌍" : "📍";
-    let content = match[2]
+    let content = line
+      .replace(/^(?:-\s*|•\s*)/, "")
       .replace(/\s+(?:und|sowie)\s+Okklusion\w*/gi, "")
       .replace(/Okklusion\w*\s+(?:und|sowie)\s+/gi, "")
       .replace(leadingIcon, "");
+    const clauses = content
+      .split(/(?<=[.;])/)
+      .map(clause => clause.trim())
+      .filter(clause => clause && !/\bOkklusion\w*\b/i.test(clause));
+    content = clauses.join(" ").trim();
     if (currentIndex === 1 && locationLabel && !section2MentionsTarget(content, locationLabel)) {
       const withCorrectedSubject = content.replace(
         /^.+?\s+\b(liegt|befindet\s+sich)\b/i,
@@ -269,7 +274,7 @@ export function normalizeSection2Icons(
         ? `${locationLabel}: ${content}`
         : withCorrectedSubject;
     }
-    return `${match[1]}${icon} ${content}`;
+    return `- ${icon} ${content}`;
   }).join("\n");
 }
 
@@ -446,6 +451,31 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
     let raw = "";
     let parsed: Record<string, string> | null = null;
     let cloudsRainText: string | null = null;
+    let windWavesText: string | null = null;
+    const finalizeWindText = (text: string | undefined): string | null => {
+      if (!text) return null;
+      const generatedWindText = softenGustyDescriptions(
+        stripRedundantWindRangeMentions(
+          stripRedundantGustMentions(
+            combineWindAndGustMentions(
+              restoreWindGustRanges(
+                stripStrongestGustMentions(normalizeWindDirectionMentions(text)),
+                local["wind"]?.text_de,
+              ),
+            ),
+          ),
+        ),
+      );
+      const windWithDatePrefixes = enforceWindForecastDatePrefixes(
+        ensureWarningFirst(analysis, generatedWindText),
+        { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
+      );
+      return ensureWindForecastIcons(
+        windWithDatePrefixes,
+        { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
+        typeof local["wave"]?.text_de === "string" && Boolean(local["wave"].text_de.trim()),
+      );
+    };
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const messages: Anthropic.Messages.MessageParam[] = attempt === 0
         ? [{ role: "user", content }]
@@ -459,6 +489,7 @@ Abschnitt 3 muss zusätzlich zur optionalen Warnzeile exakt vier eigene Prognose
 Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}.
 Abschnitt 4 muss exakt drei eigene Prognosezeilen enthalten:
 Heute (${todayLabel}), Morgen (${tomorrowLabel}) und ${forecastOverviewLabel}.
+Abschnitt 4 darf keinerlei Wind-, Böen-, Wellen- oder Seegangsinformation enthalten.
 Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschnittsmarker und ===END=== erneut ausgeben.`,
           },
         ];
@@ -477,12 +508,15 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
           section4OutputConstraints,
         )
         : null;
+      windWavesText = parsed ? finalizeWindText(parsed.windWaves) : null;
       if (
         parsed
         && hasCompleteWindForecast(parsed.windWaves)
+        && hasCompleteWindForecast(windWavesText ?? undefined)
         && hasCompleteCloudForecast(parsed.cloudsRain)
         && Boolean(cloudsRainText)
         && hasCompleteCloudForecast(cloudsRainText ?? undefined)
+        && !hasForbiddenSection4Content(cloudsRainText ?? undefined)
       ) break;
       if (attempt < 2) {
         console.warn("generateWeatherOutput: retrying incomplete forecast sections");
@@ -491,9 +525,11 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
     if (
       !parsed
       || !hasCompleteWindForecast(parsed.windWaves)
+      || !hasCompleteWindForecast(windWavesText ?? undefined)
       || !hasCompleteCloudForecast(parsed.cloudsRain)
       || !cloudsRainText
       || !hasCompleteCloudForecast(cloudsRainText)
+      || hasForbiddenSection4Content(cloudsRainText)
     ) {
       console.error("generateWeatherOutput: incomplete LLM contract", {
         windLines: parsed?.windWaves?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
@@ -503,29 +539,6 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
     }
 
     const source = "claude-sonnet-4-6";
-    const generatedWindText = parsed.windWaves
-      ? softenGustyDescriptions(
-        stripRedundantWindRangeMentions(
-          stripRedundantGustMentions(
-            combineWindAndGustMentions(
-              restoreWindGustRanges(
-                stripStrongestGustMentions(normalizeWindDirectionMentions(parsed.windWaves)),
-                local["wind"]?.text_de,
-              ),
-            ),
-          ),
-        ),
-      )
-      : null;
-    const windWithDatePrefixes = enforceWindForecastDatePrefixes(
-      ensureWarningFirst(analysis, generatedWindText),
-      { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
-    );
-    const windWavesText = ensureWindForecastIcons(
-      windWithDatePrefixes,
-      { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
-      typeof local["wave"]?.text_de === "string" && Boolean(local["wave"].text_de.trim()),
-    );
     return {
       airPressureMasses: { source, text: normalizeSection1Icons(parsed.airPressureMasses ?? null) },
       weatherFront:      {
@@ -578,6 +591,10 @@ function hasCompleteCloudForecast(text: string | undefined): boolean {
       return colon !== -1 && line.slice(colon + 1).trim().length > 0;
     });
   return forecastLines.length >= 3 && hasTail && hasSubstantiveContent;
+}
+
+function hasForbiddenSection4Content(text: string | undefined): boolean {
+  return Boolean(text && /\b(?:Wind|Böe|Welle|Seegang)\w*\b/i.test(text));
 }
 
 function parseSectionMarkers(raw: string): Record<string, string> | null {
@@ -854,8 +871,14 @@ function roundTemperatureMentions(text: string): string {
 
 function stripCloudPercentages(text: string): string {
   return text
+    .replace(
+      /\bNiederschlagswahrscheinlichkeit\s+(?:steigt|erhöht\s+sich|nimmt\s+zu)?\s*(?:auf|bis)?\s*\d{1,3}\s*%/gi,
+      "Niederschlagsneigung",
+    )
+    .replace(/\s*\(\s*(?:bis|ca\.?|circa|rund|etwa)?\s*\d{1,3}\s*%\s*\)/gi, "")
     .replace(/\s*\(?\d{1,3}\s*[–-]\s*\d{1,3}\s*%\)?/g, "")
     .replace(/\s*\(?\d{1,3}\s*%\)?/g, "")
+    .replace(/\(\s*bis\s*(?=[,.;]|$)/gi, "")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
@@ -871,11 +894,11 @@ function stripTechnicalWeatherCodes(text: string): string {
 function stripRoutineEveningCooling(text: string): string {
   return text
     .replace(
-      /,\s*(?:abends|am Abend)\s+(?:(?:rascher|schneller|allmählicher|normaler)\s+)?(?:Temperatur(?:rückgang|abfall|abkühlung)|Rückgang|Abkühlung|kühler)[^.;,]*/gi,
+      /,\s*(?:abends|am Abend)\s+(?:(?:rasch|schnell|allmählich|normal)(?:e|er|es|en)?\s+)?(?:Temperatur(?:rückgang|abfall|abkühlung)|Rückgang|Abkühlung|kühler)[^.;,]*/gi,
       "",
     )
     .replace(
-      /(?:abends|am Abend)\s+(?:(?:rascher|schneller|allmählicher|normaler)\s+)?(?:Temperatur(?:rückgang|abfall|abkühlung)|Rückgang|Abkühlung|kühler)[^.;,]*/gi,
+      /(?:abends|am Abend)\s+(?:(?:rasch|schnell|allmählich|normal)(?:e|er|es|en)?\s+)?(?:Temperatur(?:rückgang|abfall|abkühlung)|Rückgang|Abkühlung|kühler)[^.;,]*/gi,
       "",
     )
     .replace(/[ \t]{2,}/g, " ")
@@ -1060,17 +1083,18 @@ function removeNationalWarningLines(text: string, authoritativeFirstLine?: strin
   const remaining: string[] = [];
   let skippingContinuation = false;
   for (const line of lines) {
+    const startsForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
+      || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\b/i.test(line)
+      || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(line);
     const isWarningLine = (
       Boolean(authoritativeFirstLine && line.includes(authoritativeFirstLine))
       || /\b(?:sturmwarnung|starkwindwarnung|unwetterwarnung|warnquelle|warnzentrum|keine\s+(?:aktive\s+)?warnung|warnung\s+von\s+(?:hnms|dhmz|lsz))\b/i.test(line)
+      || Boolean(authoritativeFirstLine && !startsForecastLine && !remaining.length)
     );
     if (isWarningLine) {
       skippingContinuation = true;
       continue;
     }
-    const startsForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
-      || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\b/i.test(line)
-      || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(line);
     if (skippingContinuation && !/^\s*-\s+/.test(line) && !startsForecastLine) continue;
     skippingContinuation = false;
     remaining.push(line);
