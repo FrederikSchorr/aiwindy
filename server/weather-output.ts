@@ -33,13 +33,17 @@ function normalizeWindDirection(direction: string): typeof WIND_DIRECTIONS_8[num
 }
 
 export function normalizeWindDirectionMentions(text: string): string {
-  const pairPattern = new RegExp(`\\b(${WIND_DIRECTION_TOKEN})\\s*/\\s*(${WIND_DIRECTION_TOKEN})\\b`, "gi");
+  const pairPattern = new RegExp(
+    `\\b(${WIND_DIRECTION_TOKEN})(?:\\s*(?:/|[–—-])\\s*|\\s+bis\\s+|\\s+)(${WIND_DIRECTION_TOKEN})\\b`,
+    "gi",
+  );
   return text.replace(pairPattern, (_match, first: string, second: string) => {
     const normalizedFirst = normalizeWindDirection(first);
     const normalizedSecond = normalizeWindDirection(second);
     const firstIndex = WIND_DIRECTIONS_8.indexOf(normalizedFirst);
     const secondIndex = WIND_DIRECTIONS_8.indexOf(normalizedSecond);
     const shortestDelta = ((secondIndex - firstIndex + 4) % 8) - 4;
+    if (Math.abs(shortestDelta) === 4) return normalizedFirst;
     const midpoint = (firstIndex + shortestDelta / 2 + 8) % 8;
     return WIND_DIRECTIONS_8[Math.round(midpoint) % WIND_DIRECTIONS_8.length];
   }).replace(new RegExp(`\\b(${WIND_DIRECTION_TOKEN})\\b`, "gi"), (_match, direction: string) =>
@@ -68,6 +72,29 @@ function formatCalendarRange(start: Date, end: Date): string {
     return `${dayRange} ${startDay}.–${endDay}.${endMonth}.`;
   }
   return `${dayRange} ${startDay}.${startMonth}.–${endDay}.${endMonth}.`;
+}
+
+function localClock(
+  requestDate: string,
+  timeZone: string,
+): { label: string; hour: number; minute: number } {
+  const instant = new Date(requestDate);
+  const parts = new Intl.DateTimeFormat("de-DE", {
+    timeZone,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instant);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(part => part.type === type)?.value ?? "";
+  return {
+    label: `${value("weekday").replace(/\.$/, "")}, ${value("day")}.${value("month")}., ${value("hour")}:${value("minute")} Uhr`,
+    hour: Number(value("hour")),
+    minute: Number(value("minute")),
+  };
 }
 
 export function buildForecastDateLabels(
@@ -165,18 +192,21 @@ function buildSection3Rules(
   tomorrowLabel: string,
   dayAfterTomorrowLabel: string,
   forecastTailLabel: string,
+  currentLocalTimeLabel: string,
 ): string {
   return `=== ABSCHNITT 3: windWaves — Wind & Welle ===
 Inputs: der kanonische Block LOKALER STÜNDLICHER WIND, preprocessed.local.wave und geprüfte Warnungen. Europäische und nationale Texte liefern nur ergänzenden Kontext.
 - Genau 4 Prognosebullets: Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}. Bei angebundener Warnquelle steht davor genau eine Warnzeile; insgesamt höchstens 5 Bullets.
+- Analysezeitpunkt ist ${currentLocalTimeLabel}. Der Heute-Bullet blickt ausschließlich ab diesem Zeitpunkt in die Zukunft. Bereits vergangene Uhrzeiten und abgeschlossene Tagesphasen niemals erwähnen oder zusammenfassen.
 - Diese vier Prognosebullets sind Pflicht und werden als vier eigene Zeilen ausgegeben, auch wenn einzelne Werte fehlen. Bei fehlenden Werten transparent "Windprognose nicht verfügbar." schreiben, niemals den Bullet weglassen oder nur den Mehrtagesausblick ausgeben.
 - Bei angebundener Warnquelle die geprüfte Warnung aus preprocessed.local.warnings vollständig und unverändert übernehmen. "Keine Sturmwarnung" ohne ⚠️ ausgeben; aktive Warnungen oder Abruffehler dürfen ⚠️ erhalten. Bei nicht angebundener Quelle keine Warnzeile erzeugen.
 - Prognosebullets 2–5 beginnen jeweils mit ihrem Zeit-/Datumspräfix, niemals mit einem Emoji. Heute und Morgen enthalten Wind und nur bei vorhandenen preprocessed.local.wave.text_de die passende Seegangsstärke im selben Bullet; Wellendaten als Douglas-Skala, ohne Richtung, Periode oder Dünung. Wenn preprocessed.local.wave.text_de fehlt, Wellendaten und Seegang vollständig ignorieren und keinerlei Hinweis auf fehlende Wellendaten ausgeben.
 - Die Tabelle ist für konkrete Werte maßgeblich: Wind_kt und Böe_kt derselben Zeile gehören zusammen. Ein konkreter Wert wird immer als Bereich ausgegeben, z.B. "Meltemi NW 23–32 kt"; niemals nur den Windwert nennen und niemals "Wind 3 kt, Böen 6 kt".
+- JEDE numerische Windstärke hat ausnahmslos genau zwei Werte im Format "Wind–Böe kt", z.B. "8–16 kt". Einzelwerte wie "8 kt", "bis 17 kt" oder "auf 10 kt" sind verboten. Auch jede Verstärkung, Abschwächung und jeder Mehrtageswert muss als solches Paar erscheinen.
 - Interpretiere den Verlauf statt alle Stunden aufzuzählen. Nenne höchstens 1–2 markante Entwicklungen wie Verstärkung, Abschwächung, Richtungswechsel, Flaute oder starke/stürmische Phase. Heute sind konkrete Uhrzeiten, morgen nur grobe Tageszeiten erlaubt.
 - "böig" höchstens einmal und nur, wenn der jeweilige Tagesblock dies ausdrücklich stützt. Niemals "ungewöhnlich böig". Keine separate Böen-Spitze, kein "Böen bis …" und keine redundante Wiederholung desselben oberen Windwerts.
 - Übermorgen nur die wichtigste Tendenz ohne Stundenwerte. Der letzte Bullet beginnt exakt mit "${forecastTailLabel}:" und fasst die weiteren Tage großflächig zusammen; pro Tag höchstens eine Windstärkekategorie.
-- Nur die acht Richtungen N, NO, O, SO, S, SW, W und NW verwenden. Bei Windstärken ab 40 kn ⚠️ ergänzen. Wenn Winddaten fehlen, transparent "Windprognose aus regionalem Wetterbericht nicht verfügbar." ausgeben.
+- Richtungsangaben ausschließlich als genau eines dieser acht Kürzel schreiben: N, NO, O, SO, S, SW, W oder NW. Niemals Zwischenrichtungen wie NNW, WNW oder SSO und niemals zusammengesetzte Kürzel wie NW-W, NW/W oder SO-NW verwenden. Bei Windstärken ab 40 kt ⚠️ ergänzen. Wenn Winddaten fehlen, transparent "Windprognose aus regionalem Wetterbericht nicht verfügbar." ausgeben.
 - Für ${locationLabel} dürfen geographisch passende Windsysteme genannt werden, aber sie ersetzen niemals die lokalen Tabellenwerte.`;
 }
 
@@ -184,10 +214,12 @@ function buildSection4Rules(
   todayLabel: string,
   tomorrowLabel: string,
   forecastOverviewLabel: string,
+  currentLocalTimeLabel: string,
 ): string {
   return `=== ABSCHNITT 4: cloudsRain — Wetter & Regen ===
 Input: ENTWICKLUNGS- UND LAGEKONTEXT FÜR ABSCHNITT 4 und KNMI-Frontkarten; Wind- und Wellendaten nicht verwenden.
 - Genau 3 Bullets in dieser Reihenfolge: Heute (${todayLabel}), Morgen (${tomorrowLabel}), ${forecastOverviewLabel}. Jeder Bullet beginnt mit seinem Zeit-/Datumspräfix, niemals mit einem Emoji.
+- Analysezeitpunkt ist ${currentLocalTimeLabel}. Der Heute-Bullet enthält ausschließlich noch bevorstehendes Wetter ab diesem Zeitpunkt; keine bereits vergangenen Uhrzeiten oder abgeschlossenen Tagesphasen.
 - INTERPRETIERE Auffälligkeiten und Veränderungen, statt Meteogrammwerte aufzuzählen. Priorität: markanter Drucktrend, Niederschlagsfenster/-spitze, rascher Temperaturwechsel, belastbares Gewittersignal und deutlicher Wetterumschwung. Bewölkung nur bei relevantem Wechsel.
 - Heute granular, aber kompakt: höchstens 2–3 wichtigste Entwicklungen in zeitlicher Reihenfolge. Wenn mehrere lokale Signale vorhanden sind, nicht nur einen Einzelwert oder eine einzige Wetterbeschreibung nennen; niemals mit erfundenen Details auffüllen. Regen als qualitative zusammengefasste Phase; konkrete Uhrzeit nur für markanten Beginn oder Höhepunkt. Temperaturen auf ganze °C runden; Temperaturänderungen nur mit groben Tagesphasen. Einen normalen abendlichen Rückgang und kleine Stundenänderungen bis 3°C nicht erwähnen.
 - Morgen weniger granular: nur nachts, morgens, mittags, nachmittags oder abends, keine Ziffer-Uhrzeiten. ${forecastOverviewLabel} ausschließlich als High-Level-Trend der folgenden vier Tage, ohne Uhrzeiten oder Tagesphasen.
@@ -294,6 +326,7 @@ export async function generateWeatherOutput(
   const locationLabel = position.sailingArea?.name_de ?? position.city?.name_de ?? position.userInput;
   const cityLabel = position.city?.name_de ?? position.userInput;
   const timezone = getOpenMeteoTimezone(position.countryCode);
+  const currentLocal = localClock(analysis.meta.requestDate, timezone);
 
   const {
     todayLabel,
@@ -401,6 +434,7 @@ Ort/Segelrevier: ${locationLabel}
 Land: ${position.country}
 ${position.sailingArea ? `Segelrevier: ${position.sailingArea.name_de}` : `Ort: ${position.city?.name_de ?? position.userInput}`}
 Heute: ${todayLabel}
+Analysezeitpunkt: ${currentLocal.label}
 ${imageLabelsText}
 === EUROPÄISCHE WETTERLAGE (Meteonews) ===
 ${generalWeather ?? "(nicht verfügbar)"}
@@ -439,9 +473,9 @@ ${buildSection2Rules(locationLabel)}
 
 ${WIND_PEAK_TIMING_RULE}
 ${WIND_DIRECTION_RULE}
-${buildSection3Rules(locationLabel, todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel)}
+${buildSection3Rules(locationLabel, todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel, currentLocal.label)}
 
-${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
+${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel, currentLocal.label)}
 `,
   });
 
@@ -452,17 +486,34 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
     let parsed: Record<string, string> | null = null;
     let cloudsRainText: string | null = null;
     let windWavesText: string | null = null;
+    const warningCenter = analysis.sources.nationalWarningCenter;
+    const warning = analysis.weatherPreprocessed.local.warnings as {
+      checked?: unknown;
+      text_de?: unknown;
+    } | undefined;
+    const expectedWarningLineCount = (
+      warningCenter
+      && warningCenter.status !== "unsupported"
+    )
+      ? (
+        warning?.checked === true
+        && typeof warning.text_de === "string"
+        && warning.text_de.trim()
+          ? warning.text_de.trim().split(/\r?\n/).filter(Boolean).length
+          : 1
+      )
+      : 0;
     const finalizeWindText = (text: string | undefined): string | null => {
       if (!text) return null;
       const generatedWindText = softenGustyDescriptions(
         stripRedundantWindRangeMentions(
           stripRedundantGustMentions(
-            combineWindAndGustMentions(
+            normalizeWindUnits(combineWindAndGustMentions(
               restoreWindGustRanges(
                 stripStrongestGustMentions(normalizeWindDirectionMentions(text)),
                 local["wind"]?.text_de,
               ),
-            ),
+            )),
           ),
         ),
       );
@@ -471,7 +522,11 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel)}
         { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
       );
       return ensureWindForecastIcons(
-        windWithDatePrefixes,
+        normalizeCurrentHourTodayStart(
+          windWithDatePrefixes,
+          currentLocal.hour,
+          currentLocal.minute,
+        ),
         { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
         typeof local["wave"]?.text_de === "string" && Boolean(local["wave"].text_de.trim()),
       );
@@ -490,6 +545,10 @@ Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorro
 Abschnitt 4 muss exakt drei eigene Prognosezeilen enthalten:
 Heute (${todayLabel}), Morgen (${tomorrowLabel}) und ${forecastOverviewLabel}.
 Abschnitt 4 darf keinerlei Wind-, Böen-, Wellen- oder Seegangsinformation enthalten.
+Die Heute-Bullets dürfen nur die Zukunft ab ${currentLocal.label} beschreiben; entferne vergangene Uhrzeiten und abgeschlossene Tagesphasen.
+Liegt der Analysezeitpunkt nach der vollen Stunde, schreibe für einen Beginn in derselben laufenden Stunde "ab jetzt" statt "ab HH Uhr".
+Abschnitt 1 und Abschnitt 2 müssen jeweils exakt zwei inhaltlich vollständige Bullets enthalten; ein Bullet nur mit Symbol ist unzulässig.
+Abschnitt 3: Jede numerische Windstärke muss genau als Wind–Böe-Paar wie "8–16 kt" erscheinen, niemals als Einzelwert. Jede Richtung muss genau eines der Kürzel N, NO, O, SO, S, SW, W oder NW sein; keine Zwischen- oder Kombinationsrichtung.
 Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschnittsmarker und ===END=== erneut ausgeben.`,
           },
         ];
@@ -502,21 +561,32 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
       raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
       parsed = parseSectionMarkers(raw);
       cloudsRainText = parsed
-        ? enforceSection4Output(
-          parsed.cloudsRain ?? null,
-          { todayLabel, tomorrowLabel, forecastOverviewLabel },
-          section4OutputConstraints,
+        ? normalizeCurrentHourTodayStart(
+          enforceSection4Output(
+            parsed.cloudsRain ?? null,
+            { todayLabel, tomorrowLabel, forecastOverviewLabel },
+            section4OutputConstraints,
+          ),
+          currentLocal.hour,
+          currentLocal.minute,
         )
         : null;
       windWavesText = parsed ? finalizeWindText(parsed.windWaves) : null;
       if (
         parsed
-        && hasCompleteWindForecast(parsed.windWaves)
-        && hasCompleteWindForecast(windWavesText ?? undefined)
-        && hasCompleteCloudForecast(parsed.cloudsRain)
+        && hasTwoSubstantiveBullets(normalizeSection1Icons(parsed.airPressureMasses ?? null))
+        && hasTwoSubstantiveBullets(normalizeSection2Icons(parsed.weatherFront ?? null, locationLabel))
+        && hasCanonicalWindForecast(
+          windWavesText ?? undefined,
+          { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
+          expectedWarningLineCount,
+        )
+        && hasValidWindValueFormat(windWavesText ?? undefined)
+        && !containsPastTodayContent(windWavesText ?? undefined, currentLocal.hour, currentLocal.minute)
         && Boolean(cloudsRainText)
         && hasCompleteCloudForecast(cloudsRainText ?? undefined)
         && !hasForbiddenSection4Content(cloudsRainText ?? undefined)
+        && !containsPastTodayContent(cloudsRainText ?? undefined, currentLocal.hour, currentLocal.minute)
       ) break;
       if (attempt < 2) {
         console.warn("generateWeatherOutput: retrying incomplete forecast sections");
@@ -524,16 +594,52 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
     }
     if (
       !parsed
-      || !hasCompleteWindForecast(parsed.windWaves)
-      || !hasCompleteWindForecast(windWavesText ?? undefined)
-      || !hasCompleteCloudForecast(parsed.cloudsRain)
+      || !hasTwoSubstantiveBullets(normalizeSection1Icons(parsed.airPressureMasses ?? null))
+      || !hasTwoSubstantiveBullets(normalizeSection2Icons(parsed.weatherFront ?? null, locationLabel))
+      || !hasCanonicalWindForecast(
+        windWavesText ?? undefined,
+        { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
+        expectedWarningLineCount,
+      )
+      || !hasValidWindValueFormat(windWavesText ?? undefined)
+      || containsPastTodayContent(windWavesText ?? undefined, currentLocal.hour, currentLocal.minute)
       || !cloudsRainText
       || !hasCompleteCloudForecast(cloudsRainText)
       || hasForbiddenSection4Content(cloudsRainText)
+      || containsPastTodayContent(cloudsRainText, currentLocal.hour, currentLocal.minute)
     ) {
       console.error("generateWeatherOutput: incomplete LLM contract", {
         windLines: parsed?.windWaves?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
+        normalizedWindLines: windWavesText?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
         cloudLines: parsed?.cloudsRain?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
+        normalizedCloudLines: cloudsRainText?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) ?? [],
+        failedChecks: {
+          parsed: !parsed,
+          completeSection1: !hasTwoSubstantiveBullets(
+            normalizeSection1Icons(parsed?.airPressureMasses ?? null),
+          ),
+          completeSection2: !hasTwoSubstantiveBullets(
+            normalizeSection2Icons(parsed?.weatherFront ?? null, locationLabel),
+          ),
+          canonicalWind: !hasCanonicalWindForecast(
+            windWavesText ?? undefined,
+            { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
+            expectedWarningLineCount,
+          ),
+          windValueFormat: !hasValidWindValueFormat(windWavesText ?? undefined),
+          pastWindToday: containsPastTodayContent(
+            windWavesText ?? undefined,
+            currentLocal.hour,
+            currentLocal.minute,
+          ),
+          completeCloud: !cloudsRainText || !hasCompleteCloudForecast(cloudsRainText),
+          forbiddenCloudContent: hasForbiddenSection4Content(cloudsRainText ?? undefined),
+          pastCloudToday: containsPastTodayContent(
+            cloudsRainText ?? undefined,
+            currentLocal.hour,
+            currentLocal.minute,
+          ),
+        },
       });
       throw new Error("Die Wetterinterpretation war unvollständig. Bitte erneut versuchen.");
     }
@@ -573,6 +679,29 @@ function hasCompleteWindForecast(text: string | undefined): boolean {
   return forecastLines.length >= 4 && hasTail;
 }
 
+function hasCanonicalWindForecast(
+  text: string | undefined,
+  labels: {
+    todayLabel: string;
+    tomorrowLabel: string;
+    dayAfterTomorrowLabel: string;
+    forecastTailLabel: string;
+  },
+  warningLineCount: number,
+): boolean {
+  if (!text) return false;
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const forecasts = lines.slice(warningLineCount);
+  const expectedPrefixes = [
+    `- Heute (${labels.todayLabel}):`,
+    `- Morgen (${labels.tomorrowLabel}):`,
+    `- Übermorgen (${labels.dayAfterTomorrowLabel}):`,
+    `- ${labels.forecastTailLabel}:`,
+  ];
+  return forecasts.length === expectedPrefixes.length
+    && expectedPrefixes.every((prefix, index) => forecasts[index]?.startsWith(prefix));
+}
+
 function hasCompleteCloudForecast(text: string | undefined): boolean {
   if (!text) return false;
   const lines = text.split(/\r?\n/);
@@ -595,6 +724,66 @@ function hasCompleteCloudForecast(text: string | undefined): boolean {
 
 function hasForbiddenSection4Content(text: string | undefined): boolean {
   return Boolean(text && /\b(?:Wind|Böe|Welle|Seegang)\w*\b/i.test(text));
+}
+
+export function hasTwoSubstantiveBullets(text: string | null): boolean {
+  if (!text) return false;
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (lines.length !== 2) return false;
+  return lines.every(line => {
+    if (!/^-\s+/.test(line)) return false;
+    const body = line
+      .replace(/^-\s+/, "")
+      .replace(/^[^\p{L}\p{N}]+/u, "")
+      .trim();
+    return (body.match(/\p{L}/gu) ?? []).length >= 8;
+  });
+}
+
+export function containsPastTodayContent(
+  text: string | undefined,
+  currentHour: number,
+  currentMinute: number,
+): boolean {
+  if (!text) return false;
+  const todayLines = text.split(/\r?\n/).filter(line =>
+    /^\s*(?:-\s*)?Heute\b/i.test(line),
+  );
+  if (!todayLines.length) return false;
+
+  const completedPeriods: RegExp[] = [];
+  if (currentHour >= 10) completedPeriods.push(/\b(?:morgens|am\s+(?:frühen\s+)?Morgen|in\s+den\s+Morgenstunden)\b/i);
+  if (currentHour >= 12) completedPeriods.push(/\b(?:vormittags?|am\s+Vormittag)\b/i);
+  if (currentHour >= 14) completedPeriods.push(/\b(?:mittags?|zur\s+Mittagszeit|am\s+Mittag)\b/i);
+  if (currentHour >= 18) completedPeriods.push(/\b(?:nachmittags?|am\s+Nachmittag)\b/i);
+  if (currentHour >= 22) completedPeriods.push(/\b(?:abends|am\s+Abend)\b/i);
+  if (todayLines.some(line => completedPeriods.some(pattern => pattern.test(line)))) return true;
+
+  const currentMinutes = currentHour * 60 + currentMinute;
+  const exactTimes = todayLines.join("\n").matchAll(
+    /\b([01]?\d|2[0-3])(?::([0-5]\d)(?:\s*Uhr)?|\s*Uhr)\b/gi,
+  );
+  return Array.from(exactTimes).some(match => {
+    const referencedMinutes = Number(match[1]) * 60 + Number(match[2] ?? 0);
+    return referencedMinutes < currentMinutes;
+  });
+}
+
+export function normalizeCurrentHourTodayStart(
+  text: string | null,
+  currentHour: number,
+  currentMinute: number,
+): string | null {
+  if (!text || currentMinute <= 0) return text;
+  const currentHourPattern = new RegExp(
+    `\\bab\\s+0?${currentHour}(?:\\s*Uhr|:00(?:\\s*Uhr)?)\\b`,
+    "gi",
+  );
+  return text.split(/\r?\n/).map(line =>
+    /^\s*-\s*Heute\b/i.test(line)
+      ? line.replace(currentHourPattern, "ab jetzt")
+      : line
+  ).join("\n");
 }
 
 function parseSectionMarkers(raw: string): Record<string, string> | null {
@@ -621,6 +810,20 @@ function parseSectionMarkers(raw: string): Record<string, string> | null {
 const DATE_RANGE_PREFIX =
   /^(\s*)(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\.(?:\d{1,2}\.)?[–-]\d{1,2}\.\d{1,2}\.?\s*:/i;
 
+function forecastBodyAfterLabel(line: string): string {
+  let body = line.trim().replace(/^-\s*/, "");
+  const relativePrefix = /^(?:Heute|Morgen|Übermorgen)(?:\s*\([^)]*\)|\s+(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?)?\s*/i;
+  const calendarPrefix = /^(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*/i;
+  const rangePrefix = /^(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\s+\d{1,2}\.(?:\d{1,2}\.)?[–-]\d{1,2}\.\d{1,2}\.?\s*/i;
+  body = body
+    .replace(relativePrefix, "")
+    .replace(rangePrefix, "")
+    .replace(calendarPrefix, "")
+    .replace(/^:\s*/, "")
+    .trim();
+  return body;
+}
+
 function replaceRelativeDatePrefix(
   line: string,
   relativeLabel: "Heute" | "Morgen" | "Übermorgen",
@@ -643,37 +846,26 @@ export function enforceWindForecastDatePrefixes(
   },
 ): string | null {
   if (!text) return text;
-  let calendarForecastIndex = 0;
   const canonicalPrefixes = [
     `- Heute (${labels.todayLabel}):`,
     `- Morgen (${labels.tomorrowLabel}):`,
     `- Übermorgen (${labels.dayAfterTomorrowLabel}):`,
+    `- ${labels.forecastTailLabel}:`,
   ];
+  let forecastIndex = 0;
   return text
     .split("\n")
     .map((line) => {
-      const withToday = replaceRelativeDatePrefix(line, "Heute", labels.todayLabel);
-      const withTomorrow = replaceRelativeDatePrefix(withToday, "Morgen", labels.tomorrowLabel);
-      const withDayAfterTomorrow = replaceRelativeDatePrefix(
-        withTomorrow,
-        "Übermorgen",
-        labels.dayAfterTomorrowLabel,
-      );
-      const normalized = withDayAfterTomorrow.replace(
-        DATE_RANGE_PREFIX,
-        `$1- ${labels.forecastTailLabel}:`,
-      );
-      if (
-        calendarForecastIndex < canonicalPrefixes.length
-        && /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(normalized)
-      ) {
-        const colon = normalized.indexOf(":");
-        const body = normalized.slice(colon + 1).trim();
-        const prefix = canonicalPrefixes[calendarForecastIndex];
-        calendarForecastIndex += 1;
-        return `${prefix} ${body}`.trimEnd();
-      }
-      return normalized;
+      const isForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
+        || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?(?:\s*\([^)]*\))?(?:\s|:)/i.test(line)
+        || DATE_RANGE_PREFIX.test(line);
+      if (!isForecastLine || forecastIndex >= canonicalPrefixes.length) return line;
+
+      const body = forecastBodyAfterLabel(line);
+      if (!body) return line;
+      const prefix = canonicalPrefixes[forecastIndex];
+      forecastIndex += 1;
+      return `${prefix} ${body}`;
     })
     .join("\n");
 }
@@ -797,6 +989,36 @@ export function combineWindAndGustMentions(text: string): string {
   );
 }
 
+export function normalizeWindUnits(text: string): string {
+  return text.replace(/\b(?:kn|Knoten)\b/gi, "kt");
+}
+
+export function hasValidWindValueFormat(text: string | undefined): boolean {
+  if (!text) return false;
+  const forecasts = text
+    .split(/\r?\n/)
+    .filter(line => /^\s*-\s*(?:Heute|Morgen|Übermorgen|(?:Mo|Di|Mi|Do|Fr|Sa|So)[–-])/i.test(line))
+    .join("\n");
+  if (!forecasts) return false;
+
+  const forbiddenIntermediateDirection = /\b(?:NNO|ONO|OSO|SSO|SSW|WSW|WNW|NNW)\b/i;
+  const canonicalDirection = "(?:N|NO|O|SO|S|SW|W|NW)";
+  const compositeDirection = new RegExp(
+    `\\b${canonicalDirection}(?:\\s*(?:/|[–—-])\\s*|\\s+bis\\s+|\\s+)${canonicalDirection}\\b`,
+    "i",
+  );
+  if (forbiddenIntermediateDirection.test(forecasts) || compositeDirection.test(forecasts)) {
+    return false;
+  }
+
+  const withoutValidPairs = forecasts.replace(
+    /\b\d+(?:[.,]\d+)?\s*[–-]\s*\d+(?:[.,]\d+)?\s*kt\b/gi,
+    "",
+  );
+  return !/\b\d+(?:[.,]\d+)?\s*(?:kt|kn|Knoten)\b/i.test(withoutValidPairs)
+    && !/\b(?:kn|Knoten)\b/i.test(forecasts);
+}
+
 export function restoreWindGustRanges(text: string, localWindText: unknown): string {
   if (typeof localWindText !== "string" || !localWindText.trim()) return text;
 
@@ -834,6 +1056,15 @@ export function restoreWindGustRanges(text: string, localWindText: unknown): str
       .replace(
         /\b(Wind\s+)(\d+(?:[.,]\d+)?)\s*(kt|kn)\b/gi,
         addRange,
+      )
+      .replace(
+        /\b(\d+(?:[.,]\d+)?)\s*(kt|kn)\b/gi,
+        (match, speedText: string, unit: string) => {
+          const gust = ranges.get(Number(speedText.replace(",", ".")));
+          return typeof gust === "number"
+            ? `${speedText}–${gust} ${unit}`
+            : match;
+        },
       );
   }).join("\n");
 }
@@ -930,6 +1161,17 @@ function roundDecimalPressureMentions(text: string): string {
   );
 }
 
+function stripNegatedThunderstormMentions(text: string): string {
+  return text
+    .replace(
+      /(?:,\s*|;\s*)?\b(?:kein(?:e[snr]?)?|ohne)\s+(?:lokales?\s+)?Gewitter\w*\b/gi,
+      "",
+    )
+    .replace(/\s+([,.;])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function removeSection4Clauses(
   line: string,
   forbidden: RegExp,
@@ -1010,10 +1252,8 @@ export function enforceSection4Output(
     `- ${labels.forecastOverviewLabel}:`,
   ];
   const exactlyThree = bullets.slice(0, 3).map((line, index) => {
-    const colon = line.indexOf(":");
-    return colon === -1
-      ? line
-      : `${canonicalPrefixes[index]} ${line.slice(colon + 1).trim()}`;
+    const body = forecastBodyAfterLabel(line);
+    return body ? `${canonicalPrefixes[index]} ${body}` : line;
   });
   exactlyThree[1] = replaceExactClockTimes(exactlyThree[1]);
   const sanitizedOutput = exactlyThree
@@ -1035,6 +1275,7 @@ export function enforceSection4Output(
         sanitized = removeSection4Clauses(sanitized, /(?:\bDruck\b|\bhPa\b|📉|📈)/i);
       }
       if (constraints?.thunderstormAllowed?.[index] === false) {
+        sanitized = stripNegatedThunderstormMentions(sanitized);
         sanitized = removeSection4Clauses(
           sanitized,
           /(?:\bGewitter\w*\b|\bCumulonimbus\b|\bCb-Signal\b|⛈️)/i,
@@ -1049,9 +1290,9 @@ export function enforceSection4Output(
 
 export function ensureWarningFirst(analysis: AnalysisJson, windWavesText: string | null): string | null {
   const warningCenter = analysis.sources.nationalWarningCenter;
-  if (!warningCenter) return windWavesText;
-
   const output = typeof windWavesText === "string" ? windWavesText.trim() : "";
+  if (!warningCenter) return removeNationalWarningLines(output) || null;
+
   if (warningCenter.status === "unsupported") {
     return removeNationalWarningLines(output) || null;
   }
@@ -1082,14 +1323,23 @@ function removeNationalWarningLines(text: string, authoritativeFirstLine?: strin
   const lines = text.split("\n");
   const remaining: string[] = [];
   let skippingContinuation = false;
+  const warningMention =
+    /\b(?:sturmwarnung|starkwindwarnung|unwetterwarnung|warnquelle|warnzentrum|keine\s+(?:aktive\s+)?warnung|warnung\s+von\s+(?:hnms|dhmz|lsz)|(?:hnms|dhmz|lsz)\s+warnt)\b/i;
   for (const line of lines) {
     const startsForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen|Übermorgen)\b/i.test(line)
       || /^\s*(?:-\s*)?(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-](?:So|Mo|Di|Mi|Do|Fr|Sa)\b/i.test(line)
-      || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?\s*:/i.test(line);
-    const isWarningLine = (
-      Boolean(authoritativeFirstLine && line.includes(authoritativeFirstLine))
-      || /\b(?:sturmwarnung|starkwindwarnung|unwetterwarnung|warnquelle|warnzentrum|keine\s+(?:aktive\s+)?warnung|warnung\s+von\s+(?:hnms|dhmz|lsz))\b/i.test(line)
-      || Boolean(authoritativeFirstLine && !startsForecastLine && !remaining.length)
+      || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?(?:\s*\([^)]*\)|\s+ab\s+jetzt)?\s*:/i.test(line);
+    const cleanedLine = startsForecastLine
+      ? line
+        .split(/;\s*/)
+        .filter(clause => !warningMention.test(clause))
+        .join("; ")
+        .replace(/\s+([,.;])/g, "$1")
+      : line;
+    const isWarningLine = !startsForecastLine && (
+      Boolean(authoritativeFirstLine && cleanedLine.includes(authoritativeFirstLine))
+      || warningMention.test(cleanedLine)
+      || Boolean(authoritativeFirstLine && !remaining.length)
     );
     if (isWarningLine) {
       skippingContinuation = true;
@@ -1097,7 +1347,7 @@ function removeNationalWarningLines(text: string, authoritativeFirstLine?: strin
     }
     if (skippingContinuation && !/^\s*-\s+/.test(line) && !startsForecastLine) continue;
     skippingContinuation = false;
-    remaining.push(line);
+    remaining.push(cleanedLine);
   }
   return remaining.join("\n").trim();
 }

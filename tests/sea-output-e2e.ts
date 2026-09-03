@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { GeocodeResult, WeatherOutputData } from "../shared/schema.js";
+import { hasValidWindValueFormat } from "../server/weather-output.js";
 
 const BASE_URL = process.env.AIWINDY_TEST_BASE_URL ?? "http://127.0.0.1:5000";
 const RESULT_DIR = path.join(process.cwd(), "test-results");
@@ -150,14 +151,15 @@ function validate(result: Omit<LocationResult, "checks">): LocationResult["check
   if (s3.length !== expectedSection3Bullets) {
     checks.section3.failures.push(`Erwartet ${expectedSection3Bullets} Bullets, erhalten ${s3.length}`);
   }
-  const preForecastLines = (output.windWaves?.text ?? "")
-    .split(/\r?\n/)
-    .filter(line => line.trim())
+  const preForecastLines = bulletLines(output.windWaves?.text)
     .filter(line => !/^\s*-\s*(?:Heute|Morgen|Übermorgen|(?:So|Mo|Di|Mi|Do|Fr|Sa)[–-])/i.test(line));
   if (warningExpected && preForecastLines.length !== 1) {
     checks.section3.failures.push(`Warnstatus erscheint ${preForecastLines.length} statt genau einmal`);
   }
   if (BANNED_FINE_DIRECTIONS.test(s3.join("\n"))) checks.section3.failures.push("Nicht erlaubte 16-Punkt-Windrichtung enthalten");
+  if (!hasValidWindValueFormat(output.windWaves?.text)) {
+    checks.section3.failures.push("Windwerte sind nicht durchgehend Wind–Böe-Paare oder Richtungen sind nicht achtpunktkonform");
+  }
   if (MISSING_WAVES.test(s3.join("\n"))) checks.section3.failures.push("Fehlende Wellendaten werden im Nutzertext erwähnt");
   if (/\bBöen?\s+(?:bis|von)\s*\d/i.test(s3.join("\n"))) checks.section3.failures.push("Böen werden als separater Zahlenwert genannt");
   if ((s3.join("\n").match(/\bböig\b/gi) ?? []).length > 1) checks.section3.failures.push("„böig“ wird mehr als einmal verwendet");
@@ -310,9 +312,13 @@ ${details.join("\n")}
 async function main(): Promise<void> {
   await fs.mkdir(RESULT_DIR, { recursive: true });
   const filter = process.env.AIWINDY_TEST_ONLY?.trim().toLowerCase();
-  const targets = filter
+  const filteredTargets = filter
     ? LOCATIONS.filter(location => location.query.toLowerCase().includes(filter))
     : [...LOCATIONS];
+  const requestedLimit = Number.parseInt(process.env.AIWINDY_TEST_LIMIT ?? "", 10);
+  const targets = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? filteredTargets.slice(0, requestedLimit)
+    : filteredTargets;
   if (!targets.length) throw new Error(`Kein Ort passt zu AIWINDY_TEST_ONLY=${process.env.AIWINDY_TEST_ONLY}`);
 
   let results: LocationResult[] = [];

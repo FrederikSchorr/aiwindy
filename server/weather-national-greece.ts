@@ -137,6 +137,15 @@ function currentLocalDateHour(tz: string): { label: string; hour: number } {
   return { label: `${DAY_NAMES[dow]} ${parts[2]}.${parts[1]}`, hour };
 }
 
+export function isValidGreeceWarningTranslation(text: string | null): boolean {
+  if (!text) return false;
+  if (/\b(?:Sturm|stürmisch|Orkan|Gewitter|Gewittermöglichkeit|Unwetter)\w*\b/i.test(text)) {
+    return true;
+  }
+  return Array.from(text.matchAll(/(\d+(?:[,.]\d+)?)\s*(?:kt|kn|Knoten)\b/gi))
+    .some(match => Number(match[1].replace(",", ".")) >= 34);
+}
+
 // ── HNMS Preprocessing ────────────────────────────────────────────────────────
 
 export async function preprocessGreeceNationalSynopsis(
@@ -208,6 +217,10 @@ ${text}`,
     const translated = (msg.content[0] as any)?.text?.trim() ?? null;
     if (!translated || translated === "NONE") {
       return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: noWarningText, checked: true } };
+    }
+    if (!isValidGreeceWarningTranslation(translated)) {
+      console.warn("HNMS warning extraction rejected non-warning forecast text");
+      return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de: null, checked: false } };
     }
     const text_de = `Aktuell ${timeLabel ? timeLabel + " " : ""}Sturmwarnung von HNMS:\n${translated}`;
     return { "warnings": { source: "HNMS", url: HNMS_BULLETIN_URL, sailingArea: emyName, text_de, checked: true } };

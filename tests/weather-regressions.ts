@@ -26,7 +26,12 @@ import {
   ensureWindForecastIcons,
   generateWeatherOutput,
   combineWindAndGustMentions,
+  containsPastTodayContent,
+  hasValidWindValueFormat,
+  hasTwoSubstantiveBullets,
+  normalizeCurrentHourTodayStart,
   normalizeWindDirectionMentions,
+  normalizeWindUnits,
   normalizeSection1Icons,
   normalizeSection2Icons,
   restoreWindGustRanges,
@@ -39,7 +44,10 @@ import {
   getSanitizedAnalysisExport,
   type AnalysisJson,
 } from "../server/analysis-store.js";
-import { HNMS_BULLETIN_URL } from "../server/weather-national-greece.js";
+import {
+  HNMS_BULLETIN_URL,
+  isValidGreeceWarningTranslation,
+} from "../server/weather-national-greece.js";
 import { extractDhmzWarning } from "../server/weather-national-croatia.js";
 import { resolveLocalForecast } from "../server/weather-local-forecast.js";
 import CityMeteogram, { cloudBaseTone, cloudTypeColor, extractCityMeteogram, formatCloudBase, temperatureColor } from "../client/src/components/city-meteogram";
@@ -932,7 +940,12 @@ async function testInterpretationPromptContract(): Promise<void> {
     .join("\n");
   assert.match(prompt, /Datum \| Uhrzeit \| Richtung \| Wind_kt \| Böe_kt/);
   assert.match(prompt, /2026-08-22 \| 12:00 \| NW \| 23 \| 32/);
-  assert.doesNotMatch(prompt, /\b(?:NNO|ONO|OSO|SSO|SSW|WSW|WNW|NNW)\b/);
+  assert.match(
+    prompt,
+    /Richtungsangaben ausschließlich als genau eines dieser acht Kürzel schreiben: N, NO, O, SO, S, SW, W oder NW/,
+  );
+  assert.match(prompt, /Niemals Zwischenrichtungen wie NNW, WNW oder SSO/);
+  assert.match(prompt, /jede numerische Windstärke hat ausnahmslos genau zwei Werte/i);
   for (const section of [
     "ABSCHNITT 1: airPressureMasses",
     "ABSCHNITT 2: weatherFront",
@@ -1014,6 +1027,75 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(calendarPrefixedWind, /^- Übermorgen \(Mo 24\.08\.\): W 6–9 kt\.$/m);
   assert.match(calendarPrefixedWind, /^- Di–Do 25\.–27\.08\.: SW 12–18 kt\.$/m);
 
+  const mixedRelativeAndCalendarWind = enforceWindForecastDatePrefixes(
+    [
+      "- Heute (Do 03.09.): Ab 20:00 Uhr SW 6–14 kt.",
+      "- Fr 04.09.: O 9–13 kt.",
+      "- Sa 05.09.: W 10–17 kt.",
+      "- So–Di 06.–08.09.: Wechselnde Richtungen.",
+    ].join("\n"),
+    {
+      todayLabel: "Do 03.09.",
+      tomorrowLabel: "Fr 04.09.",
+      dayAfterTomorrowLabel: "Sa 05.09.",
+      forecastTailLabel: "So–Di 06.–08.09.",
+    },
+  ) ?? "";
+  assert.match(mixedRelativeAndCalendarWind, /^- Heute \(Do 03\.09\.\): Ab 20:00 Uhr/m);
+  assert.match(mixedRelativeAndCalendarWind, /^- Morgen \(Fr 04\.09\.\): O 9–13 kt\.$/m);
+  assert.match(mixedRelativeAndCalendarWind, /^- Übermorgen \(Sa 05\.09\.\): W 10–17 kt\.$/m);
+  assert.match(mixedRelativeAndCalendarWind, /^- So–Di 06\.–08\.09\.: Wechselnde Richtungen\.$/m);
+  assert.equal(
+    (mixedRelativeAndCalendarWind.match(/\bHeute\b/g) ?? []).length,
+    1,
+    "a relative Today line must advance the fallback calendar prefix index",
+  );
+
+  const parentheticalTodayWind = enforceWindForecastDatePrefixes(
+    [
+      "- Do 03.09. (ab jetzt): NW 14–20 kt.",
+      "- Fr 04.09.: N 4–9 kt.",
+      "- Sa 05.09.: S 4–12 kt.",
+      "- So–Di 06.–08.09.: W 3–7 kt.",
+    ].join("\n"),
+    {
+      todayLabel: "Do 03.09.",
+      tomorrowLabel: "Fr 04.09.",
+      dayAfterTomorrowLabel: "Sa 05.09.",
+      forecastTailLabel: "So–Di 06.–08.09.",
+    },
+  ) ?? "";
+  assert.match(parentheticalTodayWind, /^- Heute \(Do 03\.09\.\): \(ab jetzt\): NW 14–20 kt\.$/m);
+  assert.match(parentheticalTodayWind, /^- So–Di 06\.–08\.09\.: W 3–7 kt\.$/m);
+
+  assert.equal(
+    containsPastTodayContent(
+      "- Heute (Do 03.09.): Nachmittags W 8–12 kt; ab 20:00 Uhr SW 6–14 kt.",
+      19,
+      38,
+    ),
+    true,
+    "an evening forecast must reject already completed afternoon content",
+  );
+  assert.equal(
+    containsPastTodayContent(
+      "- Heute (Do 03.09.): Ab 20:00 Uhr SW 6–14 kt; nachts auf NO drehend.",
+      19,
+      38,
+    ),
+    false,
+    "an evening forecast may contain only upcoming hours and the coming night",
+  );
+  assert.equal(
+    containsPastTodayContent(
+      "- Heute (Do 03.09.): Ab 19:00 Uhr SW 6–14 kt.",
+      19,
+      38,
+    ),
+    true,
+    "an exact time earlier than the analysis instant must be rejected",
+  );
+
 }
 
 function testSection4OutputContract(): void {
@@ -1041,6 +1123,25 @@ function testSection4OutputContract(): void {
   assert.doesNotMatch(bullets[1], /\d{1,2}:\d{2}\s*Uhr/, "tomorrow must not contain exact clock times");
   assert.match(bullets[2], /^- Mo–Do 24\.–27\.08\.:/);
   assert.match(bullets[2], /: ☀️ /);
+
+  const eveningOutput = enforceSection4Output(
+    [
+      "- Do 03.09. ab 20:50 Uhr: 🌤️ Wolken lockern rasch auf.",
+      "- Fr 04.09.: ☀️ Sonnig und trocken.",
+      "- Sa–Di 05.–08.09.: ☀️ Stabiles Hochdruckwetter.",
+    ].join("\n"),
+    {
+      todayLabel: "Do 03.09.",
+      tomorrowLabel: "Fr 04.09.",
+      forecastOverviewLabel: "Sa–Di 05.–08.09.",
+    },
+  ) ?? "";
+  assert.match(eveningOutput, /^- Heute \(Do 03\.09\.\): .*ab 20:50 Uhr:/m);
+  assert.doesNotMatch(
+    eveningOutput,
+    /^- Heute \([^)]*\):\s*(?:(?:☀️|⛅|☁️|🌥️|🌤️|🌧️|🌦️|⛈️|❄️|🌫️)\s*)?50 Uhr:/mu,
+    "clock colons must not truncate the Today prefix",
+  );
 
   assert.equal(
     normalizeSection1Icons(
@@ -1153,6 +1254,26 @@ function testSection4OutputContract(): void {
   assert.doesNotMatch(sanitized, /7[,.]2\s*mm|1018[,.]4 hPa/);
   assert.doesNotMatch(sanitized, /\d+[,.]\d+\s*(?:mm|hPa|°C)/i);
 
+  const negatedThunderstormOutput = enforceSection4Output(
+    [
+      "- Heute: Klar, kein Niederschlag, kein Gewittersignal; Temperatur rund 30 °C.",
+      "- Morgen: Wolkenlos und trocken; kein Gewitter.",
+      "- Mo–Do 24.–27.08.: Stabil und sonnig; ohne Gewitterrisiko.",
+    ].join("\n"),
+    {
+      todayLabel: "Sa 22.08.",
+      tomorrowLabel: "So 23.08.",
+      forecastOverviewLabel: "Mo–Do 24.–27.08.",
+    },
+    {
+      thunderstormAllowed: [false, false, false],
+    },
+  ) ?? "";
+  assert.match(negatedThunderstormOutput, /Klar, kein Niederschlag/);
+  assert.match(negatedThunderstormOutput, /Wolkenlos und trocken/);
+  assert.match(negatedThunderstormOutput, /Stabil und sonnig/);
+  assert.doesNotMatch(negatedThunderstormOutput, /Gewitter/i);
+
   const strippedOutput = enforceSection4Output(
     [
       "- Heute: 📉 Druckschwankung von 1016 auf 1014 hPa; ⛈️ Gewitterrisiko.",
@@ -1185,6 +1306,26 @@ function testSection4OutputContract(): void {
   ) ?? "";
   assert.match(expandedOverview, /Mittelmeerraum unter stabiler Hochdrucklage/);
   assert.doesNotMatch(expandedOverview, /Höchstwerte bis 34°C|bis zum Ende des Zeitraums/);
+}
+
+function testSubstantiveTwoBulletSections(): void {
+  assert.equal(
+    hasTwoSubstantiveBullets(
+      "- 🌍 Kaltfront zieht von Frankreich ostwärts.\n"
+      + "- 📍 Am Zielort liegt keine aktive Front.",
+    ),
+    true,
+  );
+  assert.equal(
+    hasTwoSubstantiveBullets("- 🌍 \n- 📍 Am Zielort liegt keine aktive Front."),
+    false,
+    "an icon-only bullet must never satisfy a required two-bullet section",
+  );
+  assert.equal(
+    hasTwoSubstantiveBullets("- 🌍 Europa-Lage."),
+    false,
+    "a required two-bullet section must contain exactly two bullets",
+  );
 }
 
 function testCloudBaseEstimate(): void {
@@ -1957,11 +2098,66 @@ function testResolvedLocalForecastPrecedence(): void {
 
 function testWindDirectionNormalization(): void {
   const normalized = normalizeWindDirectionMentions(
-    "- Heute: aus S/SSO, später SSW und NW/WNW, danach N/NO.",
+    "- Heute: aus S/SSO, später SSW und NW/WNW, danach N/NO; Leitha NW-W und NNW; später SO NW sowie NW bis W.",
   );
-  assert.equal(normalized, "- Heute: aus S, später SW und NW, danach NO.");
+  assert.equal(normalized, "- Heute: aus S, später SW und NW, danach NO; Leitha NW und N; später SO sowie NW.");
   assert.doesNotMatch(normalized, /\b(?:N|NNO|NO|ONO|O|OSO|SO|SSO|S|SSW|SW|WSW|W|WNW|NW|NNW)\s*\//);
   assert.doesNotMatch(normalized, /\b(?:NNO|NNW|ONO|OSO|SSO|SSW|WSW|WNW)\b/);
+  assert.doesNotMatch(
+    normalized,
+    /\b(?:N|NO|O|SO|S|SW|W|NW)(?:\s*(?:\/|[–—-])\s*|\s+bis\s+|\s+)(?:N|NO|O|SO|S|SW|W|NW)\b/,
+  );
+
+  assert.equal(normalizeWindUnits("W 8–16 kn; später O 7–12 Knoten."), "W 8–16 kt; später O 7–12 kt.");
+  assert.equal(
+    hasValidWindValueFormat(
+      "- Heute (Do 03.09.): W 8–16 kt.\n- Morgen (Fr 04.09.): O 7–12 kt.\n- Übermorgen (Sa 05.09.): Windprognose nicht verfügbar.\n- So–Di 06.–08.09.: NW 5–9 kt.",
+    ),
+    true,
+  );
+  assert.equal(
+    hasValidWindValueFormat(
+      "- Heute (Do 03.09.): NW-W 13–17 kt.\n- Morgen (Fr 04.09.): NNW 8–16 kt.\n- Übermorgen (Sa 05.09.): N 17 kt.\n- So–Di 06.–08.09.: SO NW 5–9 kt; W bis 11 kt.",
+    ),
+    false,
+    "composite/intermediate directions and every single kt value must invalidate the output",
+  );
+}
+
+function testCurrentHourTodayNormalization(): void {
+  assert.equal(
+    normalizeCurrentHourTodayStart(
+      "- Heute (Do 03.09.): ab 20 Uhr S 7–8 kt.\n- Morgen (Fr 04.09.): S 5–11 kt.",
+      20,
+      10,
+    ),
+    "- Heute (Do 03.09.): ab jetzt S 7–8 kt.\n- Morgen (Fr 04.09.): S 5–11 kt.",
+  );
+  assert.equal(
+    containsPastTodayContent("- Heute (Do 03.09.): ab 20:00 bedeckt.", 20, 10),
+    true,
+    "clock times without the word Uhr must still be checked against the request time",
+  );
+  assert.equal(
+    containsPastTodayContent("- Heute (Do 03.09.): ab jetzt bedeckt.", 20, 10),
+    false,
+  );
+}
+
+function testGreeceWarningTranslationValidation(): void {
+  assert.equal(
+    isValidGreeceWarningTranslation("Heute ab 20:44 Uhr: S/O 4–9 kt; See 2 schwach bewegt."),
+    false,
+    "normal HNMS forecast wind must never be accepted as a storm warning",
+  );
+  assert.equal(
+    isValidGreeceWarningTranslation("Gewittermöglichkeit im westlichen Teil."),
+    true,
+  );
+  assert.equal(
+    isValidGreeceWarningTranslation("Böen aus NO mit 35–40 Knoten möglich."),
+    true,
+  );
 }
 
 function testOfficialWarningRestoration(): void {
@@ -2047,6 +2243,32 @@ function testOfficialWarningRestoration(): void {
       + "- Übermorgen (Do 03.09.): NW 6–9 kt.\n"
       + "- Fr–So 04.–06.09.: Schwacher W-Wind.",
     "a generic model warning candidate must not remain below the authoritative warning",
+  );
+
+  const warningInsideCalendarForecast = ensureWarningFirst({
+    sources: {
+      nationalWarningCenter: { status: "integrated", label: "DHMZ Kroatien" },
+    },
+    weatherPreprocessed: {
+      local: {
+        warnings: {
+          checked: true,
+          text_de: "Aktuell: Böen aus NO mit 35–40 Knoten möglich.",
+        },
+      },
+    },
+  } as unknown as AnalysisJson, [
+    "- ⚠️ DHMZ-Warnung: Böen aus NO mit 35–40 Knoten.",
+    "- Do 03.09. ab jetzt: NW 14–20 kt; DHMZ warnt küstennah vor 35–40 Knoten ⚠️; See leicht bewegt.",
+    "- Fr 04.09.: N 4–9 kt.",
+    "- Sa 05.09.: S 4–12 kt.",
+    "- So–Di 06.–08.09.: W 3–7 kt.",
+  ].join("\n")) ?? "";
+  assert.match(warningInsideCalendarForecast, /Do 03\.09\. ab jetzt: NW 14–20 kt; See leicht bewegt\./);
+  assert.equal(
+    (warningInsideCalendarForecast.match(/35–40 Knoten/g) ?? []).length,
+    1,
+    "an embedded duplicate warning clause must be removed without deleting its calendar forecast",
   );
 }
 
@@ -2145,6 +2367,7 @@ function testResolvedForecastExportFeedsCharts(): void {
 async function main(): Promise<void> {
   testCloudTypeClassification();
   testSection4OutputContract();
+  testSubstantiveTwoBulletSections();
   testCloudBaseEstimate();
   testCityMeteogramCloudBands();
   testSeaWindForecast();
@@ -2156,6 +2379,8 @@ async function main(): Promise<void> {
   testCityMeteogramMalformedArrays();
   testResolvedLocalForecastPrecedence();
   testWindDirectionNormalization();
+  testCurrentHourTodayNormalization();
+  testGreeceWarningTranslationValidation();
   testOfficialWarningRestoration();
   testResolvedForecastExportFeedsCharts();
   await withFixedDate(async () => {

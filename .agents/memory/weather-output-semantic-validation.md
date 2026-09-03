@@ -22,3 +22,33 @@ Every section's completeness must be validated again after deterministic normali
 **Why:** A formally complete weather section can become empty when clauses are removed by output constraints. Wind and warning cleanup can also delete a forecast tail that existed in the raw response.
 
 **How to apply:** Validate required line counts and forbidden cross-section content on final normalized text inside the correction loop. Retry failures and never persist or render them as completed analyses.
+
+Forecast dates must be canonicalized by sequence after the warning block, and “today” content must be evaluated against the immutable request timestamp.
+
+**Why:** Mixed relative/calendar labels produced duplicate “Heute” lines and shifted later dates. Clock colons such as `20:50` were also mistaken for label delimiters, and completion-time checks falsely aged valid near-future text during long LLM calls.
+
+**How to apply:** Map the four forecast rows positionally to Today, Tomorrow, Day After Tomorrow, and Tail; parse labels without splitting on clock colons; reject past Today content using the analysis request instant.
+
+Every numeric forecast wind value is a sustained-wind/gust pair, and every direction token belongs to the eight-point compass.
+
+**Why:** Single values and compound directions such as `NNW`, `NW-W`, or adjacent `SO NW` are ambiguous for sailors and violate the product's compact wind notation.
+
+**How to apply:** Require `lower–upper kt` for every numeric wind mention; allow only N, NO, O, SO, S, SW, W, NW; normalize composites and reject any invalid final forecast before display.
+
+National warning blocks may contain official continuation lines, but only their first bullet counts as the single warning status. A repeated warning clause inside a dated forecast must be removed without deleting that forecast row.
+
+**Why:** Official multiline warnings were miscounted as duplicate statuses, while an embedded DHMZ clause caused an otherwise valid Today row to be discarded and shifted all later dates forward.
+
+**How to apply:** Distinguish physical warning lines from warning bullets, recognize relative and calendar-prefixed forecast rows before cleanup, and strip only redundant warning clauses from those rows.
+
+Required short sections must remain substantive after icon and clause normalization. A symbol-only bullet is incomplete even if the expected line count is present.
+
+**Why:** A generated Europe-front bullet containing only its globe icon passed the former line-count checks and was persisted as a completed analysis.
+
+**How to apply:** Validate both required bullets in sections 1 and 2 for meaningful letter content inside the same correction loop used for wind and weather sections.
+
+When Today starts at the current full hour but the request was made later in that hour, rewrite that boundary to “ab jetzt”; do not weaken past-time checks.
+
+**Why:** Hourly forecast data prompted phrases such as “ab 20 Uhr” at 20:10, which technically included elapsed time and repeatedly exhausted correction attempts.
+
+**How to apply:** Normalize only an `ab` boundary in the current hour to “ab jetzt”; continue rejecting references to earlier hours and completed day periods.
