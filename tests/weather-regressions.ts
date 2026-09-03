@@ -29,7 +29,9 @@ import {
   containsPastTodayContent,
   hasValidWindValueFormat,
   hasTwoSubstantiveBullets,
+  hasConciseWindInterpretation,
   normalizeCurrentHourTodayStart,
+  normalizeCalmThresholdMentions,
   normalizeWindDirectionMentions,
   normalizeWindUnits,
   normalizeSection1Icons,
@@ -2107,8 +2109,17 @@ function testWindDirectionNormalization(): void {
     normalized,
     /\b(?:N|NO|O|SO|S|SW|W|NW)(?:\s*(?:\/|[–—-])\s*|\s+bis\s+|\s+)(?:N|NO|O|SO|S|SW|W|NW)\b/,
   );
+  assert.equal(
+    normalizeWindDirectionMentions("- Morgen: N/NE, danach SE."),
+    "- Morgen: NO, danach SO.",
+    "English compass abbreviations in generated forecast prose must be localized before eight-point normalization",
+  );
 
   assert.equal(normalizeWindUnits("W 8–16 kn; später O 7–12 Knoten."), "W 8–16 kt; später O 7–12 kt.");
+  assert.equal(
+    normalizeCalmThresholdMentions("Der Wind bricht auf unter 3 kt zusammen; später unter 2 kt."),
+    "Der Wind bricht bis zur Flaute zusammen; später nahezu Flaute.",
+  );
   assert.equal(
     hasValidWindValueFormat(
       "- Heute (Do 03.09.): W 8–16 kt.\n- Morgen (Fr 04.09.): O 7–12 kt.\n- Übermorgen (Sa 05.09.): Windprognose nicht verfügbar.\n- So–Di 06.–08.09.: NW 5–9 kt.",
@@ -2141,6 +2152,48 @@ function testCurrentHourTodayNormalization(): void {
   assert.equal(
     containsPastTodayContent("- Heute (Do 03.09.): ab jetzt bedeckt.", 20, 10),
     false,
+  );
+}
+
+function testConciseWindInterpretationContract(): void {
+  assert.equal(
+    hasConciseWindInterpretation([
+      "- Heute (Do 03.09.): Bestes Windfenster bis Mitternacht mit NW 15–22 kt; danach nachlassend auf NW 10–19 kt.",
+      "- Morgen (Fr 04.09.): Vormittags böiger NW 6–21 kt als beste Segelphase; danach deutlich schwächer.",
+      "- Übermorgen (Sa 05.09.): Markantes kurzes N-Fenster mit 24–35 kt, danach nachlassend.",
+      "- So–Di 06.–08.09.: So S 5–16 kt; Mo O 1–7 kt; Di S 11–19 kt.",
+    ].join("\n")),
+    true,
+  );
+  assert.equal(
+    hasConciseWindInterpretation([
+      "- Heute (Do 03.09.): NW 15–22 kt, danach NW 10–19 kt.",
+      "- Morgen (Fr 04.09.): morgens NW 6–21 kt, mittags W 8–19 kt, nachmittags S 9–15 kt.",
+      "- Übermorgen (Sa 05.09.): N 24–35 kt.",
+      "- So–Di 06.–08.09.: So S 5–16 kt; Mo O 1–7 kt; Di S 11–19 kt.",
+    ].join("\n")),
+    false,
+    "three chart values in one daily bullet must be rejected as transcription",
+  );
+  assert.equal(
+    hasConciseWindInterpretation([
+      "- Heute (Do 03.09.): Der nachlassende Druckgradient baut den Leitha-Kanalisierungseffekt bei NW 7–14 kt ab.",
+      "- Morgen (Fr 04.09.): Morgens Flaute SW 3–6 kt, danach Leitha NW 10–17 kt; der Frontdurchgang dreht den Wind auf S 5–14 kt.",
+      "- Übermorgen (Sa 05.09.): Der Kaltsektor spricht für erneuten Leithaeinsatz von NW 5–8 kt auf N 10–22 kt.",
+      "- So–Di 06.–08.09.: So NW 5–16 kt; Mo S 6–13 kt; Di S 10–19 kt.",
+    ].join("\n")),
+    true,
+    "an extra value may support a distinct local mechanism instead of merely transcribing the chart",
+  );
+  assert.equal(
+    hasConciseWindInterpretation([
+      "- Heute (Do 03.09.): NW 15–22 kt.",
+      "- Morgen (Fr 04.09.): Spitze um 09 Uhr mit NW 6–21 kt.",
+      "- Übermorgen (Sa 05.09.): N 24–35 kt.",
+      "- So–Di 06.–08.09.: So S 5–16 kt; Mo O 1–7 kt; Di S 11–19 kt.",
+    ].join("\n")),
+    false,
+    "peak-time chart narration must not pass the interpretation contract",
   );
 }
 
@@ -2380,6 +2433,7 @@ async function main(): Promise<void> {
   testResolvedLocalForecastPrecedence();
   testWindDirectionNormalization();
   testCurrentHourTodayNormalization();
+  testConciseWindInterpretationContract();
   testGreeceWarningTranslationValidation();
   testOfficialWarningRestoration();
   testResolvedForecastExportFeedsCharts();

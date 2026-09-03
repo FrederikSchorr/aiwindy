@@ -11,14 +11,14 @@ const LOCATIONS = [
   { country: "GR", query: "Lefkada" },
   { country: "GR", query: "Paros" },
   { country: "GR", query: "Korfu" },
+  { country: "GR", query: "Kos Griechenland" },
+  { country: "GR", query: "Rhodos Griechenland" },
   { country: "AT", query: "Weiden am See" },
-  { country: "AT", query: "Rust am Neusiedler See" },
   { country: "AT", query: "Gmunden am Traunsee" },
   { country: "AT", query: "Klagenfurt am Wörthersee" },
   { country: "HR", query: "Punat Kroatien" },
   { country: "HR", query: "Split Kroatien" },
   { country: "HR", query: "Hvar Kroatien" },
-  { country: "HR", query: "Rovinj Kroatien" },
 ] as const;
 
 type CountryCode = typeof LOCATIONS[number]["country"];

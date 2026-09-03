@@ -44,6 +44,13 @@ Für alle Abschnitte gilt:
 - höchstens einmal `böig`, nur wenn gestützt
 - interpretiert markante Verstärkung, Abschwächung, Drehung, Flaute, starke Phase oder passendes lokales Windsystem
 - keine stündliche Transkription des Windcharts
+- jeder Bullet beginnt mit der seglerischen Kernaussage; Werte dienen nur als Beleg
+- heute und morgen in der Regel höchstens zwei Wind-/Böen-Paare, übermorgen höchstens eines, im Ausblick höchstens eines pro Tag
+- ein zusätzlicher Tageswert ist nur erlaubt, wenn er einen eigenen lokal oder frontal verursachten Übergang belegt
+- keine Peak-Transkriptionen wie `Spitze um 09 Uhr`
+- lokale Windsysteme und thermische, Düsen-, Kanalisierungs-, Lee- oder Fallwindeffekte haben Vorrang, wenn Region und Verlauf sie stützen
+- erklärt die seglerische Folge lokaler Effekte, etwa Böigkeit, räumliche Unterschiede oder Verlässlichkeit des Windfensters
+- plausible, aber nicht ausdrücklich bestätigte lokale Mechanismen werden vorsichtig eingeordnet und niemals als sichere Ursache erfunden
 - heute darf konkrete Zeiten nennen; morgen nur grobe Tagesphasen; Übermorgen und Ausblick bleiben zunehmend zusammenfassend
 - Wellendaten nur nennen, wenn sie für die Zielkoordinaten tatsächlich vorhanden sind
 - fehlen Wellendaten, werden Wellen, Seegang, Wellen-Icons und Verfügbarkeitshinweise vollständig ignoriert
@@ -64,9 +71,9 @@ Für alle Abschnitte gilt:
 
 | Land | Orte |
 |---|---|
-| Griechenland | Meganisi, Lefkada, Paros, Korfu |
-| Österreich | Weiden am See, Rust, Gmunden, Klagenfurt |
-| Kroatien | Punat, Split, Hvar, Rovinj |
+| Griechenland | Meganisi, Lefkada, Paros, Korfu, Kos, Rhodos |
+| Österreich | Weiden am See, Gmunden, Klagenfurt |
+| Kroatien | Punat, Split, Hvar |
 
 Ausführung:
 

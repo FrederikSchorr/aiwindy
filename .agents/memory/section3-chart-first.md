@@ -11,6 +11,18 @@ Section 3 should preserve the fixed order of warning, today, tomorrow, day after
 
 **How to apply:** Keep local wind and warning data authoritative. Mention only salient strengthening, weakening, shifts, lulls, peaks, or hazards; use broad synoptic context only when it clearly supports the local evolution.
 
+Local wind mechanisms are the preferred interpretive value: named regional systems, thermal cycles, funneling/channeling, lee or downslope effects, and coastal convergence should explain sailing-window reliability, gustiness, or spatial unevenness when supported.
+
+**Why:** A technically correct sequence of chart values remained uninteresting, while explanations such as Leitha channeling, pressure-gradient decay, frontal turning, and cold-sector roughness added actionable sailing context.
+
+**How to apply:** Lead each daily bullet with the sailing implication or local mechanism and use values only as evidence. Phrase merely plausible mechanisms cautiously; never infer a cause from direction alone. Permit one extra transition value when it is necessary to explain a distinct supported mechanism, but continue rejecting value-only timelines.
+
+Every new final-output constraint must also be stated explicitly in the correction prompt, including per-day value limits and interpretation requirements.
+
+**Why:** The initial prompt and validator required concise interpretation, but correction attempts repeated only format and direction rules. Six diverse locations then exhausted all retries with the same over-detailed outlook shape.
+
+**How to apply:** Keep initial generation rules, correction instructions, and final validators in lockstep. When a multi-location run fails the same check everywhere, inspect correction-prompt parity before weakening the validator.
+
 Generated wind text must not use `SSW`; normalize that southwest sector to `SW`. Official warning text remains verbatim even if the warning centre itself uses finer direction wording.
 
 **Why:** The requested user-facing granularity stops at `SW`, while official warnings must never be rewritten.

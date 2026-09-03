@@ -33,11 +33,14 @@ function normalizeWindDirection(direction: string): typeof WIND_DIRECTIONS_8[num
 }
 
 export function normalizeWindDirectionMentions(text: string): string {
+  const localizedText = text
+    .replace(/\bNE\b/g, "NO")
+    .replace(/\bSE\b/g, "SO");
   const pairPattern = new RegExp(
     `\\b(${WIND_DIRECTION_TOKEN})(?:\\s*(?:/|[–—-])\\s*|\\s+bis\\s+|\\s+)(${WIND_DIRECTION_TOKEN})\\b`,
     "gi",
   );
-  return text.replace(pairPattern, (_match, first: string, second: string) => {
+  return localizedText.replace(pairPattern, (_match, first: string, second: string) => {
     const normalizedFirst = normalizeWindDirection(first);
     const normalizedSecond = normalizeWindDirection(second);
     const firstIndex = WIND_DIRECTIONS_8.indexOf(normalizedFirst);
@@ -203,11 +206,15 @@ Inputs: der kanonische Block LOKALER STÜNDLICHER WIND, preprocessed.local.wave 
 - Prognosebullets 2–5 beginnen jeweils mit ihrem Zeit-/Datumspräfix, niemals mit einem Emoji. Heute und Morgen enthalten Wind und nur bei vorhandenen preprocessed.local.wave.text_de die passende Seegangsstärke im selben Bullet; Wellendaten als Douglas-Skala, ohne Richtung, Periode oder Dünung. Wenn preprocessed.local.wave.text_de fehlt, Wellendaten und Seegang vollständig ignorieren und keinerlei Hinweis auf fehlende Wellendaten ausgeben.
 - Die Tabelle ist für konkrete Werte maßgeblich: Wind_kt und Böe_kt derselben Zeile gehören zusammen. Ein konkreter Wert wird immer als Bereich ausgegeben, z.B. "Meltemi NW 23–32 kt"; niemals nur den Windwert nennen und niemals "Wind 3 kt, Böen 6 kt".
 - JEDE numerische Windstärke hat ausnahmslos genau zwei Werte im Format "Wind–Böe kt", z.B. "8–16 kt". Einzelwerte wie "8 kt", "bis 17 kt" oder "auf 10 kt" sind verboten. Auch jede Verstärkung, Abschwächung und jeder Mehrtageswert muss als solches Paar erscheinen.
-- Interpretiere den Verlauf statt alle Stunden aufzuzählen. Nenne höchstens 1–2 markante Entwicklungen wie Verstärkung, Abschwächung, Richtungswechsel, Flaute oder starke/stürmische Phase. Heute sind konkrete Uhrzeiten, morgen nur grobe Tageszeiten erlaubt.
+- Schreibe eine seglerische Interpretation, keine Nacherzählung des Prognosecharts. Beginne jeden Bullet mit der Kernaussage: nutzbares Windfenster, problematische Phase, markanter Dreher, Flaute, stabiler Charakter oder lokales Windsystem. Konkrete Werte belegen diese Aussage nur.
+- Der wichtigste Zusatznutzen sind lokale Windmechanismen: benannte regionale Windsysteme, thermische Verstärkung oder Zusammenbruch, Düsen-/Kanalisierungseffekt, Fallwind, Lee-Effekt oder Küstenkonvergenz. Ordne daraus Böigkeit, räumliche Ungleichmäßigkeit und Verlässlichkeit des Segelfensters ein.
+- Nenne einen solchen lokalen Effekt nur, wenn er zum Zielrevier und zum sichtbaren Verlauf passt oder im nationalen/lokalen Windkontext ausdrücklich gestützt ist. Bei plausibler, aber nicht ausdrücklich bestätigter Zuordnung vorsichtig "spricht für …" schreiben; niemals eine lokale Ursache erfinden. Die lokalen Tabellenwerte bleiben maßgeblich.
+- Heute und morgen enthalten in der Regel höchstens zwei Wind–Böe-Paare, Übermorgen höchstens eines. Ein zusätzlicher Wert ist nur zulässig, wenn er einen eigenen, seglerisch relevanten Übergang durch einen konkret erklärten lokalen Windmechanismus oder Frontdurchgang belegt. Im Mehrtagesausblick höchstens ein Paar pro Tag. Gleichförmige Stunden zusammenfassen; keine Folge aus morgens/mittags/nachmittags/abends mit jeweils neuem Wert.
+- Heute sind konkrete Uhrzeiten nur für Beginn oder Ende eines wirklich markanten Windfensters erlaubt, morgen nur grobe Tageszeiten. Keine Formulierungen wie "Spitze um …", keine bloße Aufzählung von Maxima.
 - "böig" höchstens einmal und nur, wenn der jeweilige Tagesblock dies ausdrücklich stützt. Niemals "ungewöhnlich böig". Keine separate Böen-Spitze, kein "Böen bis …" und keine redundante Wiederholung desselben oberen Windwerts.
 - Übermorgen nur die wichtigste Tendenz ohne Stundenwerte. Der letzte Bullet beginnt exakt mit "${forecastTailLabel}:" und fasst die weiteren Tage großflächig zusammen; pro Tag höchstens eine Windstärkekategorie.
 - Richtungsangaben ausschließlich als genau eines dieser acht Kürzel schreiben: N, NO, O, SO, S, SW, W oder NW. Niemals Zwischenrichtungen wie NNW, WNW oder SSO und niemals zusammengesetzte Kürzel wie NW-W, NW/W oder SO-NW verwenden. Bei Windstärken ab 40 kt ⚠️ ergänzen. Wenn Winddaten fehlen, transparent "Windprognose aus regionalem Wetterbericht nicht verfügbar." ausgeben.
-- Für ${locationLabel} dürfen geographisch passende Windsysteme genannt werden, aber sie ersetzen niemals die lokalen Tabellenwerte.`;
+- Für ${locationLabel} soll bei klarer Evidenz der passende lokale Mechanismus erklärt werden, statt nur dessen Namen anzuhängen. Beschreibe knapp, wodurch er verstärkt, kanalisiert oder abgebaut wird und welche seglerische Konsequenz daraus folgt; er ersetzt niemals die lokalen Tabellenwerte.`;
 }
 
 function buildSection4Rules(
@@ -508,12 +515,14 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel, currentLo
       const generatedWindText = softenGustyDescriptions(
         stripRedundantWindRangeMentions(
           stripRedundantGustMentions(
-            normalizeWindUnits(combineWindAndGustMentions(
-              restoreWindGustRanges(
-                stripStrongestGustMentions(normalizeWindDirectionMentions(text)),
-                local["wind"]?.text_de,
-              ),
-            )),
+            normalizeCalmThresholdMentions(
+              normalizeWindUnits(combineWindAndGustMentions(
+                restoreWindGustRanges(
+                  stripStrongestGustMentions(normalizeWindDirectionMentions(text)),
+                  local["wind"]?.text_de,
+                ),
+              )),
+            ),
           ),
         ),
       );
@@ -549,6 +558,10 @@ Die Heute-Bullets dürfen nur die Zukunft ab ${currentLocal.label} beschreiben; 
 Liegt der Analysezeitpunkt nach der vollen Stunde, schreibe für einen Beginn in derselben laufenden Stunde "ab jetzt" statt "ab HH Uhr".
 Abschnitt 1 und Abschnitt 2 müssen jeweils exakt zwei inhaltlich vollständige Bullets enthalten; ein Bullet nur mit Symbol ist unzulässig.
 Abschnitt 3: Jede numerische Windstärke muss genau als Wind–Böe-Paar wie "8–16 kt" erscheinen, niemals als Einzelwert. Jede Richtung muss genau eines der Kürzel N, NO, O, SO, S, SW, W oder NW sein; keine Zwischen- oder Kombinationsrichtung.
+Abschnitt 3 muss interpretieren statt das Chart nachzuerzählen: Beginne jeden Prognosebullet mit Windfenster, lokalem Windmechanismus, markantem Dreher, Flaute oder seglerischer Konsequenz. Werte dienen nur als Beleg.
+Heute und morgen in der Regel höchstens zwei Wind–Böe-Paare, Übermorgen höchstens eines. Ein zusätzlicher Übergangswert ist nur mit konkret erklärtem lokalem Effekt oder Frontdurchgang erlaubt.
+Im letzten Mehrtagesbullet pro Tag ausnahmslos höchstens ein Wind–Böe-Paar; keine getrennte Morgen-/Nachmittags-/Abendfolge desselben Tages und insgesamt höchstens drei Paare.
+Keine Peak-Transkription wie "Spitze um 09 Uhr". Gleichförmige Stunden zu einer Tendenz zusammenfassen.
 Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschnittsmarker und ===END=== erneut ausgeben.`,
           },
         ];
@@ -582,6 +595,7 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
           expectedWarningLineCount,
         )
         && hasValidWindValueFormat(windWavesText ?? undefined)
+        && hasConciseWindInterpretation(windWavesText ?? undefined, expectedWarningLineCount)
         && !containsPastTodayContent(windWavesText ?? undefined, currentLocal.hour, currentLocal.minute)
         && Boolean(cloudsRainText)
         && hasCompleteCloudForecast(cloudsRainText ?? undefined)
@@ -602,6 +616,7 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
         expectedWarningLineCount,
       )
       || !hasValidWindValueFormat(windWavesText ?? undefined)
+      || !hasConciseWindInterpretation(windWavesText ?? undefined, expectedWarningLineCount)
       || containsPastTodayContent(windWavesText ?? undefined, currentLocal.hour, currentLocal.minute)
       || !cloudsRainText
       || !hasCompleteCloudForecast(cloudsRainText)
@@ -627,6 +642,10 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
             expectedWarningLineCount,
           ),
           windValueFormat: !hasValidWindValueFormat(windWavesText ?? undefined),
+          conciseWindInterpretation: !hasConciseWindInterpretation(
+            windWavesText ?? undefined,
+            expectedWarningLineCount,
+          ),
           pastWindToday: containsPastTodayContent(
             windWavesText ?? undefined,
             currentLocal.hour,
@@ -993,6 +1012,12 @@ export function normalizeWindUnits(text: string): string {
   return text.replace(/\b(?:kn|Knoten)\b/gi, "kt");
 }
 
+export function normalizeCalmThresholdMentions(text: string): string {
+  return text
+    .replace(/\bauf\s+unter\s+[0-3](?:[.,]\d+)?\s*kt\b/gi, "bis zur Flaute")
+    .replace(/\bunter\s+[0-3](?:[.,]\d+)?\s*kt\b/gi, "nahezu Flaute");
+}
+
 export function hasValidWindValueFormat(text: string | undefined): boolean {
   if (!text) return false;
   const forecasts = text
@@ -1017,6 +1042,29 @@ export function hasValidWindValueFormat(text: string | undefined): boolean {
   );
   return !/\b\d+(?:[.,]\d+)?\s*(?:kt|kn|Knoten)\b/i.test(withoutValidPairs)
     && !/\b(?:kn|Knoten)\b/i.test(forecasts);
+}
+
+export function hasConciseWindInterpretation(
+  text: string | undefined,
+  warningLineCount = 0,
+): boolean {
+  if (!text) return false;
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const forecastLines = lines.slice(warningLineCount);
+  if (forecastLines.length !== 4) return false;
+  const pairPattern = /\b\d+(?:[.,]\d+)?\s*[–-]\s*\d+(?:[.,]\d+)?\s*kt\b/gi;
+  const standardMaximumPairs = [2, 2, 1, 3];
+  const absoluteMaximumPairs = [3, 3, 2, 3];
+  const interpretiveSignal =
+    /\b(?:Leitha|Meltemi|Bora|Maestral|therm\w*|Düsen?\w*|Kanalis\w*|Fallwind\w*|Lee(?:effekt)?|Konvergenz\w*|Druckgradient\w*|Kaltsektor\w*|Frontdurchgang\w*|Segelfenster\w*|räumlich\w*|böig)\b/i;
+  if (forecastLines.some((line, index) => {
+    const pairCount = (line.match(pairPattern) ?? []).length;
+    return pairCount > absoluteMaximumPairs[index]
+      || (pairCount > standardMaximumPairs[index] && !interpretiveSignal.test(line));
+  })) return false;
+  return !forecastLines.some(line =>
+    /\b(?:Spitze|Maximum|Höchstwert)\s+(?:um|gegen)\s+\d{1,2}(?::\d{2})?\b/i.test(line)
+  );
 }
 
 export function restoreWindGustRanges(text: string, localWindText: unknown): string {
