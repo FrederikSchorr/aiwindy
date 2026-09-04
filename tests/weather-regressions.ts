@@ -46,7 +46,10 @@ import {
   getSanitizedAnalysisExport,
   type AnalysisJson,
 } from "../server/analysis-store.js";
-import { resolveSailingAreaAlias } from "../server/location.js";
+import {
+  classifyStandaloneSeaArea,
+  resolveSailingAreaAlias,
+} from "../server/location.js";
 import {
   HNMS_BULLETIN_URL,
   isValidGreeceWarningTranslation,
@@ -394,6 +397,32 @@ function testIonianOffshoreAliases(): void {
     assert.ok(
       Math.abs(westwardDistanceNm - 35) < 0.05,
       `${input} must resolve about 35 nm west of the former longitude`,
+    );
+  }
+}
+
+function testStandaloneSeaAreaClassification(): void {
+  for (const input of [
+    "Ionisches Meer",
+    "Ionisches Meer Nord",
+    "Ionisches Meer Nord Offshore (Griechenland)",
+    "Adria Mitte",
+  ]) {
+    assert.equal(
+      classifyStandaloneSeaArea(input)?.type,
+      "ANALYSE",
+      `standalone sea area "${input}" must start a weather analysis`,
+    );
+  }
+  for (const input of [
+    "Typische Windsysteme im Ionischen Meer",
+    "Welche Windsysteme gibt es im Ionischen Meer?",
+    "Ionisches Meer typische Windsysteme",
+  ]) {
+    assert.equal(
+      classifyStandaloneSeaArea(input),
+      null,
+      `sea-area question "${input}" must remain available to chat classification`,
     );
   }
 }
@@ -2438,6 +2467,7 @@ function testResolvedForecastExportFeedsCharts(): void {
 
 async function main(): Promise<void> {
   testIonianOffshoreAliases();
+  testStandaloneSeaAreaClassification();
   testCloudTypeClassification();
   testSection4OutputContract();
   testSubstantiveTwoBulletSections();

@@ -173,6 +173,29 @@ export function resolveSailingAreaAlias(locationName: string): DetectLocationRes
   };
 }
 
+export function classifyStandaloneSeaArea(
+  message: string,
+): { type: "ANALYSE"; location: string } | null {
+  const normalizedMessage = normalizeKey(message);
+  if (SAILING_AREA_ALIASES[normalizedMessage]) {
+    return { type: "ANALYSE", location: message.trim() };
+  }
+
+  const data = loadSegelreviere();
+  for (const { reviere } of Object.values(data)) {
+    const revier = reviere.find((candidate) => {
+      if (candidate.typ !== "meer") return false;
+      const canonicalName = normalizeKey(candidate.deutsch);
+      const nameWithoutCountry = normalizeKey(
+        candidate.deutsch.replace(/\s*\([^)]*\)\s*$/, ""),
+      );
+      return normalizedMessage === canonicalName || normalizedMessage === nameWithoutCountry;
+    });
+    if (revier) return { type: "ANALYSE", location: revier.deutsch };
+  }
+  return null;
+}
+
 function buildRevierList(data: SegelreviereData): string {
   const lines: string[] = [];
   for (const [land, { reviere }] of Object.entries(data)) {
@@ -353,6 +376,9 @@ export async function classifyMessage(
   type: "ANALYSE" | "CHAT" | "UNCLEAR" | "OFFTOPIC";
   location?: string;
 }> {
+  const standaloneSeaArea = classifyStandaloneSeaArea(message);
+  if (standaloneSeaArea) return standaloneSeaArea;
+
   try {
     const activeLocInfo =
       hasActiveLocation && activeLocationName
