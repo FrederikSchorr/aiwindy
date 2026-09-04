@@ -1193,6 +1193,22 @@ function testSection4OutputContract(): void {
     "clock colons must not truncate the Today prefix",
   );
 
+  const calendarOnlyOutput = enforceSection4Output(
+    [
+      "- Fr 04.09.: ☀️ Ab jetzt heiter und trocken.",
+      "- Sa 05.09.: ☀️ Durchgehend klar und trocken.",
+      "- So–Mi 06.–09.09.: ☀️ Sonnig und trocken.",
+    ].join("\n"),
+    {
+      todayLabel: "Fr 04.09.",
+      tomorrowLabel: "Sa 05.09.",
+      forecastOverviewLabel: "So–Mi 06.–09.09.",
+    },
+  ) ?? "";
+  assert.match(calendarOnlyOutput, /^- Heute \(Fr 04\.09\.\): ☀️ Ab jetzt heiter und trocken\.$/m);
+  assert.match(calendarOnlyOutput, /^- Morgen \(Sa 05\.09\.\): ☀️ Durchgehend klar und trocken\.$/m);
+  assert.match(calendarOnlyOutput, /^- So–Mi 06\.–09\.09\.: ☀️ Sonnig und trocken\.$/m);
+
   assert.equal(
     normalizeSection1Icons(
       "🌀 Hochdruckrücken breitet sich ostwärts aus.\n"

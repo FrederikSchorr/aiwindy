@@ -541,6 +541,7 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel, currentLo
         typeof local["wave"]?.text_de === "string" && Boolean(local["wave"].text_de.trim()),
       );
     };
+    let retryFeedback = "";
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (attempt > 0) onRetry?.((attempt + 1) as 2 | 3);
       const messages: Anthropic.Messages.MessageParam[] = attempt === 0
@@ -551,6 +552,8 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel, currentLo
           {
             role: "user",
             content: `Korrigiere den vollständigen Output und gib alle vier Abschnitte erneut aus.
+Beim vorigen Output schlugen genau diese Prüfungen fehl: ${retryFeedback}.
+Korrigiere gezielt nur diese Mängel und bewahre die bereits gültigen Inhalte.
 Abschnitt 3 muss zusätzlich zur optionalen Warnzeile exakt vier eigene Prognosezeilen enthalten:
 Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}.
 Abschnitt 4 muss exakt drei eigene Prognosezeilen enthalten:
@@ -587,25 +590,54 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
         )
         : null;
       windWavesText = parsed ? finalizeWindText(parsed.windWaves) : null;
-      if (
-        parsed
-        && hasTwoSubstantiveBullets(normalizeSection1Icons(parsed.airPressureMasses ?? null))
-        && hasTwoSubstantiveBullets(normalizeSection2Icons(parsed.weatherFront ?? null, locationLabel))
-        && hasCanonicalWindForecast(
+      const failedChecks = {
+        parsed: !parsed,
+        completeSection1: !hasTwoSubstantiveBullets(
+          normalizeSection1Icons(parsed?.airPressureMasses ?? null),
+        ),
+        completeSection2: !hasTwoSubstantiveBullets(
+          normalizeSection2Icons(parsed?.weatherFront ?? null, locationLabel),
+        ),
+        canonicalWind: !hasCanonicalWindForecast(
           windWavesText ?? undefined,
           { todayLabel, tomorrowLabel, dayAfterTomorrowLabel, forecastTailLabel },
           expectedWarningLineCount,
-        )
-        && hasValidWindValueFormat(windWavesText ?? undefined)
-        && hasConciseWindInterpretation(windWavesText ?? undefined, expectedWarningLineCount)
-        && !containsPastTodayContent(windWavesText ?? undefined, currentLocal.hour, currentLocal.minute)
-        && Boolean(cloudsRainText)
-        && hasCompleteCloudForecast(cloudsRainText ?? undefined)
-        && !hasForbiddenSection4Content(cloudsRainText ?? undefined)
-        && !containsPastTodayContent(cloudsRainText ?? undefined, currentLocal.hour, currentLocal.minute)
-      ) break;
+        ),
+        windValueFormat: !hasValidWindValueFormat(windWavesText ?? undefined),
+        conciseWindInterpretation: !hasConciseWindInterpretation(
+          windWavesText ?? undefined,
+          expectedWarningLineCount,
+        ),
+        pastWindToday: containsPastTodayContent(
+          windWavesText ?? undefined,
+          currentLocal.hour,
+          currentLocal.minute,
+        ),
+        completeCloud: !cloudsRainText || !hasCompleteCloudForecast(cloudsRainText),
+        forbiddenCloudContent: hasForbiddenSection4Content(cloudsRainText ?? undefined),
+        pastCloudToday: containsPastTodayContent(
+          cloudsRainText ?? undefined,
+          currentLocal.hour,
+          currentLocal.minute,
+        ),
+      };
+      if (Object.values(failedChecks).every(failed => !failed)) break;
+
+      const failedNames = Object.entries(failedChecks)
+        .filter(([, failed]) => failed)
+        .map(([name]) => name);
+      retryFeedback = failedNames.join(", ");
+      if (failedChecks.conciseWindInterpretation) {
+        retryFeedback += ". Zähle die Wind–Böe-Paare in jeder Abschnitt-3-Zeile: "
+          + "Heute maximal 2, Morgen maximal 2, Übermorgen maximal 1 und im Mehrtagesausblick "
+          + "maximal 1 je Tag sowie 3 insgesamt. Nur bei einem in derselben Zeile konkret erklärten "
+          + "lokalen Effekt oder Frontdurchgang darf Heute/Morgen ein drittes und Übermorgen ein zweites Paar enthalten";
+      }
       if (attempt < 2) {
-        console.warn("generateWeatherOutput: retrying incomplete forecast sections");
+        console.warn("generateWeatherOutput: retrying incomplete forecast sections", {
+          attempt: attempt + 1,
+          failedChecks,
+        });
       }
     }
     if (
@@ -952,15 +984,25 @@ export function enforceCloudForecastDatePrefixes(
   },
 ): string | null {
   if (!text) return text;
+  const canonicalPrefixes = [
+    `- Heute (${labels.todayLabel}):`,
+    `- Morgen (${labels.tomorrowLabel}):`,
+    `- ${labels.forecastOverviewLabel}:`,
+  ];
+  let forecastIndex = 0;
   return text
     .split("\n")
     .map((line) => {
-      const withToday = replaceRelativeDatePrefix(line, "Heute", labels.todayLabel);
-      const withTomorrow = replaceRelativeDatePrefix(withToday, "Morgen", labels.tomorrowLabel);
-      return withTomorrow.replace(
-        DATE_RANGE_PREFIX,
-        `$1- ${labels.forecastOverviewLabel}:`,
-      );
+      const isForecastLine = /^\s*(?:-\s*)?(?:Heute|Morgen)\b/i.test(line)
+        || /^\s*(?:-\s*)?(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?(?:\s|:)/i.test(line)
+        || DATE_RANGE_PREFIX.test(line);
+      if (!isForecastLine || forecastIndex >= canonicalPrefixes.length) return line;
+
+      const body = forecastBodyAfterLabel(line);
+      if (!body) return line;
+      const prefix = canonicalPrefixes[forecastIndex];
+      forecastIndex += 1;
+      return `${prefix} ${body}`;
     })
     .join("\n");
 }

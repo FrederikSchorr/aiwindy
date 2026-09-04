@@ -287,8 +287,8 @@ function markdown(results: LocationResult[]): string {
     const output = result.output;
     return `## ${result.country} – ${result.query}
 
-Erkannt: ${result.location?.displayName ?? "nicht erkannt"}  
-Revier: ${result.location?.sailingArea ?? "—"}  
+Erkannt: ${result.location?.displayName ?? "nicht erkannt"}
+Revier: ${result.location?.sailingArea ?? "—"}
 Fehler: ${result.error ?? "keiner"}
 
 ${issueLines.length ? issueLines.join("\n") : "- Alle automatischen Prüfungen bestanden."}
@@ -312,8 +312,8 @@ ${output?.cloudsRain?.text ?? "_leer_"}
   });
   return `# aiWindy Mehrort-Outputtest
 
-Basis-URL: ${BASE_URL}  
-Zeitpunkt: ${new Date().toISOString()}  
+Basis-URL: ${BASE_URL}
+Zeitpunkt: ${new Date().toISOString()}
 Orte: ${results.length}
 
 | Land | Eingabe | Erkanntes Revier | LLM-Versuche | Fehler | Warnungen | Dauer |
