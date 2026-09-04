@@ -145,6 +145,34 @@ function loadSegelreviere(): SegelreviereData {
   return sailingAreasJson as unknown as SegelreviereData;
 }
 
+const SAILING_AREA_ALIASES: Record<string, { sailingArea: string; city: string }> = {
+  "ionisches meer": {
+    sailingArea: "Ionisches Meer Nord Offshore (Griechenland)",
+    city: "Lefkada",
+  },
+  "ionisches meer nord": {
+    sailingArea: "Ionisches Meer Nord Offshore (Griechenland)",
+    city: "Lefkada",
+  },
+};
+
+export function resolveSailingAreaAlias(locationName: string): DetectLocationResult {
+  const alias = SAILING_AREA_ALIASES[normalizeKey(locationName)];
+  if (!alias) return null;
+  const data = loadSegelreviere();
+  const revier = data.Griechenland?.reviere.find(
+    (candidate) => candidate.deutsch === alias.sailingArea,
+  );
+  if (!revier) return null;
+  return {
+    kind: "revier",
+    revier,
+    land: "Griechenland",
+    countryCode: "GR",
+    city: alias.city,
+  };
+}
+
 function buildRevierList(data: SegelreviereData): string {
   const lines: string[] = [];
   for (const [land, { reviere }] of Object.entries(data)) {
@@ -207,6 +235,9 @@ export async function detectLocation(
   anthropic: Anthropic,
   signal?: AbortSignal,
 ): Promise<DetectLocationResult> {
+  const aliasedResult = resolveSailingAreaAlias(locationName);
+  if (aliasedResult) return aliasedResult;
+
   const result = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 100,

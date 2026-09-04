@@ -23,6 +23,7 @@ import {
   getCachedLocation,
   setCachedLocation,
   getRegionalModelFallback,
+  resolveSailingAreaAlias,
 } from "./location.js";
 import {
   completeAnalysisJob,
@@ -1644,7 +1645,9 @@ STIL: Deutsch, sachlich, ohne Wiederholungen.`;
 
       // ── Ortserkennung (mit persistentem Cache) ──────────────────────────
       const userInput = classification.location;
-      const cached = await getCachedLocation(userInput);
+      const cached = resolveSailingAreaAlias(userInput)
+        ? undefined
+        : await getCachedLocation(userInput);
 
       let sailingAreaObj: import("./analysis-store.js").AnalysisPosition["sailingArea"] = null;
       let cityObj: import("./analysis-store.js").AnalysisPosition["city"];

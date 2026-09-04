@@ -46,6 +46,7 @@ import {
   getSanitizedAnalysisExport,
   type AnalysisJson,
 } from "../server/analysis-store.js";
+import { resolveSailingAreaAlias } from "../server/location.js";
 import {
   HNMS_BULLETIN_URL,
   isValidGreeceWarningTranslation,
@@ -376,6 +377,24 @@ async function testFailedNationalProvidersStayTransparent(): Promise<void> {
     assert.equal((local.wind as any).text_de.split("\n").length, 6);
   } finally {
     mock.restore();
+  }
+}
+
+function testIonianOffshoreAliases(): void {
+  for (const input of ["Ionisches Meer", "Ionisches Meer Nord"]) {
+    const resolved = resolveSailingAreaAlias(input);
+    assert.equal(resolved?.kind, "revier");
+    if (resolved?.kind !== "revier") continue;
+    assert.equal(resolved.revier.deutsch, "Ionisches Meer Nord Offshore (Griechenland)");
+    assert.equal(resolved.revier.lat, 38.8);
+    assert.equal(resolved.revier.lon, 19.252);
+    assert.equal(resolved.city, "Lefkada");
+    const westwardDistanceNm =
+      (20 - resolved.revier.lon) * 60 * Math.cos(resolved.revier.lat * Math.PI / 180);
+    assert.ok(
+      Math.abs(westwardDistanceNm - 35) < 0.05,
+      `${input} must resolve about 35 nm west of the former longitude`,
+    );
   }
 }
 
@@ -2418,6 +2437,7 @@ function testResolvedForecastExportFeedsCharts(): void {
 }
 
 async function main(): Promise<void> {
+  testIonianOffshoreAliases();
   testCloudTypeClassification();
   testSection4OutputContract();
   testSubstantiveTwoBulletSections();
