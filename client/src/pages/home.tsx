@@ -321,8 +321,8 @@ function AnalysisView({ location, weatherEurope, weatherOutput, analysisJson, an
   const mapZoom = Math.max(zoom - 2, 4);
   const isIconEu = model === "iconEu";
   const windUrl = isIconEu
-    ? "https://www.windy.com/38.449/20.903/iconEuWaves/waves?iconEu,clouds,38.449,20.903,5,i:pressure,p:favs"
-    : `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
+    ? `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/iconEuWaves/waves?iconEu,waves,${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`
+    : `https://www.windy.com/${saLat.toFixed(3)}/${saLon.toFixed(3)}/${model}?${model},wind,${saLat.toFixed(3)},${saLon.toFixed(3)},${mapZoom},i:pressure,p:favs`;
   const meteogramUrl = `https://www.windy.com/${cityLat.toFixed(3)}/${cityLon.toFixed(3)}/${model}/meteogram?${model},clouds,${cityLat.toFixed(3)},${cityLon.toFixed(3)},${mapZoom},i:pressure`;
   const jsonDownloadUrl = analysisJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(analysisJson, null, 2))}`
