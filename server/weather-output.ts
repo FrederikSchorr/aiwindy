@@ -323,6 +323,7 @@ export async function generateWeatherOutput(
   analysis: AnalysisJson,
   anthropic: Anthropic,
   signal?: AbortSignal,
+  onRetry?: (attempt: 2 | 3) => void,
 ): Promise<Record<string, unknown>> {
   const { position, weatherPreprocessed } = analysis;
   const europe = weatherPreprocessed.europe as Record<string, any>;
@@ -541,6 +542,7 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel, currentLo
       );
     };
     for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt > 0) onRetry?.((attempt + 1) as 2 | 3);
       const messages: Anthropic.Messages.MessageParam[] = attempt === 0
         ? [{ role: "user", content }]
         : [

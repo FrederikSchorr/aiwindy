@@ -1027,7 +1027,14 @@ async function runAnalysisJob(context: AnalysisJobContext): Promise<void> {
     analysis.save();
 
     publish({ loadingStatus: "Interpretieren der lokalen Wetterdaten" });
-    const weatherOutput = await generateWeatherOutput(analysis.data, anthropic, signal);
+    const weatherOutput = await generateWeatherOutput(
+      analysis.data,
+      anthropic,
+      signal,
+      (attempt) => publish({
+        loadingStatus: `Interpretieren der lokalen Wetterdaten (${attempt}. Versuch) …`,
+      }),
+    );
     Object.assign(analysis.data.weatherOutput, weatherOutput);
     analysis.save();
     publish({
