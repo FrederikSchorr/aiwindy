@@ -1018,6 +1018,54 @@ async function testInterpretationPromptContract(): Promise<void> {
   assert.match(prompt, /Genau 4 Prognosebullets/);
   assert.match(prompt, /insgesamt höchstens 5 Bullets/);
 
+  const retryRequests: any[] = [];
+  const retryResponses = [
+    [
+      "===airPressureMasses===",
+      "- 🌀 Unverändertes Hochdruckgebiet.",
+      "- 🌡️ Unveränderte warme Luftmasse.",
+      "===weatherFront===",
+      "- 🌍 Unveränderte Kaltfront über Europa.",
+      "- 📍 Testrevier bleibt frontfrei.",
+      "===windWaves===",
+      "- Heute: Bestes Windfenster mit NW 23–32 kt.",
+      "- Morgen: Nutzbares Windfenster mit NW 18–26 kt.",
+      "- Übermorgen: Flaute, Windprognose nicht verfügbar.",
+      "- Di–Do 25.–27.08.: Ruhiger Trend ohne verfügbare Windprognose.",
+      "===cloudsRain===",
+      "- Heute: NW 10–20 kt.",
+      "===END===",
+    ].join("\n"),
+    [
+      "===airPressureMasses===",
+      "- 🌀 Dieser gültige Abschnitt darf nicht überschrieben werden.",
+      "- 🌡️ Auch dann nicht, wenn das Modell ihn ungefragt mitsendet.",
+      "===cloudsRain===",
+      "- Heute: ☀️ Stabil und trocken.",
+      "- Morgen: ☀️ Weiterhin trocken.",
+      "- Mo–Do 24.–27.08.: ☀️ Ruhiges Hochdruckwetter.",
+      "===END===",
+    ].join("\n"),
+  ];
+  const retryAnthropic = {
+    messages: {
+      create: async (request: any) => {
+        retryRequests.push(request);
+        return { content: [{ type: "text", text: retryResponses[retryRequests.length - 1] }] };
+      },
+    },
+  } as unknown as Anthropic;
+  const correctedOutput = await generateWeatherOutput(analysis, retryAnthropic);
+  assert.equal(retryRequests.length, 2, "one failed section should require one targeted correction");
+  const correctionPrompt = retryRequests[1].messages[2].content as string;
+  assert.match(correctionPrompt, /ausschließlich diese Abschnitte: cloudsRain/);
+  assert.doesNotMatch(correctionPrompt, /ausschließlich diese Abschnitte:.*windWaves/);
+  assert.equal(
+    (correctedOutput.airPressureMasses as any).text,
+    "- 🌀 Unverändertes Hochdruckgebiet.\n- 🌡️ Unveränderte warme Luftmasse.",
+    "valid sections must survive a targeted correction unchanged",
+  );
+
   const windLabels = {
     todayLabel: "Sa 22.08.",
     tomorrowLabel: "So 23.08.",

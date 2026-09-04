@@ -542,18 +542,20 @@ ${buildSection4Rules(todayLabel, tomorrowLabel, forecastOverviewLabel, currentLo
       );
     };
     let retryFeedback = "";
+    let sectionsToCorrect = [...SECTION_KEYS];
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (attempt > 0) onRetry?.((attempt + 1) as 2 | 3);
       const messages: Anthropic.Messages.MessageParam[] = attempt === 0
         ? [{ role: "user", content }]
         : [
           { role: "user", content },
-          { role: "assistant", content: raw },
+          { role: "assistant", content: formatSectionMarkers(parsed ?? {}) },
           {
             role: "user",
-            content: `Korrigiere den vollständigen Output und gib alle vier Abschnitte erneut aus.
+            content: `Korrigiere ausschließlich diese Abschnitte: ${sectionsToCorrect.join(", ")}.
 Beim vorigen Output schlugen genau diese Prüfungen fehl: ${retryFeedback}.
-Korrigiere gezielt nur diese Mängel und bewahre die bereits gültigen Inhalte.
+Gib nur die Marker der genannten Abschnitte mit ihrem korrigierten Inhalt aus, danach ===END===.
+Gib keinen anderen Abschnitt erneut aus; dessen bereits gültiger Inhalt wird unverändert bewahrt.
 Abschnitt 3 muss zusätzlich zur optionalen Warnzeile exakt vier eigene Prognosezeilen enthalten:
 Heute (${todayLabel}), Morgen (${tomorrowLabel}), Übermorgen (${dayAfterTomorrowLabel}) und ${forecastTailLabel}.
 Abschnitt 4 muss exakt drei eigene Prognosezeilen enthalten:
@@ -567,7 +569,7 @@ Abschnitt 3 muss interpretieren statt das Chart nachzuerzählen: Beginne jeden P
 Heute und morgen in der Regel höchstens zwei Wind–Böe-Paare, Übermorgen höchstens eines. Ein zusätzlicher Übergangswert ist nur mit konkret erklärtem lokalem Effekt oder Frontdurchgang erlaubt.
 Im letzten Mehrtagesbullet pro Tag ausnahmslos höchstens ein Wind–Böe-Paar; keine getrennte Morgen-/Nachmittags-/Abendfolge desselben Tages und insgesamt höchstens drei Paare.
 Keine Peak-Transkription wie "Spitze um 09 Uhr". Gleichförmige Stunden zu einer Tendenz zusammenfassen.
-Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschnittsmarker und ===END=== erneut ausgeben.`,
+Jede Prognosezeile beginnt mit "- ". Keine vorgeschriebene Prognosezeile des zu korrigierenden Abschnitts weglassen.`,
           },
         ];
       const msg = await anthropic.messages.create({
@@ -577,7 +579,15 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
         messages,
       }, { signal });
       raw = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : "";
-      parsed = parseSectionMarkers(raw);
+      const correction = parseSectionMarkers(raw);
+      if (attempt === 0) {
+        parsed = correction;
+      } else if (correction) {
+        parsed ??= {};
+        for (const section of sectionsToCorrect) {
+          if (correction[section] !== undefined) parsed[section] = correction[section];
+        }
+      }
       cloudsRainText = parsed
         ? normalizeCurrentHourTodayStart(
           enforceSection4Output(
@@ -627,6 +637,7 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
         .filter(([, failed]) => failed)
         .map(([name]) => name);
       retryFeedback = failedNames.join(", ");
+      sectionsToCorrect = failedSections(failedChecks);
       if (failedChecks.conciseWindInterpretation) {
         retryFeedback += ". Zähle die Wind–Böe-Paare in jeder Abschnitt-3-Zeile: "
           + "Heute maximal 2, Morgen maximal 2, Übermorgen maximal 1 und im Mehrtagesausblick "
@@ -717,6 +728,33 @@ Jede Prognosezeile beginnt mit "- ". Keine Prognosezeile weglassen. Alle Abschni
 }
 
 const SECTION_KEYS = ["airPressureMasses", "weatherFront", "windWaves", "cloudsRain"] as const;
+type SectionKey = typeof SECTION_KEYS[number];
+
+function formatSectionMarkers(sections: Record<string, string>): string {
+  const blocks = SECTION_KEYS
+    .filter(key => sections[key] !== undefined)
+    .map(key => `===${key}===\n${sections[key]}`);
+  return `${blocks.join("\n")}\n===END===`;
+}
+
+function failedSections(failedChecks: Record<string, boolean>): SectionKey[] {
+  if (failedChecks.parsed) return [...SECTION_KEYS];
+  const sections = new Set<SectionKey>();
+  if (failedChecks.completeSection1) sections.add("airPressureMasses");
+  if (failedChecks.completeSection2) sections.add("weatherFront");
+  if (
+    failedChecks.canonicalWind
+    || failedChecks.windValueFormat
+    || failedChecks.conciseWindInterpretation
+    || failedChecks.pastWindToday
+  ) sections.add("windWaves");
+  if (
+    failedChecks.completeCloud
+    || failedChecks.forbiddenCloudContent
+    || failedChecks.pastCloudToday
+  ) sections.add("cloudsRain");
+  return [...sections];
+}
 
 function hasCompleteWindForecast(text: string | undefined): boolean {
   if (!text) return false;
