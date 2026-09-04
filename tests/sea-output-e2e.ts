@@ -28,6 +28,7 @@ interface AnalysisEvent {
   weatherOutput?: WeatherOutputData;
   analysisJson?: Record<string, unknown>;
   sources?: Record<string, unknown>;
+  loadingStatus?: string;
   error?: string;
   done?: boolean;
 }
@@ -41,6 +42,7 @@ interface LocationResult {
   country: CountryCode;
   query: string;
   durationMs: number;
+  llmAttempts: 1 | 2 | 3;
   location: GeocodeResult | null;
   output: WeatherOutputData | null;
   checks: Record<"section1" | "section2" | "section3" | "section4" | "global", SectionCheck>;
@@ -222,6 +224,7 @@ async function readSse(response: Response): Promise<AnalysisEvent[]> {
 
 async function runLocation(country: CountryCode, query: string): Promise<LocationResult> {
   const started = Date.now();
+  let llmAttempts: 1 | 2 | 3 = 1;
   let location: GeocodeResult | null = null;
   let output: WeatherOutputData | null = null;
   let error: string | null = null;
@@ -240,12 +243,24 @@ async function runLocation(country: CountryCode, query: string): Promise<Locatio
       if (event.location) location = event.location;
       if (event.weatherOutput) output = event.weatherOutput;
       if (event.error) error = event.error;
+      const retryMatch = event.loadingStatus?.match(
+        /^Interpretieren der lokalen Wetterdaten \(([23])\. Versuch\)/,
+      );
+      if (retryMatch) llmAttempts = Number(retryMatch[1]) as 2 | 3;
     }
     if (!events.some(event => event.done)) error = error ?? "SSE-Stream endete ohne done-Ereignis";
   } catch (caught) {
     error = caught instanceof Error ? caught.message : String(caught);
   }
-  const partial = { country, query, durationMs: Date.now() - started, location, output, error };
+  const partial = {
+    country,
+    query,
+    durationMs: Date.now() - started,
+    llmAttempts,
+    location,
+    output,
+    error,
+  };
   return { ...partial, checks: validate(partial) };
 }
 
@@ -262,7 +277,7 @@ function countIssues(result: LocationResult): { failures: number; warnings: numb
 function markdown(results: LocationResult[]): string {
   const rows = results.map(result => {
     const issues = countIssues(result);
-    return `| ${result.country} | ${result.query} | ${result.location?.sailingArea ?? result.location?.cityName ?? "—"} | ${issues.failures} | ${issues.warnings} | ${(result.durationMs / 1000).toFixed(1)} s |`;
+    return `| ${result.country} | ${result.query} | ${result.location?.sailingArea ?? result.location?.cityName ?? "—"} | ${result.llmAttempts} | ${issues.failures} | ${issues.warnings} | ${(result.durationMs / 1000).toFixed(1)} s |`;
   });
   const details = results.map(result => {
     const issueLines = Object.entries(result.checks).flatMap(([section, check]) => [
@@ -301,8 +316,8 @@ Basis-URL: ${BASE_URL}
 Zeitpunkt: ${new Date().toISOString()}  
 Orte: ${results.length}
 
-| Land | Eingabe | Erkanntes Revier | Fehler | Warnungen | Dauer |
-|---|---|---|---:|---:|---:|
+| Land | Eingabe | Erkanntes Revier | LLM-Versuche | Fehler | Warnungen | Dauer |
+|---|---|---|---:|---:|---:|---:|
 ${rows.join("\n")}
 
 ${details.join("\n")}
@@ -343,12 +358,20 @@ async function main(): Promise<void> {
     console.log(`${issues.failures ? "FEHLER" : "OK"} (${issues.failures} Fehler, ${issues.warnings} Warnungen, ${(result.durationMs / 1000).toFixed(1)} s)`);
   }
   results.sort((a, b) => LOCATIONS.findIndex(location => location.query === a.query) - LOCATIONS.findIndex(location => location.query === b.query));
+  const attemptDistribution = results.reduce(
+    (counts, result) => {
+      counts[result.llmAttempts] += 1;
+      return counts;
+    },
+    { 1: 0, 2: 0, 3: 0 } as Record<1 | 2 | 3, number>,
+  );
   const summary = {
     generatedAt: new Date().toISOString(),
     baseUrl: BASE_URL,
     locations: results.length,
     failures: results.reduce((sum, result) => sum + countIssues(result).failures, 0),
     warnings: results.reduce((sum, result) => sum + countIssues(result).warnings, 0),
+    attemptDistribution,
     results,
   };
   await Promise.all([

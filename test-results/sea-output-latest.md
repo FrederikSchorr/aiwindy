@@ -1,23 +1,23 @@
 # aiWindy Mehrort-Outputtest
 
 Basis-URL: http://127.0.0.1:5000  
-Zeitpunkt: 2026-09-03T20:44:40.636Z  
+Zeitpunkt: 2026-09-04T13:10:20.921Z  
 Orte: 12
 
-| Land | Eingabe | Erkanntes Revier | Fehler | Warnungen | Dauer |
-|---|---|---|---:|---:|---:|
-| GR | Meganisi | Ionisches Meer Meganisi | 0 | 0 | 34.0 s |
-| GR | Lefkada | Ionisches Meer Meganisi | 0 | 0 | 30.8 s |
-| GR | Paros | Ägäis Mitte | 0 | 0 | 42.1 s |
-| GR | Korfu | Ionisches Meer Korfu | 0 | 0 | 35.1 s |
-| GR | Kos Griechenland | Dodekanes | 0 | 0 | 31.2 s |
-| GR | Rhodos Griechenland | Dodekanes | 0 | 0 | 41.0 s |
-| AT | Weiden am See | Neusiedler See (Österreich) | 0 | 0 | 50.2 s |
-| AT | Gmunden am Traunsee | Traunsee | 0 | 0 | 26.2 s |
-| AT | Klagenfurt am Wörthersee | Wörthersee | 0 | 0 | 42.8 s |
-| HR | Punat Kroatien | Adria Nord (Kroatien) | 0 | 0 | 40.9 s |
-| HR | Split Kroatien | Adria Mitte (Kroatien) | 0 | 0 | 65.9 s |
-| HR | Hvar Kroatien | Adria Süd (Kroatien) | 0 | 0 | 81.2 s |
+| Land | Eingabe | Erkanntes Revier | LLM-Versuche | Fehler | Warnungen | Dauer |
+|---|---|---|---:|---:|---:|---:|
+| GR | Meganisi | Ionisches Meer Meganisi | 1 | 0 | 0 | 40.9 s |
+| GR | Lefkada | Ionisches Meer Meganisi | 2 | 0 | 0 | 57.3 s |
+| GR | Paros | Ägäis Mitte | 3 | 1 | 0 | 74.5 s |
+| GR | Korfu | Ionisches Meer Korfu | 2 | 0 | 0 | 54.1 s |
+| GR | Kos Griechenland | Dodekanes | 2 | 0 | 0 | 57.1 s |
+| GR | Rhodos Griechenland | Dodekanes | 1 | 0 | 0 | 42.0 s |
+| AT | Weiden am See | Neusiedler See (Österreich) | 2 | 0 | 0 | 54.7 s |
+| AT | Gmunden am Traunsee | Traunsee | 1 | 0 | 0 | 28.6 s |
+| AT | Klagenfurt am Wörthersee | Wörthersee | 1 | 0 | 0 | 32.4 s |
+| HR | Punat Kroatien | Adria Nord (Kroatien) | 2 | 0 | 0 | 46.9 s |
+| HR | Split Kroatien | Adria Mitte (Kroatien) | 1 | 0 | 0 | 33.3 s |
+| HR | Hvar Kroatien | Adria Süd (Kroatien) | 3 | 0 | 0 | 75.2 s |
 
 ## GR – Meganisi
 
@@ -29,27 +29,27 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tief über Skandinavien mit Kaltsektor Richtung Südosten; Hoch über Spanien dehnt sich in den Mittelmeerraum aus.
-- 🌡️ Warme, trockene Luftmasse dominiert Südeuropa und das Ionische Meer; kühle Polarluft bleibt auf Nordeuropa beschränkt.
+- 🌀 Skandinavientief zieht ostwärts; Hoch über Spanien dehnt sich über den gesamten Mittelmeerraum aus.
+- 🌡️ Warme, trockene Subtropikluft dominiert den Mittelmeerraum; kühle Polarluft bleibt auf Nordeuropa beschränkt.
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des skandinavischen Tiefs zieht über Nordwest- und Mitteleuropa südostwärts; Warmluft im Süden unberührt.
-- 📍 Ionisches Meer Meganisi liegt weit südlich aller aktiven Fronten; keine Kalt- oder Warmfront in Reichweite.
+- 🌍 Kaltfront des Skandinavientiefs zieht über Mitteleuropa ostwärts; Hochdruckrücken stabilisiert Südeuropa bis Samstag.
+- 📍 Ionisches Meer Meganisi liegt weit im Vorfeld jeder aktiven Front; keine relevante Kalt- oder Warmfront in Reichweite.
 
 ### 3. Wind & Welle
 
-- Aktuell Fr., 04.09., 01:00 Ortszeit: Keine Sturmwarnung von HNMS
-- Heute (Do 03.09.): 💨 ab 23:36 Uhr: Ruhige Nacht, NW 2–3 kt; kein nutzbares Segelfenster bis Tagesende.
-- Morgen (Fr 04.09.): 💨 Vormittags schwacher NW 3–5 kt, ab Mittag Dreher auf SW; ab spätem Nachmittag thermische Verstärkung auf N, Abend N 9–12 kt – typisches Maïstrali-Muster mit nachmittäglicher Kanal-Beschleunigung, dann Abschwächung über Nacht auf N 3–6 kt. 🌊 See schwach bewegt (Stufe 2).
-- Übermorgen (Sa 05.09.): 💨 Ähnliches Muster; Abend N 7–9 kt, tagsüber S 4–8 kt; thermisches Tagesgangmuster bleibt erhalten.
-- So–Di 06.–08.09.: 💨 SO 06.09. schwach bis mäßig S, abends abschwächend; Mo 07.09. zunehmend S 3–7 kt nachmittags; Di 08.09. deutliche Verstärkung SW, Mittag/Nachmittag 9–18 kt – erhöhte Böigkeit, seglerisch beachten.
+- Aktuell Fr., 04.09., 13:00 Ortszeit: Keine Sturmwarnung von HNMS
+- Heute (Fr 04.09.): 💨 ab 16:00: Thermisch gesteuerter Maïstrali-Nachmittag klingt ab – S 6–12 kt bis ~21:00, danach rasche Abflaute auf unter 2–6 kt; 🌊 See 2, schwach bewegt.
+- Morgen (Sa 05.09.): 💨 Vormittags Flaute, spricht für thermische Ruhe; ab Mittag schwacher S-Maïstrali-Ersatz aus S 2–7 kt, nachmittags S 7–9 kt; 🌊 See 2, schwach bewegt.
+- Übermorgen (So 06.09.): 💨 Weitgehend windarm; nachmittags kurze S-Komponente 3–6 kt, kein belastbares Segelfenster.
+- Mo–Mi 07.–09.09.: 💨 Mo sehr schwach S 1–7 kt; Di zunehmend S auf 7–11 kt, tagsüber markanteste Phase der Woche; Mi Winddreher auf NW mit 10–19 kt am Nachmittag, Druckabfall stützt den Anstieg.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☀️ ab 23:36 Uhr: Klar, trocken, kein Niederschlag; keine weiteren Wetterentwicklungen bis Mitternacht zu erwarten. 🌙
-- Morgen (Fr 04.09.): ☁️ Überwiegend ☀️ klar und sonnig; nachmittags vereinzelt Altostratusfelder möglich, kein Regen. Temperaturen tagsüber bis etwa 33 °C, abends deutlich ruhiger und angenehm.
-- Sa–Di 05.–08.09.: 🌤️ Stabiles Hochdruckwetter hält an; durchgehend trocken, kein Niederschlag. Temperaturen bleiben hoch mit Spitzen bis 35 °C; erst Di 08.09. leichter Druckrückgang ohne Frontwirkung auf das Revier.
+- Heute (Fr 04.09.): ☀️ ab 16:00: Sonnig, klar und sommerlich heiß (~33 °C); Hochdrucklage stabil, kein Niederschlag – ruhiger Abend bei steigendem Luftdruck.
+- Morgen (Sa 05.09.): ☁️ Überwiegend klar und trocken; mittags vereinzelt Quellbewölkung (Altostratus/Cumulus) ohne Niederschlag, nachmittags wieder aufklarend; warm bis heiß (~33 °C).
+- So–Mi 06.–09.09.: ☀️ So–Mo stabil hochdruckdominiert, sonnig und warm. Di Gewittersignal in den frühen Nachtstunden (02–04 Uhr), tagsüber überwiegend bewölkt, Luftdruck fällt Di signifikant um ~4 hPa. Mi Tiefdruckeinfluss verstärkt sich weiter, Druckniveau sinkt auf ~1012 hPa; kein Regen aus lokalem Forecast ableitbar, Situation aber zunehmend unbeständiger.
 
 ## GR – Lefkada
 
@@ -61,59 +61,51 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tiefdruckgebiet (~990 hPa) westlich der Britischen Inseln zieht nordostwärts; Hochdruck über Spanien dehnt sich Mittelmeerraum-weit aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Mittelmeerraum; polare Kaltluft bleibt auf Nordeuropa beschränkt, klare Luftmassengrenze über Mitteleuropa.
+- 🌀 Hoch über Spanien dehnt sich über den Mittelmeerraum aus; Skandinavientief zieht ostwärts Richtung Russland ab.
+- 🌡️ Warme, trockene Subtropikluft dominiert den Mittelmeerraum; kühle Polarluft verbleibt weit nördlich über Skandinavien.
 
 ### 2. Fronten
 
-- 🌍 Kaltsektor schwenkt über Norddeutschland/Skandinavien südostwärts – Front bleibt nördlich der Alpen.
-- 📍 Für Ionisches Meer Meganisi liegt keine relevante Kalt- oder Warmfront vor; das Revier bleibt unter Hochdruckeinfluss, keine Frontannäherung erkennbar.
+- 🌍 Kaltfront des Skandinavienwirbels zieht über Nord- und Mitteleuropa südostwärts; erreicht bis Samstag östliche Alpen und Osteuropa.
+- 📍 Keine aktive Front im Bereich Ionisches Meer Meganisi; das Gebiet verbleibt vollständig im stabilen Hochdruckbereich.
 
 ### 3. Wind & Welle
 
-- Aktuell Fr., 04.09., 01:00 Ortszeit: Keine Sturmwarnung von HNMS
-- Heute (Do 03.09.): 💨 ab 23:25 Uhr: Ruhige Nacht, NW-Abflaufen auf 2–3 kt – kein nutzbares Segelfenster bis Mitternacht.
-- Morgen (Fr 04.09.): 💨 Vormittags Flaute aus NW 1–5 kt, ab Mittag thermisch bedingter SW-Einsetzer 3–8 kt; am Abend dreht der Wind auf N und frischt auf 7–12 kt auf – der abendliche Nordwind spricht für thermische Verstärkung durch Land-🌊 See-Kontrast, typisch für die Maïstrali-Kanalisierung im Ionischen Meer. See schwach bewegt.
-- Übermorgen (Sa 05.09.): 💨 Ähnliches Muster – tagsüber S-Thermik 4–8 kt, Abend N-Auffrischung 6–9 kt, danach rasche Abschwächung.
-- So–Di 06.–08.09.: 💨 SO 06. und Mo 07.: leichte variable Winde 1–6 kt, kaum nutzbares Segelfenster. Di 08.: markante SW-Verstärkung nachmittags auf 8–18 kt, Böen zeitweise ⚠️-nah; rasches Abflauen zum Abend.
+- Aktuell Fr., 04.09., 13:00 Ortszeit: Keine Sturmwarnung von HNMS
+- Heute (Fr 04.09.): 💨 Schwaches Maïstrali-Fenster aus N klingt ab jetzt rasch ab; thermischer Antrieb bricht nach Sonnenuntergang zusammen, ab 21 Uhr Flaute 2–6 kt. 🌊 See 2, schwach bewegt.
+- Morgen (Sa 05.09.): 💨 Nachts und morgens Flaute mit wechselnden Richtungen ohne nutzbares Segelfenster; ab Mittag thermische Rückströmung aus S bis 4–7 kt, nachmittags Dreher auf NW mit 7–9 kt – kurzes Maïstrali-Fenster zum Feierabend.
+- Übermorgen (So 06.09.): 💨 Ähnlich schwacher Charakter wie Samstag; tagsüber S 2–5 kt, kein stabiles Segelfenster erkennbar.
+- Mo–Mi 07.–09.09.: 💨 Mo 07.09. S 1–7 kt; Di 08.09. S zunehmend auf 7–11 kt – nutzbarstes Fenster der Periode; Mi 09.09. NW auf 10–19 kt auffrischend, böig.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☀️ ab 23:25 Uhr: Klarer Himmel, kein Niederschlag, stabile Bedingungen für den Rest der Nacht. 🌙
-- Morgen (Fr 04.09.): ☀️ Überwiegend ☀️ sonnig, tagsüber Spitzenwerte um 32 °C; nachmittags einzelne Quellwolken möglich, kein Regen. Abend wieder klar und trocken.
-- Sa–Di 05.–08.09.: 🌤️ Anhaltend stabiles Hochdruckwetter, trocken und sonnig, Tageshöchstwerte durchgehend um 32–35 °C. Erst Di 08.09. leichte Zunahme der Bewölkung bei gleichzeitig beginnendem Druckrückgang – kein Niederschlagssignal erkennbar.
+- Heute (Fr 04.09.): ☀️ Ab jetzt wolkenlos und trocken
+- Morgen (Sa 05.09.): ☀️ Wolkenlos und trocken den ganzen Tag; morgens rund 24 °C, mittags bis 32 °C. Kein Niederschlag – ungestörtes Hochdruckwetter.
+- So–Mi 06.–09.09.: ☀️ So und Mo sonnig, warm und niederschlagsfrei unter stabilem Hochdruckrücken; Di 08.09. zunehmend gemischte Bewölkung bei signifikantem Druckrückgang – erster Hinweis auf zunehmenden Tiefdruckeinfluss; Mi 09.09. Druck weiter leicht fallend, Quellbewölkung möglich, kein Regen erwartet.
 
 ## GR – Paros
 
 Erkannt: Paros, Parikia, Paros Municipality, Regionalbezirk Paros, Region Südliche Ägäis, Ägäis, 844 00, Griechenland  
 Revier: Ägäis Mitte  
-Fehler: keiner
+Fehler: Die Wetterinterpretation war unvollständig. Bitte erneut versuchen.
 
-- Alle automatischen Prüfungen bestanden.
+- FEHLER global: Die Wetterinterpretation war unvollständig. Bitte erneut versuchen.
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tief über Skandinavien zieht ostwärts; Hoch über Spanien dehnt sich über den gesamten Mittelmeerraum aus.
-- 🌡️ Warme, trockene Luftmasse dominiert den Mittelmeerraum; kühle Luftmassen im Norden und Nordosten Europas.
+_leer_
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des skandinavischen Tiefs zieht südostwärts über Nordost- und Mitteleuropa; Frontensystem bleibt nördlich des Mittelmeers.
-- 📍 Ägäis Mitte: Keine aktive Kalt- oder Warmfront in Reichweite; Revier verbleibt im hochdruckdominierten Bereich.
+_leer_
 
 ### 3. Wind & Welle
 
-- ⚠️ Nationale Sturmwarnquelle HNMS Griechenland derzeit nicht erreichbar
-- Heute (Do 03.09.): 💨 Ab jetzt schwacher Meltemi N mit 9–18 kt; kein seglerisch relevantes Fenster mehr in der Nacht.
-- Morgen (Fr 04.09.): 💨 Klassischer Meltemi-Tag – tagsüber auffrischend auf 21–38 kt, nachmittags Spitzenwerte; das Balkanhoch kanalisiert die Nordströmung, thermische Verstärkung über Kleinasien treibt den Wind an. Gegen Abend Abschwächung auf 12–27 kt. 🌊 See mäßig bewegt (Douglas 4).
-- Übermorgen (Sa 05.09.): 💨 Anhaltender Meltemi N, tagsüber 19–33 kt, ab Abend deutliche Abschwächung auf 5–13 kt. 🌊 See mäßig bewegt (Douglas 4).
-- So–Di 06.–08.09.: 💨 SO ruhig, 4–19 kt N; Mo moderat, 4–28 kt N; Di erneut kräftiger Meltemi, 9–39 kt N.
+_leer_
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): 🌤️ Ab jetzt wolkenlos und trocken bei 26 °C; keine Wetterauffälligkeit bis Mitternacht.
-- Morgen (Fr 04.09.): 🌤️ Den ganzen Tag wolkenlos, kein Niederschlag; tagsüber warm mit Höchstwerten um 27 °C. Stabiles Hochdruckwetter ohne Wetterumschwung.
-- Sa–Di 05.–08.09.: ☀️ Anhaltend sonnig und trocken unter dem bestimmenden Mittelmeerhoch; Di leichte Zunahme von Cirrus und Mischbewölkung möglich, jedoch weiterhin kein Niederschlagssignal und.
+_leer_
 
 ## GR – Korfu
 
@@ -125,27 +117,27 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Atlantisches Tief (~990 hPa) über Schottland/Nordmeer zieht ostwärts; Hochdruckgebiet mit Zentrum über Spanien dehnt sich über den Mittelmeerraum aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Süd- und Mittelmeerraum; kühle Polarluft im Kaltsektor des Tiefs über Nordwest- und Mitteleuropa.
+- 🌀 Tief über Skandinavien zieht ostwärts; Hoch über Spanien dehnt sich in den Mittelmeerraum aus und stabilisiert das Ionische Meer.
+- 🌡️ Warme, trockene Subtropikluft dominiert den Süden; kühl-feuchte Polarluft bleibt auf Nordeuropa beschränkt, klare Luftmassengrenze über Mitteleuropa.
 
 ### 2. Fronten
 
-- 🌍 Aktive Kaltfront des nordatlantisch-skandinavischen Tiefs zieht von den Britischen Inseln ostwärts über Nordwest- und Mitteleuropa; Kaltsektor greift bis nach Osteuropa aus.
-- 📍 Ionisches Meer Korfu liegt im hochdruckbestimmten Bereich; keine aktive Kalt- oder Warmfront im unmittelbaren Revier; nächste relevante Kaltfront weit nördlich über Mitteleuropa.
+- 🌍 Aktive Kaltfront des Skandinavientiefs überquert Mitteleuropa südostwärts; weitere Störungen bleiben auf den Nordatlantik beschränkt.
+- 📍 Ionisches Meer Korfu liegt klar im Hochdruckbereich; keine Kalt- oder Warmfront in Reichweite des Reviers.
 
 ### 3. Wind & Welle
 
-- Aktuell Fr., 04.09., 01:00 Ortszeit: Keine Sturmwarnung von HNMS
-- Heute (Do 03.09.): 💨 ab 23:26 Uhr: Stabiles Nachtfenster mit schwachem NO-Wind 4–6 kt; kein seglerisch nutzbares Segelwind-Fenster, ruhige Restfläche.
-- Morgen (Fr 04.09.): 💨 Typisches thermisches Tagesschema – vormittags O 3–5 kt, Windstille um die Mittagszeit, ab Nachmittag auffrischender NW 12–20 kt; spricht für den Maïstrali, der im Ionischen Kanal durch die Bergkulisse Korfus thermisch kanalisiert wird und nachmittags die seglerisch stärkste Phase bringt, abends rasch abschwächend auf NW 4–10 kt; 🌊 See 2, schwach bewegt.
-- Übermorgen (Sa 05.09.): 💨 Ähnliches Muster wie Freitag; nachmittags W 10–15 kt, Abend ruhig – nutzbares Westwindfenster am Nachmittag, insgesamt etwas schwächer als Freitag.
-- So–Di 06.–08.09.: 💨 Sonntag sehr leicht mit wechselnden Richtungen 1–4 kt; Montag weiterhin schwach W 2–5 kt; Dienstag auffrischend S 6–12 kt mit drehenden Richtungen – zunehmend unbeständiger Charakter zum Wochenende hin.
+- Aktuell Fr., 04.09., 13:00 Ortszeit: Keine Sturmwarnung von HNMS
+- Heute (Fr 04.09.): 💨 Maïstrali aus NW liefert ab jetzt ein nutzbares Segelfenster mit 15–21 kt; ab 20 Uhr dreht er auf N und fällt auf 9–15 kt, danach rasches Abklingen. 🌊 See 2, schwach bewegt.
+- Morgen (Sa 05.09.): 💨 Schwache Nacht und ruhiger Morgen aus O mit 4–7 kt bieten kaum Segelpotenzial; ab Nachmittag thermisch geprägter Maïstrali aus W auf 10–14 kt, abends wieder Abschwächung. 🌊 See 1, ruhig.
+- Übermorgen (So 06.09.): 💨 Flaute – ganztägig maximal 2–6 kt aus wechselnden Richtungen, kein nutzbares Segelfenster.
+- Mo–Mi 07.–09.09.: 💨 Mo leichte W-Winde 2–5 kt; Di S mit 6–11 kt; Mi S ähnlich 5–10 kt – moderat, mit zunehmender Tendenz.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): 🌤️ ab 23:26 Uhr: Klare bis gering bewölkte Nacht, trocken, kein Niederschlag; Temperatur um 29 °C, keine markante Wetterentwicklung bis Tagesende.
-- Morgen (Fr 04.09.): ☀️ Morgens und vormittags heiter bis klar, tagsüber sonnig mit Tagesmaximum um 34–35 °C am Nachmittag; ☀️ durchgehend trocken, kein Regen
-- Sa–Di 05.–08.09.: ☀️ Anhaltend sonnig und trocken unter dem sich festigenden Hochdruckeinfluss; Tageshöchstwerte weiterhin warm bis sehr warm; erst Dienstag leichte Zunahme der Bewölkung bei beginnendem Druckrückgang – kein Niederschlag erwartet.
+- Heute (Fr 04.09.): 🌤️ Ab jetzt wolkenlos und trocken bei rund 34 °C
+- Morgen (Sa 05.09.): ☀️ Ganztägig klar und trocken; tagsüber bis rund 34 °C, nachts um 26 °C; kein Niederschlag, Hochdruckeinfluss hält stabil an.
+- So–Mi 06.–09.09.: ☀️ Anhaltend sonnig und trocken unter Hochdruckrücken; Temperaturen bis rund 36 °C am So, ab Di leicht rückläufig auf 30–32 °C; kein Niederschlag im gesamten Zeitraum.
 
 ## GR – Kos Griechenland
 
@@ -157,31 +149,31 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Skandinavien-Tief (~990 hPa) verlagert sich ostwärts; Spanien-Hoch dehnt sich über den gesamten Mittelmeerraum aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Süden; kühle, feuchte Meeresluft im nordwesteuropäischen Tiefdruckbereich.
+- 🌀 Tief über Skandinavien verlagert sich ostwärts; Hoch über Spanien dehnt sich über den gesamten Mittelmeerraum aus.
+- 🌡️ Warme, trockene Subtropikalluft beherrscht den Mittelmeerraum; kühl-feuchte Polarluft bleibt auf Nord- und Mitteleuropa beschränkt.
 
 ### 2. Fronten
 
-- 🌍 Aktive Kaltfront des Skandinavien-Tiefs zieht südostwärts über Nord- und Mitteleuropa; Britische Inseln und Norddeutschland erfasst.
-- 📍 Dodekanes: Keine lokale Front; der Dodekanes verbleibt im Einflussbereich des Mittelmeer-Hochs weit südlich der Frontalzone.
+- 🌍 Kaltfront des skandinavischen Tiefs zieht südostwärts über Mitteleuropa; Frontensystem verbleibt nördlich der Alpen.
+- 📍 Dodekanes: Keine aktive Kalt- oder Warmfront in Reichweite; das Revier liegt vollständig im Einflussbereich des sich ausdehnenden Iberischen Hochs.
 
 ### 3. Wind & Welle
 
-- Aktuell Fr., 04.09., 01:00 Ortszeit: Keine Sturmwarnung von HNMS
-- Heute (Do 03.09.): 💨 ab 23:37 Uhr: Ruhige Nacht, W 8–12 kt; seglerisch unauffällig.
-- Morgen (Fr 04.09.): 💨 Stabiler NW-Meltemi, tagsüber 14–19 kt, abends leichte Verstärkung auf 16–21 kt. Das Balkanhoch kanalisiert die Nördliche Strömung über die Dodekanes-Inseln; zwischen den Inseln mit lokaler Düsenwirkung und erhöhter Böigkeit rechnen. 🌊 See leicht bewegt (Douglas 3).
-- Übermorgen (Sa 05.09.): 💨 NW-Meltemi schwächt in der Früh auf 7–11 kt ab, baut sich nachmittags wieder auf 13–17 kt auf; Steigender Luftdruck (+4 hPa) stützt die Hochdrucklage.
-- So–Di 06.–08.09.: 💨 SO 11–18 kt NW; Mo Zunahme auf 19–26 kt NW (Abend); Di Abschwächung auf 10–24 kt NW, gegen Nacht weiter nachlassend.
+- Aktuell Fr., 04.09., 13:00 Ortszeit: Keine Sturmwarnung von HNMS
+- Heute (Fr 04.09.): 💨 Nutzbares Nachmittagsfenster mit NW 11–17 kt, das gegen Abend auf 8–15 kt abflaut. Die thermische Komponente des Meltemi in den Inselkanälen des Dodekanes fällt mit dem Sonnenuntergang weg; danach gleichmäßig nachlassender Wind bis Mitternacht. 🌊 See leicht bewegt (Stärke 3).
+- Morgen (Sa 05.09.): 💨 Schwaches, seglerisch wenig ergiebiges Meltemifenster – nachts 6–10 kt, am Vormittag nahezu Flaute, tagesüber langsames Auffrischen auf 6–12 kt NW, abends nochmals 11–16 kt. Ohne ausreichendes Druckgefälle baut sich die thermische Verstärkung nur zögerlich auf. 🌊 See leicht bewegt (Stärke 3).
+- Übermorgen (So 06.09.): 💨 Stabiler NW-Meltemi ganztägig 11–18 kt; der Hochdruckrücken über dem Balkan liefert ein gleichmäßiges Druckgefälle, das den Wind ohne markanten Tagesgang hält.
+- Mo–Mi 07.–09.09.: 💨 Mo 07.09. kräftige Meltemizunahme auf 14–26 kt NW – stärkste Phase der Woche, für exponierte Kanaldurchfahrten erhöhte Vorsicht. Di 08.09. allmähliche Abschwächung auf 10–24 kt NW. Mi 09.09. deutliche Beruhigung auf 5–15 kt W.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☀️ ab 23:37 Uhr: Klar, trocken, 28 °C; keine nennenswerte Entwicklung bis Mitternacht.
-- Morgen (Fr 04.09.): 🌤️ Überwiegend sonnig und trocken; morgens klar bei 25 °C, nachmittags bis 30 °C, abends und nachts vereinzelt höhere Wolkenfelder (Altostratus), kein Regen.
-- Sa–Di 05.–08.09.: ☀️ Anhaltend stabil und trocken unter Hochdruckeinfluss; Sa–So zunehmend sonnig bei weiter steigendem Luftdruck, Mo Spitzenwerte um 34 °C möglich; Di leichter Temperaturrückgang und etwas wechselhafter, aber weiterhin niederschlagsfrei.
+- Heute (Fr 04.09.): ☁️ ab jetzt: 🌤️ Klar bis heiter, keine Niederschlagsneigung. Ab etwa 21 Uhr vorübergehend Altostratusfelder möglich, die bis Mitternacht wieder auflockern. Trockene, warme Abendstunden ohne Wetterrisiko.
+- Morgen (Sa 05.09.): 🌤️ 🌞 Ganztägig wolkenlos und trocken. Tagsüber warm bis heiß mit Höchstwerten um 31 °C, nachts bleibt es angenehm warm. Stabiles Hochdruckwetter ohne jede Niederschlagsneigung.
+- So–Mi 06.–09.09.: ☀️ 🌞 Überwiegend sonnig und trocken unter anhaltendem Hochdruckeinfluss. So und Mo weiterhin sommerlich warm bis heiß. Di vereinzelt Cirrus möglich, kein Niederschlagssignal. Mi leichte Abkühlung, Trockenheit bleibt erhalten.
 
 ## GR – Rhodos Griechenland
 
-Erkannt: Rhodos  
+Erkannt: Rhodos, Ägäis, Griechenland  
 Revier: Dodekanes  
 Fehler: keiner
 
@@ -189,27 +181,27 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tief über Skandinavien zieht ostwärts; Hoch über Spanien dehnt sich über den westlichen Mittelmeerraum aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Dodekanes; kalte Polarluft bleibt auf Nordeuropa beschränkt.
+- 🌀 Hoch über Spanien dehnt sich über den Mittelmeerraum aus; skandinavisches Tief zieht ostwärts Richtung Russland.
+- 🌡️ Warme, trockene Subtropikluft dominiert den östlichen Mittelmeerraum; kühle Polarluft bleibt auf Nordeuropa beschränkt.
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des Skandinavientiefs zieht über Nordwest- und Mitteleuropa südostwärts; Frontensystem erreicht die östlichen Alpen.
-- 📍 Dodekanes liegt klar im Hochdruckbereich; keine aktive Kalt- oder Warmfront in Reichweite des Reviers.
+- 🌍 Kaltfront des skandinavischen Tiefs zieht über Mittel- und Osteuropa südostwärts; erreicht bis 05. 09. die östlichen Alpen.
+- 📍 Keine aktive Front im Bereich Dodekanes; der Hochdruckeinfluss hält das Revier frontenfrei.
 
 ### 3. Wind & Welle
 
-- Aktuell Fr., 04.09., 01:00 Ortszeit: Keine Sturmwarnung von HNMS
-- Heute (Do 03.09.): 💨 Ab 23:28 Uhr stabiles W-Windfenster mit 8–12 kt; seglerisch ruhige Nacht. 🌊 See leicht bewegt (Stufe 3 Douglas).
-- Morgen (Fr 04.09.): 💨 Klassisches Meltemi-Muster – ab frühem Morgen dreht auf NW und baut auf 15–19 kt auf; das Hoch über dem Mittelmeer kanalisiert die Strömung durch die Inseldurchfahrten und hält den Wind tagsüber konstant. Abends leichte Verstärkung auf 16–21 kt. 🌊 See leicht bewegt (Stufe 3 Douglas).
-- Übermorgen (Sa 05.09.): 💨 NW-Meltemi schwächt sich deutlich ab auf 7–13 kt; stabiles, gut nutzbares Segelfenster ohne nennenswerte Böigkeit.
-- So–Di 06.–08.09.: 💨 SO 06.09. ruhiger NW 11–18 kt; Mo 07.09. erneute Verstärkung auf NW 19–26 kt ab Nachmittag; Di 08.09. Abschwächung zurück auf NW 10–24 kt mit Tendenz zur Beruhigung.
+- ⚠️ Nationale Sturmwarnquelle HNMS Griechenland derzeit nicht erreichbar
+- Heute (Fr 04.09.): 💨 ab 16:05: Stabiler NW-Wind spricht für Meltemi-Charakter in der Südlichen Ägäis – thermisch gestützt und kanalisiert durch die Inseldurchfahrten; 11–17 kt, abends nachlassend auf 8–14 kt. 🌊 See leicht bewegt (Stärke 3).
+- Morgen (Sa 05.09.): 💨 Nachts und morgens Abschwächung auf 3–8 kt; ab Mittag erneuter NW-Aufbau, abends wieder 11–16 kt. 🌊 See leicht bewegt (Stärke 3).
+- Übermorgen (So 06.09.): 💨 NW hält an und stabilisiert sich ganztägig bei 13–18 kt – konsistentes, gut nutzbares Segelfenster.
+- Mo–Mi 07.–09.09.: 💨 Mo NW mit deutlicher Zunahme auf 17–26 kt; Di NW abflachend 10–16 kt; Mi W abschwächend 5–15 kt.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☁️ Ab 23:28 Uhr Altostratus, trocken, kein Niederschlag. 🌤️ Stabiler, ruhiger Restabend ohne nennenswerte Entwicklung.
-- Morgen (Fr 04.09.): 🌤️ Nachts und morgens noch etwas Altostratus, tagsüber aufklarend und sonnig. Tageshöchstwerte um 33 °C mittags; kein Regen. Luftdruck unauffällig stabil.
-- Sa–Di 05.–08.09.: ☀️ Anhaltend sonnig und trocken; Temperaturen steigen von Sa auf Mo auf bis zu 36 °C an. Druckanstieg Sa auf über 1013 hPa stützt stabile Hochdrucklage. Di leichter Temperaturrückgang; Cirrus möglich, kein Niederschlag.
+- Heute (Fr 04.09.): 🌤️ ab 16:05: Wolkenlos, kein Niederschlag; Temperatur sinkt von rund 31 °C bis Mitternacht auf etwa 24 °C – ruhiger, klarer Sommerabend.
+- Morgen (Sa 05.09.): 🌧️ Morgens klar und frisch um 21 °C; tagsüber rasch aufheizend auf bis zu 34 °C mit einzelnen Quellwolken mittags bis nachmittags; am Nachmittag kurzzeitig leicht erhöhte Niederschlagswahrscheinlichkeit ☁️, kein Regen erwartet; abends wieder klar.
+- So–Mi 06.–09.09.: ☀️ Anhaltend sonnig und trocken unter stabilem Hochdruckeinfluss; Temperaturen sommerlich warm, kein Niederschlagssignal im gesamten Zeitraum.
 
 ## AT – Weiden am See
 
@@ -221,27 +213,27 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tief über Nordwesteuropa (~990 hPa) verlagert sich ostwärts; Hoch über Spanien dehnt sich nordwärts bis zum Alpenraum aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Süden; im Norden schiebt sich maritime Kaltluft hinter der Tiefzirkulation südostwärts.
+- 🌀 Skandinavien-Tief zieht ostwärts Richtung Russland; Azorenhoch dehnt sich über Mittelmeer und Schweiz aus.
+- 🌡️ Kaltluftsektor schiebt sich von NW nach SO über Mitteleuropa; Warmluft bleibt im Süden stabil dominant.
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des nordwesteuropäischen Tiefs zieht über Norddeutschland und Skandinavien südostwärts, am 04. 09. Richtung Mitteleuropa.
-- 📍 Am Neusiedler See (Österreich) liegt die Kaltfront am 04. 09. nach nationaler Synopsis im Anmarsch aus West; Frontdurchzug im Tagesverlauf erwartet.
+- 🌍 Kaltfront des Skandinavien-Tiefs überquert Nordsee und Norddeutschland ostwärts; weitere Fronten über Nordmeer aktiv.
+- 📍 Am Neusiedler See (Österreich) nähert sich die Kaltfront aus Norden und erreicht den Donauraum in den frühen Morgenstunden des 05. 09.
 
 ### 3. Wind & Welle
 
-- Aktuell: Keine Sturmwarnung der LSZ Burgenland
-- Heute (Do 03.09.): 💨 Ab jetzt Abschwächen von NW 15–22 kt auf NW 8–19 kt in der Nacht; Hochdruckaufbau lässt den Leitha-Wind rasch nachlassen – kein nutzbares Segelfenster mehr.
-- Morgen (Fr 04.09.): 💨 Leitha-Wind am Vormittag NW 14–21 kt durch Druckgefälle zwischen Alpen und Pannonischer Tiefebene; mit Kaltfrontdurchzug Dreher auf S 9–15 kt ab Nachmittag, danach Abschwächen – Vormittag ist das brauchbarste Segelfenster.
-- Übermorgen (Sa 05.09.): 💨 Kaltsektor bringt N 15–35 kt am Vormittag mit markanten Böen; ab Mittag Stabilisierung auf NW 14–24 kt – böig durch einströmende Kaltluft, erhöhte Vorsicht am Vormittag geboten.
-- So–Di 06.–08.09.: 💨 Sonntag NW 5–16 kt abnehmend; Montag weitgehend Flaute NO 1–13 kt; Dienstag Auffrischung S 7–19 kt mit zunehmender Tendenz.
+- ⚠️ Aktuell: Starkwindwarnung der LSZ Burgenland
+- Heute (Fr 04.09.): 💨 Nutzbares Abendsegelrevier mit S 10–16 kt
+- Morgen (Sa 05.09.): 💨 Kaltfrontdurchgang erzeugt ab den Morgenstunden einen markanten Dreher auf N mit 21–34 kt – klassischer Leitha-Wind, durch den Gradienten zwischen Alpenraum und Pannonischer Tiefebene kanalisiert und böig. Ab Mittag Abschwächung auf NW 14–24 kt; seglerisch nutzbares Fenster erst ab dem Nachmittag.
+- Übermorgen (So 06.09.): 💨 Übermorgen gleichmäßiger NW 12–20 kt unter Hochdruckeinfluss – stabiles, verlässliches Segelfenster ohne Fronteinfluss.
+- Mo–Mi 07.–09.09.: 💨 Mo leichte S 7–18 kt; Di schwacher S 3–15 kt; Mi NW-Auffrischung auf 16–38 kt ⚠️.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): 🌤️ Ab jetzt klar bis leicht bewölkt, kein Regen
-- Morgen (Fr 04.09.): 🌤️ Anfangs bedeckt mit Hochbewölkung, um die Mittagszeit Auflockerungen und Erwärmung auf bis zu 32 °C; gegen Abend zunehmende Bewölkung durch herannahende Kaltfront, Druck fällt deutlich um rund 5 hPa bis Tagesende – kein Regen erwartet, aber spürbarer Wetterumschwung.
-- Sa–Di 05.–08.09.: 🌧️ Samstag Kaltfrontdurchzug mit kurzem Regenintervall um Mittag, danach Druckerholung auf über 1022 hPa und Aufklaren. Sonntag trocken und freundlich bei mäßigen Temperaturen bis 25 °C. Montag klar und deutlich kühler mit Tiefstwerten um 11 °C. Dienstag erneute Erwärmung auf bis zu 32 °C bei fallender Drucktendenz, trocken.
+- Heute (Fr 04.09.): ☁️ ab jetzt: Wechselnde Bewölkung, kein Niederschlag erwartet. Temperaturen um 32 °C, bis Mitternacht auf rund 25 °C zurückgehend..
+- Morgen (Sa 05.09.): 🌧️ Morgens dicht bewölkt mit Schauerneigung beim Kaltfrontdurchgang; um Mittag einzelne leichte Regenschauer möglich, Temperaturen kühlen auf etwa 21–22 °C ab. Nachmittags und abends aufklarend, trocken.
+- So–Mi 06.–09.09.: ☀️ Sonntag und Montag unter Hochdruckeinfluss sonnig, trocken und mild. Dienstag deutlicher Druckfall mit Temperaturanstieg auf rund 34 °C. Mittwoch neuerlicher Wetterwechsel mit Frontdurchgang, sonst weitgehend trocken.
 
 ## AT – Gmunden am Traunsee
 
@@ -253,26 +245,26 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Atlantisches Tief (~990 hPa) westlich der Britischen Inseln zieht ostwärts; Hoch über Spanien dehnt sich Richtung Alpen aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert Mitteleuropa; kalte Luftmassen im Tiefdruck-Kaltsektor über Nordwest- und Nordeuropa.
+- 🌀 Tief über Skandinavien zieht ostwärts; Hochdruckgebiet über Spanien dehnt sich Richtung Alpenraum aus.
+- 🌡️ Warme, trockene Subtropikluft im Süden; kühle Polarluft im Kaltsektor nördlich der Alpen schiebt sich südwärts.
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des Atlantiktiefs überquert am 04. 09. die Britischen Inseln und zieht südostwärts Richtung Norddeutschland.
-- 📍 Traunsee liegt am 04. 09. noch knapp südlich der durchziehenden Kaltfront; Frontpassage am 05. 09. wahrscheinlich.
+- 🌍 Kaltfront des Skandinavien-Tiefs überquert Norddeutschland und erreicht die östlichen Alpen am Samstag.
+- 📍 Traunsee: Kaltfront nähert sich aus Norden und quert das Revier voraussichtlich in den Morgenstunden des 05. 09. durch.
 
 ### 3. Wind & Welle
 
-- Heute (Do 03.09.): 💨 ab 22:29 Uhr: Schwacher S-Wind, 9–11 kt; kein seglerisch nutzbares Fenster mehr.
-- Morgen (Fr 04.09.): 💨 Stabiles, schwaches Windbild; S und SW überwiegend 5–12 kt, nachmittags Dreher auf SO mit 6–11 kt. Thermischer Talwind spricht für leichte Verstärkung zur Mittagszeit; insgesamt leichter Segelwind ohne markante Böigkeit.
-- Übermorgen (Sa 05.09.): 💨 Kaltfrontdurchgang bringt unbeständige Verhältnisse; um Mittag kurzzeitig N mit 5–23 kt und stark wechselnde Richtungen – kein verlässliches Segelfenster.
-- So–Di 06.–08.09.: 💨 SO 06.09. schwacher S, 2–11 kt; Mo 07.09. ruhig, N 2–8 kt; Di 08.09. zunehmend NW, nachmittags möglich.
+- Heute (Fr 04.09.): 💨 ab jetzt: Stabiles, nutzbares Segelfenster mit S 6–9 kt; der Talkanal des Traunsees kanalisiert den Südlichen Thermikwind entlang der Längsachse, was gleichmäßige, wenig böige Verhältnisse begünstigt.
+- Morgen (Sa 05.09.): 💨 Frontdurchgang bringt früh noch SW 3–10 kt; nach Frontenpassage Drehung auf NW mit 5–15 kt im Tagesverlauf, danach Rückdrehen auf S 4–10 kt; Böigkeit beim Richtungswechsel erhöht.
+- Übermorgen (So 06.09.): 💨 Ruhige Verhältnisse; SO 3–7 kt, nachmittags kurze N-Phase 6–12 kt; kein stabiles Segelfenster erkennbar.
+- Mo–Mi 07.–09.09.: 💨 Mo schwach N 1–13 kt; Di mäßig NO 2–10 kt; Mi NW, seglerisch unruhig.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☁️ ab 22:29 Uhr: Bedeckt mit Altostratus, kein Niederschlag
-- Morgen (Fr 04.09.): 🌤️ Morgens noch wechselnde Bewölkung, dann rasche Aufheiterung ab Vormittag; 🌤️ bis mittags weitgehend klar, Temperaturen steigen auf knapp 30 °C. Luftdruck fällt tagsüber deutlich (1021 auf 1015 hPa), Hinweis auf herannahende Kaltfront; Abend trocken.
-- Sa–Di 05.–08.09.: ⛈️ Sa 05.09. Kaltfrontpassage mit Regen und Gewittersignal um Mittag, danach Druckanstieg. So 06.09. trocken, 🌤️ zunehmend freundlich. Mo 07.09. sonnig, warm, kein Niederschlag. Di 08.09. erneut Druckfall und ⛈️ Gewitterrisiko am Abend.
+- Heute (Fr 04.09.): 🌤️ ab jetzt: ☀️ Wolkenlos, trocken und sommerlich warm rund 29–30 °C; kein Niederschlag bis Mitternacht.
+- Morgen (Sa 05.09.): 🌧️ Kaltfrontdurchgang in den frühen Morgenstunden bringt zunächst dichte Bewölkung; vormittags bis mittags Regen; nachmittags rasch aufheiternd mit markanter Abkühlung auf rund 16–17 °C; Druck steigt um rund 9 hPa; deutliches Kaltluftsignal.
+- So–Mi 06.–09.09.: ☀️ So bis Mo unter Hochdruckrücken trocken und sonnig, Erwärmung bis knapp 29 °C am Mo; Di Druckfall und Cirrus-/Cumulonimbus-Signal mit Gewitterpotenzial abends; Mi 🌧️ länger anhaltender Regen und deutlicher Temperaturrückgang.
 
 ## AT – Klagenfurt am Wörthersee
 
@@ -284,26 +276,26 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tief über Schottland (~990 hPa) zieht ostwärts; Hoch über Spanien dehnt sich nordostwärts aus.
-- 🌡️ Warme, trockene Subtropikluft über Südeuropa; kühle Meeresluft im Norden hinter der Kaltfront.
+- 🌀 Skandinavisches Tief verlagert sich ostwärts; Hochdruckzentrum über Spanien dehnt sich über Mittelmeer und Alpenraum aus.
+- 🌡️ Warme, trockene Subtropikluft dominiert Südösterreich; Kaltluftmasse des nordischen Tiefs drängt von Norden heran.
 
 ### 2. Fronten
 
-- 🌍 Aktive Kaltfront zieht vom atlantischen Tief südostwärts über die Britischen Inseln in Richtung Mitteleuropa.
-- 📍 Am Wörthersee liegt die Kaltfront am Fr 04. 09. noch nördlich; der Hochdruckrücken schirmt vorerst ab.
+- 🌍 Kaltfront aus Skandinavien zieht ostsüdostwärts über Norddeutschland und Polen Richtung östliche Alpen.
+- 📍 Wörthersee: Kaltfront nähert sich aus Norden; Durchzug wird laut Synopsis für Samstag tagsüber erwartet.
 
 ### 3. Wind & Welle
 
-- Heute (Do 03.09.): 💨 Segeln vorbei – ab jetzt Flaute S 1–5 kt, kein nutzbares Windfenster mehr.
-- Morgen (Fr 04.09.): 💨 der Druckabfall von rund 7 hPa begünstigt diesen frontalen Impuls.
-- Übermorgen (Sa 05.09.): 💨 Nach ruhigem Morgen erneut thermische O-Strömung am Nachmittag 6–11 kt, abends abermals frontaler W-Impuls auf 10–20 kt.
-- So–Di 06.–08.09.: 💨 Sonntag schwache SO-Strömung 4–8 kt; Montag weitgehend ruhig O 2–6 kt; Dienstag sehr schwach W 1–6 kt.
+- Heute (Fr 04.09.): 💨 ab 15:07 Uhr: Windfenster aus W aufbauend – Abendstunden bringen nutzbaren Westwind; ab ca. 21–22 Uhr W 7–19 kt, in den frühen Morgenstunden Spitze um W 10–21 kt. Das Klagenfurter Becken kanalisiert Westströmungen entlang des längsorientierten Wörthersees, was die Böigkeit abends verstärkt.
+- Morgen (Sa 05.09.): 💨 Kaltfrontpassage führt zu markanter Winddrehung; Nacht/Früh noch W 7–18 kt, dann rascher Abfall auf W 2–3 kt vormittags – seglerische Flaute. Nachmittags erneuter Aufbau aus NO mit 6–24 kt; lokale Thermik im Becken nach Kaltlufteinfluss spricht für unbeständige Böigkeit.
+- Übermorgen (So 06.09.): 💨 Schwache östliche Strömung bestimmend; O 2–10 kt, keine ausgeprägte Böenphase – ruhiges, aber windscbwaches Segelfenster.
+- Mo–Mi 07.–09.09.: 💨 Mo fast windstill (0–5 kt); Di zunehmend W mit 2–12 kt nachmittags; Mi W tagsüber 4–12 kt, abends bei beginnendem Druckfall.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☁️ Ab jetzt trocken und ruhig, Bewölkung wechselhaft, kein Niederschlag erwartet.
-- Morgen (Fr 04.09.): 🌤️ Morgens noch aufgelockert bewölkt, tagsüber zunehmend sonnig, nachmittags wolkenlos; Temperaturen steigen auf knapp 30 °C. 📉 Der Luftdruck fällt tagsüber spürbar um rund 7 hPa – Hinweis auf nahenden Kaltfronteinfluss; dennoch kein Regen erwartet.
-- Sa–Di 05.–08.09.: 🌤️ Samstag warm und überwiegend sonnig, trocken. Sonntag unter Hochdruckeinfluss freundlich bis 28 °C. Montag ähnlich sonnig und stabil. Dienstag weiterhin trocken, jedoch kündigt ein markanter Druckabfall von rund 8 hPa zunehmenden Tiefdruckeinfluss an.
+- Heute (Fr 04.09.): 🌤️ abendlicher Temperaturabfall auf rund 23 °C.
+- Morgen (Sa 05.09.): ⛅ Früh noch klar, im Tagesverlauf zunehmende Bewölkung (Cirrus, Altostratus) durch Kaltfrontannäherung. Nachmittags Niederschlagsneigung, kein Regen tatsächlich modelliert. Druck steigt nach Frontpassage deutlich um +6 hPa – Hochdruckeinfluss festigt sich zum Abend.
+- So–Mi 06.–09.09.: ☀️ So und Mo überwiegend trocken und sonnig unter Hochdruckrücken, Temperaturen angenehm. Di Druck fällt markant um rund 9 hPa – zunehmender Tiefdruckeinfluss, Bewölkung nimmt zu, trocken bleibend. Mi weiterer Druckfall auf rund 1008–1014 hPa; abends erstes Gewittersignal und geringe Niederschläge möglich. ⚠️
 
 ## HR – Punat Kroatien
 
@@ -315,27 +307,27 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Skandinavientief (~990 hPa) zieht ostwärts; Hoch über Spanien dehnt sich über den Mittelmeerraum aus; Antizyklonalkamm stützt die nördliche Adria.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Süden; polare Kaltluft im Norden und Nordosten bleibt nördlich der Alpen.
+- 🌀 Skandinavientief zieht ostwärts; Azorenhoch dehnt Rücken über Iberische Halbinsel bis ins westliche Mittelmeer aus.
+- 🌡️ Kühle Luftmasse im Norden; warme, trockene Subtropikluft dominiert südlich der Alpen und über der Adria.
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des Skandinavientiefs zieht südostwärts über Nordost- und Mitteleuropa; erreicht laut Vorhersage Sa die östlichen Alpen.
-- 📍 Adria Nord (Kroatien): Keine aktive Front; das Gebiet verbleibt unter dem sich verstärkenden Antizyklonalkamm; keine Kalt- oder Warmfront in Reichweite.
+- 🌍 Kaltfront des Skandinavientiefs überquert Deutschland und Polen in Richtung östliche Alpen und Osteuropa.
+- 📍 Adria Nord (Kroatien): Kaltfront bleibt nördlich der Adria und verlagert sich morgen nach Osten; kein direkter Frontdurchgang am Revier.
 
 ### 3. Wind & Welle
 
-- ⚠️ Aktuell (03.09.2026, 20:00 MESZ): Zu Beginn noch gebietsweise Böen aus NW auf der mittleren und südlichen Adria, und in der Nacht am Fuß des Velebit Böen aus NE mit 35–40 Knoten.
-- Heute (Do 03.09.): 💨 ab 22:38 Uhr: Schwaches Abklingen des N-Winds; 9–12 kt, bis Mitternacht auf 5–9 kt zurückgehend. Kein nutzbares Segelfenster mehr heute Nacht; 🌊 See 2, schwach bewegt.
-- Morgen (Fr 04.09.): 💨 Ruhige Nacht und Morgen mit schwachem NO 3–7 kt aus dem Velebit-Sektor (Bura-Restströmung); ab Mittag Windstille bis S 1–4 kt, nachmittags thermischer Südwind 4–6 kt. Klassisches Maestral-loses Hochdruckregime – kein verlässliches Segelfenster, 🌊 See 2–3, schwach bis mäßig bewegt.
-- Übermorgen (Sa 05.09.): 💨 S 6–12 kt mit vorübergehender SW-Verstärkung auf 10–14 kt am Vormittag – Vorbote zunehmenden Druckgradienten; nachmittags Abschwächung.
-- So–Di 06.–08.09.: 💨 SO 06.09. markante NO-Bura, tagsüber 15–26 kt, böig; Mo 07.09. NO 8–16 kt, abnehmend; Di 08.09. NW 5–10 kt, gegen Abend Druckfall bei gleichzeitig signifikantem Tagesdruckfall (–6 hPa), Lage beobachten.
+- Aktuell: Keine Sturmwarnung von DHMZ
+- Heute (Fr 04.09.): 💨 Ruhiges Jugo-Fenster; SO 5–7 kt hält bis in die Nacht an; 🌊 See ruhig (Douglas 1).
+- Morgen (Sa 05.09.): 💨 Jugo baut sich Nächtlich auf SO 8–10 kt auf; tagsüber Dreher auf SW 8–13 kt, spricht für thermische Maestral-Überlagerung; nachmittags Abschwächung; 🌊 See schwach bewegt (Douglas 2).
+- Übermorgen (So 06.09.): 💨 Ab Nacht markante Bura-Episode; NO 19–26 kt, durch die Dinarischen Alpen kanalisiert und böig; im Tagesverlauf rasche Abschwächung auf NO 5–10 kt.
+- Mo–Mi 07.–09.09.: 💨 Mo leichter NO 8–12 kt; Di auffrischend SO 11–16 kt abends; Mi S 9–17 kt.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☁️ ab 22:38 Uhr: Überwiegend heiter bis locker bewölkt (Cirrus), trocken, kein Niederschlag
-- Morgen (Fr 04.09.): ☀️ Nachts und morgens klar, tagsüber sonnig mit einzelnen Hochnebel-/Cirrusfeldern; Temperaturanstieg bis rund 32 °C am Nachmittag; kein Niederschlag
-- Sa–Di 05.–08.09.: ☀️ Sa und So weiterhin trocken und warm unter Hochdruckeinfluss, vereinzelt Quellwolken So; Mo unverändert sonnig, max. bis 33 °C; Di Druckfall von rund 6 hPa im Tagesverlauf signalisiert sich anbahnenden Wetterumbruch – Entwicklung aufmerksam verfolgen.
+- Heute (Fr 04.09.): ☀️ ab jetzt: ☀️ Sonnig und heiß, um 31 °C; klarer Himmel, kein Niederschlag.
+- Morgen (Sa 05.09.): ☀️ Überwiegend heiter und warm bis 31 °C; nachmittags vorübergehend Altostratus möglich, trocken; abends wieder aufklarend.
+- So–Mi 06.–09.09.: ☀️ Sonntag und Montag unter Hochdruckrücken sonnig und warm, trocken; Dienstag deutlicher Druckabfall signalisiert zunehmenden Tiefdruckeinfluss; Mittwoch weiterhin niederschlagsfrei laut Datenlage.
 
 ## HR – Split Kroatien
 
@@ -347,27 +339,27 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Tiefdruckzentrum (~990 hPa) westlich der Britischen Inseln zieht nach Skandinavien; Hochdruckkamm Spanien–Mittelmeer dehnt sich zur Adria aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert Südeuropa; polare Kaltluft bleibt auf Nordeuropa und Skandinavien begrenzt.
+- 🌀 Skandinavientief zieht ostwärts; Antizyklone über Spanien dehnt sich über den Mittelmeerraum nach Nordosten aus.
+- 🌡️ Warme, trockene Subtropikluft dominiert den Mittelmeerraum; kühle Meeresluft im tiefdruckbestimmten Norden Europas.
 
 ### 2. Fronten
 
-- 🌍 Aktive Kaltfront zieht vom Atlantik über die Britischen Inseln nordostwärts Richtung Skandinavien; Warmfront östlich Skandinaviens in Auflösung.
-- 📍 Adria Mitte (Kroatien): Keine Kalt- oder Warmfront in Reichweite; Region liegt im Bereich des sich verstärkenden Antizyklonskamms.
+- 🌍 Ausgeprägte Kaltfront des Skandinavientiefs zieht über Nord- und Mitteleuropa südostwärts in Richtung östliche Alpen.
+- 📍 Für Adria Mitte (Kroatien) aktuell keine Kaltfront; antizyklonaler Kamm schirmt das Revier ab; Front bleibt nördlich der Adria.
 
 ### 3. Wind & Welle
 
-- ⚠️ Aktuell (03.09.2026, 20:00 MESZ): Zu Beginn noch stellenweise Böen aus NW auf der mittleren und südlichen Adria, in der Nacht an der Küste der mittleren und südlichen Adria NE-Wind mit 35–40 Knoten.
-- Heute (Do 03.09.): 💨 Rasch abklingende N-Strömung ab jetzt; 13–19 kt, bis in die frühen Morgenstunden auf 4–6 kt abschwächend. Laut DHMZ küstennah Bura-Böen 35–40 kt möglich – die Lokaltabelle zeigt jedoch keine solchen Werte, Bura-Fallwind bleibt auf exponierte Küstenabschnitte beschränkt. 🌊 See leicht bewegt (Stufe 3).
-- Morgen (Fr 04.09.): 💨 Ausgeprägte Flaute als Tagescharakter; der Antizyklonskamm unterdrückt jeden tragfähigen Maestral, thermische Zirkulation bleibt auf schwachen W 5–8 kt am Nachmittag begrenzt. Kein verwertbares Segelfenster ohne Motor. 🌊 See schwach bewegt (Stufe 2).
-- Übermorgen (Sa 05.09.): 💨 Aufbauende S-Strömung 8–12 kt spricht für einsetzenden Jugo-Einfluss im Vorfeld des ostwärts ziehenden Tiefkomplexes; Richtung stabil aus S, mäßig und gleichmäßig.
-- So–Di 06.–08.09.: 💨 SO 06.09. Übergang auf N 10–13 kt; Mo 07.09. NW-Maestral 7–10 kt; Di 08.09. schwache W-Strömung 3–7 kt bei fallendem Druck.
+- Aktuell: Keine Sturmwarnung von DHMZ
+- Heute (Fr 04.09.): 💨 Nutzbares Restfenster mit abschwächendem Maestral; NW 3–6 kt, ab ca. 20:00 Drehung auf S mit 2–4 kt – typisches thermisches Ausklingen des Maestrals, Nacht ruhig. 🌊 See 2, schwach bewegt.
+- Morgen (Sa 05.09.): 💨 Jugo-Einfluss; ab frühem Morgen SO 5–8 kt, am Vormittag kurzzeitig SO 10–13 kt, nachmittags nachlassend auf S 4–8 kt – warmfeuchter Südostwind aus dem adriatischen Kanal, kanalisiert durch Küstengeometrie, böig. 🌊 See 2, schwach bewegt.
+- Übermorgen (So 06.09.): 💨 Markanter Dreher; zunächst O 14–20 kt am frühen Morgen (möglicher Bura-Impuls mit Kaltfrontannäherung), Zusammenbruch um Mittag, nachmittags Rückkehr zu NW 8–14 kt (Maestral) – unruhige Übergangssee, erhöhte Aufmerksamkeit.
+- Mo–Mi 07.–09.09.: 💨 Mo schwacher NW 4–8 kt, nahezu Flaute tagsüber; Di zunehmendes S 4–15 kt, abends anziehend; Mi SO 11–21 kt mit weiterer Tendenz zum Jugo, Böen gegen Tagesende an der Grenze zu ⚠️.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☀️ Ab jetzt heiter und klar, kein Niederschlag. Temperatur stabil um 30 °C, trocken bis Mitternacht.
-- Morgen (Fr 04.09.): ☀️ Heiter und trocken den ganzen Tag. Morgens angenehme Temperaturen um 27 °C, mittags Erwärmung auf bis zu 34 °C. Nachmittags vereinzelt Cirrus, kein Niederschlagssignal. Stabiler Hochdruckcharakter ohne Wetterumschwung.
-- Sa–Di 05.–08.09.: 🌤️ Sa und So überwiegend sonnig und warm, vereinzelt Cirrus, kein Regen. Mo weiterhin stabil und heiter. Di zunehmend leicht wolkiger bei merklich fallendem Druck; erster Hinweis auf herannahenden Tiefdruckeinfluss, kein Niederschlag ableitbar.
+- Heute (Fr 04.09.): ☀️ Klar und sonnig; Temperaturen ab 15:08 Uhr noch rund 33 °C, gleitend sinkend. Kein Niederschlag. ☀️ Stabil bis Mitternacht, Hochdrucklage.
+- Morgen (Sa 05.09.): ☀️ Überwiegend klar den gesamten Tag; Temperaturen von morgens rund 26 °C auf nachmittags rund 33 °C ansteigend, abends wieder zurückgehend. Kein Niederschlag.
+- So–Mi 06.–09.09.: ☀️ So und Mo weiterhin sonnig, trocken, sommerlich warm unter Hochdruckrücken. Di Druck fällt deutlich (rund −6 hPa), ☁️ erste Cirren als Vorbote zunehmenden Tiefdruckeinflusses; Mi ⛈️ Gewittersignal am Nachmittag bei weiter fallendem Druck und gemischter Bewölkung – Wetterumschwung wahrscheinlich.
 
 ## HR – Hvar Kroatien
 
@@ -379,25 +371,25 @@ Fehler: keiner
 
 ### 1. Druck & Luftmassen
 
-- 🌀 Atlantisches Tief (~990 hPa) vor Schottland/Irland zieht ostwärts; Hoch über Spanien dehnt sich in den Mittelmeerraum aus.
-- 🌡️ Warme, trockene Subtropikluft dominiert den Mittelmeerraum; kühle Meeresluft im tiefdruckbestimmten Norden bleibt weit entfernt.
+- 🌀 Skandinavientief zieht Kaltsektor nach Südosten; Antizyklone über Spanien dehnt sich über den gesamten Mittelmeerraum aus.
+- 🌡️ Warme, trockene Luftmasse dominiert den Adria- und Mittelmeerraum; kühle Polarluft liegt nördlich der Alpen und schiebt sich ostwärts.
 
 ### 2. Fronten
 
-- 🌍 Kaltfront des Nordatlantiktiefs liegt über den Britischen Inseln und zieht bis Freitag über Nord- und Mitteleuropa nordostwärts.
-- 📍 Adria Süd (Kroatien): Keine Kalt- oder Warmfront in Reichweite; der verstärkende Hochdruckrücken hält Fronten deutlich nördlich.
+- 🌍 Kaltfront des Skandinavientiefs überquert Deutschland und Polen und dringt in Richtung östliche Alpen und Osteuropa vor.
+- 📍 Adria Süd (Kroatien): Antizyklonalkeil schirmt die südliche Adria ab; nächste Kaltfront verbleibt nördlich der Adria und verlagert sich ostwärts.
 
 ### 3. Wind & Welle
 
-- ⚠️ Aktuell (03.09.2026, 20:00 MESZ): Zu Beginn noch gebietsweise Böen aus NW, in der Nacht an der Küste des mittleren und südlichen Adria Böen aus NE mit 35–40 Knoten.
-- Heute (Do 03.09.): 💨 Aktiver Bura-Impuls – Kaltluft wird durch die Dinariden auf die Südliche Adria gedrückt; örtlich ⚠️ bis 35–40 kt möglich, lokal messbarer Wert ab jetzt NO 10–14 kt. 🌊 See 2, leicht bewegt.
-- Morgen (Fr 04.09.): 💨 Bura klingt tagsüber ab, vormittags noch NO 8–14 kt; nachmittags thermisch angetriebener Maestral dreht auf W und verstärkt sich auf 11–19 kt. 🌊 See 2–3, anfangs möglicherweise 4.
-- Übermorgen (Sa 05.09.): 💨 Flaute – Bura erschöpft, Maestral baut sich nicht auf; variable Winde 2–7 kt, kein nutzbares Segelfenster.
-- So–Di 06.–08.09.: 💨 Sonntag erneuter Bura-Impuls NO 12–19 kt; Montag NO 9–15 kt; Dienstag Abflauen auf 2–7 kt.
+- Aktuell: Keine Sturmwarnung von DHMZ
+- Heute (Fr 04.09.): 💨 Stabiles Maestral-Fenster ab jetzt; der Antizyklonalkeil kanalisiert den NW-Gradienten entlang der Inselketten und sorgt für verlässlichen Segelwind. Laut DHMZ 10–20 kt, 🌊 See 2–3.
+- Morgen (Sa 05.09.): 💨 Maestral schwächt sich ab, da der thermische Antrieb mit abnehmendem Temperaturgradient nachlässt; tagsüber noch 10–20 kt, gegen Abend auf 4–10 kt zurückgehend. 🌊 See 1–2.
+- Übermorgen (So 06.09.): 💨 Hochdruckrücken von Iberien bis Balkan gestützt; ruhiges Windregime ohne ausgeprägten Maestral-Aufbau zu erwarten.
+- Mo–Mi 07.–09.09.: 💨 Mo und Di weiter unter Hochdruckeinfluss, schwache Winde. Mi deutlicher Druckabfall; auffrischende Winde möglich.
 
 ### 4. Wetter & Regen
 
-- Heute (Do 03.09.): ☀️ Ab jetzt klar und trocken bei rund 30 °C; kein Niederschlag.
-- Morgen (Fr 04.09.): ☀️ Überwiegend sonnig und trocken; morgens um 27 °C, mittags bis 33 °C. Vereinzelt Cirrus, kein Regenrisiko.
-- Sa–Di 05.–08.09.: ☀️ Anhaltend hochdruckbestimmt, trocken und sonnig mit sommerlichen Temperaturen zwischen 24 °C und 32 °C; erst Dienstag deutlicher Druckrückgang um 5 hPa als Hinweis auf nachlassenden Hochdruckeinfluss, Niederschlag jedoch nicht signalisiert.
+- Heute (Fr 04.09.): ☀️ Ab jetzt heiter und trocken, kein Niederschlag. Temperatur rund 31 °C, sinkt bis Mitternacht auf etwa 27 °C.
+- Morgen (Sa 05.09.): ☀️ Wolkenloser, sommerwarmer Tag; Temperaturen steigen bis mittags auf rund 32 °C. Kein Niederschlag; stabiler Hochdruckeinfluss.
+- So–Mi 06.–09.09.: ☀️ So und Mo sonnig und warm unter Hochdruckeinfluss, kein Niederschlag. Di setzt ein deutlicher Druckabfall ein, der auf zunehmenden Tiefdruckeinfluss hindeutet. Mi wechselnde Bewölkung möglich, bislang kein Niederschlagssignal.
 
