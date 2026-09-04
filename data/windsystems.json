@@ -144,11 +144,11 @@
       },
       {
         "name": "Maïstrali",
-        "alternativeNames": "Maestro",
+        "alternativeNames": "Maistro, Maestros, Maestro",
         "importance": "secondary",
-        "description": "Dem Meltemi ähnlicher Nordwestwind, der vor allem die Ionischen Inseln und die Westküste Griechenlands beeinflusst. Etwas sanfter als der Meltemi, angenehm kühl und trocken.",
-        "location": "Ionische Inseln, Westgriechenland",
-        "season": "Sommer"
+        "description": "Typischer sommerlicher West- bis Nordwestwind im Ionischen Meer und an der Westküste Griechenlands. Er entwickelt sich bei ruhigem Sommerwetter meist gegen Mittag, frischt am Nachmittag auf und lässt gegen Sonnenuntergang wieder nach. Sein ausgeprägter Tagesgang ist häufig thermisch geprägt; Stärke und lokale Richtung werden zusätzlich durch die großräumige Druckverteilung, Inseln, Küstengebirge und Kanalisierung beeinflusst. Der Maïstrali ist gewöhnlich moderater als der Meltemi der Ägäis. Morgendliche Winde aus anderen Richtungen nicht automatisch als Maïstrali bezeichnen; entscheidend ist das einsetzende westliche bis nordwestliche Windfenster.",
+        "location": "Ionische Inseln, Ionisches Meer, Westgriechenland",
+        "season": "Sommer, besonders Juni bis September"
       },
       {
         "name": "Sirocco",
